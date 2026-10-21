@@ -378,7 +378,8 @@ EventBits_t xEventGroupWaitBits(EventGroupHandle_t g, const EventBits_t bits, co
 // Los timers de software de FreeRTOS aún no se modelan (no los usa el cierre
 // de librerías del JWPLC Basic). Se rechazan de forma explícita.
 TimerHandle_t xTimerCreate(const char *name, TickType_t, UBaseType_t, void *, TimerCallbackFunction_t) {
-  jwsim_fatal("xTimerCreate('%s'): timers de software FreeRTOS no soportados todavía por JWPLC Sim", name ? name : "");
+  jwsim_fatal("xTimerCreate('%s'): los timers de software de FreeRTOS no están soportados todavía por JWPLC Sim; llegan en JWSIM_G4_HAL_EXTRAS.",
+              name ? name : "");
 }
 BaseType_t xTimerStart(TimerHandle_t, TickType_t) { return pdFAIL; }
 BaseType_t xTimerStop(TimerHandle_t, TickType_t) { return pdFAIL; }

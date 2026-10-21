@@ -45,7 +45,8 @@ void jwsim_seed_random(uint64_t seed) { g_rng = seed ? seed : 1; }
 int64_t esp_timer_get_time(void) { return static_cast<int64_t>(jwsim_now() / JWSIM_NS_PER_US); }
 
 esp_err_t esp_timer_create(const esp_timer_create_args_t *args, esp_timer_handle_t *) {
-  jwsim_fatal("esp_timer_create('%s'): esp_timer no soportado todavía por JWPLC Sim", args && args->name ? args->name : "");
+  jwsim_fatal("esp_timer_create('%s'): esp_timer no está soportado todavía por JWPLC Sim; llega en JWSIM_G4_HAL_EXTRAS.",
+              args && args->name ? args->name : "");
 }
 esp_err_t esp_timer_start_once(esp_timer_handle_t, uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
 esp_err_t esp_timer_start_periodic(esp_timer_handle_t, uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
@@ -67,7 +68,7 @@ void esp_fill_random(void *buf, size_t len) {
 
 void esp_restart(void) {
   std::fflush(stdout);
-  jwsim_fatal("esp_restart() solicitado por el firmware (reinicio no soportado todavía)");
+  jwsim_fatal("esp_restart() solicitado por el firmware: el reinicio no está soportado todavía por JWPLC Sim; llega en JWSIM_G4_HAL_EXTRAS.");
 }
 void esp_system_abort(const char *details) { jwsim_fatal("esp_system_abort: %s", details ? details : ""); }
 esp_reset_reason_t esp_reset_reason(void) { return ESP_RST_POWERON; }
@@ -78,9 +79,9 @@ uint32_t esp_get_minimum_free_heap_size(void) { return 180000; }
 esp_err_t esp_register_shutdown_handler(shutdown_handler_t) { return ESP_OK; }
 
 esp_err_t esp_sleep_enable_timer_wakeup(uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
-void esp_deep_sleep_start(void) { jwsim_fatal("deep sleep no soportado por JWPLC Sim"); }
+void esp_deep_sleep_start(void) { jwsim_fatal("deep sleep no está soportado por JWPLC Sim. No está en el plan de gates G0–G10."); }
 esp_err_t esp_light_sleep_start(void) { return ESP_ERR_NOT_SUPPORTED; }
-void esp_deep_sleep(uint64_t) { jwsim_fatal("deep sleep no soportado por JWPLC Sim"); }
+void esp_deep_sleep(uint64_t) { jwsim_fatal("deep sleep no está soportado por JWPLC Sim. No está en el plan de gates G0–G10."); }
 esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void) { return ESP_SLEEP_WAKEUP_UNDEFINED; }
 
 esp_cpu_cycle_count_t esp_cpu_get_cycle_count(void) {
