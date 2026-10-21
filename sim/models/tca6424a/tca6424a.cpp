@@ -51,8 +51,9 @@ uint8_t TCA6424A::input_port(int bank) const {
   for (int bit = 0; bit < 8; ++bit) {
     if (pins_[bank * 8 + bit]->level()) v |= static_cast<uint8_t>(1u << bit);
   }
-  // La inversión de polaridad aplica a los pines configurados como entrada.
-  return static_cast<uint8_t>(v ^ (polarity_[bank] & config_[bank]));
+  // La inversión de polaridad aplica a todos los bits del Input Port, sean
+  // entradas o salidas (TI E2E sobre SCPS193; ver MODEL.md fila 7).
+  return static_cast<uint8_t>(v ^ polarity_[bank]);
 }
 
 uint8_t TCA6424A::reg(uint8_t r) const {
@@ -105,7 +106,8 @@ void TCA6424A::update_interrupt() {
 
 void TCA6424A::advance_pointer() {
   if (!(command_ & 0x80)) return;   // AI = 0: el puntero no avanza
-  // AI = 1: avanza dentro del grupo de 3 registros y vuelve al primero.
+  // AI = 1: se incrementan los 2 bits menos significativos saltando la
+  // dirección reservada (x3), es decir x0 -> x1 -> x2 -> x0.
   const uint8_t base = command_ & 0x7C;
   uint8_t bank = static_cast<uint8_t>((command_ & 0x03) + 1);
   if (bank > 2) bank = 0;
