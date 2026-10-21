@@ -4,7 +4,8 @@
 JWSIM_G0_POC_IO_BASIC=PASS
 Package: platform-jwplc v2.1.0-alpha.12 (1011f2588fe0), sin modificaciones
 Sketch: tools/build-speed-benchmark/sketches/02_io_basic
-Host: Linux x86_64 (gcc 13.3) y Windows x86_64 (zig 0.17 / clang + MinGW-w64, ejecutado con wine 9.0)
+Host: Linux x86_64 (gcc 13.3) y Windows x86_64 (zig 0.17 / clang + MinGW-w64, ejecutado con wine 9.0).
+Desde G1 el destino Windows usa MinGW-w64 GCC (ARCHITECTURE §3.1, hallazgo H10); el hash de C5 no cambió.
 ```
 
 ## Objetivo
@@ -41,7 +42,7 @@ Reproducir:
 ```sh
 node scripts/fetch-package.mjs
 node scripts/gate-g0-poc.mjs                     # C1–C4
-JWSIM_ZIG=/ruta/a/zig node scripts/gate-g0-poc.mjs   # + C5 (Windows)
+node scripts/gate-g0-poc.mjs   # C5 (Windows) si hay MinGW-w64 GCC y wine
 ```
 
 ## Salida de consola

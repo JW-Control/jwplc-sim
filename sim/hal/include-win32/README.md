@@ -1,7 +1,6 @@
 # include-win32
 
-Capa de compatibilidad newlib/POSIX para el destino Windows (MinGW-w64 vía
-`zig cc`). Se antepone al include path **solo** al compilar para Windows.
+Capa de compatibilidad newlib/POSIX para el destino Windows (MinGW-w64 GCC). Se antepone al include path **solo** al compilar para Windows.
 
 El código del package (FS, SD) y FatFs de ESP-IDF asumen la libc newlib del
 toolchain xtensa: `dirent.d_type`, `stat.st_blksize`, `fsync`, `MAX()` en

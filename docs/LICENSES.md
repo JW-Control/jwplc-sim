@@ -43,7 +43,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | Headers sustitutos de ESP-IDF (`sim/hal/include`) | este repo | GPL-3.0-or-later | — | Declaraciones de API escritas desde cero; nombres y firmas por interoperabilidad. |
 | HAL nativo, motor, modelos, placa, runner | este repo | GPL-3.0-or-later (interfaz del SDK: MIT) | — | |
 | libstdc++ / glibc (Linux) | GCC / GNU | GPL-3.0 + excepción de runtime / LGPL-2.1+ | Sí | Excepción de runtime de GCC; glibc enlazada dinámicamente. |
-| libc++, CRT de MinGW-w64 (Windows vía zig) | LLVM / mingw-w64 | Apache-2.0 WITH LLVM-exception / ZPL-2.1 + dominio público | Sí | Se enlazan estáticamente en el `.exe` del runner; incluir avisos. |
+| libstdc++, libgcc, CRT y winpthreads de MinGW-w64 (Windows) | GCC / mingw-w64 | GPL-3.0 + excepción de runtime de GCC / ZPL-2.1 + dominio público / MIT + BSD-3-Clause (winpthreads) | Sí | Se enlazan estáticamente en el `.exe` del runner; la excepción de runtime permite cualquier licencia del ejecutable. Incluir avisos de mingw-w64 y winpthreads. |
 
 ### 2.2 Aplicación de escritorio
 
@@ -52,7 +52,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | Electron (Chromium + Node.js) | MIT (Electron, Node.js); BSD-3-Clause y otras (Chromium) | Distribuir `LICENSES.chromium.html` (electron-builder lo genera). |
 | Monaco Editor | MIT | |
 | three.js | MIT | |
-| zig (toolchain incluido: clang, lld, headers MinGW, libc++) | MIT + Apache-2.0 WITH LLVM-exception + avisos mingw-w64 | Herramienta, no se enlaza en la app; incluir licencias en el instalador. |
+| MinGW-w64 GCC 13 + binutils (toolchain incluido para compilar sketches) | GPL-3.0-or-later (GCC, binutils) + avisos mingw-w64 | Herramienta, no se enlaza en la app. Se distribuye sin modificar junto con sus fuentes o una oferta escrita (GPL §6), p. ej. enlazando la versión exacta de WinLibs/MSYS2 usada. |
 | Intérprete para dispositivos de escena (si se embebe QuickJS) | MIT | Opcional (G7). |
 | Playwright (solo desarrollo/CI) | Apache-2.0 | No se distribuye. |
 
@@ -136,7 +136,7 @@ solo de forma descriptiva ("compatible con…").
 ## 4. Obligaciones al distribuir el instalador
 
 1. Incluir `LICENSE` (GPL-3.0) y un `THIRD_PARTY_NOTICES` generado a partir
-   de esta matriz (Electron/Chromium, zig/LLVM/mingw-w64, Monaco, three.js).
+   de esta matriz (Electron/Chromium, GCC/binutils/mingw-w64, Monaco, three.js).
 2. Si el instalador incluye fuentes de terceros para compilar sin conexión
    (TFT_eSPI, FatFs), incluir sus licencias junto a ellas.
 3. Ofrecer el código fuente correspondiente (el repositorio público basta).

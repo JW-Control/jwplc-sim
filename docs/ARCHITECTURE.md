@@ -26,7 +26,7 @@ como **[G0]**.
 8. [Formato de proyecto `.jwsim` v1](#8-formato-de-proyecto-jwsim-v1)
 9. [Sincronización con el package](#9-sincronización-con-el-package)
 10. [Límites de fidelidad](#10-límites-de-fidelidad)
-11. [Hallazgos de G0 para el package](#11-hallazgos-de-g0-para-el-package)
+11. [Hallazgos para el package (G0–G1)](#11-hallazgos-para-el-package-g0g1)
 12. [Estructura del repositorio](#12-estructura-del-repositorio)
 
 ---
@@ -157,10 +157,18 @@ Basic simulado (WiFi, BLE, WebServer, Preferences, LittleFS…) con el motivo.
 Si el descubrimiento llega a una de ellas, la compilación se detiene con
 "la librería X (requerida por 'Y.h') no está soportada por JWPLC Sim: motivo".
 
-Toolchains: **Windows x86_64** con `zig cc` (MinGW-w64 + libc++; un solo
-binario redistribuible en el instalador) y nativo `gcc`/`clang` en Linux y
-macOS. **[G0]** El `.exe` de Windows y el binario Linux producen el mismo
-hash de traza.
+Toolchains **[G1]**: siempre **GCC**, el mismo compilador que el ESP32
+(`xtensa-esp32-elf-gcc`). clang rechaza código válido del package (H10), así
+que no se usa.
+
+| Destino (`--target`) | Compilador | Modelo de datos | Uso |
+|---|---|---|---|
+| `windows` | MinGW-w64 GCC 13 (hilos posix), estático; cruzado desde Linux con `x86_64-w64-mingw32-g++-posix` | LLP64: `int` y `long` de 32 bits, punteros de 64 | Destino principal (instalador) |
+| `native` | `gcc` del sistema | Linux/macOS: LP64 (`long` de 64 bits); Windows: LLP64 | Desarrollo y CI |
+| `linux-x86` | `gcc -m32`, estático | ILP32, igual que el ESP32 | Verificar código que depende de `sizeof(long) == 4` en Linux |
+
+**[G1]** El `.exe` de Windows, el binario Linux x86_64 y el binario
+`linux-x86` producen el mismo hash de traza en los sketches de referencia.
 
 ### 3.2 El autoload arrastra todo el ecosistema **[G0]**
 
@@ -194,6 +202,39 @@ con su justificación. Hoy:
   otra unidad incluye `TFT_eSPI.h`), así que no hay riesgo de ODR.
 - Windows: FatFs/SD/FS reciben `-include jwsim_fatfs_win32.h` para mantener
   los tipos C99 de FatFs (como en el ESP32).
+
+### 3.4 Modelo de datos **[G1]**
+
+El ESP32 es ILP32 (`int`, `long` y punteros de 32 bits). `millis()` y
+`micros()` devuelven `unsigned long`, y el HAL los trunca a 32 bits como en
+el chip, de modo que `micros()` desborda cada 2³² µs (71,6 min). El modismo
+`if (micros() - last >= periodo)` con `unsigned long` depende de que la resta
+también sea de 32 bits:
+
+- Windows (LLP64) y `linux-x86` (ILP32): `long` de 32 bits, comportamiento
+  idéntico al ESP32.
+- Linux/macOS x86_64 (LP64): `long` de 64 bits; en el desborde la resta da
+  un valor enorme y el `if` se dispara antes de tiempo. `tests/sketches/
+  micros_rollover` lo muestra: en LP64 hay un tick espurio a los 4 799 969 ms
+  (desborde de `micros()`); en ILP32 y en Windows el tick llega a los
+  4 800 004 ms como en la placa.
+
+Por eso el destino principal (Windows) es fiel en este punto, y en Linux se
+recomienda `--target linux-x86` para pruebas largas. Lo que sigue difiriendo
+en Windows es `sizeof` de punteros (`void *`, `size_t`, `intptr_t`: 8 bytes
+en vez de 4), visible solo en código que mide estructuras con punteros.
+
+### 3.5 Símbolos `weak` en Windows **[G1]**
+
+El core y las librerías del package usan `__attribute__((weak))` y alias
+weak (callbacks de `jwplc_peripherals.cpp`, `yield`, profilers H3E,
+`esp32-hal-*.c`). GCC para MinGW los emite como "weak externals" de COFF y
+GNU ld 2.41 y lld 18 no los resuelven si otro objeto los referencia
+("undefined reference"). `cli/lib/weak-pe.mjs` recorre los objetos con `nm`
+antes de enlazar y genera un objeto con un salto a la definición weak
+(cuando no hay definición fuerte) o con dirección 0 (referencia weak sin
+definición), que es exactamente la semántica ELF del ESP32. Si el sketch
+define el símbolo, gana su definición fuerte.
 
 ## 4. Placa virtual e interfaz de dispositivos
 
@@ -475,7 +516,7 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 
 | Área | Fiel | No fiel / pendiente |
 |---|---|---|
-| Lógica del sketch y librerías | Mismo código fuente que el firmware | Diferencias de compilador (int de 32 bits igual; `double` igual; UB del sketch puede comportarse distinto) |
+| Lógica del sketch y librerías | Mismo código fuente y mismo compilador (GCC) que el firmware; `int` y `long` de 32 bits en Windows y `linux-x86` (§3.4) | Punteros de 64 bits (`sizeof` de estructuras con punteros); `long` de 64 bits en Linux/macOS x86_64; UB del sketch puede comportarse distinto |
 | Tiempo | Ticks, delays, periodos del runtime, duración de buses | Tiempo de cómputo puro (modelo de costos calibrable, no ciclo-exacto) |
 | Doble núcleo | Afinidad, prioridades, apropiación en puntos de sincronización | Carreras finas entre núcleos sin puntos de sincronización |
 | Interrupciones | GPIO por flanco/nivel en contexto ISR del núcleo dueño | Latencia de entrada a la ISR (0 en el modelo), anidamiento por niveles de prioridad |
@@ -491,7 +532,7 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 Por eso el simulador **antecede** a los gates físicos de las alphas
 (`SIM_REGRESSION`), no los reemplaza.
 
-## 11. Hallazgos de G0 para el package
+## 11. Hallazgos para el package (G0–G1)
 
 Puntos de extensión o defectos detectados al compilar y ejecutar el package
 sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
@@ -507,23 +548,5 @@ sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
 | H7 | El sdkconfig de `esp32-libs 3.3.8` no está en el package. | Valores como `CONFIG_FATFS_*` o `CONFIG_ARDUINO_RUNNING_CORE` se fijaron por defecto. | Verificar contra el `sdkconfig` del tool y fijarlos en `sim/hal/include/sdkconfig.h`. |
 | H8 | Cuatro ejemplos de `JW_MatrixButtons` (`01_BasicPress`, `02_AxisWrapSerial`, `03_EventQueue`, `05_DirectButtons_IO35_IO34_IO39`) definen su propio `enum { BTN_LEFT, … }`, que choca con `JWPLCButtonId` de `JWPLC_GlobalPeripherals.h` (incluido por el autoload de `Arduino.h`). | No compilan con la placa `jwplcbasic`, tampoco en el Arduino IDE. | Renombrar los enumeradores de los ejemplos o poner `JWPLCButtonId` en un namespace / `enum class`. |
 | H9 | Sketches de `tools/build-speed-benchmark` que usan librerías retiradas antes de alpha.12 (`08_ethernet_bridge_link`, `09_gfx_bridge_link`, `10_gfx_physical`, `16_alpha6_ethernet_nonblocking_acceptance`). | No compilan con alpha.12. | Actualizarlos a `JWPLC_TFT`/`JWPLC_Ethernet` o moverlos a un archivo histórico. |
-
-## 12. Estructura del repositorio
-
-```text
-package.lock                 versión fijada del package (único lugar)
-third_party/sources.json     dependencias de terceros con SHA-256
-scripts/                     fetch-package, fetch-third-party, gates
-cli/                         jwsim-cli (build/run headless)
-sim/engine/                  planificador determinista, fibras, interfaz de dispositivos
-sim/hal/include/             headers sustitutos de ESP-IDF
-sim/hal/include-win32/       capa newlib/POSIX para Windows
-sim/hal/src/                 HAL nativo del Arduino core ESP32
-sim/models/                  modelos por registros (TCA6424A, …) + MODEL.md
-sim/boards/jwplcbasic/       placa virtual
-sim/runner/                  runner headless (estímulos, traza, estadísticas)
-sim/core-manifest.json       clasificación de fuentes del core del package
-tests/                       estímulos y casos de gates
-docs/                        ARCHITECTURE, GATES, LICENSES, informes
-apps/desktop/ (G2)           Electron
-```
+| H10 | `LogicV2EnginePrototype.cpp:7` y `RuntimeUIV2EditSession.cpp:14` inicializan `_links{}`, un arreglo de `LogicV2InputLink`, cuyo constructor por defecto es `constexpr explicit LogicV2InputLink(uint16_t = …)`. La inicialización de copia de lista con un constructor `explicit` está prohibida (CWG 1518); GCC la acepta, clang la rechaza. | Solo compila con GCC. El simulador usa GCC en todos los destinos (§3.1). | Quitar `explicit` del constructor con argumento por defecto o declarar un constructor por defecto no explícito. |
+| H11 | El ejemplo `JWPLC_LogicRuntime_V2_Engine_RAM` exige `sizeof(LogicV2EnginePrototype) <= MIN_ENGINE_STORAGE_BYTES + 64`, pero `MIN_ENGINE_STORAGE_BYTES` no cuenta `_timing[100]` ni `_startedAtMs[100]` (500 bytes). En ILP32 (como el ESP32) el motor mide 2852 bytes frente a 2324 + 64. | El ejemplo informa "56 PASS, 1 FAIL" en cualquier destino; previsiblemente también en la placa. | Incluir esos arreglos en `MIN_ENGINE_STORAGE_BYTES` o ajustar el margen. |

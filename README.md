@@ -24,8 +24,10 @@ Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 
 ## Prueba rápida (headless)
 
-Requisitos: Node.js ≥ 20, git, y `gcc`/`clang` (Linux) o `zig` (Windows,
-o compilación cruzada desde Linux con `--target windows` y `JWSIM_ZIG`).
+Requisitos: Node.js ≥ 20, git y GCC: `gcc`/`g++` en Linux, MinGW-w64 GCC
+en Windows (o `x86_64-w64-mingw32-g++-posix` para compilar desde Linux con
+`--target windows`; se ejecuta con wine). `--target linux-x86` (`gcc -m32`,
+paquete `g++-multilib`) reproduce el modelo de datos ILP32 del ESP32.
 
 ```sh
 node scripts/fetch-package.mjs        # descarga el tag fijado a .jwsim/ (no se versiona)
