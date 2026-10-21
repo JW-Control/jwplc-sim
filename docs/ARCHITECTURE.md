@@ -236,6 +236,12 @@ antes de enlazar y genera un objeto con un salto a la definición weak
 definición), que es exactamente la semántica ELF del ESP32. Si el sketch
 define el símbolo, gana su definición fuerte.
 
+GCC nombra el valor por defecto `.weak.X.<primer símbolo global del
+archivo>`, y dos unidades pueden generar el mismo nombre (en
+`JWPLC_LogicRuntime_UI` ambas empiezan con el `snprintf` inline de MinGW):
+esos nombres se renombran con `objcopy` en una copia del objeto, sin tocar la
+caché compartida.
+
 ## 4. Placa virtual e interfaz de dispositivos
 
 Definida en [`sim/engine/include/jwsim/devices.h`](../sim/engine/include/jwsim/devices.h).

@@ -335,10 +335,21 @@ export async function buildSketch(sketchDir, options = {}) {
     throw new Error(`${failures.length} unidades no compilaron`);
   }
 
+  // PE/COFF: resolución de símbolos weak (cli/lib/weak-pe.mjs).
+  let weakObj = null;
+  if (tc.weakPE) {
+    const w = resolveWeakPE(tc, objects.map((o) => o.obj), outDir);
+    w.objects.forEach((obj, i) => (objects[i] = { ...objects[i], obj }));
+    weakObj = w.asm.replace(/\.S$/, ".o");
+    const r = await run(tc.cc[0], [...tc.cc.slice(1), "-c", w.asm, "-o", weakObj]);
+    if (r.code !== 0) throw new Error(`no se pudo ensamblar ${w.asm}: ${r.out}`);
+    log(`[build] weak PE/COFF: ${w.thunks} definiciones elegidas, ${w.zeros} referencias a 0, ${w.renamed} objetos renombrados`);
+  }
+
   // Archivos .a por grupo (salvo sketch y runtime, que se enlazan directos).
   const groups = new Map();
   for (const o of objects) groups.set(o.group, [...(groups.get(o.group) ?? []), o.obj]);
-  const linkInputs = [...groups.get("sketch"), ...groups.get("jwsim")];
+  const linkInputs = [...groups.get("sketch"), ...groups.get("jwsim"), ...(weakObj ? [weakObj] : [])];
   const archives = [];
   for (const [group, objs] of groups) {
     if (group === "sketch" || group === "jwsim") continue;
@@ -347,14 +358,6 @@ export async function buildSketch(sketchDir, options = {}) {
     if (r.status !== 0) throw new Error(`ar falló para ${group}: ${r.stderr}`);
     spawnSync(process.platform === "win32" ? "cmd" : "mv", process.platform === "win32" ? ["/c", "move", "/y", ar + ".tmp", ar] : ["-f", ar + ".tmp", ar]);
     archives.push(ar);
-  }
-  if (tc.weakPE) {
-    const { asm, thunks, zeros } = resolveWeakPE(tc, objects.map((o) => o.obj), outDir);
-    const obj = asm.replace(/\.S$/, ".o");
-    const w = await run(tc.cc[0], [...tc.cc.slice(1), "-c", asm, "-o", obj]);
-    if (w.code !== 0) throw new Error(`no se pudo ensamblar ${asm}: ${w.out}`);
-    linkInputs.push(obj);
-    log(`[build] weak PE/COFF: ${thunks} definiciones elegidas, ${zeros} referencias a 0`);
   }
   const exe = join(outDir, `${sketchName}${tc.exeSuffix}`);
   const linkArgs = [...tc.cxx.slice(1), ...linkInputs, ...tc.groupStart, ...archives, ...tc.groupEnd, ...tc.ldflags, "-o", exe];
