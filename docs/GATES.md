@@ -22,7 +22,12 @@ Convenciones:
 JWSIM_G0_ARCH_DOC=PASS
 JWSIM_G0_LICENSE_MATRIX=PASS        (GPL-3.0-or-later adoptada; SDK MIT; materiales CC BY-SA 4.0)
 JWSIM_G0_POC_IO_BASIC=PASS
-JWSIM_G1_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G1_HAL_CORE=PASS              (Linux; Windows en docs/reports/G1.md)
+JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
+JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
+JWSIM_G1_SPEED_X10=PASS
+JWSIM_G1_PACKAGE_EXAMPLES_IO=PENDING (tablas de verdad PASS; calibración requiere medición en placa)
+JWSIM_G2_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---
@@ -71,6 +76,7 @@ JWSIM_G1_*=PENDING ... JWSIM_G10_*=PENDING
 | Gate | Criterios | Verificación |
 |---|---|---|
 | `JWSIM_G4_RTC_DS3232M` | Modelo por registros (hora, alarmas, control/estado, OSF, temperatura) con `MODEL.md`; `03.RTC_Basic` del package funciona; tiempo del RTC sigue al tiempo virtual (y opción de reloj del host). | Ejemplo del package + tests del modelo. |
+| `JWSIM_G4_NVS_PREFERENCES` | `Preferences` (NVS sobre flash) persistente en el proyecto; los 10 ejemplos de `JWPLC_LogicRuntime` que hoy se rechazan por usar `Preferences` compilan y pasan su verificación. | Ejemplos de `JWPLC_LogicRuntime` + test de persistencia. |
 | `JWSIM_G4_FRAM_PERSIST` | Modelo SPI FRAM (WREN/WRDI/RDSR/WRSR/READ/WRITE) de 8 KiB; contenido persistente en archivo del proyecto entre corridas; `04.FRAM_Basic` pasa. | Ejemplo + test de persistencia. |
 | `JWSIM_G4_SD_DATALOG` | Tarjeta SD en modo SPI (CMD0/8/55/41/58/9/10/17/18/24/25, CRC) sobre imagen FAT; FatFs real; VFS enruta `fopen("/sd/…")` a FatFs sin tocar el disco del host; `05.microSD_Basic` y DataLog pasan; detección de tarjeta. | Ejemplos + comparación de la imagen resultante. |
 | `JWSIM_G4_TFT_HMI` | Modelo ST7789 (comandos, ventana, RGB565, rotación, inversión) con framebuffer en la UI; HMI de `JWPLC_Display` visible y navegable con la botonera virtual; captura PNG comparable píxel a píxel con una referencia. | Comparación de capturas. |
