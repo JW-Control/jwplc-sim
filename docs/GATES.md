@@ -22,7 +22,7 @@ Convenciones:
 JWSIM_G0_ARCH_DOC=PASS
 JWSIM_G0_LICENSE_MATRIX=PASS        (GPL-3.0-or-later adoptada; SDK MIT; materiales CC BY-SA 4.0)
 JWSIM_G0_POC_IO_BASIC=PASS
-JWSIM_G1_HAL_CORE=PASS              (Linux; Windows en docs/reports/G1.md)
+JWSIM_G1_HAL_CORE=PASS              (Linux y Windows: 109/131 compilan, 0 fallas inesperadas)
 JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS
