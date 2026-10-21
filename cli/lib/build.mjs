@@ -19,6 +19,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { resolvePackageRoot } from "../../scripts/fetch-package.mjs";
 import { fetchAll, readSources, thirdPartyDir } from "../../scripts/fetch-third-party.mjs";
 import { toolchain } from "./toolchain.mjs";
+import { resolveWeakPE } from "./weak-pe.mjs";
 
 export const ROOT = resolve(import.meta.dirname, "..", "..");
 const SRC_EXT = /\.(c|cpp|cc|S)$/;
@@ -261,7 +262,7 @@ export async function buildSketch(sketchDir, options = {}) {
     seen.add(file);
     for (let attempt = 0; attempt < 64; attempt++) {
       const cc = file.endsWith(".c") ? tc.cc : tc.cxx;
-      // Salida a archivo (no /dev/null): `zig cc -E -o /dev/null` escribe a stdout.
+      // Salida a archivo (no /dev/null): portable a cualquier compilador y SO.
       const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", join(outDir, "discovery.i"), ...flagsFor(file), ...(isSketchFile.has(file) ? sketchOnlyIncludes : []).concat(includeDirs).map((d) => `-I${d}`), file], {
         encoding: "utf8",
         maxBuffer: 64 * 1024 * 1024,
@@ -346,6 +347,14 @@ export async function buildSketch(sketchDir, options = {}) {
     if (r.status !== 0) throw new Error(`ar falló para ${group}: ${r.stderr}`);
     spawnSync(process.platform === "win32" ? "cmd" : "mv", process.platform === "win32" ? ["/c", "move", "/y", ar + ".tmp", ar] : ["-f", ar + ".tmp", ar]);
     archives.push(ar);
+  }
+  if (tc.weakPE) {
+    const { asm, thunks, zeros } = resolveWeakPE(tc, objects.map((o) => o.obj), outDir);
+    const obj = asm.replace(/\.S$/, ".o");
+    const w = await run(tc.cc[0], [...tc.cc.slice(1), "-c", asm, "-o", obj]);
+    if (w.code !== 0) throw new Error(`no se pudo ensamblar ${asm}: ${w.out}`);
+    linkInputs.push(obj);
+    log(`[build] weak PE/COFF: ${thunks} definiciones elegidas, ${zeros} referencias a 0`);
   }
   const exe = join(outDir, `${sketchName}${tc.exeSuffix}`);
   const linkArgs = [...tc.cxx.slice(1), ...linkInputs, ...tc.groupStart, ...archives, ...tc.groupEnd, ...tc.ldflags, "-o", exe];

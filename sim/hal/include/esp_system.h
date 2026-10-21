@@ -6,6 +6,7 @@
 #include <stdbool.h>
 // newlib (toolchain xtensa) expone limits.h a través de stdlib/stdio; glibc no.
 #include <limits.h>
+#include <sys/types.h>  // newlib: time_t, off_t... vía stdio.h/stdlib.h
 #include "esp_err.h"
 #include "esp_random.h"
 
