@@ -1,0 +1,9 @@
+{
+  "jwsim": 0,
+  "name": "Marcha y parada (borrador v0)",
+  "sketch": "./sketch/marcha/marcha.ino",
+  "openplc": "./ladder/plc.xml",
+  "hmi": "./hmi/panel.hmi",
+  "realtime": 10,
+  "seed": 7
+}

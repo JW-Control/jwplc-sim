@@ -1,0 +1,12 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Marcha y parada",
+  "board": { "id": "jwplcbasic", "package": { "minRef": "v2.1.0-alpha.12" } },
+  "program": { "kind": "arduino", "sketch": "./sketch/marcha/marcha.ino" },
+  "links": { "openplc": "./ladder/plc.xml", "hmi": "./hmi/panel.hmi" },
+  "simulation": { "seed": 1, "realtimeFactor": 1 },
+  "scene": { "inputMode": "push", "inputs": { "I0_1": 1 } },
+  "x-notas": "campo desconocido: debe conservarse al guardar"
+}
