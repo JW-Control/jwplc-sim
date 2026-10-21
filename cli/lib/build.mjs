@@ -12,12 +12,13 @@
 //      runtime del simulador y sketch; enlazar un ejecutable nativo.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 import { resolvePackageRoot } from "../../scripts/fetch-package.mjs";
 import { fetchAll, readSources, thirdPartyDir } from "../../scripts/fetch-third-party.mjs";
+import { addPrototypes } from "./prototypes.mjs";
 import { toolchain } from "./toolchain.mjs";
 import { resolveWeakPE } from "./weak-pe.mjs";
 
@@ -53,15 +54,17 @@ export function preprocessSketch(sketchDir, outFile) {
   const main = `${name}.ino`;
   if (!files.includes(main)) throw new Error(`no existe ${main} en ${sketchDir}`);
   const ordered = [main, ...files.filter((f) => f !== main)];
-  // Igual que arduino-cli: Arduino.h primero y #line para mapear errores.
-  // (Los prototipos automáticos vía ctags quedan para G2 / ERROR_MAPPING.)
+  // Igual que arduino-cli: Arduino.h primero, #line para mapear errores y
+  // prototipos automáticos de las funciones de las pestañas .ino.
   let out = "#include <Arduino.h>\n";
   for (const f of ordered) {
     const abs = resolve(sketchDir, f).replaceAll("\\", "/");
     out += `#line 1 "${abs}"\n${readFileSync(join(sketchDir, f), "utf8")}\n`;
   }
+  out = addPrototypes(out);
   mkdirSync(dirname(outFile), { recursive: true });
-  writeFileSync(outFile, out);
+  // Solo si cambió: conserva la fecha y evita recompilar el sketch.
+  if (!existsSync(outFile) || readFileSync(outFile, "utf8") !== out) writeFileSync(outFile, out);
   const extra = readdirSync(sketchDir)
     .filter((f) => /\.(c|cpp|S)$/.test(f))
     .map((f) => join(sketchDir, f));
@@ -187,6 +190,14 @@ export async function buildSketch(sketchDir, options = {}) {
   const target = options.target ?? "native";
   const log = options.log ?? ((m) => console.error(m));
   const tc = toolchain(target, options.cc);
+  if (!tc.available) {
+    throw new Error(
+      `no se encontró el compilador ${tc.cxx[0]}. ` +
+        (process.platform === "win32"
+          ? "Instale el toolchain incluido (node scripts/fetch-toolchain.mjs) o MinGW-w64 GCC (WinLibs) en el PATH."
+          : "Instale gcc/g++ (y MinGW-w64 para --target windows)."),
+    );
+  }
 
   const { root: pkgRoot, lock } = resolvePackageRoot();
   await fetchAll();
@@ -337,16 +348,65 @@ export async function buildSketch(sketchDir, options = {}) {
   const simIncludes = [join(ROOT, "sim", "models", "include"), join(ROOT, "sim", "boards", boardId)];
 
   log(`[build] ${units.length} unidades, ${usedLibs.length} librerías, destino ${target}`);
+  const phase = process.env.JWSIM_BUILD_TIMING ? ((t0) => (name) => log(`[tiempo] ${name}: ${Math.round(performance.now() - t0)} ms`))(performance.now()) : () => {};
+  // Header precompilado para el .ino: el preprocesado empieza con
+  // #include <Arduino.h>, que con el autoload arrastra 16 librerías. GCC solo
+  // usa un PCH si es lo primero que se incluye, así que se precompila un
+  // prefijo con los -include forzados del toolchain y Arduino.h, en ese orden,
+  // y el .ino lo recibe con -include (su propio #include <Arduino.h> queda
+  // vacío por el guard). Si GCC no puede usarlo, se compila sin él: el
+  // resultado es idéntico.
+  // El PCH vive en la caché compartida, indexado por sus flags e include
+  // path: los sketches con las mismas librerías lo reutilizan.
+  const inoUnit = sketchSources[0];
+  const forced = [];
+  const inoFlags = [];
+  for (const f = flagsFor(inoUnit), i = { v: 0 }; i.v < f.length; i.v++) {
+    if (f[i.v] === "-include") forced.push(f[++i.v]);
+    else inoFlags.push(f[i.v]);
+  }
+  const pchIncs = includeDirs.map((d) => `-I${d}`);
+  const pchKey = hash([tc.cxx[0], ...inoFlags, ...forced, ...pchIncs].join("\0"));
+  const pchDir = join(cacheDir, "pch", pchKey);
+  const pchHeader = join(pchDir, "jwsim_sketch_prefix.h");
+  let usePch = !existsSync(join(pchDir, "disabled"));
+  if (usePch) {
+    mkdirSync(pchDir, { recursive: true });
+    const text = [...forced.map((f) => `#include "${f.replaceAll("\\", "/")}"`), "#include <Arduino.h>", ""].join("\n");
+    if (!existsSync(pchHeader) || readFileSync(pchHeader, "utf8") !== text) writeFileSync(pchHeader, text);
+    const pchFile = pchHeader + ".gch";
+    const pchArgs = [...tc.cxx.slice(1), "-x", "c++-header", "-MMD", ...inoFlags, ...pchIncs, pchHeader, "-o", pchFile];
+    const pchHash = hash(tc.cxx[0] + "\0" + pchArgs.join("\0"));
+    if (!upToDate(pchFile, pchHeader.replace(/\.h$/, ".d"), pchHash, pchFile + ".cmd")) {
+      // Escritura atómica: otro build puede estar usando el mismo PCH.
+      const tmp = `${pchFile}.${process.pid}.tmp`;
+      const args = pchArgs.map((x) => (x === pchFile ? tmp : x));
+      const r = await run(tc.cxx[0], [...args, "-MF", pchHeader.replace(/\.h$/, ".d")]);
+      if (r.code === 0) {
+        renameSync(tmp, pchFile);
+        writeFileSync(pchFile + ".cmd", pchHash);
+      }
+      else {
+        log("[build] aviso: no se pudo precompilar Arduino.h; se compila sin PCH");
+        writeFileSync(join(pchDir, "disabled"), r.out);
+        usePch = false;
+      }
+    }
+  }
+  phase("pch");
+
   const failures = [];
   const objects = await pool(units, availableParallelism(), async (u) => {
     const rel = relative(ROOT, u.file).split(sep).join("/").replace(/^\.jwsim\//, "");
     const cc = u.file.endsWith(".c") ? tc.cc : tc.cxx;
+    const withPch = usePch && u.file === inoUnit;
     const incs = [
       ...(u.group === "sketch" ? sketchOnlyIncludes : []),
       ...includeDirs,
       ...(u.group === "jwsim" ? simIncludes : []),
     ].map((d) => `-I${d}`);
-    const compile = [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file];
+    const flags = withPch ? [...inoFlags, "-include", pchHeader, "-Winvalid-pch"] : flagsFor(u.file);
+    const compile = [...cc.slice(1), "-c", "-MMD", ...flags, ...incs, u.file];
     const cmdHash = hash(cc[0] + "\0" + compile.join("\0"));
     // Caché de objetos compartida entre sketches: la clave es el comando
     // completo (flags + include path + archivo). El sketch va en su carpeta.
@@ -357,7 +417,13 @@ export async function buildSketch(sketchDir, options = {}) {
     mkdirSync(dirname(obj), { recursive: true });
     const args = [...compile, "-o", obj];
     if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd")) return { ...u, obj };
-    const r = await run(cc[0], args);
+    let r = await run(cc[0], args);
+    if (r.code !== 0 && withPch && /\.gch|precompiled|PCH/i.test(r.out)) {
+      // PCH inválido para este host (p. ej. reubicación en Windows): sin él.
+      writeFileSync(join(pchDir, "disabled"), r.out);
+      const plain = [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file, "-o", obj];
+      r = await run(cc[0], plain);
+    }
     if (r.code !== 0) {
       failures.push({ rel, out: r.out });
       return null;
@@ -373,6 +439,7 @@ export async function buildSketch(sketchDir, options = {}) {
     throw err;
   }
 
+  phase("compilación");
   // PE/COFF: resolución de símbolos weak (cli/lib/weak-pe.mjs).
   let weakObj = null;
   if (tc.weakPE) {
@@ -392,11 +459,22 @@ export async function buildSketch(sketchDir, options = {}) {
   for (const [group, objs] of groups) {
     if (group === "sketch" || group === "jwsim") continue;
     const ar = join(outDir, `${group}.a`);
+    // Se rehace solo si cambió la lista de objetos o alguno es más nuevo.
+    const stamp = hash(objs.join("\0"));
+    if (existsSync(ar) && existsSync(ar + ".list") && readFileSync(ar + ".list", "utf8") === stamp) {
+      const arTime = statSync(ar).mtimeMs;
+      if (objs.every((o) => statSync(o).mtimeMs <= arTime)) {
+        archives.push(ar);
+        continue;
+      }
+    }
     const r = spawnSync(tc.ar[0], [...tc.ar.slice(1), "rcs", ar + ".tmp", ...objs], { encoding: "utf8" });
     if (r.status !== 0) throw new Error(`ar falló para ${group}: ${r.stderr}`);
     spawnSync(process.platform === "win32" ? "cmd" : "mv", process.platform === "win32" ? ["/c", "move", "/y", ar + ".tmp", ar] : ["-f", ar + ".tmp", ar]);
+    writeFileSync(ar + ".list", stamp);
     archives.push(ar);
   }
+  phase("archivos .a");
   const exe = join(outDir, `${sketchName}${tc.exeSuffix}`);
   const linkArgs = [...tc.cxx.slice(1), ...linkInputs, ...tc.groupStart, ...archives, ...tc.groupEnd, ...tc.ldflags, "-o", exe];
   const r = await run(tc.cxx[0], linkArgs);
@@ -404,6 +482,7 @@ export async function buildSketch(sketchDir, options = {}) {
     log(r.out);
     throw new Error("el enlazado falló");
   }
+  phase("enlace");
   writeFileSync(
     join(outDir, "build-info.json"),
     JSON.stringify(

@@ -1,0 +1,11 @@
+{
+  "comment": "Toolchain GCC incluido para compilar sketches sin depender del PATH. sha256 vacío = sin fijar: node scripts/fetch-toolchain.mjs --lock en Windows lo calcula una vez y se versiona.",
+  "windows": {
+    "name": "winlibs-gcc",
+    "version": "14.2.0posix-12.0.0-ucrt-r3",
+    "url": "https://github.com/brechtsanders/winlibs_mingw/releases/download/14.2.0posix-19.1.7-12.0.0-ucrt-r3/winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r3.zip",
+    "sha256": "",
+    "bin": "mingw64/bin",
+    "license": "GCC y binutils: GPL-3.0-or-later; mingw-w64: ZPL-2.1 y otras (ver licenses/ dentro del zip)"
+  }
+}

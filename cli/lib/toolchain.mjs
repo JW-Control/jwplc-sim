@@ -13,6 +13,8 @@ import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { bundledToolchainBin } from "../../scripts/fetch-toolchain.mjs";
+
 const EXTRA = (process.env.JWSIM_EXTRA_FLAGS ?? "").split(/\s+/).filter(Boolean);
 const COMMON = ["-O1", "-g", "-fno-strict-aliasing", "-Wno-unused-parameter", ...EXTRA];
 
@@ -79,16 +81,20 @@ export function toolchain(target = "native", ccOverride) {
   const os = process.platform === "win32" ? "windows" : process.platform;
   // clang solo a pedido explícito (--cc clang): ver hallazgo H10.
   const useClang = ccOverride === "clang";
+  // Toolchain incluido (scripts/fetch-toolchain.mjs) antes que el del PATH.
+  const bin = useClang ? null : bundledToolchainBin();
+  const tool = (name) => (bin ? join(bin, name) : name);
   return {
     ...base(os),
     dataModel: os === "windows" ? "LLP64" : "LP64",
-    cc: [useClang ? "clang" : "gcc"],
-    cxx: [useClang ? "clang++" : "g++"],
-    ar: ["ar"],
-    nm: ["nm"],
-    objcopy: ["objcopy"],
+    bundled: !!bin,
+    cc: [useClang ? "clang" : tool("gcc")],
+    cxx: [useClang ? "clang++" : tool("g++")],
+    ar: [tool("ar")],
+    nm: [tool("nm")],
+    objcopy: [tool("objcopy")],
     weakPE: os === "windows" && !useClang,
     ldflags: os === "windows" ? ["-static", ...EXTRA] : ["-pthread", ...EXTRA],
-    available: which(useClang ? "clang++" : "g++"),
+    available: !!bin || which(useClang ? "clang++" : "g++"),
   };
 }
