@@ -1,0 +1,86 @@
+{
+  "$comment": "Clasificación de cada fuente de cores/jwcontrol del package para el build nativo. 'compile' = se compila sin cambios; 'replaced' = la API la implementa sim/hal (indicar archivo); 'excluded' = no aplica al JWPLC Basic simulado. Un archivo nuevo del package sin clasificar hace fallar el build (gate RELEASE_TREE_PARITY).",
+  "compile": [
+    "ColorFormat.c",
+    "FunctionalInterrupt.cpp",
+    "HEXBuilder.cpp",
+    "HardwareSerial.cpp",
+    "HashBuilder.cpp",
+    "IPAddress.cpp",
+    "MD5Builder.cpp",
+    "MacAddress.cpp",
+    "Print.cpp",
+    "Stream.cpp",
+    "StreamString.cpp",
+    "StringUtils.cpp",
+    "WMath.cpp",
+    "WString.cpp",
+    "base64.cpp",
+    "cbuf.cpp",
+    "esp32-hal-periman.c",
+    "freertos_stats.cpp",
+    "jwplc_peripherals.cpp",
+    "libb64/cdecode.c",
+    "libb64/cencode.c",
+    "main.cpp",
+    "peripherals/src/jwplc_i2c_bridge.cpp",
+    "peripherals/src/jwplc_spi_bus.cpp",
+    "peripherals/src/peripheral-tca6424a.c",
+    "peripherals_init.cpp",
+    "stdlib_noniso.c",
+    "wiring_pulse.c",
+    "wiring_shift.c"
+  ],
+  "replaced": {
+    "Esp.cpp": "sim/hal/src/esp_class.cpp",
+    "chip-debug-report.cpp": "sim/hal/src/arduino_misc.cpp",
+    "esp32-hal-misc.c": "sim/hal/src/arduino_misc.cpp",
+    "esp32-hal-cpu.c": "sim/hal/src/arduino_misc.cpp",
+    "esp32-hal-log-wrapper.c": "sim/hal/src/esp_system.cpp",
+    "esp32-hal-gpio.c": "sim/hal/src/gpio.cpp",
+    "esp32-hal-matrix.c": "sim/hal/src/gpio.cpp",
+    "esp32-hal-i2c.c": "sim/hal/src/i2c.cpp",
+    "esp32-hal-i2c-ng.c": "sim/hal/src/i2c.cpp",
+    "esp32-hal-i2c-slave.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-spi.c": "sim/hal/src/spi.cpp",
+    "esp32-hal-uart.c": "sim/hal/src/uart.cpp",
+    "esp32-hal-adc.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-dac.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-ledc.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-rmt.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-sigmadelta.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-timer.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-touch.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-touch-ng.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-time.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-psram.c": "sim/hal/src/arduino_misc.cpp",
+    "esp32-hal-rgb-led.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-bt.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-hosted.c": "sim/hal/src/unsupported.cpp",
+    "Tone.cpp": "sim/hal/src/unsupported.cpp",
+    "WireC.c": "sim/hal/src/unsupported.cpp"
+  },
+  "excluded": {
+    "FirmwareMSC.cpp": "USB nativo: el ESP32 del JWPLC Basic no tiene USB OTG",
+    "HWCDC.cpp": "USB-Serial-JTAG: no existe en ESP32",
+    "USB.cpp": "USB nativo: no existe en ESP32",
+    "USBCDC.cpp": "USB nativo: no existe en ESP32",
+    "USBMSC.cpp": "USB nativo: no existe en ESP32",
+    "firmware_msc_fat.c": "USB nativo: no existe en ESP32",
+    "esp32-hal-tinyusb.c": "USB nativo: no existe en ESP32",
+    "idf_openthread_mpool_wrapper.c": "OpenThread: no aplica al ESP32"
+  },
+  "flagOverrides": [
+    {
+      "match": ["libraries/JWPLC_TFT/src/JWPLC_TFT.cpp", "TFT_eSPI-2.5.43/TFT_eSPI.cpp"],
+      "add": ["-UESP32", "-UARDUINO_ARCH_ESP32"],
+      "why": "TFT_eSPI se compila con su procesador Generic (SPI.transfer + digitalWrite) en vez del procesador ESP32, que escribe registros GPIO/SPI por dirección física. El objeto TFT_eSPI queda encapsulado en JWPLC_TFT.cpp."
+    }
+  ],
+  "thirdPartyLibraries": {
+    "TFT_eSPI": { "source": "TFT_eSPI", "srcDir": ".", "sources": ["TFT_eSPI.cpp"] }
+  },
+  "idfComponents": {
+    "fatfs": { "source": "esp-idf-fatfs", "sources": ["ff.c", "ffsystem.c", "ffunicode.c", "diskio.c"] }
+  }
+}
