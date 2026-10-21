@@ -22,10 +22,10 @@ static char *jwsim_utoa_impl(unsigned long value, char *s, int radix, int negati
   return s;
 }
 
-#if !defined(_WIN32)
+#if !defined(_WIN32)  // MinGW ya ofrece itoa (msvcrt)
 char *itoa(int value, char *s, int radix) {
   if (value < 0 && radix == 10) return jwsim_utoa_impl((unsigned long)(-(long)value), s, radix, 1);
   return jwsim_utoa_impl((unsigned)value, s, radix, 0);
 }
-char *utoa(unsigned int value, char *s, int radix) { return jwsim_utoa_impl(value, s, radix, 0); }
 #endif
+char *utoa(unsigned int value, char *s, int radix) { return jwsim_utoa_impl(value, s, radix, 0); }

@@ -202,8 +202,10 @@ export async function buildSketch(sketchDir, options = {}) {
     ...splitDefines(board["build.defines"]),
     "-DJWPLC_LIBRARY_DISCOVERY_PHASE=0",
     "-DJWSIM=1",
+    ...(tc.os === "windows" ? ["-D_POSIX_THREAD_SAFE_FUNCTIONS"] : []),
   ];
   const baseIncludes = [
+    ...(tc.os === "windows" ? [join(ROOT, "sim", "hal", "include-win32")] : []),
     join(ROOT, "sim", "hal", "include"),
     join(ROOT, "sim", "engine", "include"),
     coreDir,
@@ -221,7 +223,8 @@ export async function buildSketch(sketchDir, options = {}) {
     const norm = file.split(sep).join("/");
     const extra = [];
     for (const o of manifest.flagOverrides ?? []) {
-      if (o.match.some((m) => norm.endsWith(m))) extra.push(...o.add);
+      if (o.os && o.os !== tc.os) continue;
+      if (o.match.some((m) => norm.endsWith(m))) extra.push(...o.add.map((a) => a.replaceAll("${ROOT}", ROOT)));
     }
     const isC = file.endsWith(".c");
     return [...(isC ? tc.cflags : tc.cxxflags), ...defines, ...extra];
@@ -237,8 +240,10 @@ export async function buildSketch(sketchDir, options = {}) {
     seen.add(file);
     for (let attempt = 0; attempt < 64; attempt++) {
       const cc = file.endsWith(".c") ? tc.cc : tc.cxx;
-      const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", tc.nullDevice, ...flagsFor(file), ...includeDirs.map((d) => `-I${d}`), file], {
+      // Salida a archivo (no /dev/null): `zig cc -E -o /dev/null` escribe a stdout.
+      const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", join(outDir, "discovery.i"), ...flagsFor(file), ...includeDirs.map((d) => `-I${d}`), file], {
         encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
       });
       const m = (r.stderr ?? "").match(/fatal error: ([^:\s]+): No such file/) ?? (r.stderr ?? "").match(/'([^']+)' file not found/);
       if (!m) break;

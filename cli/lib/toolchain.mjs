@@ -21,16 +21,17 @@ export function toolchain(target, ccOverride) {
     const zig = process.env.JWSIM_ZIG ?? "zig";
     const triple = target === "windows" ? ["-target", "x86_64-windows-gnu"] : [];
     return {
+      os: target === "windows" ? "windows" : process.platform,
       cc: [zig, "cc", ...triple],
       cxx: [zig, "c++", ...triple],
       ar: [zig, "ar"],
       cflags: ["-std=gnu17", ...COMMON],
-      cxxflags: ["-std=gnu++2b", ...COMMON],
+      // libc++ añade sobrecargas const de strchr/strstr; newlib (ESP32) no.
+      cxxflags: ["-std=gnu++2b", ...COMMON, "-D_LIBCPP_STRING_H_HAS_CONST_OVERLOADS"],
       ldflags: target === "windows" ? ["-static"] : [],
       groupStart: ["-Wl,--start-group"],
       groupEnd: ["-Wl,--end-group"],
       exeSuffix: target === "windows" ? ".exe" : "",
-      nullDevice: process.platform === "win32" ? "NUL" : "/dev/null",
     };
   }
   const useClang = ccOverride === "clang" || (!ccOverride && !which("g++") && which("clang++"));
@@ -38,6 +39,7 @@ export function toolchain(target, ccOverride) {
   const cxx = useClang ? "clang++" : "g++";
   const isGlibc = process.platform === "linux";
   return {
+    os: process.platform === "win32" ? "windows" : process.platform,
     cc: [cc],
     cxx: [cxx],
     ar: ["ar"],
@@ -49,6 +51,5 @@ export function toolchain(target, ccOverride) {
     groupStart: process.platform === "darwin" ? [] : ["-Wl,--start-group"],
     groupEnd: process.platform === "darwin" ? [] : ["-Wl,--end-group"],
     exeSuffix: process.platform === "win32" ? ".exe" : "",
-    nullDevice: process.platform === "win32" ? "NUL" : "/dev/null",
   };
 }

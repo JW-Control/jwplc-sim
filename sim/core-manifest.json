@@ -72,15 +72,53 @@
   },
   "flagOverrides": [
     {
-      "match": ["libraries/JWPLC_TFT/src/JWPLC_TFT.cpp", "TFT_eSPI-2.5.43/TFT_eSPI.cpp"],
-      "add": ["-UESP32", "-UARDUINO_ARCH_ESP32"],
+      "match": [
+        "libraries/JWPLC_TFT/src/JWPLC_TFT.cpp",
+        "TFT_eSPI-2.5.43/TFT_eSPI.cpp"
+      ],
+      "add": [
+        "-UESP32",
+        "-UARDUINO_ARCH_ESP32"
+      ],
       "why": "TFT_eSPI se compila con su procesador Generic (SPI.transfer + digitalWrite) en vez del procesador ESP32, que escribe registros GPIO/SPI por dirección física. El objeto TFT_eSPI queda encapsulado en JWPLC_TFT.cpp."
+    },
+    {
+      "os": "windows",
+      "match": [
+        "esp-idf-fatfs-5.5.1/ff.c",
+        "esp-idf-fatfs-5.5.1/ffsystem.c",
+        "esp-idf-fatfs-5.5.1/ffunicode.c",
+        "esp-idf-fatfs-5.5.1/diskio.c",
+        "libraries/SD/src/SD.cpp",
+        "libraries/SD/src/sd_diskio.cpp",
+        "libraries/FS/src/vfs_api.cpp",
+        "sim/hal/src/vfs_fat.cpp"
+      ],
+      "add": [
+        "-include",
+        "${ROOT}/sim/hal/include-win32/jwsim_fatfs_win32.h"
+      ],
+      "why": "Mantiene los tipos C99 de FatFs (como en el ESP32) aunque _WIN32 esté definido."
     }
   ],
   "thirdPartyLibraries": {
-    "TFT_eSPI": { "source": "TFT_eSPI", "srcDir": ".", "sources": ["TFT_eSPI.cpp"] }
+    "TFT_eSPI": {
+      "source": "TFT_eSPI",
+      "srcDir": ".",
+      "sources": [
+        "TFT_eSPI.cpp"
+      ]
+    }
   },
   "idfComponents": {
-    "fatfs": { "source": "esp-idf-fatfs", "sources": ["ff.c", "ffsystem.c", "ffunicode.c", "diskio.c"] }
+    "fatfs": {
+      "source": "esp-idf-fatfs",
+      "sources": [
+        "ff.c",
+        "ffsystem.c",
+        "ffunicode.c",
+        "diskio.c"
+      ]
+    }
   }
 }
