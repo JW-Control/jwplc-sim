@@ -77,9 +77,16 @@ for (const name of ["01.DigitalIO_Basic", "DigitalIO_BlockMirror", "JWPLC_IO_Blo
   criteria["DigitalIO_BlockRead"] = { pass: bad.length === 0, failures: bad };
 }
 {
+  // Imprime cada 1000 ms: cada línea debe coincidir con las entradas vigentes
+  // (se descartan las que caen a menos de 100 ms de un cambio de patrón).
   const ev = await run("06.Runtime_Cache_Status");
-  const bad = checkConsole(ev, /^IO ready=1 IN=0x([0-9A-F]{2}) /, (m) => parseInt(m[1], 16));
-  criteria["06.Runtime_Cache_Status"] = { pass: bad.length === 0, failures: bad };
+  const re = /^IO ready=1 IN=0x([0-9A-F]{2}) /;
+  const changes = PATTERNS.map((_, i) => PATTERN_T0 + PATTERN_DT * i);
+  const lines = ev.filter((e) => e.kind === "UART" && re.test(e.text) && !changes.some((c) => e.t >= c && e.t - c < 100));
+  const bad = lines
+    .filter((e) => parseInt(e.text.match(re)[1], 16) !== bitsAt(ev, "DI", e.t))
+    .map((e) => `t=${e.t}: consola ${e.text.match(re)[1]} DI=${hex(bitsAt(ev, "DI", e.t))}`);
+  criteria["06.Runtime_Cache_Status"] = { pass: bad.length === 0 && lines.length >= 6, checked_lines: lines.length, failures: bad };
 }
 {
   // Secuencia 0x88 -> 0x11 -> 0x00 con periodo de 1000 ms tras setup().
