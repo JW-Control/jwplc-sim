@@ -1,0 +1,8 @@
+# Versión del package JWPLC contra la que se compila y valida el simulador.
+# ÚNICO lugar donde se fija. Para sincronizar una alpha nueva: cambiar REF y
+# COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
+# (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
+JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
+JWPLC_PACKAGE_REF=v2.1.0-alpha.12
+JWPLC_PACKAGE_COMMIT=1011f2588fe02bdc67b14bef8c33ad3624426cb6
+JWPLC_PACKAGE_TREE=JWPLC/2.1.0

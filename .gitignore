@@ -1,0 +1,8 @@
+# Package JWPLC descargado (nunca se versiona aquí: cero copias del package)
+/.jwsim/
+# Artefactos de compilación
+/build/
+node_modules/
+*.o
+*.a
+*.exe
