@@ -46,7 +46,7 @@
     "esp32-hal-uart.c": "sim/hal/src/uart.cpp",
     "esp32-hal-adc.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-dac.c": "sim/hal/src/unsupported.cpp",
-    "esp32-hal-ledc.c": "sim/hal/src/unsupported.cpp",
+    "esp32-hal-ledc.c": "sim/hal/src/ledc.cpp",
     "esp32-hal-rmt.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-sigmadelta.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-timer.c": "sim/hal/src/unsupported.cpp",
@@ -57,7 +57,7 @@
     "esp32-hal-rgb-led.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-bt.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-hosted.c": "sim/hal/src/unsupported.cpp",
-    "Tone.cpp": "sim/hal/src/unsupported.cpp",
+    "Tone.cpp": "sim/hal/src/ledc.cpp",
     "WireC.c": "sim/hal/src/unsupported.cpp"
   },
   "excluded": {
@@ -120,5 +120,43 @@
         "diskio.c"
       ]
     }
+  },
+  "unsupportedLibraries": {
+    "WiFi": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "WiFiProv": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "BLE": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "SimpleBLE": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "BluetoothSerial": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "ESP_NOW": "el JWPLC Basic simulado no tiene radio (Wi-Fi/BLE). Use Ethernet (W5500, G4) o RS-485.",
+    "AsyncUDP": "requiere la pila lwIP del ESP32 (no simulada).",
+    "WebServer": "requiere la pila lwIP del ESP32 (no simulada).",
+    "HTTPClient": "requiere la pila lwIP del ESP32 (no simulada).",
+    "HTTPUpdate": "requiere la pila lwIP del ESP32 (no simulada).",
+    "HTTPUpdateServer": "requiere la pila lwIP del ESP32 (no simulada).",
+    "NetworkClientSecure": "requiere la pila lwIP del ESP32 (no simulada).",
+    "Network": "requiere la pila lwIP del ESP32 (no simulada).",
+    "ESPmDNS": "requiere la pila lwIP del ESP32 (no simulada).",
+    "NetBIOS": "requiere la pila lwIP del ESP32 (no simulada).",
+    "DNSServer": "requiere la pila lwIP del ESP32 (no simulada).",
+    "ArduinoOTA": "la actualización OTA no aplica al simulador.",
+    "Update": "la actualización de firmware no aplica al simulador.",
+    "Ethernet": "es el ETH de ESP-IDF (EMAC/PHY); el JWPLC Basic usa JWPLC_Ethernet (W5500).",
+    "PPP": "módem PPP no presente en el JWPLC Basic.",
+    "Matter": "no aplica al JWPLC Basic.",
+    "Zigbee": "no aplica al ESP32.",
+    "OpenThread": "no aplica al ESP32.",
+    "RainMaker": "requiere Wi-Fi.",
+    "Insights": "requiere Wi-Fi.",
+    "ESP_SR": "reconocimiento de voz: no aplica al ESP32.",
+    "TFLiteMicro": "no soportado todavía.",
+    "ESP_I2S": "I2S no está cableado en el JWPLC Basic.",
+    "USB": "el ESP32 no tiene USB nativo.",
+    "ESP_HostedOTA": "no aplica al ESP32.",
+    "SD_MMC": "el JWPLC Basic usa la microSD por SPI (librería SD / JW_SD).",
+    "Preferences": "NVS en flash todavía no simulada (use JW_FRAM).",
+    "EEPROM": "emulación EEPROM en flash todavía no simulada (use JW_FRAM).",
+    "LittleFS": "sistemas de archivos en flash todavía no simulados.",
+    "SPIFFS": "sistemas de archivos en flash todavía no simulados.",
+    "FFat": "sistemas de archivos en flash todavía no simulados."
   }
 }

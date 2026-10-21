@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "esp_attr.h"  // ESP-IDF lo expone a través de FreeRTOS
+
 #ifdef __cplusplus
 extern "C" {
 #endif
