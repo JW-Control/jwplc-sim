@@ -6,12 +6,37 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0 (arquitectura + prueba técnica)
-JWSIM_G0_ARCH_DOC=PASS
-JWSIM_G0_LICENSE_MATRIX=PASS
-JWSIM_G0_POC_IO_BASIC=PASS
+Estado: G0 y G1 cerrados (salvo calibración contra placa) · G2 en curso (MVP de la interfaz)
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
+
+Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
+
+![JWPLC Sim: editor, placa y consola serie](docs/img/g2-mvp.png)
+
+## Abrir la interfaz (MVP de G2)
+
+Requisitos:
+
+- Node.js ≥ 22 y Git.
+- GCC en el `PATH` (`gcc`, `g++`, `ar`, `nm`, `objcopy`):
+  - Windows: MinGW-w64 GCC ≥ 13 con hilos POSIX, por ejemplo
+    [WinLibs](https://winlibs.com/) (descomprimir y agregar `mingw64\bin`
+    al `PATH`).
+  - Linux: `gcc`/`g++` del sistema.
+
+```sh
+git clone https://github.com/JW-Control/jwplc-sim.git
+cd jwplc-sim
+node scripts/fetch-package.mjs        # descarga platform-jwplc en el tag fijado
+cd app
+npm install
+npm start
+```
+
+La primera compilación tarda ~10–15 s (core + 16 librerías del package); las
+siguientes, ~2 s. Los ejemplos del package se copian a
+`Documentos/JWPLC Sim/` antes de editarlos. F5 compila y ejecuta, F6 pausa.
 
 ## Documentación
 

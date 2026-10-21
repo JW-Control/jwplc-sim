@@ -27,7 +27,13 @@ JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS
 JWSIM_G1_PACKAGE_EXAMPLES_IO=PENDING (tablas de verdad PASS; calibración requiere medición en placa)
-JWSIM_G2_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G2_SPLIT_UI=PENDING           (MVP: Sketch, Placa y Consola lado a lado; arranque 1,0 s; falta pestaña Buses)
+JWSIM_G2_LOCAL_COMPILE=PENDING      (incremental 2,0 s en Linux; falta medir en Windows y prototipos automáticos)
+JWSIM_G2_ERROR_MAPPING=PENDING      (error en la línea del .ino verificado; falta la prueba de 5 errores en 2 pestañas)
+JWSIM_G2_UNSUPPORTED_LIB_MSG=PENDING (mensaje en compilación desde G1; falta nombrar el gate que la soportará)
+JWSIM_G2_PROJECT_LINKING=PENDING
+JWSIM_G2_EXTERNAL_EDIT_RELOAD=PENDING
+JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---

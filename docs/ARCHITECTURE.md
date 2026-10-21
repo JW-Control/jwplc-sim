@@ -419,7 +419,11 @@ No garantizado (documentar al usuario y detectar cuando se pueda):
 
 Transporte: stdio del runner (pipes anónimos), tramas
 `[u32 longitud][u8 tipo][payload]`; payload JSON (UTF-8) para control y
-binario para datos masivos. El framebuffer de la TFT (170×320×2 B) va por
+binario para datos masivos. **[G2]** La longitud es little-endian y cuenta
+el byte de tipo más el payload; tipo 1 = JSON. El runner lo activa con
+`--port stdio` (`sim/runner/port.cpp`; lado Node en `app/lib/sim-port.mjs`)
+y reserva stdout para las tramas: los `printf` del firmware o del HAL van a
+stderr. El framebuffer de la TFT (170×320×2 B) va por
 memoria compartida con un contador de versión para no copiar por el pipe.
 
 | Dirección | Mensaje | Contenido |
@@ -437,6 +441,16 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 | runner→UI | `stopped` | motivo (`time`, `breakpoint`, `idle`, `fatal`), `t_ns`, hash |
 | runner→UI | `fatal` | API no soportada, `esp_restart`, assert, crash |
 | ambos | `horizon` | sincronización con el motor de escena (§6.6) |
+
+Implementado en el MVP de G2 **[G2]**: `hello` (placa y nivel de cada
+señal), `run` con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas
+`I0_k`, `quit`; del runner, `signals` (último nivel de cada señal que
+cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin cortar caracteres),
+`status` y `stopped`. Un `set` se agenda como evento en el instante virtual
+actual, igual que un `.stim`: una sesión interactiva es reproducible. En
+pausa queda pendiente y se aplica al continuar. Si el host no alcanza la
+velocidad pedida, el runner se re-sincroniza con el reloj en vez de
+acumular atraso.
 
 Reglas: versión de protocolo en `hello` con compatibilidad por versión mayor;
 todo mensaje lleva `t_ns` virtual; el runner nunca bloquea esperando a la UI
