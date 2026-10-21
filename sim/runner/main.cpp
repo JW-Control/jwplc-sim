@@ -4,6 +4,7 @@
 //
 //   <exe> [--until <ms>] [--set NAME=V@<ms>]... [--stim <archivo>] [--quiet]
 //         [--realtime <factor>] [--pause <t_ms>:<pared_ms>] [--seed <n>] [--stats]
+//   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
 // inicia comentario). NAME es una señal de bornera (I0_0..I0_7).
@@ -23,6 +24,7 @@
 
 #include "board.h"
 #include "jwsim/engine.h"
+#include "port.h"
 
 extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
@@ -92,6 +94,7 @@ int main(int argc, char **argv) {
   double pause_wall_ms = 0.0;
   bool quiet = false;
   bool stats = false;
+  bool port = false;
   std::vector<Stimulus> stims;
 
   for (int i = 1; i < argc; ++i) {
@@ -103,6 +106,10 @@ int main(int argc, char **argv) {
     if (a == "--until") until = parse_ms(next());
     else if (a == "--quiet") quiet = true;
     else if (a == "--stats") stats = true;
+    else if (a == "--port") {
+      if (next() != "stdio") usage("--port solo admite 'stdio'");
+      port = true;
+    }
     else if (a == "--realtime") realtime = std::atof(next().c_str());
     else if (a == "--pause") {
       // --pause <t_ms>:<pared_ms>: detiene la simulación en t (tiempo virtual
@@ -134,6 +141,11 @@ int main(int argc, char **argv) {
   // Arranque idéntico al firmware real: app_main() del core del package crea
   // loopTask, loop1Task y jwplcSystemTask; el planificador las ejecuta.
   app_main();
+  if (port) {
+    const int rc = jwsim::runner::run_port(board);
+    std::fflush(stdout);
+    std::_Exit(rc);
+  }
 
   const auto wall_start = std::chrono::steady_clock::now();
   jwsim_stop_reason reason = JWSIM_STOP_TIME;

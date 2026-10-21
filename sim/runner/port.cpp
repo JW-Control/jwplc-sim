@@ -1,0 +1,355 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Modo interactivo del runner (--port stdio): protocolo motor ↔ interfaz de
+// docs/ARCHITECTURE.md §7 sobre stdin/stdout.
+//
+// Tramas [u32 LE longitud][u8 tipo][payload]; longitud = 1 + payload. Tipo 1
+// = JSON UTF-8. Mensajes del MVP de G2:
+//   UI → runner : {"type":"run","speed":1|10|0}  (0 = lo más rápido posible)
+//                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
+//                 {"type":"quit"}
+//   runner → UI : hello · signals · serial · status · stopped
+// El firmware avanza en tramos de 1 ms virtual sincronizados con el reloj de
+// pared según la velocidad; los comandos se aplican entre tramos como eventos
+// en el instante virtual actual, así una sesión interactiva queda en la traza
+// igual que un archivo .stim.
+#include "port.h"
+
+#include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <map>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#define JWSIM_READ _read
+#define JWSIM_WRITE _write
+#define JWSIM_DUP _dup
+#define JWSIM_DUP2 _dup2
+#else
+#include <unistd.h>
+#define JWSIM_READ read
+#define JWSIM_WRITE write
+#define JWSIM_DUP dup
+#define JWSIM_DUP2 dup2
+#endif
+
+#include "jwsim/engine.h"
+
+namespace jwsim::runner {
+namespace {
+
+using Clock = std::chrono::steady_clock;
+using Fields = std::map<std::string, std::string>;
+
+constexpr uint8_t kFrameJson = 1;
+constexpr int kProtocolVersion = 1;
+constexpr auto kFlushPeriod = std::chrono::milliseconds(20);
+
+// ---------------------------------------------------------------- JSON
+// Lector de objetos JSON planos (cadenas, números, booleanos y null), que es
+// todo lo que envía la interfaz. Devuelve false ante un formato inesperado.
+bool parse_flat_object(const std::string &s, Fields &out) {
+  size_t i = 0;
+  auto ws = [&] {
+    while (i < s.size() && std::strchr(" \t\r\n", s[i])) ++i;
+  };
+  auto str = [&](std::string &v) {
+    if (s[i] != '"') return false;
+    for (++i; i < s.size() && s[i] != '"'; ++i) {
+      if (s[i] == '\\' && i + 1 < s.size()) {
+        const char e = s[++i];
+        v.push_back(e == 'n' ? '\n' : e == 't' ? '\t' : e == 'r' ? '\r' : e);
+      } else {
+        v.push_back(s[i]);
+      }
+    }
+    if (i >= s.size()) return false;
+    ++i;
+    return true;
+  };
+  ws();
+  if (i >= s.size() || s[i++] != '{') return false;
+  for (;;) {
+    ws();
+    if (i < s.size() && s[i] == '}') return true;
+    std::string key, val;
+    if (i >= s.size() || !str(key)) return false;
+    ws();
+    if (i >= s.size() || s[i++] != ':') return false;
+    ws();
+    if (i < s.size() && s[i] == '"') {
+      if (!str(val)) return false;
+    } else {
+      while (i < s.size() && !std::strchr(",}", s[i]) && !std::strchr(" \t\r\n", s[i])) val.push_back(s[i++]);
+    }
+    out[key] = val;
+    ws();
+    if (i < s.size() && s[i] == ',') {
+      ++i;
+      continue;
+    }
+    if (i < s.size() && s[i] == '}') return true;
+    return false;
+  }
+}
+
+void json_escape(std::string &out, const char *data, size_t len) {
+  for (size_t i = 0; i < len; ++i) {
+    const unsigned char c = static_cast<unsigned char>(data[i]);
+    if (c == '"' || c == '\\') {
+      out.push_back('\\');
+      out.push_back(static_cast<char>(c));
+    } else if (c == '\n') {
+      out += "\\n";
+    } else if (c == '\r') {
+      out += "\\r";
+    } else if (c == '\t') {
+      out += "\\t";
+    } else if (c < 0x20 || c == 0x7f) {
+      char buf[8];
+      std::snprintf(buf, sizeof(buf), "\\u%04x", c);
+      out += buf;
+    } else {
+      out.push_back(static_cast<char>(c));  // UTF-8 tal cual
+    }
+  }
+}
+
+std::string quoted(const std::string &s) {
+  std::string out = "\"";
+  json_escape(out, s.data(), s.size());
+  out.push_back('"');
+  return out;
+}
+
+// Largo del prefijo de `buf` que termina en un límite de carácter UTF-8: un
+// carácter partido entre dos envíos se guarda para el siguiente.
+size_t utf8_complete_prefix(const std::string &buf) {
+  size_t n = buf.size();
+  for (size_t back = 1; back <= 3 && back <= n; ++back) {
+    const unsigned char c = static_cast<unsigned char>(buf[n - back]);
+    if ((c & 0xC0) == 0x80) continue;  // byte de continuación
+    const size_t need = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC0 ? 2 : 1;
+    return need > back ? n - back : n;
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------- E/S
+int g_out_fd = -1;
+
+void send_json(const std::string &json) {
+  std::string frame(5, '\0');
+  const uint32_t len = static_cast<uint32_t>(json.size() + 1);
+  for (int b = 0; b < 4; ++b) frame[b] = static_cast<char>((len >> (8 * b)) & 0xff);
+  frame[4] = static_cast<char>(kFrameJson);
+  frame += json;
+  size_t off = 0;
+  while (off < frame.size()) {
+    const auto w = JWSIM_WRITE(g_out_fd, frame.data() + off, static_cast<unsigned>(frame.size() - off));
+    if (w <= 0) std::_Exit(0);  // la interfaz cerró el pipe
+    off += static_cast<size_t>(w);
+  }
+}
+
+struct Inbox {
+  std::mutex mu;
+  std::condition_variable cv;
+  std::deque<Fields> queue;
+  bool closed = false;
+};
+
+bool read_exact(void *dst, size_t len) {
+  auto *p = static_cast<char *>(dst);
+  while (len > 0) {
+    const auto r = JWSIM_READ(0, p, static_cast<unsigned>(len));
+    if (r <= 0) return false;
+    p += r;
+    len -= static_cast<size_t>(r);
+  }
+  return true;
+}
+
+void reader_thread(Inbox *inbox) {
+  for (;;) {
+    uint8_t head[5];
+    if (!read_exact(head, sizeof(head))) break;
+    const uint32_t len = head[0] | (head[1] << 8) | (head[2] << 16) | (static_cast<uint32_t>(head[3]) << 24);
+    if (len == 0 || len > (1u << 20)) break;
+    std::string body(len - 1, '\0');
+    if (len > 1 && !read_exact(body.data(), body.size())) break;
+    Fields f;
+    if (head[4] != kFrameJson || !parse_flat_object(body, f)) {
+      std::fprintf(stderr, "[jwsim] trama inválida de la interfaz; se ignora\n");
+      continue;
+    }
+    std::lock_guard<std::mutex> lk(inbox->mu);
+    inbox->queue.push_back(std::move(f));
+    inbox->cv.notify_one();
+  }
+  std::lock_guard<std::mutex> lk(inbox->mu);
+  inbox->closed = true;
+  inbox->cv.notify_one();
+}
+
+// ---------------------------------------------------------------- estado
+struct InputEvent {
+  jwsim::Net *net;
+  bool level;
+};
+
+void apply_input(void *arg, jwsim_ns_t) {
+  auto *e = static_cast<InputEvent *>(arg);
+  e->net->drive(e->level);
+}
+
+} // namespace
+
+int run_port(jwsim::boards::JwplcBasic &board) {
+  // stdout queda reservado a las tramas: cualquier printf del firmware o del
+  // HAL va a stderr, que la interfaz muestra como mensajes del sistema.
+  g_out_fd = JWSIM_DUP(1);
+  JWSIM_DUP2(2, 1);
+#if defined(_WIN32)
+  _setmode(g_out_fd, _O_BINARY);
+  _setmode(0, _O_BINARY);
+#endif
+  board.set_echo(false);
+
+  // Cambios de bornera y bytes de UART acumulados hasta el próximo envío.
+  std::map<std::string, bool> changed;
+  std::string serial[3];
+  const auto names = board.signal_names();
+  for (const auto &name : names) {
+    board.signal(name)->on_change([&changed, name](jwsim::Net &, bool level) { changed[name] = level; });
+  }
+  board.set_uart_sink([&serial](int port, const uint8_t *data, size_t len) {
+    serial[port].append(reinterpret_cast<const char *>(data), len);
+  });
+
+  {
+    std::string hello = "{\"type\":\"hello\",\"protocol\":" + std::to_string(kProtocolVersion) +
+                        ",\"board\":" + quoted(board.name()) + ",\"signals\":[";
+    bool first = true;
+    for (const auto &name : names) {
+      hello += (first ? "[" : ",[") + quoted(name) + "," + (board.signal(name)->level() ? "1" : "0") + "]";
+      first = false;
+    }
+    hello += "]}";
+    send_json(hello);
+  }
+
+  Inbox inbox;
+  std::thread(reader_thread, &inbox).detach();
+  std::deque<InputEvent> inputs;  // direcciones estables para los eventos
+
+  bool running = false;
+  double speed = 1.0;  // 0 = sin sincronizar con el reloj de pared
+  jwsim_ns_t base_t = jwsim_now();
+  Clock::time_point base_wall = Clock::now();
+  Clock::time_point last_flush = Clock::now();
+  bool quit = false;
+
+  auto flush = [&](bool force) {
+    const auto now = Clock::now();
+    if (!force && now - last_flush < kFlushPeriod) return;
+    last_flush = now;
+    const std::string t = std::to_string(jwsim_now());
+    if (!changed.empty()) {
+      std::string m = "{\"type\":\"signals\",\"t_ns\":" + t + ",\"changes\":[";
+      bool first = true;
+      for (const auto &[name, level] : changed) {
+        m += (first ? "[" : ",[") + quoted(name) + "," + (level ? "1" : "0") + "]";
+        first = false;
+      }
+      m += "]}";
+      send_json(m);
+      changed.clear();
+    } else {
+      send_json("{\"type\":\"status\",\"t_ns\":" + t + ",\"state\":\"" + (running ? "running" : "paused") + "\"}");
+    }
+    for (int p = 0; p < 3; ++p) {
+      const size_t n = utf8_complete_prefix(serial[p]);
+      if (n == 0) continue;
+      std::string m = "{\"type\":\"serial\",\"port\":" + std::to_string(p) + ",\"t_ns\":" + t + ",\"text\":\"";
+      json_escape(m, serial[p].data(), n);
+      m += "\"}";
+      send_json(m);
+      serial[p].erase(0, n);
+    }
+  };
+
+  auto handle = [&](const Fields &f) {
+    const auto type = f.count("type") ? f.at("type") : std::string();
+    if (type == "run") {
+      if (f.count("speed")) speed = std::max(0.0, std::atof(f.at("speed").c_str()));
+      running = true;
+      base_t = jwsim_now();
+      base_wall = Clock::now();
+    } else if (type == "pause") {
+      running = false;
+      flush(true);
+    } else if (type == "set") {
+      jwsim::Net *net = f.count("signal") ? board.signal(f.at("signal")) : nullptr;
+      if (!net || f.at("signal").rfind("I0_", 0) != 0) {
+        std::fprintf(stderr, "[jwsim] set: señal de entrada desconocida\n");
+        return;
+      }
+      const auto &v = f.count("value") ? f.at("value") : std::string("0");
+      inputs.push_back(InputEvent{net, v == "1" || v == "true"});
+      // En pausa el evento queda pendiente y se aplica al continuar, en el
+      // mismo instante virtual (el firmware no corre mientras tanto).
+      jwsim_schedule_event(jwsim_now(), apply_input, &inputs.back());
+    } else if (type == "quit") {
+      quit = true;
+    }
+  };
+
+  while (!quit) {
+    {
+      std::unique_lock<std::mutex> lk(inbox.mu);
+      if (!running) inbox.cv.wait_for(lk, kFlushPeriod, [&] { return !inbox.queue.empty() || inbox.closed; });
+      if (inbox.closed && inbox.queue.empty()) break;
+      std::deque<Fields> batch;
+      batch.swap(inbox.queue);
+      lk.unlock();
+      for (const auto &f : batch) handle(f);
+    }
+    if (quit) break;
+    if (!running) {
+      flush(false);
+      continue;
+    }
+    // Tramo de 1 ms virtual (10 ms a máxima velocidad para reducir el
+    // costo por tramo; los comandos se atienden igual cada ≤ 10 ms virtuales).
+    const jwsim_ns_t step = speed > 0.0 ? JWSIM_NS_PER_MS : 10 * JWSIM_NS_PER_MS;
+    jwsim_run_limits lim{jwsim_now() + step};
+    jwsim_run(&lim);
+    if (speed > 0.0) {
+      const auto target = base_wall + std::chrono::nanoseconds(static_cast<int64_t>((jwsim_now() - base_t) / speed));
+      // Si el host no da abasto, no se acumula atraso infinito.
+      if (Clock::now() - target > std::chrono::milliseconds(250)) {
+        base_t = jwsim_now();
+        base_wall = Clock::now();
+      } else {
+        std::this_thread::sleep_until(target);
+      }
+    }
+    flush(false);
+  }
+  flush(true);
+  send_json("{\"type\":\"stopped\",\"reason\":\"quit\",\"t_ns\":" + std::to_string(jwsim_now()) + "}");
+  return 0;
+}
+
+} // namespace jwsim::runner

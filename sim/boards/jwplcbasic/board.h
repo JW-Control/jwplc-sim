@@ -13,6 +13,7 @@
 #ifndef JWSIM_BOARD_JWPLCBASIC_H
 #define JWSIM_BOARD_JWPLCBASIC_H
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -36,6 +37,9 @@ class JwplcBasic : public Board {
 
   // Registro de eventos de bornera en consola (desactivable con --quiet).
   void set_echo(bool echo) { echo_ = echo; }
+  // Bytes crudos que el firmware transmite por cada UART (modo interactivo).
+  using UartSink = std::function<void(int port, const uint8_t *data, size_t len)>;
+  void set_uart_sink(UartSink sink) { uart_sink_ = std::move(sink); }
   uint8_t inputs() const;    // bit k = I0_k
   uint8_t outputs() const;   // bit k = Q0_k
   void flush_console();
@@ -54,6 +58,7 @@ class JwplcBasic : public Board {
   std::vector<std::string> order_;
   std::string console_line_[3];
   bool echo_ = true;
+  UartSink uart_sink_;
 };
 
 } // namespace jwsim::boards

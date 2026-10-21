@@ -98,6 +98,7 @@ uint8_t JwplcBasic::outputs() const {
 
 void JwplcBasic::uart_tx(int port, const uint8_t *data, size_t len) {
   if (port < 0 || port > 2) return;
+  if (uart_sink_) uart_sink_(port, data, len);
   std::string &line = console_line_[port];
   for (size_t i = 0; i < len; ++i) {
     const char c = static_cast<char>(data[i]);
