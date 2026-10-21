@@ -9,11 +9,12 @@
 //   C2 cada cambio de I0_0 sostenido >= 100 ms aparece en Q0_0 en <= 100 ms
 //   C3 ninguna otra salida cambia
 //   C4 N corridas con los mismos estímulos producen el mismo hash de traza
-//   C5 (opcional) el .exe de Windows produce el mismo hash (requiere JWSIM_ZIG y wine)
+//   C5 (opcional) el .exe de Windows produce el mismo hash (requiere MinGW-w64 GCC y wine)
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
+import { toolchain } from "../cli/lib/toolchain.mjs";
 import { resolvePackageRoot } from "./fetch-package.mjs";
 import { runExe, WINE } from "./lib/gate-util.mjs";
 
@@ -87,9 +88,8 @@ async function main() {
   for (let i = 1; i < RUNS; i++) hashes.add(parseRun(run(exe, [...args, "--quiet"])).result.hash);
   report.criteria.C4_determinism = { pass: hashes.size === 1, runs: RUNS, hashes: [...hashes] };
 
-  const zig = process.env.JWSIM_ZIG;
   const wine = WINE;
-  if (zig) {
+  if (toolchain("windows").available) {
     const win = await buildSketch(sketch, { target: "windows", log: () => {} });
     const c5 = { built: true, exe: win.exe };
     if (wine) {
@@ -102,7 +102,7 @@ async function main() {
     }
     report.criteria.C5_windows = c5;
   } else {
-    report.criteria.C5_windows = { pass: null, note: "omitido: defina JWSIM_ZIG para compilar el destino Windows" };
+    report.criteria.C5_windows = { pass: null, note: "omitido: falta MinGW-w64 GCC (x86_64-w64-mingw32-g++) para compilar el destino Windows" };
   }
 
   const pass = Object.values(report.criteria).every((c) => c.pass !== false);

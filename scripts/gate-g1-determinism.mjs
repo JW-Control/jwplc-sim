@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Gate JWSIM_G1_DETERMINISM: N corridas (100 por defecto) de cada sketch de
-// referencia con su .stim producen un único hash; con JWSIM_ZIG y wine, el
+// referencia con su .stim producen un único hash; con MinGW-w64 GCC y wine, el
 // .exe de Windows produce el mismo hash que el binario nativo.
 import { join } from "node:path";
 
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
+import { toolchain } from "../cli/lib/toolchain.mjs";
 import { resolvePackageRoot } from "./fetch-package.mjs";
 import { parseResult, printCriteria, runExe, WINE, writeReport } from "./lib/gate-util.mjs";
 
@@ -29,7 +30,7 @@ const CASES = [
 ];
 
 const criteria = {};
-const zig = process.env.JWSIM_ZIG;
+const hasWindows = toolchain("windows").available;
 for (const c of CASES) {
   const { exe } = await buildSketch(c.dir, { log: () => {} });
   const hashes = new Map();
@@ -39,14 +40,14 @@ for (const c of CASES) {
     hashes.set(h, (hashes.get(h) ?? 0) + 1);
   }
   const entry = { pass: hashes.size === 1, runs: RUNS, hashes: Object.fromEntries(hashes) };
-  if (zig && WINE) {
+  if (hasWindows && WINE) {
     const win = await buildSketch(c.dir, { target: "windows", log: () => {} });
     const winHashes = new Set();
     for (let i = 0; i < WIN_RUNS; i++) winHashes.add(parseResult(runExe(win.exe, [...c.args, "--quiet"]).stdout)?.trace_hash);
     entry.windows = { runs: WIN_RUNS, hashes: [...winHashes] };
     entry.pass = entry.pass && winHashes.size === 1 && hashes.has([...winHashes][0]);
   } else {
-    entry.windows = "omitido (defina JWSIM_ZIG y tenga wine para comparar Windows)";
+    entry.windows = "omitido (se necesitan MinGW-w64 GCC y wine para comparar Windows)";
   }
   criteria[c.name] = entry;
 }
