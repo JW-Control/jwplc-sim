@@ -135,6 +135,17 @@ function hash(text) {
   return createHash("sha1").update(text).digest("hex").slice(0, 16);
 }
 
+// Mensajes de GCC "archivo:línea:columna: error|warning|note: texto". Las
+// rutas del .ino llegan tal cual gracias a los #line del preprocesado.
+export function parseDiagnostics(text) {
+  const out = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^(.+?):(\d+):(\d+): (fatal error|error|warning|note): (.*)$/);
+    if (m) out.push({ file: m[1], line: Number(m[2]), column: Number(m[3]), severity: m[4] === "fatal error" ? "error" : m[4], message: m[5] });
+  }
+  return out;
+}
+
 function run(cmd, args, opts = {}) {
   return new Promise((resolvePromise) => {
     const child = spawn(cmd, args, { ...opts, stdio: ["ignore", "pipe", "pipe"] });
@@ -332,7 +343,10 @@ export async function buildSketch(sketchDir, options = {}) {
   });
   if (failures.length) {
     for (const f of failures) log(`\n[build] ERROR compilando ${f.rel}\n${f.out}`);
-    throw new Error(`${failures.length} unidades no compilaron`);
+    const err = new Error(`${failures.length} unidades no compilaron`);
+    err.diagnostics = failures.flatMap((f) => parseDiagnostics(f.out));
+    err.output = failures.map((f) => `${f.rel}\n${f.out}`).join("\n");
+    throw err;
   }
 
   // PE/COFF: resolución de símbolos weak (cli/lib/weak-pe.mjs).
