@@ -7,8 +7,8 @@
 // = JSON UTF-8. Mensajes del MVP de G2:
 //   UI → runner : {"type":"run","speed":1|10|0}  (0 = lo más rápido posible)
 //                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
-//                 {"type":"quit"}
-//   runner → UI : hello · signals · serial · status · stopped
+//                 {"type":"subscribe","buses":1|0} · {"type":"quit"}
+//   runner → UI : hello · signals · serial · bus · status · stopped
 // El firmware avanza en tramos de 1 ms virtual sincronizados con el reloj de
 // pared según la velocidad; los comandos se aplican entre tramos como eventos
 // en el instante virtual actual, así una sesión interactiva queda en la traza
@@ -54,6 +54,20 @@ using Fields = std::map<std::string, std::string>;
 constexpr uint8_t kFrameJson = 1;
 constexpr int kProtocolVersion = 1;
 constexpr auto kFlushPeriod = std::chrono::milliseconds(20);
+constexpr size_t kBusMaxItems = 400;  // por envío; el resto se cuenta como descartado
+constexpr size_t kBusMaxUartBytes = 256;
+
+std::string hex(const uint8_t *data, size_t len) {
+  static const char *digits = "0123456789abcdef";
+  std::string out;
+  out.reserve(len * 3);
+  for (size_t i = 0; i < len; ++i) {
+    if (i) out.push_back(' ');
+    out.push_back(digits[data[i] >> 4]);
+    out.push_back(digits[data[i] & 15]);
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------- JSON
 // Lector de objetos JSON planos (cadenas, números, booleanos y null), que es
@@ -233,9 +247,32 @@ int run_port(jwsim::boards::JwplcBasic &board) {
   for (const auto &name : names) {
     board.signal(name)->on_change([&changed, name](jwsim::Net &, bool level) { changed[name] = level; });
   }
-  board.set_uart_sink([&serial](int port, const uint8_t *data, size_t len) {
+  // Monitor de buses (pestaña Buses): solo mientras la interfaz lo pide.
+  bool bus_on = false;
+  std::string bus_items;
+  size_t bus_count = 0;
+  size_t bus_dropped = 0;
+  std::string uart_bus[3];
+  auto bus_item = [&](const std::string &item) {
+    if (bus_count >= kBusMaxItems) {
+      ++bus_dropped;
+      return;
+    }
+    if (bus_count++) bus_items.push_back(',');
+    bus_items += item;
+  };
+  board.set_uart_sink([&](int port, const uint8_t *data, size_t len) {
     serial[port].append(reinterpret_cast<const char *>(data), len);
+    if (bus_on) uart_bus[port].append(reinterpret_cast<const char *>(data), len);
   });
+  if (jwsim::I2CBus *i2c = board.i2c_bus(0)) {
+    i2c->observe([&](const jwsim::I2CBus &bus, uint8_t addr, const uint8_t *w, size_t wl, const uint8_t *r, size_t rl,
+                     jwsim::I2CResult res) {
+      if (!bus_on) return;
+      bus_item("[" + std::to_string(jwsim_now()) + "," + quoted(bus.name()) + "," + std::to_string(addr) + ",\"" + hex(w, wl) +
+               "\",\"" + hex(r, rl) + "\"," + std::to_string(static_cast<int>(res)) + "]");
+    });
+  }
 
   {
     std::string hello = "{\"type\":\"hello\",\"protocol\":" + std::to_string(kProtocolVersion) +
@@ -278,6 +315,20 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     } else {
       send_json("{\"type\":\"status\",\"t_ns\":" + t + ",\"state\":\"" + (running ? "running" : "paused") + "\"}");
     }
+    for (int p = 0; p < 3 && bus_on; ++p) {
+      if (uart_bus[p].empty()) continue;
+      const size_t n = std::min(uart_bus[p].size(), kBusMaxUartBytes);
+      std::string data = hex(reinterpret_cast<const uint8_t *>(uart_bus[p].data()), n);
+      if (uart_bus[p].size() > n) data += " …";
+      bus_item("[" + t + ",\"UART" + std::to_string(p) + " TX\",-1,\"" + data + "\",\"\",0]");
+      uart_bus[p].clear();
+    }
+    if (bus_count || bus_dropped) {
+      send_json("{\"type\":\"bus\",\"t_ns\":" + t + ",\"dropped\":" + std::to_string(bus_dropped) + ",\"items\":[" + bus_items + "]}");
+      bus_items.clear();
+      bus_count = 0;
+      bus_dropped = 0;
+    }
     for (int p = 0; p < 3; ++p) {
       const size_t n = utf8_complete_prefix(serial[p]);
       if (n == 0) continue;
@@ -310,6 +361,13 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       // En pausa el evento queda pendiente y se aplica al continuar, en el
       // mismo instante virtual (el firmware no corre mientras tanto).
       jwsim_schedule_event(jwsim_now(), apply_input, &inputs.back());
+    } else if (type == "subscribe") {
+      bus_on = f.count("buses") && (f.at("buses") == "1" || f.at("buses") == "true");
+      if (!bus_on) {
+        bus_items.clear();
+        bus_count = bus_dropped = 0;
+        for (auto &u : uart_bus) u.clear();
+      }
     } else if (type == "quit") {
       quit = true;
     }
