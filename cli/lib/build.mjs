@@ -264,8 +264,30 @@ export async function buildSketch(sketchDir, options = {}) {
 
   // Descubrimiento iterativo de librerías.
   const sketchSources = preprocessSketch(resolve(sketchDir), join(outDir, "sketch", `${sketchName}.ino.cpp`));
-  const queue = [...sketchSources];
   const isSketchFile = new Set(sketchSources);
+  // Caché del descubrimiento: las librerías usadas dependen solo de las
+  // directivas del preprocesador del sketch (el package está fijado), así que
+  // un cambio en el cuerpo de loop() no repite el preprocesado de ~90 fuentes.
+  const directives = readdirSync(resolve(sketchDir))
+    .filter((f) => /\.(ino|h|hh|hpp|c|cpp|cc|S|inc)$/i.test(f) || f === "build_opt.h")
+    .sort()
+    .map((f) => `${f}\n${readFileSync(join(sketchDir, f), "utf8").split(/\r?\n/).filter((l) => /^\s*#/.test(l)).join("\n")}`);
+  const discoveryKey = hash(
+    JSON.stringify([lock.JWPLC_PACKAGE_COMMIT, target, tc.cxx, defines, directives, readFileSync(join(ROOT, "sim", "core-manifest.json"), "utf8")]),
+  );
+  const discoveryFile = join(outDir, "discovery.json");
+  let cached = null;
+  if (existsSync(discoveryFile)) {
+    const d = JSON.parse(readFileSync(discoveryFile, "utf8"));
+    if (d.key === discoveryKey) cached = d.libraries.map((n) => libs.find((l) => l.name === n));
+  }
+  const queue = cached ? [] : [...sketchSources];
+  for (const lib of cached && !cached.includes(undefined) ? cached : []) {
+    usedLibs.push(lib);
+    includeDirs.push(...lib.includeDirs);
+    log(`[build] librería: ${lib.name}${lib.origin === "third-party" ? " (terceros)" : ""} (caché)`);
+  }
+  if (cached?.includes(undefined)) queue.push(...sketchSources);
   const seen = new Set();
   while (queue.length) {
     const file = queue.shift();
@@ -297,6 +319,8 @@ export async function buildSketch(sketchDir, options = {}) {
       log(`[build] librería: ${lib.name}${lib.origin === "third-party" ? " (terceros)" : ""}`);
     }
   }
+
+  writeFileSync(discoveryFile, JSON.stringify({ key: discoveryKey, libraries: usedLibs.map((l) => l.name) }) + "\n");
 
   // Unidades de compilación agrupadas en archivos .a (como el build real).
   const units = [];
