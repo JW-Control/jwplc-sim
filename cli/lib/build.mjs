@@ -38,6 +38,13 @@ function splitDefines(text) {
   return (text ?? "").split(/\s+/).filter((t) => t.startsWith("-D") || t.startsWith("-U"));
 }
 
+// Opciones del archivo build_opt.h del sketch (una o varias por línea).
+export function readBuildOpt(sketchDir) {
+  const f = join(sketchDir, "build_opt.h");
+  if (!existsSync(f)) return [];
+  return (readFileSync(f, "utf8").match(/"[^"]*"|\S+/g) ?? []).map((t) => t.replace(/^"(.*)"$/, "$1"));
+}
+
 // ------------------------------------------------------------ sketch
 export function preprocessSketch(sketchDir, outFile) {
   const name = basename(sketchDir);
@@ -180,6 +187,7 @@ export async function buildSketch(sketchDir, options = {}) {
 
   const sketchName = basename(resolve(sketchDir));
   const outDir = resolve(options.outDir ?? join(ROOT, "build", `${sketchName}-${target}`));
+  const cacheDir = join(ROOT, "build", "cache", target);
   mkdirSync(outDir, { recursive: true });
 
   // Coherencia del manifiesto del core contra el árbol del package.
@@ -202,11 +210,21 @@ export async function buildSketch(sketchDir, options = {}) {
     "-DCORE_DEBUG_LEVEL=0",
     "-DARDUINO_USB_CDC_ON_BOOT=0",
     ...splitDefines(board["build.defines"]),
+    `-DARDUINO_PARTITION_${board["build.partitions"]}`,
+    // build_opt.h del sketch (platform.txt: "@{build.opt.path}" en todas las unidades).
+    ...readBuildOpt(resolve(sketchDir)),
     "-DJWPLC_LIBRARY_DISCOVERY_PHASE=0",
     "-DJWSIM=1",
     ...(tc.os === "windows" ? ["-D_POSIX_THREAD_SAFE_FUNCTIONS"] : []),
   ];
+  // platform.txt pone "-I{build.source.path}" (carpeta original del sketch)
+  // en todas las unidades. Si la carpeta no tiene headers, solo puede afectar
+  // a las unidades del sketch (#include "../otro/x.ino"); así se conserva la
+  // caché de objetos compartida entre sketches.
+  const sketchHasHeaders = readdirSync(resolve(sketchDir)).some((f) => /\.(h|hh|hpp|inc)$/i.test(f) && f !== "build_opt.h");
+  const sketchOnlyIncludes = sketchHasHeaders ? [] : [resolve(sketchDir)];
   const baseIncludes = [
+    ...(sketchHasHeaders ? [resolve(sketchDir)] : []),
     ...(tc.os === "windows" ? [join(ROOT, "sim", "hal", "include-win32")] : []),
     join(ROOT, "sim", "hal", "include"),
     join(ROOT, "sim", "engine", "include"),
@@ -235,6 +253,7 @@ export async function buildSketch(sketchDir, options = {}) {
   // Descubrimiento iterativo de librerías.
   const sketchSources = preprocessSketch(resolve(sketchDir), join(outDir, "sketch", `${sketchName}.ino.cpp`));
   const queue = [...sketchSources];
+  const isSketchFile = new Set(sketchSources);
   const seen = new Set();
   while (queue.length) {
     const file = queue.shift();
@@ -243,7 +262,7 @@ export async function buildSketch(sketchDir, options = {}) {
     for (let attempt = 0; attempt < 64; attempt++) {
       const cc = file.endsWith(".c") ? tc.cc : tc.cxx;
       // Salida a archivo (no /dev/null): `zig cc -E -o /dev/null` escribe a stdout.
-      const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", join(outDir, "discovery.i"), ...flagsFor(file), ...includeDirs.map((d) => `-I${d}`), file], {
+      const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", join(outDir, "discovery.i"), ...flagsFor(file), ...(isSketchFile.has(file) ? sketchOnlyIncludes : []).concat(includeDirs).map((d) => `-I${d}`), file], {
         encoding: "utf8",
         maxBuffer: 64 * 1024 * 1024,
       });
@@ -255,6 +274,10 @@ export async function buildSketch(sketchDir, options = {}) {
         throw new Error(`${relative(ROOT, file)}: falta '${m[1]}' y ninguna librería del package lo provee.`);
       }
       const lib = pickLibrary(header, candidates);
+      const unsupported = manifest.unsupportedLibraries?.[lib.name];
+      if (unsupported) {
+        throw new Error(`la librería ${lib.name} (requerida por '${m[1]}') no está soportada por JWPLC Sim: ${unsupported}`);
+      }
       if (usedLibs.includes(lib)) throw new Error(`no se pudo resolver '${m[1]}' desde ${lib.name}`);
       usedLibs.push(lib);
       includeDirs.push(...lib.includeDirs);
@@ -281,12 +304,22 @@ export async function buildSketch(sketchDir, options = {}) {
   const failures = [];
   const objects = await pool(units, availableParallelism(), async (u) => {
     const rel = relative(ROOT, u.file).split(sep).join("/").replace(/^\.jwsim\//, "");
-    const obj = join(outDir, "obj", u.group, hash(u.file) + "_" + basename(u.file) + ".o");
-    mkdirSync(dirname(obj), { recursive: true });
     const cc = u.file.endsWith(".c") ? tc.cc : tc.cxx;
-    const incs = [...includeDirs, ...(u.group === "jwsim" ? simIncludes : [])].map((d) => `-I${d}`);
-    const args = [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file, "-o", obj];
-    const cmdHash = hash(cc[0] + "\0" + args.join("\0"));
+    const incs = [
+      ...(u.group === "sketch" ? sketchOnlyIncludes : []),
+      ...includeDirs,
+      ...(u.group === "jwsim" ? simIncludes : []),
+    ].map((d) => `-I${d}`);
+    const compile = [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file];
+    const cmdHash = hash(cc[0] + "\0" + compile.join("\0"));
+    // Caché de objetos compartida entre sketches: la clave es el comando
+    // completo (flags + include path + archivo). El sketch va en su carpeta.
+    const obj =
+      u.group === "sketch"
+        ? join(outDir, "obj", "sketch", hash(u.file) + "_" + basename(u.file) + ".o")
+        : join(cacheDir, cmdHash + "_" + basename(u.file) + ".o");
+    mkdirSync(dirname(obj), { recursive: true });
+    const args = [...compile, "-o", obj];
     if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd")) return { ...u, obj };
     const r = await run(cc[0], args);
     if (r.code !== 0) {
