@@ -3,7 +3,7 @@
 // Runner headless del firmware simulado (modo G0/G5: consola + traza).
 //
 //   <exe> [--until <ms>] [--set NAME=V@<ms>]... [--stim <archivo>] [--quiet]
-//         [--realtime <factor>] [--seed <n>] [--stats]
+//         [--realtime <factor>] [--pause <t_ms>:<pared_ms>] [--seed <n>] [--stats]
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
 // inicia comentario). NAME es una señal de bornera (I0_0..I0_7).
@@ -88,6 +88,8 @@ void apply_stimulus(void *arg, jwsim_ns_t) {
 int main(int argc, char **argv) {
   jwsim_ns_t until = 1000 * JWSIM_NS_PER_MS;
   double realtime = 0.0;
+  jwsim_ns_t pause_at = JWSIM_NS_FOREVER;
+  double pause_wall_ms = 0.0;
   bool quiet = false;
   bool stats = false;
   std::vector<Stimulus> stims;
@@ -102,6 +104,15 @@ int main(int argc, char **argv) {
     else if (a == "--quiet") quiet = true;
     else if (a == "--stats") stats = true;
     else if (a == "--realtime") realtime = std::atof(next().c_str());
+    else if (a == "--pause") {
+      // --pause <t_ms>:<pared_ms>: detiene la simulación en t (tiempo virtual
+      // congelado) durante pared_ms de reloj real y luego continúa.
+      const std::string v = next();
+      const auto colon = v.find(':');
+      if (colon == std::string::npos) usage("--pause requiere <t_ms>:<pared_ms>");
+      pause_at = parse_ms(v.substr(0, colon));
+      pause_wall_ms = std::atof(v.substr(colon + 1).c_str());
+    }
     else if (a == "--seed") jwsim_seed_random(std::strtoull(next().c_str(), nullptr, 0));
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--set") {
@@ -125,20 +136,35 @@ int main(int argc, char **argv) {
   app_main();
 
   const auto wall_start = std::chrono::steady_clock::now();
-  jwsim_stop_reason reason;
-  if (realtime > 0.0) {
-    // Ejecución sincronizada con el reloj de pared (x factor), en tramos de 1 ms.
-    jwsim_ns_t t = 0;
+  jwsim_stop_reason reason = JWSIM_STOP_TIME;
+  double max_lag_ms = 0.0;
+  // Ejecuta [desde, hasta). Con --realtime avanza en tramos de 1 ms
+  // sincronizados con el reloj de pared; `base` es el instante de pared que
+  // corresponde a t = 0 (se corre tras una pausa).
+  auto run_segment = [&](jwsim_ns_t from, jwsim_ns_t to, std::chrono::steady_clock::time_point base) {
+    if (realtime <= 0.0) {
+      jwsim_run_limits lim{to};
+      reason = jwsim_run(&lim);
+      return;
+    }
+    jwsim_ns_t t = from;
     do {
-      t = std::min<jwsim_ns_t>(until, t + JWSIM_NS_PER_MS);
+      t = std::min<jwsim_ns_t>(to, t + JWSIM_NS_PER_MS);
       jwsim_run_limits lim{t};
       reason = jwsim_run(&lim);
-      const auto target = wall_start + std::chrono::nanoseconds(static_cast<int64_t>(t / realtime));
+      const auto target = base + std::chrono::nanoseconds(static_cast<int64_t>(t / realtime));
+      const double lag = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - target).count();
+      max_lag_ms = std::max(max_lag_ms, lag);
       std::this_thread::sleep_until(target);
-    } while (t < until && reason == JWSIM_STOP_TIME);
+    } while (t < to && reason == JWSIM_STOP_TIME);
+  };
+  if (pause_at < until) {
+    run_segment(0, pause_at, wall_start);
+    const auto pause_ns = std::chrono::nanoseconds(static_cast<int64_t>(pause_wall_ms * 1e6));
+    std::this_thread::sleep_for(pause_ns);   // pausa: no se llama jwsim_run()
+    run_segment(pause_at, until, wall_start + pause_ns);
   } else {
-    jwsim_run_limits lim{until};
-    reason = jwsim_run(&lim);
+    run_segment(0, until, wall_start);
   }
   const double wall_ms =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - wall_start).count();
@@ -161,11 +187,11 @@ int main(int argc, char **argv) {
     return s;
   };
   std::printf("JWSIM_RESULT t_end_ms=%.3f stop=%s DI=%s DO=%s trace_events=%" PRIu64 " trace_hash=0x%016" PRIx64
-              " wall_ms=%.1f\n",
+              " wall_ms=%.1f rt_max_lag_ms=%.3f\n",
               static_cast<double>(jwsim_now()) / 1e6,
               reason == JWSIM_STOP_TIME ? "time" : reason == JWSIM_STOP_IDLE ? "idle" : "request",
               bits(board.inputs()).c_str(), bits(board.outputs()).c_str(), jwsim_trace_count(), jwsim_trace_hash(),
-              wall_ms);
+              wall_ms, realtime > 0.0 ? max_lag_ms : 0.0);
   std::fflush(stdout);
   // Las tareas del firmware nunca terminan: se sale sin destruir sus pilas.
   std::_Exit(0);
