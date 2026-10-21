@@ -9,7 +9,7 @@ SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
 [[annotations]]
-path = ["package.lock", "third_party/sources.json", "sim/core-manifest.json", "tests/**", ".gitignore", "REUSE.toml"]
+path = ["package.lock", "third_party/sources.json", "sim/core-manifest.json", "tests/**", ".gitignore", "REUSE.toml", "app/package.json", "app/package-lock.json"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "GPL-3.0-or-later"

@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: 2026 JW Control -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:"
+    />
+    <title>JWPLC Sim</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="../node_modules/monaco-editor/min/vs/editor/editor.main.css" />
+  </head>
+  <body>
+    <header class="toolbar">
+      <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
+      <div class="group">
+        <button id="btn-new" title="Nuevo sketch (Ctrl+N)">Nuevo</button>
+        <button id="btn-open" title="Abrir sketch (Ctrl+O)">Abrir…</button>
+        <select id="sel-example" title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">
+          <option value="">Ejemplos…</option>
+        </select>
+        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
+      </div>
+      <div class="group">
+        <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
+        <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
+        <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
+      </div>
+      <div class="group speed" role="radiogroup" aria-label="Velocidad">
+        <span class="label">Velocidad</span>
+        <button data-speed="1" class="seg active" role="radio" aria-checked="true">×1</button>
+        <button data-speed="10" class="seg" role="radio" aria-checked="false">×10</button>
+        <button data-speed="0" class="seg" role="radio" aria-checked="false" title="Lo más rápido posible">Máx</button>
+      </div>
+      <div class="clock" title="Tiempo virtual del PLC simulado">
+        <span class="label">t</span><span id="clock">00:00:00.000</span>
+      </div>
+      <div id="status" class="status idle">Detenido</div>
+    </header>
+
+    <main class="workspace">
+      <section class="pane code-pane">
+        <div class="tabs" id="tabs"></div>
+        <div id="editor"></div>
+        <div class="build-output" id="output-panel">
+          <div class="panel-head">
+            <span>Salida de compilación</span>
+            <span id="problems-count" class="count"></span>
+            <button id="btn-output-toggle" class="ghost small">Ocultar</button>
+          </div>
+          <ul id="problems" class="problems"></ul>
+          <pre id="build-log" class="log"></pre>
+        </div>
+      </section>
+
+      <section class="pane sim-pane">
+        <div class="board-card">
+          <div class="panel-head">
+            <span>Placa</span>
+            <span class="muted" id="board-name">JWPLC Basic</span>
+            <div class="mode" role="radiogroup" aria-label="Modo de las entradas">
+              <button class="seg active" data-mode="toggle" role="radio" aria-checked="true" title="Clic alterna la entrada">Interruptor</button>
+              <button class="seg" data-mode="push" role="radio" aria-checked="false" title="La entrada está activa mientras se mantiene presionada">Pulsador</button>
+            </div>
+          </div>
+          <div class="plc">
+            <div class="terminal-strip top">
+              <div class="strip-title">ENTRADAS DIGITALES · 24 VDC</div>
+              <div class="io-row" id="inputs"></div>
+            </div>
+            <div class="plc-body">
+              <div class="plc-name">
+                <strong>JWPLC</strong> Basic
+                <span class="plc-sub">ESP32 · TCA6424A</span>
+              </div>
+              <div class="plc-leds">
+                <span class="led-sm" id="led-pwr" title="Alimentación"></span><span>PWR</span>
+                <span class="led-sm" id="led-run" title="Firmware en ejecución"></span><span>RUN</span>
+                <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
+              </div>
+              <div class="screen" title="Pantalla TFT (llega en G4)">
+                <span>TFT 170×320</span>
+                <small>disponible en G4</small>
+              </div>
+            </div>
+            <div class="terminal-strip bottom">
+              <div class="io-row" id="outputs"></div>
+              <div class="strip-title">SALIDAS RELÉ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="console-card">
+          <div class="panel-head">
+            <span>Consola serie</span>
+            <span class="muted">UART0 · 115200</span>
+            <button id="btn-console-clear" class="ghost small">Limpiar</button>
+          </div>
+          <pre id="console" class="console"></pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="sb-sketch">Sin sketch</span>
+      <span id="sb-package"></span>
+      <span id="sb-build"></span>
+    </footer>
+
+    <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
