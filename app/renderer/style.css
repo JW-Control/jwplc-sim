@@ -36,16 +36,18 @@ body {
 body {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 button,
 select {
+  white-space: nowrap;
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 5px 9px;
   cursor: pointer;
 }
 button:hover:not(:disabled),
@@ -84,12 +86,16 @@ select:focus-visible {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  gap: 10px;
   padding: 8px 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
 .brand {
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -133,7 +139,7 @@ select:focus-visible {
   color: #fff;
 }
 #sel-example {
-  max-width: 220px;
+  max-width: 180px;
 }
 .clock {
   margin-left: auto;
@@ -149,7 +155,8 @@ select:focus-visible {
   margin-right: 8px;
 }
 .status {
-  min-width: 110px;
+  white-space: nowrap;
+  min-width: 96px;
   text-align: center;
   padding: 4px 10px;
   border-radius: 999px;
@@ -243,7 +250,7 @@ select:focus-visible {
   text-transform: none;
   letter-spacing: 0;
 }
-.panel-head > button,
+.panel-head > button.ghost,
 .panel-head > .mode {
   margin-left: auto;
 }
@@ -269,8 +276,10 @@ select:focus-visible {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 45%;
+  flex: 0 0 auto;
+  max-height: 96px;
   overflow: auto;
+  border-bottom: 1px solid var(--border);
 }
 .problems li {
   padding: 3px 10px;
@@ -294,7 +303,8 @@ select:focus-visible {
 .console {
   margin: 0;
   padding: 8px 10px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   font-family: var(--mono);
   font-size: 12px;
@@ -325,6 +335,66 @@ select:focus-visible {
 .console {
   color: #c8f0d6;
   background: #0e1114;
+}
+.tabbar {
+  gap: 4px;
+  padding: 4px 8px;
+}
+.ptab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 3px 10px;
+}
+.ptab.active {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--panel-2);
+}
+.tabbar #view-note {
+  margin-left: 8px;
+}
+.tabbar #btn-view-clear {
+  margin-left: auto;
+}
+.buses {
+  flex: 1;
+  overflow: auto;
+  background: #0e1114;
+}
+.buses table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.buses th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.buses td {
+  padding: 2px 8px;
+  border-bottom: 1px solid #1b2026;
+  white-space: nowrap;
+  color: #b9c4cf;
+}
+.buses td.data {
+  white-space: normal;
+  word-break: break-all;
+  color: #d7dee7;
+}
+.buses tr.nack td {
+  color: var(--err);
 }
 .console .sys {
   color: var(--muted);

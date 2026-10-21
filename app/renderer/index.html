@@ -24,12 +24,16 @@
         <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
       </div>
       <div class="group">
+        <span class="label">Proyecto</span>
+        <button id="btn-project-open" title="Abrir proyecto .jwsim (Ctrl+Mayús+O)">Abrir</button>
+        <button id="btn-project-save" title="Guardar proyecto .jwsim (Ctrl+Mayús+S)">Guardar</button>
+      </div>
+      <div class="group">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
         <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
         <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
       </div>
-      <div class="group speed" role="radiogroup" aria-label="Velocidad">
-        <span class="label">Velocidad</span>
+      <div class="group speed" role="radiogroup" aria-label="Velocidad" title="Velocidad de la simulación">
         <button data-speed="1" class="seg active" role="radio" aria-checked="true">×1</button>
         <button data-speed="10" class="seg" role="radio" aria-checked="false">×10</button>
         <button data-speed="0" class="seg" role="radio" aria-checked="false" title="Lo más rápido posible">Máx</button>
@@ -93,18 +97,28 @@
         </div>
 
         <div class="console-card">
-          <div class="panel-head">
-            <span>Consola serie</span>
-            <span class="muted">UART0 · 115200</span>
-            <button id="btn-console-clear" class="ghost small">Limpiar</button>
+          <div class="panel-head tabbar" role="tablist">
+            <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console">Consola serie</button>
+            <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses">Buses</button>
+            <span class="muted" id="view-note">UART0 · 115200</span>
+            <button id="btn-view-clear" class="ghost small">Limpiar</button>
           </div>
-          <pre id="console" class="console"></pre>
+          <pre id="console" class="console view" data-view="console"></pre>
+          <div id="buses" class="buses view" data-view="buses" hidden>
+            <table>
+              <thead>
+                <tr><th>t (ms)</th><th>Bus</th><th>Dispositivo</th><th>Operación</th><th>Datos</th></tr>
+              </thead>
+              <tbody id="bus-rows"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="statusbar">
       <span id="sb-sketch">Sin sketch</span>
+      <span id="sb-project"></span>
       <span id="sb-package"></span>
       <span id="sb-build"></span>
     </footer>

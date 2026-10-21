@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Proceso principal de JWPLC Sim (Electron): ventana, sketches del usuario,
 // compilación con jwsim-cli y ciclo de vida del runner (un PLC simulado).
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { buildSketch } from "../cli/lib/build.mjs";
+import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 
@@ -31,6 +32,10 @@ void loop()
 
 let win = null;
 let runner = null;
+let watcher = null;
+// Contenido que la propia app escribió: un evento de fs.watch con ese mismo
+// contenido no es una edición externa.
+const ownWrites = new Map();
 
 // Carpeta de trabajo: los ejemplos del package se copian aquí antes de
 // editarlos (el package fijado nunca se modifica).
@@ -125,8 +130,74 @@ ipcMain.handle("sketch:save", (_e, { dir, files }) => {
   for (const f of files) {
     const p = resolve(dir, f.name);
     if (dirname(p) !== resolve(dir)) throw new Error(`nombre de archivo inválido: ${f.name}`);
+    ownWrites.set(p, f.content);
     writeFileSync(p, f.content);
   }
+  return true;
+});
+
+// ---------------------------------------------------------------- proyectos
+ipcMain.handle("project:open", async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: "Abrir proyecto",
+    defaultPath: workspaceDir(),
+    properties: ["openFile"],
+    filters: [{ name: "Proyecto JWPLC Sim", extensions: ["jwsim"] }],
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  return openProject(r.filePaths[0]);
+});
+
+function openProject(file) {
+  const { project, migratedFrom, links, missing } = loadProject(file);
+  if (missing.some((m) => m.link === "sketch")) throw new Error(`el sketch vinculado no existe: ${links.sketch}`);
+  return { file, project, migratedFrom, links, missing, sketch: readSketch(dirname(links.sketch)) };
+}
+ipcMain.handle("project:openFile", (_e, file) => openProject(file));
+
+ipcMain.handle("project:save", async (_e, { file, project, sketchDir, simulation, scene }) => {
+  let target = file;
+  if (!target) {
+    const r = await dialog.showSaveDialog(win, {
+      title: "Guardar proyecto",
+      defaultPath: join(dirname(sketchDir), `${basename(sketchDir)}.jwsim`),
+      filters: [{ name: "Proyecto JWPLC Sim", extensions: ["jwsim"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    target = r.filePath;
+  }
+  const saved = saveProject(target, project ?? { name: basename(sketchDir) }, {
+    sketchPath: join(sketchDir, `${basename(sketchDir)}.ino`),
+    simulation,
+    scene,
+  });
+  return { file: target, project: saved };
+});
+
+// ---------------------------------------------------------------- recarga externa
+// Vigila la carpeta del sketch: un cambio hecho fuera (Arduino IDE, otro
+// editor) llega a la interfaz, que recarga el editor y la simulación.
+ipcMain.handle("watch:set", (_e, dir) => {
+  watcher?.close();
+  watcher = null;
+  if (!dir) return false;
+  const pending = new Map();
+  watcher = watch(dir, (_event, name) => {
+    if (!name || !SKETCH_EXT.has(extname(name).toLowerCase())) return;
+    const p = join(dir, name);
+    clearTimeout(pending.get(p));
+    // Los editores suelen escribir en varios pasos: se espera a que se asiente.
+    pending.set(
+      p,
+      setTimeout(() => {
+        if (!existsSync(p)) return;
+        const content = readFileSync(p, "utf8");
+        if (ownWrites.get(p) === content) return;
+        ownWrites.set(p, content);
+        forward("fs:changed", { name, path: p, content, at: Date.now() });
+      }, 60),
+    );
+  });
   return true;
 });
 
@@ -177,6 +248,9 @@ function buildMenu() {
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
           { label: "Guardar", accelerator: "CmdOrCtrl+S", click: send("save") },
           { type: "separator" },
+          { label: "Abrir proyecto…", accelerator: "CmdOrCtrl+Shift+O", click: send("openProject") },
+          { label: "Guardar proyecto", accelerator: "CmdOrCtrl+Shift+S", click: send("saveProject") },
+          { type: "separator" },
           { label: "Abrir carpeta de trabajo", click: () => shell.openPath(workspaceDir()) },
           { type: "separator" },
           { role: "quit", label: "Salir" },
@@ -225,6 +299,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  watcher?.close();
   stopRunner();
   app.quit();
 });
