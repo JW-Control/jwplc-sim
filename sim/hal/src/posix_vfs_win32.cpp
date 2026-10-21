@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Funciones POSIX estilo newlib para el destino Windows (ver
 // sim/hal/include-win32/README.md). En G0 no hay sistemas de archivos
 // simulados montados: todo responde ENOENT. G4 (SD_DATALOG) enruta estas

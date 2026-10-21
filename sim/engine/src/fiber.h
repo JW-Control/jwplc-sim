@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Contextos de ejecución cooperativos (fibras) para las tareas simuladas.
 // Implementaciones: fiber_posix.cpp (ucontext) y fiber_win32.cpp (Fibers).
 #ifndef JWSIM_FIBER_H

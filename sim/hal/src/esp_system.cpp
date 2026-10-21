@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Servicios de sistema de ESP-IDF sobre el motor: tiempo, aleatorios
 // deterministas, log, reinicio, heap y stubs de periféricos internos.
 #include <cstdarg>

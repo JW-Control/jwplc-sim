@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Reemplaza esp32-hal-misc.c, esp32-hal-cpu.c, esp32-hal-psram.c y
 // chip-debug-report.cpp: tiempo Arduino sobre el reloj virtual, arranque y
 // utilidades de CPU.

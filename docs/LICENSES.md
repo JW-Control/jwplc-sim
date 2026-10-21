@@ -2,8 +2,8 @@
 
 ```text
 Gate: JWSIM_G0_LICENSE_MATRIX
-Recomendación: GPL-3.0-or-later para el simulador
-Estado de la decisión: PENDIENTE de confirmación del titular (JW Control)
+Licencia del simulador: GPL-3.0-or-later (adoptada por el titular)
+SDK de dispositivos: MIT · Materiales y documentación: CC BY-SA 4.0
 ```
 
 > Este documento es un análisis técnico de compatibilidad, no asesoría
@@ -40,8 +40,8 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | `libb64` (core) | | Dominio público | Sí | |
 | TFT_eSPI 2.5.43 | Bodmer (descargada, no versionada) | FreeBSD (BSD-2-Clause) + partes MIT (`license.txt`) | Sí | El package solo trae el `.a` y la licencia (§11 H3 de ARCHITECTURE). |
 | FatFs (ESP-IDF v5.5.1) | ChaN + glue ESP-IDF | Licencia FatFs (BSD de 1 cláusula) + Apache-2.0 | Sí | Descargada, no versionada. |
-| Headers sustitutos de ESP-IDF (`sim/hal/include`) | este repo | GPL-3.0-or-later (propuesto) | — | Declaraciones de API escritas desde cero; nombres y firmas por interoperabilidad. |
-| HAL nativo, motor, modelos, placa, runner | este repo | GPL-3.0-or-later (propuesto) | — | |
+| Headers sustitutos de ESP-IDF (`sim/hal/include`) | este repo | GPL-3.0-or-later | — | Declaraciones de API escritas desde cero; nombres y firmas por interoperabilidad. |
+| HAL nativo, motor, modelos, placa, runner | este repo | GPL-3.0-or-later (interfaz del SDK: MIT) | — | |
 | libstdc++ / glibc (Linux) | GCC / GNU | GPL-3.0 + excepción de runtime / LGPL-2.1+ | Sí | Excepción de runtime de GCC; glibc enlazada dinámicamente. |
 | libc++, CRT de MinGW-w64 (Windows vía zig) | LLVM / mingw-w64 | Apache-2.0 WITH LLVM-exception / ZPL-2.1 + dominio público | Sí | Se enlazan estáticamente en el `.exe` del runner; incluir avisos. |
 
@@ -82,7 +82,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | Cobrar por talleres | Permitido | Permitido |
 | Coherencia con el ecosistema JW Control | Igual que platform-jwplc | Distinta |
 
-**Recomendación: GPL-3.0-or-later** para todo el código de este repositorio.
+**Adoptada: GPL-3.0-or-later** para todo el código de este repositorio.
 "or-later" mantiene compatibilidad con el package y con una eventual GPL-4.0.
 
 ### 3.2 Obra combinada del runner
@@ -120,9 +120,11 @@ decisión 7 ya lo resuelve; se fija aquí:
 
 - Material didáctico (enunciados, guías, imágenes, escenas 2D/3D):
   **CC BY-SA 4.0** (compatible en un sentido con GPL-3.0 desde 2015).
-- Código de ejemplo que los alumnos copian a sus sketches: se recomienda
-  **CC0-1.0** o **MIT-0**, para que puedan reutilizarlo sin obligaciones de
-  atribución (Creative Commons no recomienda CC BY-SA para software).
+- Código de ejemplo que acompaña a los ejercicios: queda bajo **CC BY-SA
+  4.0** como parte del material, por decisión del titular. Observación: CC
+  BY-SA no está pensada para software; si en el futuro se quiere que los
+  alumnos copien fragmentos sin obligaciones de atribución, se puede liberar
+  ese código además bajo CC0-1.0 o MIT-0 (licencia dual).
 
 ### 3.6 Marcas
 
@@ -143,13 +145,29 @@ solo de forma descriptiva ("compatible con…").
    la app debe dejar disponibles esos avisos (carpeta de licencias del
    toolchain).
 
-## 5. Decisión pendiente
+## 5. Decisión adoptada
 
 ```text
-DECISIÓN REQUERIDA DEL TITULAR:
-  [ ] Adoptar GPL-3.0-or-later para jwplc-sim (agregar LICENSE y encabezados SPDX)
-  [ ] SDK de dispositivos bajo MIT
-  [ ] Materiales CC BY-SA 4.0; código de ejemplo CC0-1.0 / MIT-0
+DECISIÓN DEL TITULAR (JW Control):
+  [x] jwplc-sim bajo GPL-3.0-or-later (LICENSE en la raíz, encabezados SPDX)
+  [x] SDK de dispositivos bajo MIT
+  [x] Materiales didácticos y documentación bajo CC BY-SA 4.0
 ```
 
-Hasta la confirmación, el repositorio no incluye archivo `LICENSE`.
+Aplicación en el repositorio (formato [REUSE](https://reuse.software)):
+
+| Ruta | Licencia |
+|---|---|
+| Código (`sim/`, `cli/`, `scripts/`, `tests/`) | GPL-3.0-or-later — `LICENSE` y `LICENSES/GPL-3.0-or-later.txt` |
+| Interfaz del SDK: `sim/engine/include/jwsim/devices.h`, `sim/engine/include/jwsim/engine.h` y el futuro `sdk/` | MIT — `LICENSES/MIT.txt` |
+| `docs/`, `README.md`, `MODEL.md` y materiales de ejercicios | CC BY-SA 4.0 — `LICENSES/CC-BY-SA-4.0.txt` |
+
+Cada archivo de código lleva `SPDX-FileCopyrightText` y
+`SPDX-License-Identifier`; las rutas sin encabezado se declaran en
+`REUSE.toml`.
+
+Nota: un dispositivo nativo MIT se carga en el proceso del runner
+(GPL-3.0-or-later). Eso es válido porque MIT es compatible; la licencia MIT
+del SDK permite que los autores de dispositivos elijan cualquier licencia
+compatible con GPL-3.0 (§3.4), no que se distribuyan dispositivos con
+licencias incompatibles junto al simulador.

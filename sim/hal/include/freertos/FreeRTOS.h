@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Sustituto de FreeRTOS (ESP-IDF) para JWPLC Sim. Las tareas y primitivas se
 // implementan sobre el planificador determinista del motor (jwsim/engine.h).
 // Solo se declara la API que usan el core y las librerías del package; lo que

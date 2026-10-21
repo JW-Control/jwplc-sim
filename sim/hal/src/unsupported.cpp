@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // APIs del Arduino core ESP32 que el JWPLC Basic simulado todavía no ofrece.
 // Fallan de forma explícita en tiempo de ejecución con un mensaje claro en vez
 // de comportarse de forma silenciosa o inventada (gate G2 UNSUPPORTED_LIB_MSG).

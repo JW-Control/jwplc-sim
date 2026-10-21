@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Subset de esp_vfs_fat.h (ESP-IDF). La integración VFS (rutas "/sd/..." hacia
 // FatFs) la implementa el HAL nativo; ver ARCHITECTURE.md §6 (SD_DATALOG, G4).
 #pragma once

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // dirent estilo newlib (con d_type), servido por el VFS del simulador.
 #pragma once
 #include <stdint.h>

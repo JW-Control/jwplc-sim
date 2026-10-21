@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // struct stat estilo newlib (con st_blksize) para el código del package.
 #pragma once
 #include_next <sys/stat.h>

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: MIT
 // JWPLC Sim — API C del motor determinista.
 //
 // El motor es el dueño del tiempo virtual. Todo el firmware (sketch, librerías

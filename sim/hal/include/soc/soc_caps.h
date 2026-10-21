@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Capacidades del SoC ESP32 (subset de esp-idf/components/soc/esp32/include/
 // soc/soc_caps.h) que consultan el core JWPLC y sus librerías. Solo se
 // declaran periféricos que el HAL de JWPLC Sim implementa o rechaza con un

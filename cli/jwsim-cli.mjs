@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // jwsim-cli — interfaz de línea de comandos del simulador (modo headless).
 //
 //   jwsim-cli build <sketch_dir> [--target native|windows] [--out <dir>] [--cc gcc|clang]

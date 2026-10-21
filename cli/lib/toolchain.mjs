@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Toolchains nativos soportados.
 //   native  : compilador del sistema (gcc/clang) para el SO actual.
 //   windows : x86_64-windows-gnu con `zig cc` (toolchain incluible en el

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // FatFs elige tipos de Windows (windows.h, DWORD = unsigned long) cuando
 // _WIN32 está definido. En el ESP32 FatFs usa los tipos C99 (DWORD =
 // uint32_t), que es lo que esperan diskio_impl.h y la librería SD. Se oculta

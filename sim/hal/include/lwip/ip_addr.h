@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tipos de direcciones de lwIP (lwip/ip_addr.h) usados por IPAddress. El
 // simulador no incluye la pila lwIP: la red del JWPLC Basic es el W5500, que
 // se modela a nivel de registros (G4).

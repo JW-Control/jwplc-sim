@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // API FreeRTOS (sabor ESP-IDF) implementada sobre el planificador determinista.
 //
 // Semántica conservada: prioridades, afinidad de núcleo, bloqueo con timeout

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Gate JWSIM_G0_POC_IO_BASIC: el sketch 02_io_basic del package, sin
 // modificar, compila contra el HAL nativo y se comporta como en el PLC.
 //

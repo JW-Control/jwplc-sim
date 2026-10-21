@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Versión de ESP-IDF de esp32-arduino-libs para arduino-esp32 3.3.x.
 #pragma once
 #define ESP_IDF_VERSION_MAJOR 5

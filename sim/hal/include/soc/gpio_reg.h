@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Direcciones de registros GPIO del ESP32. Arduino.h solo las usa en macros
 // (portOutputRegister...). El acceso directo a estos registros NO está
 // soportado por el HAL nativo (ver ARCHITECTURE.md, límites de fidelidad).

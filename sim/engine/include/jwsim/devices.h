@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: MIT
 // JWPLC Sim — interfaz de dispositivos (C++).
 //
 // Contrato común para modelos de periféricos (TCA6424A, DS3232M, FRAM, W5500,

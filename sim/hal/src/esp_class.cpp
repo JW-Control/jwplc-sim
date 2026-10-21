@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // EspClass (ESP.*) del ESP32 simulado: reemplaza Esp.cpp. Valores fijos y
 // deterministas de un ESP32-D0WD (4 MB de flash, sin PSRAM).
 #include "Esp.h"

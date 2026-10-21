@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Descarga el árbol del package JWPLC fijado en package.lock, sin copiarlo al
 // repositorio. Resultado: .jwsim/package/<REF>/ (ignorado por git).
 //

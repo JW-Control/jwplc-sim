@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
 #include <assert.h>  // igual que esp_err.h de ESP-IDF

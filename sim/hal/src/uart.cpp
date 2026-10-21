@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // UART del ESP32 simulado: reemplaza esp32-hal-uart.c. HardwareSerial.cpp del
 // package se compila sin cambios encima de esta API.
 //

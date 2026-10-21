@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Funciones no estándar que newlib (toolchain xtensa) ofrece y glibc/MinGW no.
 #include <stdint.h>
 #include <stdlib.h>

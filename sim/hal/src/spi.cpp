@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // SPI maestro del ESP32 simulado: reemplaza esp32-hal-spi.c.
 //
 // Las transferencias se entregan byte a byte al bus de la placa

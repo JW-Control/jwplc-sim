@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Subset de esp_partition.h para la declaración de EspClass.
 #pragma once
 #include <stdbool.h>

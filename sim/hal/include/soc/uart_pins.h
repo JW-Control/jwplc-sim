@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #define U0TXD_GPIO_NUM 1
 #define U0RXD_GPIO_NUM 3

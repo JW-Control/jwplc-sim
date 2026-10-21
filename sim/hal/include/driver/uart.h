@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Subset de driver/uart.h (ESP-IDF) usado por HardwareSerial::_uartEventTask.
 #pragma once
 

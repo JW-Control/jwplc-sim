@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Modelo del expansor de E/S I2C TCA6424A (Texas Instruments, SCPS193).
 //
 // Modelado contra el datasheet, no contra el driver del package. Ver

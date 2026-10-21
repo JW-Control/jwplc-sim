@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // GPIO nativo del ESP32 simulado: reemplaza esp32-hal-gpio.c,
 // esp32-hal-matrix.c y la parte usada de driver/gpio.h.
 //

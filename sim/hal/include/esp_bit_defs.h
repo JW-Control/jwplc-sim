@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #define BIT64(nr) (1ULL << (nr))
 #define BIT31 0x80000000

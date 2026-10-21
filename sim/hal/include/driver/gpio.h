@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Subset de driver/gpio.h (ESP-IDF). La implementación nativa mantiene una
 // tabla de los 40 GPIO del ESP32 conectada a la placa virtual.
 #pragma once

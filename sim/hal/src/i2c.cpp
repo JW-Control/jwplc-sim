@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // I2C maestro del ESP32 simulado: reemplaza esp32-hal-i2c.c / -i2c-ng.c.
 //
 // Cada transacción se entrega completa al bus de la placa (jwsim::I2CBus),

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Compilación nativa de un sketch JWPLC para el simulador.
 //
 // Pasos (equivalentes a arduino-cli, pero con el HAL nativo):

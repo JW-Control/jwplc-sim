@@ -20,7 +20,7 @@ Convenciones:
 
 ```text
 JWSIM_G0_ARCH_DOC=PASS
-JWSIM_G0_LICENSE_MATRIX=PASS        (licencia recomendada: GPL-3.0-or-later; falta confirmación del titular)
+JWSIM_G0_LICENSE_MATRIX=PASS        (GPL-3.0-or-later adoptada; SDK MIT; materiales CC BY-SA 4.0)
 JWSIM_G0_POC_IO_BASIC=PASS
 JWSIM_G1_*=PENDING ... JWSIM_G10_*=PENDING
 ```
@@ -32,7 +32,7 @@ JWSIM_G1_*=PENDING ... JWSIM_G10_*=PENDING
 | Gate | Criterios | Verificación |
 |---|---|---|
 | `JWSIM_G0_ARCH_DOC` | `docs/ARCHITECTURE.md` define: capas y procesos; inventario de qué se reemplaza del core ESP32/FreeRTOS y qué depende del hardware; formato `.jwsim` v1; interfaz de dispositivos (señal, I2C, SPI, UART, GPIO); protocolo motor↔interfaz; modelo de tiempo y scan; límites de fidelidad; estrategia de sincronización con el package. | Revisión del documento. |
-| `JWSIM_G0_LICENSE_MATRIX` | `docs/LICENSES.md` lista cada dependencia (package, core, librerías, terceros, Electron, toolchains, OpenPLC, QEMU) con su licencia SPDX y modo de uso (enlazada, proceso separado, herramienta), señala incompatibilidades y recomienda una licencia. | Revisión del documento. La adopción del archivo `LICENSE` requiere confirmación del titular. |
+| `JWSIM_G0_LICENSE_MATRIX` | `docs/LICENSES.md` lista cada dependencia (package, core, librerías, terceros, Electron, toolchains, OpenPLC, QEMU) con su licencia SPDX y modo de uso (enlazada, proceso separado, herramienta), señala incompatibilidades y recomienda una licencia. | Revisión del documento; `LICENSE`, `LICENSES/` y `REUSE.toml` en el repositorio. |
 | `JWSIM_G0_POC_IO_BASIC` | C1: `02_io_basic` del package **sin modificar** compila y enlaza para x86_64 contra el HAL nativo y el modelo TCA6424A. C2: cada cambio de `I0_0` sostenido ≥ 100 ms se refleja en `Q0_0` antes de 100 ms. C3: ninguna otra salida cambia. C4: 10 corridas → mismo hash. C5 (si hay `JWSIM_ZIG`): el `.exe` de Windows compila y, si hay wine, produce el mismo hash. | `node scripts/gate-g0-poc.mjs` → `JWSIM_G0_POC_IO_BASIC=PASS`, informe `build/gates/JWSIM_G0_POC_IO_BASIC.json`. |
 
 ## G1 — Motor + placa virtual

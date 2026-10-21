@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Descarga dependencias de terceros fijadas en third_party/sources.json a
 // .jwsim/third_party/<nombre>-<versión>/, verificando el SHA-256 de cada archivo.
 // No se versionan en este repositorio (igual que el package JWPLC).

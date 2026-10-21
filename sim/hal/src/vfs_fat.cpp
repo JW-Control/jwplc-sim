@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Registro VFS de FatFs (esp_vfs_fat_register). El montaje y las operaciones
 // FatFs son las reales de ESP-IDF; lo que falta es enrutar fopen("/sd/...")
 // de vfs_api.cpp hacia FatFs, que se implementa en G4 (SD_DATALOG).

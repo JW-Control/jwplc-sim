@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Modelo a nivel de registros del controlador SPI (GP-SPI) del ESP32, solo
 // para los campos que el package accede directamente.
 //

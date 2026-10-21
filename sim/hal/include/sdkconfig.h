@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // sdkconfig equivalente al de esp32-arduino-libs para ESP32 (arduino-esp32
 // 3.3.x), reducido a lo que consultan el core JWPLC y las librerías del
 // package. Valores de hardware según el JWPLC Basic.

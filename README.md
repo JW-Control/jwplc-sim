@@ -8,7 +8,7 @@ virtual determinista y modelos de periféricos a nivel de registros.
 ```text
 Estado: G0 (arquitectura + prueba técnica)
 JWSIM_G0_ARCH_DOC=PASS
-JWSIM_G0_LICENSE_MATRIX=PASS   (licencia: pendiente de confirmación del titular)
+JWSIM_G0_LICENSE_MATRIX=PASS
 JWSIM_G0_POC_IO_BASIC=PASS
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
@@ -46,3 +46,12 @@ bloquea una tarea; `JWSIM_EXTRA_FLAGS=-fsanitize=address` compila con ASan.
   fijado en `package.lock`. Lo que impida simular se documenta como punto de
   extensión para una alpha futura.
 - Documentación en español.
+- Commits sin líneas de coautor (`Co-Authored-By`).
+
+## Licencias
+
+- Código: [GPL-3.0-or-later](LICENSE).
+- Interfaz del SDK de dispositivos: [MIT](LICENSES/MIT.txt).
+- Documentación y materiales: [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
+
+Detalle por ruta en `REUSE.toml` y en [docs/LICENSES.md](docs/LICENSES.md).
