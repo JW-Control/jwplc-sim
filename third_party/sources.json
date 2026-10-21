@@ -1,0 +1,55 @@
+{
+  "packages": [
+    {
+      "name": "esp-idf-fatfs",
+      "version": "5.5.1",
+      "license": "FatFs (BSD-1-Clause) + Apache-2.0 (glue ESP-IDF)",
+      "purpose": "FatFs real de ESP-IDF para la librería SD del package (microSD en modo SPI)",
+      "baseUrl": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/fatfs",
+      "layout": {
+        "src/ff.h": "ff.h",
+        "src/ffconf.h": "ffconf.h",
+        "src/diskio.h": "diskio.h",
+        "src/ff.c": "ff.c",
+        "src/ffunicode.c": "ffunicode.c",
+        "diskio/diskio_impl.h": "diskio_impl.h",
+        "diskio/diskio.c": "diskio.c",
+        "port/freertos/ffsystem.c": "ffsystem.c"
+      },
+      "files": {
+        "src/ff.h": "7bae240d9934c35599b1e49431b6bec65a7269d09284aca40191c8c5fd3be475",
+        "src/ffconf.h": "9d3a18bd5f23b9bfc6b38668d1da59274c280d22b86d281c58d441da60942fd5",
+        "src/diskio.h": "60beaaca712a9d5126f41362fa68ce7f30e26e115b310a20d79e5639b6fcc3b5",
+        "src/ff.c": "b6511bc0102f42b941897cd9f96f75206b6851fedbebc6dcb17c220cb1d4bede",
+        "src/ffunicode.c": "f2e03e97fccd9d7b0614b48ee02b7e49fb21c5196d3ff77ba5d8e4558a064d5d",
+        "diskio/diskio_impl.h": "b14ddbcedfe06e0668f8040eaec993c5ea076d71dbd30aaf53cd8485c93036bf",
+        "diskio/diskio.c": "733c3b78d9fd605a7caa6d9912b6d84ba5d0f8614b80fd38eebe91416e8fbd4b",
+        "port/freertos/ffsystem.c": "17a29aa226ee74b0947eb5e5f471599e091a732d923a31800799fd6c85971c75"
+      }
+    },
+    {
+      "name": "TFT_eSPI",
+      "version": "2.5.43",
+      "license": "FreeBSD + MIT (ver license.txt)",
+      "purpose": "Backend ST7789 que el package distribuye precompilado dentro de libJWPLC_TFT.a; se compila desde fuente con el procesador Generic",
+      "baseUrl": "https://raw.githubusercontent.com/Bodmer/TFT_eSPI/V2.5.43",
+      "files": {
+        "TFT_eSPI.h": "b1b2789ace7ac8fd4a4c414054757d91e6e62649a23d74226ea28ceb8d6f4462",
+        "TFT_eSPI.cpp": "01ed6edb0530d38b94ddeac079ba81633aa21d77d049b12da21a37f4bec69ee1",
+        "User_Setup_Select.h": "577c7e19e2b356a219558d43099a66d7969dd9120933343b16bbafafdafd707f",
+        "license.txt": "f79bffc86315004815e4e7f11a23e757de0f25793022e6020938e2db1a495a9d",
+        "library.properties": "d29e02a280cd4bc0bfb5db928e6b2aaffcaa1ca9397fdc9e016c33501a7c2cd1",
+        "Processors/TFT_eSPI_Generic.h": "ea5158b61260a65aa52af5e5e9a15e6a265eeb39d2c4c35ea30f666c72fa940d",
+        "Processors/TFT_eSPI_Generic.c": "8de8094f136a68f084004a9767a412f6294bf321b7e09b4d3229f12a2dc78d33",
+        "TFT_Drivers/ST7789_Defines.h": "464bccf0a1faffe6f95567f02b7fd8fcd92e43f3ccd03a6356fa2eaf6edfdca8",
+        "TFT_Drivers/ST7789_Init.h": "e21cae2ac84285dc0e77648eca67ca753f41f7da3c271594ede750b725136c10",
+        "TFT_Drivers/ST7789_Rotation.h": "39d257e5a4ca9dadd3fd238692115587263206997ba7e4209907f9d973f7fb5f",
+        "Fonts/glcdfont.c": "bde369bf045a11a092f06d6073d44039c72515d8bc83353a87b8b8032e450d7c",
+        "Extensions/Button.h": "0b6b4b651014bcdc261e0cbf2402feb818f627c78dce4638978499b33938cba5",
+        "Extensions/Button.cpp": "06d8e24d9c512ffe7ef061008b0b87e4d638187aa95962f1d6e7fee0a290f626",
+        "Extensions/Sprite.h": "ca5a993ead724d8ee255bf6ccea1894cca48d42efadfa5c7922150a276cc8e8f",
+        "Extensions/Sprite.cpp": "19eedd4fd3ff9f367898ad9a3f730d079018dd31af4991f283f67417a3f83a65"
+      }
+    }
+  ]
+}
