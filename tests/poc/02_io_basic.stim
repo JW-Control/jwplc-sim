@@ -1,0 +1,13 @@
+# Estímulos para JWSIM_G0_POC_IO_BASIC (sketch 02_io_basic del package).
+# Formato: <tiempo_ms> <SEÑAL>=<0|1>
+# El sketch copia I0_0 en Q0_0; el resto de entradas no debe afectar salidas.
+1000 I0_0=1
+1500 I0_0=0
+1600 I0_1=1        # otra entrada: no debe mover ninguna salida
+1800 I0_1=0
+2000 I0_0=1
+2003 I0_0=0        # pulso de 3 ms < periodo de escaneo de 20 ms: puede perderse
+2500 I0_0=1
+2550 I0_7=1
+3000 I0_0=0
+3200 I0_7=0
