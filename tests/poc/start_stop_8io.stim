@@ -1,0 +1,15 @@
+# Start/Stop con 8 E/S: secuencia de marcha, parada, falla térmica y copias.
+0     I0_1=1      # parada NC sin pulsar
+0     I0_2=1      # térmico NC sin disparar
+1000  I0_0=1      # marcha
+1200  I0_0=0
+2000  I0_3=1
+2500  I0_5=1
+3000  I0_3=0
+5000  I0_1=0      # parada
+5200  I0_1=1
+6000  I0_0=1      # marcha otra vez
+6100  I0_0=0
+8000  I0_2=0      # disparo térmico
+9000  I0_2=1
+9500  I0_7=1

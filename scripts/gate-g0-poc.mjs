@@ -10,12 +10,12 @@
 //   C3 ninguna otra salida cambia
 //   C4 N corridas con los mismos estímulos producen el mismo hash de traza
 //   C5 (opcional) el .exe de Windows produce el mismo hash (requiere JWSIM_ZIG y wine)
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
 import { resolvePackageRoot } from "./fetch-package.mjs";
+import { runExe, WINE } from "./lib/gate-util.mjs";
 
 const RUNS = Number(process.env.JWSIM_GATE_RUNS ?? 10);
 const STIM = join(ROOT, "tests", "poc", "02_io_basic.stim");
@@ -33,9 +33,9 @@ function parseRun(stdout) {
   return { events, result };
 }
 
-function runExe(cmd, args) {
-  const r = spawnSync(cmd[0], [...cmd.slice(1), ...args], { encoding: "utf8", env: { ...process.env, WINEDEBUG: "-all" } });
-  if (r.status !== 0) throw new Error(`${cmd.join(" ")} terminó con ${r.status}: ${r.stderr}`);
+function run(exe, args) {
+  const r = runExe(exe, args);
+  if (r.status !== 0) throw new Error(`${exe} terminó con ${r.status}: ${r.stderr}`);
   return r.stdout;
 }
 
@@ -79,21 +79,21 @@ async function main() {
   report.criteria.C1_build_native = { pass: true, libraries };
 
   const args = ["--until", String(UNTIL_MS), "--stim", STIM];
-  const first = parseRun(runExe([exe], args));
+  const first = parseRun(run(exe, args));
   const { failures, latencies } = check(first.events);
   report.criteria.C2_C3_behavior = { pass: failures.length === 0, failures, latencies_ms: latencies };
 
   const hashes = new Set([first.result.hash]);
-  for (let i = 1; i < RUNS; i++) hashes.add(parseRun(runExe([exe], [...args, "--quiet"])).result.hash);
+  for (let i = 1; i < RUNS; i++) hashes.add(parseRun(run(exe, [...args, "--quiet"])).result.hash);
   report.criteria.C4_determinism = { pass: hashes.size === 1, runs: RUNS, hashes: [...hashes] };
 
   const zig = process.env.JWSIM_ZIG;
-  const wine = ["/usr/lib/wine/wine64", "/usr/bin/wine64", "/usr/bin/wine"].find(existsSync);
+  const wine = WINE;
   if (zig) {
     const win = await buildSketch(sketch, { target: "windows", log: () => {} });
     const c5 = { built: true, exe: win.exe };
     if (wine) {
-      const h = parseRun(runExe([wine, win.exe], [...args, "--quiet"])).result.hash;
+      const h = parseRun(run(win.exe, [...args, "--quiet"])).result.hash;
       c5.hash = h;
       c5.pass = h === first.result.hash;
     } else {
