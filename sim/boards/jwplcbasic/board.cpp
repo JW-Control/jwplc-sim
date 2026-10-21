@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "board.h"
 
 #include <cstdio>
@@ -15,9 +17,9 @@ double now_ms() { return static_cast<double>(jwsim_now()) / 1e6; }
 JwplcBasic::JwplcBasic() {
   i2c0_.attach(tca_.address(), &tca_);
 
-  // Entradas digitales: 0 V en reposo. Se asume acondicionamiento no
-  // inversor (entrada activa => pin del TCA en alto), coherente con el core,
-  // que solo invierte el orden de bits (I0_0 = P07) y no la lógica.
+  // Entradas digitales: 0 V en reposo. Acondicionamiento no inversor
+  // (entrada activa => pin del TCA en alto; confirmado por JW Control). El
+  // core solo invierte el orden de bits (I0_0 = P07), no la lógica.
   for (int k = 0; k < 8; ++k) {
     Net &in = add_signal("I0_" + std::to_string(k), false);
     Net &pin = tca_.pin(7 - k);
@@ -28,7 +30,8 @@ JwplcBasic::JwplcBasic() {
     });
   }
 
-  // Salidas a relé: bobina energizada si EN_IO=1 y el pin P1k está en alto.
+  // Salidas a relé: bobina energizada si EN_IO=1 (habilitación de los
+  // drivers, confirmado por JW Control) y el pin P1k está en alto.
   for (int k = 0; k < 8; ++k) {
     Net &q = add_signal("Q0_" + std::to_string(k), false);
     q.on_change([this](Net &net, bool level) { log_signal(net, level); });

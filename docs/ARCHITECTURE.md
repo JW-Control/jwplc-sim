@@ -241,16 +241,15 @@ Extraído del package (alpha.12). "Fuente" indica de dónde sale cada dato.
 | UART0 consola | TX 1, RX 3 | `HardwareSerial` | `pins_arduino.h` | consola | G1 |
 | LEDs RUN/ERR/BUS/ETH | **no encontrados en el package alpha.12** | — | — | pendiente | ver §11 H6 |
 
-Supuestos de la placa a confirmar con el esquemático (no están en el
-package):
+Supuestos de la placa (no están en el package):
 
-- Entradas no inversoras: 24 V en `I0_k` ⇒ pin del TCA en alto (coherente con
-  el core, que solo invierte el orden de bits).
-- `EN_IO` habilita los drivers de relé (el core configura el TCA con
-  `EN_IO=0` y lo pone en 1 al final); no es el `RESET` del TCA6424A.
-- `RESET` del TCA6424A atado a nivel alto; puerto 2 del expansor sin uso.
-- Pull-up externo en GPIO39 (detección SD) y GPIO15 (INTn del W5500).
-- Relés sin retardo mecánico en G0 (operación típica 5–10 ms: parámetro en G1).
+| Supuesto | Estado |
+|---|---|
+| Entradas no inversoras: 24 V en `I0_k` ⇒ pin del TCA en alto (el core solo invierte el orden de bits) | **Confirmado** por JW Control |
+| `EN_IO` habilita los drivers de relé; no es el `RESET` del TCA6424A | **Confirmado** por JW Control |
+| Pull-up externo en GPIO39 (detección SD, activo en bajo) y GPIO15 (INTn del W5500) | **Confirmado** por JW Control |
+| `RESET` del TCA6424A atado a nivel alto; puerto 2 del expansor sin uso | Supuesto (sin impacto en el firmware actual) |
+| Relés sin retardo mecánico (operación típica 5–10 ms) | Simplificación; parámetro de la placa en G1 |
 
 ## 6. Modelo de tiempo y scan
 

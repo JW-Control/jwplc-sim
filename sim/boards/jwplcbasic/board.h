@@ -1,9 +1,11 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Placa virtual JWPLC Basic (v2): conexiones entre el ESP32 simulado y los
 // modelos de periféricos, más las señales de bornera.
 //
 // Cableado modelado en G0 (fuente: variants/jwplcbasic/pins_is.h y
-// cores/jwcontrol/jwplc_hardware_config.h del package; ver
-// docs/ARCHITECTURE.md §5 para los supuestos a confirmar con el esquemático):
+// cores/jwcontrol/jwplc_hardware_config.h del package; supuestos de placa
+// confirmados por JW Control en docs/ARCHITECTURE.md §5):
 //   I2C0 (SDA=21, SCL=22) ── TCA6424A @0x22
 //   I0_k  ── acondicionamiento de entrada ── TCA6424A P0(7-k)
 //   TCA6424A P1k ── driver de relé (habilitado por EN_IO=GPIO27) ── Q0_k
