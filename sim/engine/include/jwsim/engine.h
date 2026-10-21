@@ -92,6 +92,14 @@ bool jwsim_waitq_wake_one(jwsim_waitq *q);
 void jwsim_waitq_wake_all(jwsim_waitq *q);
 bool jwsim_waitq_empty(const jwsim_waitq *q);
 
+// ---------------------------------------------------------------- interrupciones
+// Levanta una interrupción para el núcleo `core`: el manejador corre en
+// contexto ISR (sin tarea, no puede bloquear) antes de que la tarea en curso
+// de ese núcleo continúe, en el instante virtual en que se levantó.
+typedef void (*jwsim_isr_fn)(void *arg);
+void jwsim_isr_raise(int core, jwsim_isr_fn fn, void *arg);
+bool jwsim_in_isr(void);
+
 // ---------------------------------------------------------------- ejecución
 typedef struct jwsim_run_limits {
   jwsim_ns_t until_ns;        // detener cuando todos los núcleos superan este tiempo

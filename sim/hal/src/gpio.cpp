@@ -31,6 +31,7 @@ struct Pin {
   void (*isr)(void *) = nullptr;
   void *isr_arg = nullptr;
   bool isr_with_arg = false;
+  int isr_core = 0;           // núcleo donde se instaló la ISR (como ESP-IDF)
 };
 
 std::array<Pin, SOC_GPIO_PIN_COUNT> &pins() {
@@ -51,6 +52,13 @@ void trace_pin(int pin, bool level) {
   jwsim_trace_bytes(rec, sizeof(rec));
 }
 
+void dispatch_isr(void *arg) {
+  Pin &p = pins()[reinterpret_cast<uintptr_t>(arg)];
+  if (!p.isr || !p.intr_enabled) return;
+  if (p.isr_with_arg) p.isr(p.isr_arg);
+  else reinterpret_cast<void (*)()>(p.isr)();
+}
+
 void on_net_change(int pin, bool level) {
   Pin &p = pins()[pin];
   if (!p.isr || !p.intr_enabled) return;
@@ -64,8 +72,8 @@ void on_net_change(int pin, bool level) {
     default: break;
   }
   if (!fire) return;
-  if (p.isr_with_arg) p.isr(p.isr_arg);
-  else reinterpret_cast<void (*)()>(p.isr)();
+  // La ISR corre en contexto de interrupción del núcleo donde se instaló.
+  jwsim_isr_raise(p.isr_core, dispatch_isr, reinterpret_cast<void *>(static_cast<uintptr_t>(pin)));
 }
 
 void apply_mode(int pin, uint8_t mode) {
@@ -142,6 +150,7 @@ void __attachInterruptFunctionalArg(uint8_t pin, void (*fn)(void *), void *arg, 
   p.isr_with_arg = true;
   p.intr_type = intr_type;
   p.intr_enabled = true;
+  p.isr_core = jwsim_current_core();
 }
 
 void __attachInterruptArg(uint8_t pin, void (*fn)(void *), void *arg, int intr_type) {
@@ -268,6 +277,7 @@ esp_err_t gpio_isr_handler_add(gpio_num_t pin, gpio_isr_t fn, void *arg) {
   p.isr_arg = arg;
   p.isr_with_arg = true;
   p.intr_enabled = true;
+  p.isr_core = jwsim_current_core();
   return ESP_OK;
 }
 esp_err_t gpio_isr_handler_remove(gpio_num_t pin) {

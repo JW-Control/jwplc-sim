@@ -13,10 +13,13 @@
 // - Solo hay cambios de contexto en puntos de sincronización; nunca se usa el
 //   reloj del sistema operativo. Misma entrada => misma ejecución.
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "fiber.h"
@@ -78,8 +81,18 @@ struct Event {
   void *arg;
 };
 
+struct Isr {
+  jwsim_ns_t at;
+  int core;
+  jwsim_isr_fn fn;
+  void *arg;
+};
+
 struct Sched {
   Core cores[JWSIM_NUM_CORES];
+  std::vector<Isr> isrs;                 // interrupciones pendientes (FIFO)
+  bool in_isr = false;
+  jwsim_ns_t isr_now = 0;
   std::vector<jwsim_task *> tasks;       // en orden de creación (determinista)
   std::vector<jwsim_task *> graveyard;   // borradas pendientes de liberar
   std::vector<Event> events;             // min-heap por (when, seq)
@@ -250,6 +263,65 @@ void free_graveyard() {
   s.graveyard.clear();
 }
 
+// Ejecuta las interrupciones pendientes en el contexto del planificador, en
+// el instante en que fueron levantadas (o en el reloj del núcleo si va
+// adelantado). Equivale a la ISR apropiando a la tarea del núcleo dueño.
+void run_pending_isrs() {
+  Sched &s = S();
+  for (size_t i = 0; i < s.isrs.size(); ++i) {
+    const Isr isr = s.isrs[i];
+    Core &c = s.cores[isr.core];
+    c.t = std::max(c.t, isr.at);
+    s.in_isr = true;
+    s.isr_now = c.t;
+    isr.fn(isr.arg);
+    s.in_isr = false;
+  }
+  s.isrs.clear();
+}
+
+// ---------------------------------------------------------------- vigilante
+// Detecta, en tiempo de pared, código que no llega a ningún punto de
+// sincronización (p. ej. while(1){} sin llamadas al HAL): en el ESP32 el
+// tick lo apropiaría, aquí el tiempo virtual quedaría detenido.
+std::atomic<uint64_t> g_progress{0};
+std::atomic<const char *> g_running_name{nullptr};
+std::atomic<bool> g_in_run{false};
+
+void start_watchdog() {
+  static bool started = false;
+  if (started) return;
+  started = true;
+  const char *env = std::getenv("JWSIM_WATCHDOG_MS");
+  const long limit_ms = env ? std::atol(env) : 2000;
+  if (limit_ms <= 0) return;
+  std::thread([limit_ms] {
+    uint64_t last = g_progress.load();
+    auto since = std::chrono::steady_clock::now();
+    for (;;) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      const uint64_t now = g_progress.load(std::memory_order_relaxed);
+      const auto t = std::chrono::steady_clock::now();
+      if (now != last || !g_in_run.load()) {
+        last = now;
+        since = t;
+        continue;
+      }
+      if (t - since >= std::chrono::milliseconds(limit_ms)) {
+        const char *name = g_running_name.load();
+        std::fprintf(stderr,
+                     "[jwsim] FATAL: la tarea '%s' lleva %ld ms de reloj real sin llegar a ningún punto de "
+                     "sincronización (bucle sin llamadas a delay/yield/HAL). En el ESP32 la apropiaría el "
+                     "tick; en el simulador el tiempo virtual quedaría detenido. Agregue delay(), yield() o "
+                     "una llamada al HAL dentro del bucle.\n",
+                     name ? name : "?", limit_ms);
+        std::fflush(stderr);
+        std::_Exit(70);
+      }
+    }
+  }).detach();
+}
+
 void fire_event() {
   Sched &s = S();
   std::pop_heap(s.events.begin(), s.events.end(), event_after);
@@ -268,6 +340,7 @@ extern "C" {
 jwsim_ns_t jwsim_now(void) {
   Sched &s = S();
   if (s.running) return s.cores[s.running_core].t;
+  if (s.in_isr) return s.isr_now;
   if (s.in_event) return s.event_now;
   jwsim_ns_t m = JWSIM_NS_FOREVER;
   for (const Core &c : s.cores) m = std::min(m, c.t);
@@ -284,8 +357,20 @@ void jwsim_cpu(jwsim_ns_t ns) {
   Core &core = s.cores[s.running_core];
   core.t += ns;
   s.running->cpu_ns += ns;
+  g_progress.fetch_add(1, std::memory_order_relaxed);
   if (core.t >= core.horizon && s.lock_depth == 0) to_scheduler();
 }
+
+void jwsim_isr_raise(int core, jwsim_isr_fn fn, void *arg) {
+  Sched &s = S();
+  if (core < 0 || core >= JWSIM_NUM_CORES) core = 0;
+  s.isrs.push_back(Isr{jwsim_now(), core, fn, arg});
+  // La tarea en curso del núcleo dueño cede en su próximo punto de
+  // sincronización (si no está dentro de una sección crítica).
+  if (s.running) s.cores[s.running_core].horizon = s.cores[s.running_core].t;
+}
+
+bool jwsim_in_isr(void) { return S().in_isr; }
 
 void jwsim_wait(jwsim_ns_t ns) {
   Sched &s = S();
@@ -374,6 +459,7 @@ void jwsim_task_yield(void) {
   Core &core = s.cores[s.running_core];
   core.t += s.costs.task_yield;
   s.running->cpu_ns += s.costs.task_yield;
+  g_progress.fetch_add(1, std::memory_order_relaxed);
   if (s.lock_depth) return;
   // Atajo: si ninguna otra tarea del núcleo con prioridad >= puede correr
   // ahora y no se alcanzó el horizonte, ceder no cambia nada.
@@ -413,7 +499,7 @@ void jwsim_waitq_free(jwsim_waitq *q) {
 bool jwsim_waitq_block(jwsim_waitq *q, jwsim_ns_t timeout_ns) {
   Sched &s = S();
   jwsim_task *self = s.running;
-  if (!self) jwsim_fatal("bloqueo fuera de una tarea");
+  if (!self) jwsim_fatal(s.in_isr ? "operación bloqueante dentro de una ISR" : "bloqueo fuera de una tarea");
   if (timeout_ns == 0) return false;
   self->state = State::Blocked;
   self->signaled = false;
@@ -516,9 +602,15 @@ jwsim_stop_reason jwsim_run(const jwsim_run_limits *limits) {
   if (!s.main_fiber) s.main_fiber = jwsim::fiber_from_thread();
   const jwsim_ns_t until = limits ? limits->until_ns : JWSIM_NS_FOREVER;
   s.stop_requested = false;
+  start_watchdog();
+  g_in_run = true;
+  struct RunFlag {
+    ~RunFlag() { g_in_run = false; }
+  } run_flag;
 
   for (;;) {
     free_graveyard();
+    if (!s.isrs.empty()) run_pending_isrs();
     if (s.stop_requested) return JWSIM_STOP_REQUEST;
 
     jwsim_ns_t na[JWSIM_NUM_CORES];
@@ -563,6 +655,8 @@ jwsim_stop_reason jwsim_run(const jwsim_run_limits *limits) {
     }
     s.running = t;
     s.running_core = best;
+    g_running_name.store(t->name.c_str());
+    g_progress.fetch_add(1, std::memory_order_relaxed);
     jwsim::fiber_switch(s.main_fiber, t->fiber);
     s.running = nullptr;
     s.running_core = -1;

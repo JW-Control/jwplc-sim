@@ -33,7 +33,11 @@ jwsim_ns_t ticks_to_ns(TickType_t ticks) {
 template <typename Cond>
 bool wait_for(jwsim_waitq *q, TickType_t ticks, Cond cond) {
   if (cond()) return true;
-  if (ticks == 0 || !jwsim_task_self()) return false;
+  if (!jwsim_task_self()) {
+    if (ticks != 0 && jwsim_in_isr()) jwsim_fatal("llamada FreeRTOS con espera dentro de una ISR (use la variante FromISR)");
+    return false;
+  }
+  if (ticks == 0) return false;
   const jwsim_ns_t timeout = ticks_to_ns(ticks);
   const jwsim_ns_t deadline = timeout == JWSIM_NS_FOREVER ? JWSIM_NS_FOREVER : jwsim_now() + timeout;
   while (!cond()) {
@@ -87,7 +91,7 @@ void jwsim_freertos_assert(const char *file, int line) { jwsim_fatal("configASSE
 void jwsim_port_enter_critical(void) { jwsim_sched_lock(); }
 void jwsim_port_exit_critical(void) { jwsim_sched_unlock(); }
 BaseType_t xPortGetCoreID(void) { return jwsim_current_core(); }
-BaseType_t xPortInIsrContext(void) { return pdFALSE; }
+BaseType_t xPortInIsrContext(void) { return jwsim_in_isr() ? pdTRUE : pdFALSE; }
 void jwsim_port_yield(void) { jwsim_task_yield(); }
 
 // ------------------------------------------------------------------ tareas
