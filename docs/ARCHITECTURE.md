@@ -140,7 +140,22 @@ quedan como "no soportado" explícito hasta que algo los use.
    "No such file" buscar qué librería provee el header y agregarla.
 5. Compilar core (según el manifiesto), librerías, terceros y runtime del
    simulador; empaquetar en `.a` por grupo; enlazar un ejecutable nativo.
-   Recompilación incremental por dependencias (`-MMD`) y hash del comando.
+   Recompilación incremental por dependencias (`-MMD`) y **caché de objetos
+   compartida entre sketches** (`build/cache/<destino>/`), con el comando de
+   compilación completo como clave.
+
+Paridad con `platform.txt` **[G1]**: `-DARDUINO_PARTITION_<build.partitions>`,
+`build_opt.h` del sketch aplicado a todas las unidades (`"@{build.opt.path}"`)
+y `-I{build.source.path}` (carpeta original del sketch, necesaria para
+`#include "../otro_sketch/x.ino"`). Si la carpeta del sketch no tiene
+headers, esa ruta solo se agrega a las unidades del sketch para no invalidar
+la caché (el resultado es idéntico).
+
+Librerías no soportadas **[G1]**: `sim/core-manifest.json →
+unsupportedLibraries` lista las librerías del core sin sentido en el JWPLC
+Basic simulado (WiFi, BLE, WebServer, Preferences, LittleFS…) con el motivo.
+Si el descubrimiento llega a una de ellas, la compilación se detiene con
+"la librería X (requerida por 'Y.h') no está soportada por JWPLC Sim: motivo".
 
 Toolchains: **Windows x86_64** con `zig cc` (MinGW-w64 + libc++; un solo
 binario redistribuible en el instalador) y nativo `gcc`/`clang` en Linux y
@@ -338,14 +353,20 @@ No garantizado (documentar al usuario y detectar cuando se pueda):
 
 - Bucles de cómputo puro sin ningún punto de sincronización: no avanzan el
   tiempo (el ESP32 sí, por apropiación de tick). G1: vigilante de tiempo real
-  que lo detecta, y opción de instrumentar el sketch
+  que lo detecta (implementado en G1), y opción de instrumentar el sketch
   (`-fsanitize-coverage=trace-pc-guard`) para contar bloques básicos como
   costo y punto de apropiación.
 - Código que depende de direcciones de memoria, memoria no inicializada o
   `std::hash` del host.
-- Contextos ISR: en G0 las interrupciones GPIO se ejecutan de forma síncrona
-  en el contexto que cambió la red; en G1 pasan a contexto ISR que apropia
-  al núcleo dueño.
+- Contextos ISR **[G1]**: una interrupción GPIO se levanta para el núcleo
+  donde se instaló (`attachInterrupt`) y se ejecuta en contexto ISR (sin
+  tarea; `xPortInIsrContext()` verdadero) en el instante virtual del flanco,
+  antes de que la tarea en curso de ese núcleo continúe. Dentro de una
+  sección crítica la ISR espera a que se libere. Una llamada FreeRTOS con
+  espera dentro de una ISR es un error explícito.
+- Vigilante **[G1]**: si una tarea pasa 2 s de reloj real
+  (`JWSIM_WATCHDOG_MS`) sin llegar a ningún punto de sincronización, el
+  runner termina con código 70 y un mensaje que nombra la tarea.
 
 ## 7. Protocolo motor ↔ interfaz
 
@@ -457,14 +478,15 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 | Lógica del sketch y librerías | Mismo código fuente que el firmware | Diferencias de compilador (int de 32 bits igual; `double` igual; UB del sketch puede comportarse distinto) |
 | Tiempo | Ticks, delays, periodos del runtime, duración de buses | Tiempo de cómputo puro (modelo de costos calibrable, no ciclo-exacto) |
 | Doble núcleo | Afinidad, prioridades, apropiación en puntos de sincronización | Carreras finas entre núcleos sin puntos de sincronización |
-| Interrupciones | GPIO por flanco/nivel | Contexto ISR real, latencias de interrupción (G1) |
+| Interrupciones | GPIO por flanco/nivel en contexto ISR del núcleo dueño | Latencia de entrada a la ISR (0 en el modelo), anidamiento por niveles de prioridad |
 | Memoria | — | Tamaño de pila/heap del ESP32, desbordes (pilas del host ≥ 256 KiB) |
 | E/S digitales | Registro a registro en el TCA6424A | Tiempos eléctricos, rebotes (los agrega el dispositivo de escena) |
 | TFT | (G4) comandos ST7789 y framebuffer | Tiempo de pintado: TFT_eSPI usa el procesador Generic, más lento que la ruta por registros del firmware real |
 | SD | (G4) protocolo SPI de tarjeta + FatFs real | Tiempos internos de la tarjeta |
 | W5500 | (G4, tras alpha.13) registros y sockets → sockets del host | PHY/enlace físico |
 | Registros del ESP32 | Solo los campos GP-SPI que usa el package | Cualquier otro acceso por dirección física falla (no hay MMU que lo atrape) |
-| Wi-Fi / BLE / ADC / PWM | — | No soportados (mensaje explícito) |
+| PWM (LEDC, `analogWrite`, `tone`) | Frecuencia, resolución, ciclo e inversión por pin; fin de rampa con interrupción | No se generan flancos a la frecuencia del PWM: la red digital indica "activa si ciclo > 0" y los dispositivos de escena leen el valor PWM. Las rampas aplican el ciclo final al inicio |
+| Wi-Fi / BLE / ADC / NVS / LittleFS | — | No soportados (mensaje explícito al compilar o al usar la API) |
 
 Por eso el simulador **antecede** a los gates físicos de las alphas
 (`SIM_REGRESSION`), no los reemplaza.
@@ -483,6 +505,8 @@ sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
 | H5 | El autoload de `Arduino.h` enlaza 16 librerías en cualquier sketch. | Más superficie a simular y a compilar en frío. | Ninguna acción necesaria; documentado para G1/G5. |
 | H6 | No se encontraron en alpha.12 definiciones de los LEDs RUN/ERR/BUS/ETH. | No se pueden modelar todavía. | Indicar pines/expansor o confirmar que son controlados por hardware. |
 | H7 | El sdkconfig de `esp32-libs 3.3.8` no está en el package. | Valores como `CONFIG_FATFS_*` o `CONFIG_ARDUINO_RUNNING_CORE` se fijaron por defecto. | Verificar contra el `sdkconfig` del tool y fijarlos en `sim/hal/include/sdkconfig.h`. |
+| H8 | Cuatro ejemplos de `JW_MatrixButtons` (`01_BasicPress`, `02_AxisWrapSerial`, `03_EventQueue`, `05_DirectButtons_IO35_IO34_IO39`) definen su propio `enum { BTN_LEFT, … }`, que choca con `JWPLCButtonId` de `JWPLC_GlobalPeripherals.h` (incluido por el autoload de `Arduino.h`). | No compilan con la placa `jwplcbasic`, tampoco en el Arduino IDE. | Renombrar los enumeradores de los ejemplos o poner `JWPLCButtonId` en un namespace / `enum class`. |
+| H9 | Sketches de `tools/build-speed-benchmark` que usan librerías retiradas antes de alpha.12 (`08_ethernet_bridge_link`, `09_gfx_bridge_link`, `10_gfx_physical`, `16_alpha6_ethernet_nonblocking_acceptance`). | No compilan con alpha.12. | Actualizarlos a `JWPLC_TFT`/`JWPLC_Ethernet` o moverlos a un archivo histórico. |
 
 ## 12. Estructura del repositorio
 
