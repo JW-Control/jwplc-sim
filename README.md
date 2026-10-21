@@ -6,15 +6,15 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0 y G1 cerrados (salvo calibración contra placa) · G2 en curso (MVP de la interfaz)
+Estado: G0 y G1 cerrados (salvo calibración contra placa) · G2: 3 gates PASS, 3 a la espera de la corrida en Windows 11
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
 
 Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
 
-![JWPLC Sim: editor, placa y consola serie](docs/img/g2-mvp.png)
+![JWPLC Sim: editor, placa y pestaña Buses](docs/img/g2.png)
 
-## Abrir la interfaz (MVP de G2)
+## Abrir la interfaz
 
 Requisitos:
 
@@ -34,9 +34,19 @@ npm install
 npm start
 ```
 
-La primera compilación tarda ~10–15 s (core + 16 librerías del package); las
-siguientes, ~2 s. Los ejemplos del package se copian a
-`Documentos/JWPLC Sim/` antes de editarlos. F5 compila y ejecuta, F6 pausa.
+Con el toolchain incluido no hace falta GCC en el `PATH`:
+`node scripts/fetch-toolchain.mjs` (la primera vez, con `--lock`, fija su
+SHA-256 en `third_party/toolchain.json`).
+
+La primera compilación de un sketch tarda ~10–15 s (core + 16 librerías del
+package); un cambio posterior, menos de 1 s. Los ejemplos del package se
+copian a `Documentos/JWPLC Sim/` antes de editarlos. F5 compila y ejecuta,
+F6 pausa. Proyecto → Abrir/Guardar maneja archivos `.jwsim` (sketch,
+vínculos a OpenPLC y HMI, escena). Si edita el sketch con el Arduino IDE, la
+simulación se recarga sola.
+
+Prueba E2E de la interfaz: `cd app && npm run test:e2e` (en Linux sin
+pantalla, `xvfb-run -a npm run test:e2e`).
 
 ## Documentación
 
@@ -45,7 +55,7 @@ siguientes, ~2 s. Los ejemplos del package se copian a
   límites de fidelidad, sincronización con el package y hallazgos.
 - [Gates](docs/GATES.md): G0 a G10 con criterios medibles.
 - [Licencias](docs/LICENSES.md): matriz de dependencias y recomendación.
-- [Informe de la prueba técnica G0](docs/reports/G0_POC_IO_BASIC.md).
+- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md).
 
 ## Prueba rápida (headless)
 

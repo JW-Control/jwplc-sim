@@ -134,8 +134,12 @@ quedan como "no soportado" explícito hasta que algo los use.
    terceros (`third_party/sources.json`, SHA-256 por archivo).
 2. Leer la placa de `boards.txt` del package (`build.defines`, `build.f_cpu`,
    `build.board`, `build.variant`): **no se copian flags**.
-3. Preprocesar el `.ino`: pestañas concatenadas, `#include <Arduino.h>` y
-   `#line` para mapear errores. Prototipos automáticos (ctags) en G2.
+3. Preprocesar el `.ino`: pestañas concatenadas, `#include <Arduino.h>`,
+   `#line` para mapear errores y **[G2]** prototipos automáticos
+   (`cli/lib/prototypes.mjs`): las funciones globales de las pestañas reciben
+   un prototipo antes de la primera definición, con `#line` a su definición.
+   Se omiten, como en arduino-cli, las ya declaradas, los métodos, las
+   plantillas y las que tienen argumentos por defecto.
 4. Descubrir librerías como arduino-cli: preprocesar cada fuente; ante
    "No such file" buscar qué librería provee el header y agregarla.
 5. Compilar core (según el manifiesto), librerías, terceros y runtime del
@@ -143,6 +147,23 @@ quedan como "no soportado" explícito hasta que algo los use.
    Recompilación incremental por dependencias (`-MMD`) y **caché de objetos
    compartida entre sketches** (`build/cache/<destino>/`), con el comando de
    compilación completo como clave.
+
+Recompilación rápida **[G2]** (cambio en `loop()` de `02_io_basic`: de ~2 s
+a ~0,4 s en Linux, ~0,6 s en el destino Windows):
+
+- Caché del descubrimiento (`discovery.json`): las librerías dependen solo
+  de las directivas del preprocesador del sketch (el package está fijado).
+- Header precompilado del prefijo del `.ino` (`-include` forzados +
+  `Arduino.h`, que con el autoload arrastra 16 librerías), en la caché
+  compartida e indexado por flags e include path. Si GCC no puede usarlo se
+  compila sin él; el resultado (hash de traza) es idéntico.
+- El `.ino.cpp` preprocesado y los `.a` solo se reescriben si cambian.
+
+Sin red **[G2]**: con el package y los terceros ya descargados, compilar no
+accede a la red (verificado en un namespace sin red). Toolchain incluido:
+`scripts/fetch-toolchain.mjs` instala el GCC fijado en
+`third_party/toolchain.json` (WinLibs en Windows, con SHA-256) en
+`.jwsim/toolchain/`, y `cli/lib/toolchain.mjs` lo usa antes que el del `PATH`.
 
 Paridad con `platform.txt` **[G1]**: `-DARDUINO_PARTITION_<build.partitions>`,
 `build_opt.h` del sketch aplicado a todas las unidades (`"@{build.opt.path}"`)
@@ -442,11 +463,15 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 | runner→UI | `fatal` | API no soportada, `esp_restart`, assert, crash |
 | ambos | `horizon` | sincronización con el motor de escena (§6.6) |
 
-Implementado en el MVP de G2 **[G2]**: `hello` (placa y nivel de cada
-señal), `run` con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas
-`I0_k`, `quit`; del runner, `signals` (último nivel de cada señal que
-cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin cortar caracteres),
-`status` y `stopped`. Un `set` se agenda como evento en el instante virtual
+Implementado en G2 **[G2]**: `hello` (placa y nivel de cada señal), `run`
+con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,
+`subscribe` (`buses`: 1/0), `quit`; del runner, `signals` (último nivel de
+cada señal que cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin
+cortar caracteres), `bus` (transacciones I2C `[t_ns, bus, dirección,
+escritos, leídos, resultado]` y bytes de UART, hasta 400 por envío; el resto
+se informa como `dropped`), `status` y `stopped`. La interfaz decodifica
+los registros del TCA6424A en la pestaña Buses; el analizador completo
+(SPI por CS, Modbus) es G3. Un `set` se agenda como evento en el instante virtual
 actual, igual que un `.stim`: una sesión interactiva es reproducible. En
 pausa queda pendiente y se aplica al continuar. Si el host no alcanza la
 velocidad pedida, el runner se re-sincroniza con el reloj en vez de
@@ -504,6 +529,15 @@ detectar cambios (G2 EXTERNAL_EDIT_RELOAD).
   "stimuli": ["./tests/marcha_parada.stim"]
 }
 ```
+
+Esquema **[G2]**: [`schema/jwsim-1.json`](../schema/jwsim-1.json) (JSON
+Schema 2020-12, MIT). `cli/lib/project.mjs` valida al abrir y al guardar
+(subconjunto del estándar sin dependencias; contrastado con Ajv), migra
+versiones anteriores y conserva los campos desconocidos. `scene.inputMode`
+(`toggle`/`push`) y `scene.inputs` (`{"I0_1": 1}`) guardan la escena mínima
+de G2: modo de las entradas y su nivel inicial. La versión 0 es el borrador
+previo a v1 (`{"jwsim": 0, "sketch", "openplc", "hmi", "realtime", "seed"}`)
+y sirve para probar la ruta de migración.
 
 Reglas: rutas relativas al `.jwsim`; campos desconocidos se conservan; una
 versión mayor nueva implica migración explícita; `program.kind` admite

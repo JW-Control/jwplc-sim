@@ -27,12 +27,12 @@ JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS
 JWSIM_G1_PACKAGE_EXAMPLES_IO=PENDING (tablas de verdad PASS; calibración requiere medición en placa)
-JWSIM_G2_SPLIT_UI=PENDING           (MVP: Sketch, Placa y Consola lado a lado; arranque 1,0 s; falta pestaña Buses)
-JWSIM_G2_LOCAL_COMPILE=PENDING      (incremental 2,0 s en Linux; falta medir en Windows y prototipos automáticos)
-JWSIM_G2_ERROR_MAPPING=PENDING      (error en la línea del .ino verificado; falta la prueba de 5 errores en 2 pestañas)
-JWSIM_G2_UNSUPPORTED_LIB_MSG=PENDING (mensaje en compilación desde G1; falta nombrar el gate que la soportará)
-JWSIM_G2_PROJECT_LINKING=PENDING
-JWSIM_G2_EXTERNAL_EDIT_RELOAD=PENDING
+JWSIM_G2_SPLIT_UI=PENDING           (criterios PASS en Linux: arranque 1,0 s, pestaña Buses; falta corrida en Windows 11)
+JWSIM_G2_LOCAL_COMPILE=PENDING      (PASS en Linux y destino Windows: incremental 0,4/0,7 s, sin red, prototipos; falta Windows 11 y fijar el toolchain)
+JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
+JWSIM_G2_UNSUPPORTED_LIB_MSG=PASS   (10 familias; mensaje con API y gate)
+JWSIM_G2_PROJECT_LINKING=PASS       (esquema jwsim-1, migración v0 → v1)
+JWSIM_G2_EXTERNAL_EDIT_RELOAD=PENDING (PASS en Linux: recarga 0,44–0,56 s con la escena; falta Windows 11)
 JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
@@ -60,12 +60,12 @@ JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G2_SPLIT_UI` | Electron con código (Monaco) y simulación lado a lado; pestañas Sketch, Placa, Consola, Buses; arranque en frío < 5 s. | Prueba E2E (Playwright sobre Electron). |
-| `JWSIM_G2_LOCAL_COMPILE` | Compilación con el toolchain incluido, sin red ni Arduino IDE; incremental de un cambio en `loop()` < 3 s en el host de referencia; prototipos automáticos como arduino-cli. | Script cronometrado. |
-| `JWSIM_G2_ERROR_MAPPING` | Errores y avisos aparecen en la línea correcta del `.ino` (y de pestañas múltiples) en el editor. | Sketch con 5 errores sembrados en 2 pestañas. |
-| `JWSIM_G2_UNSUPPORTED_LIB_MSG` | Usar una librería o API no soportada (WiFi, BLE, analogWrite…) produce un mensaje en español que nombra la API/librería y el gate que la soportará, en compilación o al primer uso. | Sketches de prueba por cada familia no soportada. |
-| `JWSIM_G2_PROJECT_LINKING` | `.jwsim` v1 abre un proyecto que vincula `.ino`, proyecto OpenPLC y `.hmi`; validación por JSON Schema; migración probada de un archivo de versión anterior. | Tests del esquema. |
-| `JWSIM_G2_EXTERNAL_EDIT_RELOAD` | Editar el `.ino` fuera del simulador (Arduino IDE) provoca recompilación y recarga en < 2 s sin perder la escena. | Prueba E2E con escritura externa. |
+| `JWSIM_G2_SPLIT_UI` | Electron con código (Monaco) y simulación lado a lado; pestañas Sketch, Placa, Consola, Buses; arranque en frío < 5 s. | `cd app && npm run test:e2e` (Playwright sobre Electron) → `JWSIM_G2_E2E.json`, criterio `SPLIT_UI`. |
+| `JWSIM_G2_LOCAL_COMPILE` | Compilación con el toolchain incluido, sin red ni Arduino IDE; incremental de un cambio en `loop()` < 3 s en el host de referencia; prototipos automáticos como arduino-cli. | `node scripts/gate-g2-local-compile.mjs` + criterio `LOCAL_COMPILE` de la E2E; toolchain fijado en `third_party/toolchain.json`. |
+| `JWSIM_G2_ERROR_MAPPING` | Errores y avisos aparecen en la línea correcta del `.ino` (y de pestañas múltiples) en el editor. | `tests/sketches/g2_errores` (5 errores en 2 pestañas), criterio `ERROR_MAPPING` de la E2E. |
+| `JWSIM_G2_UNSUPPORTED_LIB_MSG` | Usar una librería o API no soportada (WiFi, BLE, ADC…) produce un mensaje en español que nombra la API/librería y el gate que la soportará (o que no está en el plan G0–G10), en compilación o al primer uso. | `node scripts/gate-g2-unsupported.mjs` sobre `tests/sketches/g2_unsupported`. |
+| `JWSIM_G2_PROJECT_LINKING` | `.jwsim` v1 abre un proyecto que vincula `.ino`, proyecto OpenPLC y `.hmi`; validación por JSON Schema; migración probada de un archivo de versión anterior. | `node --test tests/build/project_test.mjs` + criterio `PROJECT_LINKING` de la E2E. |
+| `JWSIM_G2_EXTERNAL_EDIT_RELOAD` | Editar el `.ino` fuera del simulador (Arduino IDE) provoca recompilación y recarga en < 2 s sin perder la escena. | Criterio `EXTERNAL_EDIT_RELOAD` de la E2E (escritura externa con una entrada activa). |
 
 ## G3 — Depuración
 
@@ -82,7 +82,8 @@ JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
 | Gate | Criterios | Verificación |
 |---|---|---|
 | `JWSIM_G4_RTC_DS3232M` | Modelo por registros (hora, alarmas, control/estado, OSF, temperatura) con `MODEL.md`; `03.RTC_Basic` del package funciona; tiempo del RTC sigue al tiempo virtual (y opción de reloj del host). | Ejemplo del package + tests del modelo. |
-| `JWSIM_G4_NVS_PREFERENCES` | `Preferences` (NVS sobre flash) persistente en el proyecto; los 10 ejemplos de `JWPLC_LogicRuntime` que hoy se rechazan por usar `Preferences` compilan y pasan su verificación. | Ejemplos de `JWPLC_LogicRuntime` + test de persistencia. |
+| `JWSIM_G4_NVS_PREFERENCES` | `Preferences` y `EEPROM` (NVS sobre flash) persistentes en el proyecto; los 10 ejemplos de `JWPLC_LogicRuntime` que hoy se rechazan por usar `Preferences` compilan y pasan su verificación. | Ejemplos de `JWPLC_LogicRuntime` + test de persistencia. |
+| `JWSIM_G4_HAL_EXTRAS` | APIs del HAL que hoy fallan con mensaje explícito y el package o sketches comunes pueden usar: `esp_timer`, timers de software de FreeRTOS (`xTimerCreate`…) y `esp_restart()` (reinicio del runner conservando FRAM, SD y NVS, con el mismo hash en corridas repetidas). | Sketches de prueba por API + determinismo. |
 | `JWSIM_G4_FRAM_PERSIST` | Modelo SPI FRAM (WREN/WRDI/RDSR/WRSR/READ/WRITE) de 8 KiB; contenido persistente en archivo del proyecto entre corridas; `04.FRAM_Basic` pasa. | Ejemplo + test de persistencia. |
 | `JWSIM_G4_SD_DATALOG` | Tarjeta SD en modo SPI (CMD0/8/55/41/58/9/10/17/18/24/25, CRC) sobre imagen FAT; FatFs real; VFS enruta `fopen("/sd/…")` a FatFs sin tocar el disco del host; `05.microSD_Basic` y DataLog pasan; detección de tarjeta. | Ejemplos + comparación de la imagen resultante. |
 | `JWSIM_G4_TFT_HMI` | Modelo ST7789 (comandos, ventana, RGB565, rotación, inversión) con framebuffer en la UI; HMI de `JWPLC_Display` visible y navegable con la botonera virtual; captura PNG comparable píxel a píxel con una referencia. | Comparación de capturas. |

@@ -42,6 +42,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | FatFs (ESP-IDF v5.5.1) | ChaN + glue ESP-IDF | Licencia FatFs (BSD de 1 cláusula) + Apache-2.0 | Sí | Descargada, no versionada. |
 | Headers sustitutos de ESP-IDF (`sim/hal/include`) | este repo | GPL-3.0-or-later | — | Declaraciones de API escritas desde cero; nombres y firmas por interoperabilidad. |
 | HAL nativo, motor, modelos, placa, runner | este repo | GPL-3.0-or-later (interfaz del SDK: MIT) | — | |
+| Esquema del proyecto `.jwsim` (`schema/`) | este repo | MIT | — | Para que otras herramientas lean y escriban proyectos sin restricciones. |
 | libstdc++ / glibc (Linux) | GCC / GNU | GPL-3.0 + excepción de runtime / LGPL-2.1+ | Sí | Excepción de runtime de GCC; glibc enlazada dinámicamente. |
 | libstdc++, libgcc, CRT y winpthreads de MinGW-w64 (Windows) | GCC / mingw-w64 | GPL-3.0 + excepción de runtime de GCC / ZPL-2.1 + dominio público / MIT + BSD-3-Clause (winpthreads) | Sí | Se enlazan estáticamente en el `.exe` del runner; la excepción de runtime permite cualquier licencia del ejecutable. Incluir avisos de mingw-w64 y winpthreads. |
 
