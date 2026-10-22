@@ -55,9 +55,13 @@ function startRunner() {
     const initialized = dap.waitEvent("initialized", 120000);
     await dap.request("initialize", { adapterID: "gdb", linesStartAt1: true, columnsStartAt1: true, pathFormat: "path" }, 120000);
     console.log(`\n== DAP initialize: ${Date.now() - t0} ms`);
-    await dap.request("attach", { pid: r.pid, program: exe }, 120000);
-    console.log(`== DAP attach: ${Date.now() - t0} ms`);
+    const attached = dap.request("attach", { pid: r.pid, program: exe }, 120000);
     await initialized;
+    console.log(`== DAP initialized: ${Date.now() - t0} ms`);
+    await dap.request("configurationDone", {}, 120000);
+    console.log(`== DAP configurationDone: ${Date.now() - t0} ms`);
+    await attached;
+    console.log(`== DAP attach: ${Date.now() - t0} ms`);
     const th = await dap.request("threads", {}, 60000);
     console.log(`== DAP threads: ${JSON.stringify(th.threads)}`);
   } catch (e) {

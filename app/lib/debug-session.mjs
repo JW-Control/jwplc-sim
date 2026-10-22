@@ -57,12 +57,19 @@ export class DebugSession extends EventEmitter {
     });
     const initialized = dap.waitEvent("initialized");
     await dap.request("initialize", { adapterID: "gdb", clientID: "jwplc-sim", linesStartAt1: true, columnsStartAt1: true, pathFormat: "path" });
-    await dap.request("attach", { pid: this.pid, program: this.exe });
+    // Orden del protocolo: attach, (initialized) configuración, configurationDone.
+    // gdb ≥ 16 responde al attach recién después de configurationDone; gdb 15,
+    // de inmediato. No se espera la respuesta antes de configurar.
+    const attached = dap.request("attach", { pid: this.pid, program: this.exe }, 120000);
+    attached.catch(() => {});
     await initialized;
     await this.#cli(`set may-call-functions ${this.allowCalls ? "on" : "off"}`);
+    for (const [path, lines] of breakpoints) await this.setBreakpoints(path, lines);
+    await dap.request("configurationDone");
+    await attached;
+    // Con el programa ya cargado, gdb informa qué líneas tienen código.
     const verified = new Map();
     for (const [path, lines] of breakpoints) verified.set(path, await this.setBreakpoints(path, lines));
-    await dap.request("configurationDone");
     const { threads } = await dap.request("threads");
     // El hilo principal del runner (planificador y fibras del firmware) es el
     // primero que creó el proceso: el de número menor en gdb.
