@@ -40,8 +40,13 @@ export class FrameDecoder {
 // Un runner (un PLC simulado). Eventos: "message" (objeto JSON), "stderr"
 // (texto), "exit" ({ code, signal }).
 export class RunnerProcess extends EventEmitter {
-  start(exe, args = []) {
-    this.child = spawn(exe, ["--port", "stdio", ...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+  // env: variables extra para el proceso (p. ej. JWSIM_DEBUG para depurar).
+  start(exe, args = [], { env } = {}) {
+    this.child = spawn(exe, ["--port", "stdio", ...args], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      env: env ? { ...process.env, ...env } : process.env,
+    });
     const dec = new FrameDecoder((type, msg) => type === FRAME_JSON && this.emit("message", msg));
     this.child.stdout.on("data", (d) => dec.push(d));
     this.child.stderr.setEncoding("utf8");
@@ -56,6 +61,9 @@ export class RunnerProcess extends EventEmitter {
   }
   send(msg) {
     if (this.child) this.child.stdin.write(encodeFrame(FRAME_JSON, msg));
+  }
+  get pid() {
+    return this.child?.pid ?? null;
   }
   get running() {
     return !!this.child;
