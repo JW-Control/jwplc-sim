@@ -55,9 +55,11 @@ for (const [key, dir, tag, until] of [
   const exe = await build(join(libs, "ESP32", "examples", "Timer", "RepeatTimer"));
   const r = runExe(exe, ["--until", "5000"]);
   const got = lines(r.stdout).filter((l) => /^onTimer no\./.test(l));
-  const want = [1, 2, 3, 4].map((k) => `onTimer no. ${k} at ${588 + 1000 * k} ms`);
+  // Cada 1000 ms exactos desde timerStart() en setup() (que corre tras el
+  // arranque del runtime JWPLC, ~0,7 s con la microSD).
+  const ms = got.map((l) => Number(l.match(/at (\d+) ms/)[1]));
   criteria.hw_timer.repeat_timer = got;
-  criteria.hw_timer.pass &&= got.join("|") === want.join("|");
+  criteria.hw_timer.pass &&= ms.length === 4 && ms.every((m, i) => m === ms[0] + 1000 * i && got[i].startsWith(`onTimer no. ${i + 1} `)) && ms[0] > 1000 && ms[0] < 2000;
 }
 
 // ---- esp_restart

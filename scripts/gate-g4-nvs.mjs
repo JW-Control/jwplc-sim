@@ -82,7 +82,8 @@ const criteria = {};
   {
     const exe = await build(ex("Preferences", "Prefs2Struct"));
     const r = run(exe, join(work, "Prefs2Struct"), 2000);
-    out.Prefs2Struct = { pass: r.lines.some((l) => /^09 1E FFFFFFEB FFFFFFFF 14 0F 00 01 08 1E 14 15/.test(l)), salida: r.lines.filter(Boolean) };
+    // printf("%02X ", char): con char sin signo, como en el ESP32 (H14).
+    out.Prefs2Struct = { pass: r.lines.some((l) => /^09 1E EB FF 14 0F 00 01 08 1E 14 15/.test(l)), salida: r.lines.filter(Boolean) };
   }
   {
     const exe = await build(ex("EEPROM", "eeprom_class"));
