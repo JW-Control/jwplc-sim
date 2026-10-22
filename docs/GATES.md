@@ -15,7 +15,7 @@ Convenciones:
   `trace_hash` (línea `JWSIM_RESULT` del runner).
 - Tiempos "virtuales" se miden con el reloj del simulador; "de pared", con el
   reloj del host de CI de referencia: GitHub Actions `windows-latest` (x64),
-  workflow `.github/workflows/g2-windows.yml`.
+  workflows `.github/workflows/g2-windows.yml` y `g3-windows.yml`.
 
 ## Estado actual
 
@@ -34,7 +34,12 @@ JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
 JWSIM_G2_UNSUPPORTED_LIB_MSG=PASS   (10 familias; mensaje con API y gate)
 JWSIM_G2_PROJECT_LINKING=PASS       (esquema jwsim-1, migración v0 → v1)
 JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI: recarga 1,86 s con la escena)
-JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G3_BREAKPOINTS_STEP=PASS     (gdb -i=dap; Windows CI y Linux; E2E en Electron)
+JWSIM_G3_FREEZE_TIME=PASS          (10 s detenido: millis() y tiempo virtual idénticos; sin perturbar el hash)
+JWSIM_G3_WATCH_FORCE_IO=PASS       (variables en vivo, forzado de I0/Q0 con marca visual, en la grabación)
+JWSIM_G3_BUS_ANALYZER=PASS         (11 capturas de referencia; I2C, SPI por CS, UART, Modbus RTU/TCP)
+JWSIM_G3_RECORD_REPLAY=PASS        (CLI, protocolo y app: mismo hash)
+JWSIM_G4_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---

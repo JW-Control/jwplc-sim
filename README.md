@@ -6,7 +6,7 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0, G1 y G2 cerrados (G1 salvo la calibración contra placa) · siguiente: G3 (depuración)
+Estado: G0–G3 cerrados (G1 salvo la calibración contra placa) · en curso: G4 (periféricos)
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
 
@@ -69,7 +69,7 @@ pantalla, `xvfb-run -a npm run test:e2e`).
   límites de fidelidad, sincronización con el package y hallazgos.
 - [Gates](docs/GATES.md): G0 a G10 con criterios medibles.
 - [Licencias](docs/LICENSES.md): matriz de dependencias y recomendación.
-- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md).
+- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md).
 
 ## Prueba rápida (headless)
 
