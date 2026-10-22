@@ -119,7 +119,9 @@ for (const [key, dir, tag, until] of [
   // Sin --state: directorio temporal propio, borrado al terminar.
   const tmp = join(work, "tmp");
   mkdirSync(tmp, { recursive: true });
-  const env = { TMPDIR: tmp, TMP: tmp, TEMP: tmp };
+  // Bajo wine la carpeta temporal se pasa como ruta de Windows (unidad Z:).
+  const winTmp = exe.endsWith(".exe") && process.platform !== "win32" ? `Z:${tmp.replaceAll("/", "\\")}` : tmp;
+  const env = { TMPDIR: tmp, TMP: winTmp, TEMP: winTmp };
   const old = { ...process.env };
   Object.assign(process.env, env);
   const r = runExe(exe, ["--until", "6000", "--stim", stim]);
