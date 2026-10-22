@@ -182,4 +182,32 @@ void JwplcBasic::save_state() {
   if (!jwsim_nvs_save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la NVS en el directorio de estado\n");
 }
 
+void JwplcBasic::save_warm(models::StateWriter &w) const {
+  w.u32(static_cast<uint32_t>(order_.size()));
+  for (const std::string &name : order_) {
+    const Net &n = *signals_.at(name);
+    w.str(name);
+    w.u8(static_cast<uint8_t>(n.external_level() + 1));
+    w.u8(static_cast<uint8_t>(n.forced_level() + 1));
+  }
+  tca_.save_warm(w);
+  tft_->save_warm(w);
+}
+
+bool JwplcBasic::load_warm(models::StateReader &r) {
+  const uint32_t n = r.u32();
+  for (uint32_t i = 0; i < n && r.ok(); ++i) {
+    const std::string name = r.str();
+    const int ext = r.u8() - 1;
+    const int forced = r.u8() - 1;
+    Net *net = signal(name);
+    if (!net) continue;
+    if (ext >= 0) net->drive(ext == 1);
+    if (forced >= 0) net->force(forced == 1);
+  }
+  tca_.load_warm(r);
+  tft_->load_warm(r);
+  return r.ok();
+}
+
 } // namespace jwsim::boards

@@ -12,6 +12,7 @@
 //                               esta opción sigue la del estado o, sin estado,
 //                               un RTC sin hora válida)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
+//   --resume <archivo>   (interno: proceso nuevo tras esp_restart; ver restart.h)
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
 // inicia comentario). NAME es una señal de bornera (I0_0..I0_7).
@@ -34,10 +35,12 @@
 #include "board.h"
 #include "jwsim/engine.h"
 #include "port.h"
+#include "restart.h"
 #include "stimulus.h"
 
 extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
+extern "C" void jwsim_set_reset_reason(int reason);
 
 namespace {
 
@@ -122,6 +125,10 @@ int main(int argc, char **argv) {
   std::string rtc_mode;
   std::vector<ScreenShot> shots;
   std::vector<jwsim::runner::InputEvent> stims;
+  std::string resume_file;
+  bool state_temp = false;
+  bool seeded = false;
+  uint64_t seed = 0;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -146,7 +153,12 @@ int main(int argc, char **argv) {
       pause_at = parse_ms(v.substr(0, colon));
       pause_wall_ms = std::atof(v.substr(colon + 1).c_str());
     }
-    else if (a == "--seed") jwsim_seed_random(std::strtoull(next().c_str(), nullptr, 0));
+    else if (a == "--seed") {
+      seed = std::strtoull(next().c_str(), nullptr, 0);
+      seeded = true;
+    }
+    else if (a == "--resume") resume_file = next();
+    else if (a == "--state-temp") state_temp = true;
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--state") state_dir = next();
     else if (a == "--screen") screen_file = next();
@@ -168,6 +180,19 @@ int main(int argc, char **argv) {
     } else usage(("opción desconocida: " + a).c_str());
   }
 
+  // Proceso nuevo tras esp_restart(): arranque en el instante guardado, con
+  // la traza encadenada y lo externo al ESP32 como estaba.
+  jwsim::runner::Resume resume;
+  if (!resume_file.empty()) {
+    resume = jwsim::runner::read_resume(resume_file);
+    jwsim_set_boot(resume.boot, resume.trace_hash, resume.trace_count);
+    jwsim_set_reset_reason(3);   // ESP_RST_SW
+    rtc_mode.clear();            // el RTC tiene batería: no se vuelve a fijar
+  }
+  // El generador de números aleatorios no repite la secuencia en cada
+  // arranque (en el ESP32 es de hardware), pero sigue siendo reproducible.
+  if (seeded || resume.restarts) jwsim_seed_random((seeded ? seed : 0x4A57504C4353494DULL) + 0x9E3779B97F4A7C15ULL * resume.restarts);
+
   static jwsim::boards::JwplcBasic board;
   board.set_echo(!quiet);
   if (!state_dir.empty()) {
@@ -177,10 +202,20 @@ int main(int argc, char **argv) {
   }
   // Ante una falla del firmware (abort, assert, vigilante) lo ya escrito en
   // FRAM, NVS y RTC queda guardado, como en la placa.
+  static std::string temp_dir;
+  if (state_temp) temp_dir = state_dir;
   jwsim_set_fatal_hook([] {
     board.flush_console();
     board.save_state();
+    if (!temp_dir.empty()) jwsim::runner::remove_temp_state(temp_dir);
   });
+  if (!resume_file.empty()) {
+    jwsim::models::StateReader r(resume.warm.data(), resume.warm.size());
+    if (!board.load_warm(r)) usage("estado tibio inválido en el archivo de reanudación");
+    for (uint32_t i : resume.applied) {
+      if (i < stims.size()) stims[i].applied = true;
+    }
+  }
   if (!rtc_mode.empty()) {
     if (rtc_mode == "host") {
       // Como sincronizar el RTC con la PC al encender (no reproducible). El
@@ -211,6 +246,7 @@ int main(int argc, char **argv) {
   }
   // Capturas en instantes dados: eventos externos (no cambian la traza).
   for (auto &shot : shots) {
+    if (shot.when < jwsim_boot_ns()) continue;
     jwsim_schedule_external_event(shot.when, [](void *arg, jwsim_ns_t) {
       auto *s = static_cast<ScreenShot *>(arg);
       write_screen(static_cast<jwsim::boards::JwplcBasic &>(jwsim::board()).tft(), s->file);
@@ -219,15 +255,33 @@ int main(int argc, char **argv) {
   for (auto &s : stims) {
     const std::string err = jwsim::runner::validate_input(board, s);
     if (!err.empty()) usage(err.c_str());
-    jwsim::runner::schedule_input(board, &s);
+    // Lo ya aplicado antes del reinicio está en el estado tibio.
+    if (!s.applied) jwsim::runner::schedule_input(board, &s);
   }
+  // Prepara el reinicio pedido por el firmware y devuelve el archivo de
+  // reanudación (el directorio de estado temporal pasa al proceso nuevo).
+  auto restart = [&]() {
+    std::vector<uint32_t> applied;
+    for (uint32_t i = 0; i < stims.size(); ++i) {
+      if (stims[i].applied) applied.push_back(i);
+    }
+    bool temp = state_temp;
+    const std::string file = jwsim::runner::prepare_restart(board, state_dir, temp, resume.restarts, applied);
+    return std::make_pair(file, temp);
+  };
 
   // Arranque idéntico al firmware real: app_main() del core del package crea
   // loopTask, loop1Task y jwplcSystemTask; el planificador las ejecuta.
   app_main();
   if (port) {
-    const int rc = jwsim::runner::run_port(board);
-    board.save_state();
+    const int rc = jwsim::runner::run_port(board, [&]() {
+      const auto [file, temp] = restart();
+      return jwsim::runner::RestartInfo{file, state_dir, temp};
+    });
+    if (rc != jwsim::runner::kRestartExitCode) {
+      board.save_state();
+      if (state_temp) jwsim::runner::remove_temp_state(state_dir);
+    }
     std::fflush(stdout);
     std::_Exit(rc);
   }
@@ -255,18 +309,30 @@ int main(int argc, char **argv) {
       std::this_thread::sleep_until(target);
     } while (t < to && reason == JWSIM_STOP_TIME);
   };
-  if (pause_at < until) {
-    run_segment(0, pause_at, wall_start);
+  // Tras un reinicio el tiempo virtual sigue desde el arranque t0: el
+  // instante de pared de t = 0 queda en el pasado.
+  const jwsim_ns_t t0 = jwsim_boot_ns();
+  const auto origin = wall_start - std::chrono::nanoseconds(realtime > 0.0 ? static_cast<int64_t>(t0 / realtime) : 0);
+  auto restart_if_pending = [&]() {
+    if (!jwsim_restart_pending()) return;
+    const auto [file, temp] = restart();
+    jwsim::runner::reexec(argc, argv, file, state_dir, temp);
+  };
+  if (pause_at < until && pause_at >= t0) {
+    run_segment(t0, pause_at, origin);
+    restart_if_pending();
     const auto pause_ns = std::chrono::nanoseconds(static_cast<int64_t>(pause_wall_ms * 1e6));
     std::this_thread::sleep_for(pause_ns);   // pausa: no se llama jwsim_run()
-    run_segment(pause_at, until, wall_start + pause_ns);
+    run_segment(pause_at, until, origin + pause_ns);
   } else {
-    run_segment(0, until, wall_start);
+    run_segment(t0, until, origin);
   }
+  restart_if_pending();
   const double wall_ms =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - wall_start).count();
   board.flush_console();
   board.save_state();
+  if (state_temp) jwsim::runner::remove_temp_state(state_dir);
   if (!screen_file.empty()) write_screen(board.tft(), screen_file);
 
   if (stats) {

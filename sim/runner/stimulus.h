@@ -30,6 +30,7 @@ struct InputEvent {
   bool level = false;
   int port = -1;      // InputOp::Uart
   std::string data;   // bytes recibidos (InputOp::Uart)
+  bool applied = false;   // ya se aplicó (para reanudar tras un reinicio)
 };
 
 // Interpreta "I0_0=1", "force Q0_3=1", "unforce Q0_3" o 'uart0 "texto"' (sin

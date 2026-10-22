@@ -153,4 +153,36 @@ void ST7789::pixel(uint16_t rgb) {
   }
 }
 
+void ST7789::save_warm(StateWriter &w) const {
+  w.u8(madctl_);
+  w.u8(colmod_);
+  w.u8(static_cast<uint8_t>(inversion_ | display_on_ << 1 | sleeping_ << 2));
+  for (int v : {xs_, xe_, ys_, ye_, ca_, ra_}) w.u16(static_cast<uint16_t>(v));
+  w.u8(cmd_);
+  w.u8(static_cast<uint8_t>(nparam_));
+  w.bytes(params_, sizeof(params_));
+  w.u8(static_cast<uint8_t>(have_hi_));
+  w.u8(hi_);
+  w.u64(pixels_written_);
+  w.bytes(gram_.data(), gram_.size() * sizeof(uint16_t));
+}
+
+void ST7789::load_warm(StateReader &r) {
+  madctl_ = r.u8();
+  colmod_ = r.u8();
+  const uint8_t f = r.u8();
+  inversion_ = f & 1;
+  display_on_ = f & 2;
+  sleeping_ = f & 4;
+  for (int *v : {&xs_, &xe_, &ys_, &ye_, &ca_, &ra_}) *v = r.u16();
+  cmd_ = r.u8();
+  nparam_ = r.u8();
+  r.bytes(params_, sizeof(params_));
+  have_hi_ = r.u8() != 0;
+  hi_ = r.u8();
+  pixels_written_ = r.u64();
+  r.bytes(gram_.data(), gram_.size() * sizeof(uint16_t));
+  mark_all();
+}
+
 } // namespace jwsim::models

@@ -57,6 +57,12 @@ class JwplcBasic : public Board {
   void set_state_dir(const std::string &dir);
   void save_state();
 
+  // Estado que conserva un reinicio del ESP32 (esp_restart): lo que no es
+  // el ESP32 sigue alimentado (expansor, pantalla, entradas y forzados de la
+  // interfaz). FRAM, NVS y RTC van por set_state_dir().
+  void save_warm(models::StateWriter &w) const;
+  bool load_warm(models::StateReader &r);
+
  private:
   Net &add_signal(const std::string &name, bool idle);
   void update_relays();

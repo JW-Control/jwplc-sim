@@ -27,6 +27,10 @@
 namespace {
 // xorshift64*: semilla fija por defecto; el runner puede cambiarla.
 uint64_t g_rng = 0x4A57504C4353494DULL;   // "JWPLCSIM"
+esp_reset_reason_t g_reset_reason = ESP_RST_POWERON;
+// esp_register_shutdown_handler: hasta 5, como ESP-IDF.
+constexpr int kShutdownHandlers = 5;
+shutdown_handler_t g_shutdown[kShutdownHandlers] = {};
 
 void console_vprintf(const char *fmt, va_list ap) {
   char buf[512];
@@ -41,18 +45,7 @@ void console_vprintf(const char *fmt, va_list ap) {
 extern "C" {
 
 void jwsim_seed_random(uint64_t seed) { g_rng = seed ? seed : 1; }
-
-int64_t esp_timer_get_time(void) { return static_cast<int64_t>(jwsim_now() / JWSIM_NS_PER_US); }
-
-esp_err_t esp_timer_create(const esp_timer_create_args_t *args, esp_timer_handle_t *) {
-  jwsim_fatal("esp_timer_create('%s'): esp_timer no está soportado todavía por JWPLC Sim; llega en JWSIM_G4_HAL_EXTRAS.",
-              args && args->name ? args->name : "");
-}
-esp_err_t esp_timer_start_once(esp_timer_handle_t, uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
-esp_err_t esp_timer_start_periodic(esp_timer_handle_t, uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
-esp_err_t esp_timer_stop(esp_timer_handle_t) { return ESP_ERR_NOT_SUPPORTED; }
-esp_err_t esp_timer_delete(esp_timer_handle_t) { return ESP_ERR_NOT_SUPPORTED; }
-bool esp_timer_is_active(esp_timer_handle_t) { return false; }
+void jwsim_set_reset_reason(int reason) { g_reset_reason = static_cast<esp_reset_reason_t>(reason); }
 
 uint32_t esp_random(void) {
   g_rng ^= g_rng >> 12;
@@ -66,17 +59,43 @@ void esp_fill_random(void *buf, size_t len) {
   for (size_t i = 0; i < len; ++i) p[i] = static_cast<uint8_t>(esp_random());
 }
 
+// Como ESP-IDF: corre los manejadores de apagado (del último al primero) y
+// reinicia. El runner arranca un proceso nuevo del firmware conservando lo
+// externo al ESP32 (FRAM, NVS, RTC, TCA6424A, pantalla, entradas).
 void esp_restart(void) {
-  std::fflush(stdout);
-  jwsim_fatal("esp_restart() solicitado por el firmware: el reinicio no está soportado todavía por JWPLC Sim; llega en JWSIM_G4_HAL_EXTRAS.");
+  for (int i = kShutdownHandlers - 1; i >= 0; --i) {
+    if (g_shutdown[i]) g_shutdown[i]();
+  }
+  jwsim_request_restart();   // desde una tarea o una ISR no vuelve
+  jwsim_fatal("esp_restart() fuera de una tarea o interrupción del firmware");
 }
 void esp_system_abort(const char *details) { jwsim_fatal("esp_system_abort: %s", details ? details : ""); }
-esp_reset_reason_t esp_reset_reason(void) { return ESP_RST_POWERON; }
+esp_reset_reason_t esp_reset_reason(void) { return g_reset_reason; }
 // Heap del ESP32 sin PSRAM: valores representativos y constantes (deterministas).
 uint32_t esp_get_free_heap_size(void) { return 200000; }
 uint32_t esp_get_free_internal_heap_size(void) { return 200000; }
 uint32_t esp_get_minimum_free_heap_size(void) { return 180000; }
-esp_err_t esp_register_shutdown_handler(shutdown_handler_t) { return ESP_OK; }
+esp_err_t esp_register_shutdown_handler(shutdown_handler_t handler) {
+  for (auto h : g_shutdown) {
+    if (h == handler) return ESP_ERR_INVALID_STATE;
+  }
+  for (auto &h : g_shutdown) {
+    if (!h) {
+      h = handler;
+      return ESP_OK;
+    }
+  }
+  return ESP_ERR_NO_MEM;
+}
+esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handler) {
+  for (auto &h : g_shutdown) {
+    if (h == handler) {
+      h = nullptr;
+      return ESP_OK;
+    }
+  }
+  return ESP_ERR_INVALID_STATE;
+}
 
 esp_err_t esp_sleep_enable_timer_wakeup(uint64_t) { return ESP_ERR_NOT_SUPPORTED; }
 void esp_deep_sleep_start(void) { jwsim_fatal("deep sleep no está soportado por JWPLC Sim. No está en el plan de gates G0–G10."); }
@@ -85,7 +104,7 @@ void esp_deep_sleep(uint64_t) { jwsim_fatal("deep sleep no está soportado por J
 esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void) { return ESP_SLEEP_WAKEUP_UNDEFINED; }
 
 esp_cpu_cycle_count_t esp_cpu_get_cycle_count(void) {
-  return static_cast<esp_cpu_cycle_count_t>(jwsim_now() * 240ULL / 1000ULL);
+  return static_cast<esp_cpu_cycle_count_t>((jwsim_now() - jwsim_boot_ns()) * 240ULL / 1000ULL);
 }
 int esp_cpu_get_core_id(void) { return jwsim_current_core(); }
 
@@ -131,7 +150,7 @@ void esp_log_write(esp_log_level_t level, const char *tag, const char *fmt, ...)
   va_end(ap);
 }
 void esp_log_level_set(const char *, esp_log_level_t) {}
-uint32_t esp_log_timestamp(void) { return static_cast<uint32_t>(jwsim_now() / JWSIM_NS_PER_MS); }
+uint32_t esp_log_timestamp(void) { return static_cast<uint32_t>((jwsim_now() - jwsim_boot_ns()) / JWSIM_NS_PER_MS); }
 
 int ets_printf(const char *fmt, ...) {
   va_list ap;

@@ -107,6 +107,9 @@ struct Sched {
   uint64_t next_event_seq = 1;
   int lock_depth = 0;
   bool stop_requested = false;
+  bool restart_requested = false;
+  jwsim_ns_t restart_at = 0;
+  jwsim_ns_t boot = 0;          // instante del último arranque del ESP32
   jwsim_cost_model costs{};
   uint64_t trace_hash = 1469598103934665603ULL;
   uint64_t trace_count = 0;
@@ -136,7 +139,8 @@ bool event_after(const Event &a, const Event &b) {
   return a.seq > b.seq;
 }
 
-jwsim_ns_t tick_to_ns(uint32_t tick) { return static_cast<jwsim_ns_t>(tick) * JWSIM_TICK_NS; }
+// Los ticks de FreeRTOS cuentan desde el arranque (boot es múltiplo del tick).
+jwsim_ns_t tick_to_ns(uint32_t tick) { return S().boot + static_cast<jwsim_ns_t>(tick) * JWSIM_TICK_NS; }
 
 void make_ready(jwsim_task *t, jwsim_ns_t at) {
   t->state = State::Ready;
@@ -269,6 +273,11 @@ void free_graveyard() {
 // Ejecuta las interrupciones pendientes en el contexto del planificador, en
 // el instante en que fueron levantadas (o en el reloj del núcleo si va
 // adelantado). Equivale a la ISR apropiando a la tarea del núcleo dueño.
+// Salida de una ISR que no vuelve (esp_restart() desde una interrupción):
+// __builtin_longjmp regresa al despacho sin desenrollar con SEH (MinGW).
+void *g_isr_exit[5];
+bool g_isr_exit_armed = false;
+
 void run_pending_isrs() {
   Sched &s = S();
   for (size_t i = 0; i < s.isrs.size(); ++i) {
@@ -277,8 +286,13 @@ void run_pending_isrs() {
     c.t = std::max(c.t, isr.at);
     s.in_isr = true;
     s.isr_now = c.t;
-    isr.fn(isr.arg);
+    if (__builtin_setjmp(g_isr_exit) == 0) {
+      g_isr_exit_armed = true;
+      isr.fn(isr.arg);
+    }
+    g_isr_exit_armed = false;
     s.in_isr = false;
+    if (s.restart_requested) break;
   }
   s.isrs.clear();
 }
@@ -357,7 +371,39 @@ jwsim_ns_t jwsim_now(void) {
   return m;
 }
 
-uint32_t jwsim_tick_count(void) { return static_cast<uint32_t>(jwsim_now() / JWSIM_TICK_NS); }
+uint32_t jwsim_tick_count(void) { return static_cast<uint32_t>((jwsim_now() - S().boot) / JWSIM_TICK_NS); }
+
+jwsim_ns_t jwsim_boot_ns(void) { return S().boot; }
+
+void jwsim_set_boot(jwsim_ns_t boot, uint64_t trace_hash, uint64_t trace_count) {
+  Sched &s = S();
+  if (boot % JWSIM_TICK_NS) jwsim_fatal("jwsim_set_boot: el arranque debe caer en un tick");
+  s.boot = boot;
+  for (Core &c : s.cores) c.t = std::max(c.t, boot);
+  s.trace_hash = trace_hash;
+  s.trace_count = trace_count;
+}
+
+void jwsim_request_restart(void) {
+  Sched &s = S();
+  if (!s.restart_requested) s.restart_at = jwsim_now();
+  s.restart_requested = true;
+  s.stop_requested = true;
+  // Ninguna instrucción más del firmware: la ISR o la tarea que pidió el
+  // reinicio no continúa y jwsim_run() vuelve en cuanto recupera el control.
+  if (jwsim_in_isr() && g_isr_exit_armed) __builtin_longjmp(g_isr_exit, 1);
+  if (s.running && !jwsim_in_isr()) jwsim_task_suspend(nullptr);
+}
+
+bool jwsim_restart_pending(void) { return S().restart_requested; }
+
+jwsim_ns_t jwsim_restart_time(void) {
+  // Los núcleos ociosos quedaron atrás: el reinicio ocurre para todos en el
+  // instante del núcleo que lo pidió.
+  Sched &s = S();
+  for (Core &c : s.cores) c.t = std::max(c.t, s.restart_at);
+  return s.restart_at;
+}
 
 jwsim_cost_model *jwsim_costs(void) { return &S().costs; }
 

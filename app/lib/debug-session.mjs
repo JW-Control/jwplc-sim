@@ -201,7 +201,14 @@ export class DebugSession extends EventEmitter {
     this.dap = null;
     const wait = (p, ms) => Promise.race([p.catch(() => {}), new Promise((r) => setTimeout(r, ms))]);
     const exited = new Promise((r) => (dap.child.exitCode !== null ? r() : dap.child.once("exit", r)));
-    if (this.started && !this.stoppedNow) {
+    // Tras un esp_restart() el proceso depurado ya terminó: no hay qué pausar.
+    let alive = true;
+    try {
+      process.kill(this.pid, 0);
+    } catch {
+      alive = false;
+    }
+    if (alive && this.started && !this.stoppedNow) {
       const stopped = new Promise((r) => dap.once("stopped", r));
       this.pauseRequested = true;
       await wait(dap.request("pause", { threadId: this.mainThreadId ?? this.threadId }, 5000), 5000);

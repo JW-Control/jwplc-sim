@@ -15,12 +15,12 @@ extern "C" {
 
 unsigned long micros() {
   jwsim_cpu(jwsim_costs()->millis_call);
-  return static_cast<unsigned long>(static_cast<uint32_t>(jwsim_now() / JWSIM_NS_PER_US));
+  return static_cast<unsigned long>(static_cast<uint32_t>((jwsim_now() - jwsim_boot_ns()) / JWSIM_NS_PER_US));
 }
 
 unsigned long millis() {
   jwsim_cpu(jwsim_costs()->millis_call);
-  return static_cast<unsigned long>(static_cast<uint32_t>(jwsim_now() / JWSIM_NS_PER_MS));
+  return static_cast<unsigned long>(static_cast<uint32_t>((jwsim_now() - jwsim_boot_ns()) / JWSIM_NS_PER_MS));
 }
 
 void delay(uint32_t ms) { vTaskDelay(ms / portTICK_PERIOD_MS); }

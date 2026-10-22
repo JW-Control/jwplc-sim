@@ -40,30 +40,103 @@ export class FrameDecoder {
 
 // Un runner (un PLC simulado). Eventos: "message" (objeto JSON), "display"
 // (Buffer con la zona cambiada de la pantalla), "stderr" (texto), "exit"
-// ({ code, signal }).
+// ({ code, signal }), "restarted" ({ pid, boot_ns }).
+//
+// esp_restart() del firmware (G4): el runner informa {"type":"restart"} y
+// termina con el código 75; aquí se lanza el proceso nuevo con --resume y el
+// mismo objeto sigue representando al PLC. Lo que la interfaz envíe mientras
+// tanto se encola, y al llegar el "hello" nuevo se repone el estado de
+// marcha (run/pause, suscripción a buses) antes de entregarlo. `onRestart`
+// (async) corre antes de reanudar: p. ej. adjuntar el depurador al pid nuevo.
+export const RESTART_EXIT_CODE = 75;
+
 export class RunnerProcess extends EventEmitter {
   // env: variables extra para el proceso (p. ej. JWSIM_DEBUG para depurar).
-  start(exe, args = [], { env } = {}) {
-    this.child = spawn(exe, ["--port", "stdio", ...args], {
+  start(exe, args = [], { env, onRestart } = {}) {
+    this.exe = exe;
+    this.args = args;
+    this.env = env;
+    this.onRestart = onRestart;
+    this.lastRun = null;
+    this.lastSubscribe = null;
+    this.queue = null;   // comandos durante un reinicio
+    this.#spawn(args);
+    return this;
+  }
+  #spawn(args) {
+    const child = spawn(this.exe, ["--port", "stdio", ...args], {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
-      env: env ? { ...process.env, ...env } : process.env,
+      env: this.env ? { ...process.env, ...this.env } : process.env,
     });
+    this.child = child;
     // Tipo 2: zona cambiada de la pantalla (binario, ver port.cpp).
-    const dec = new FrameDecoder((type, msg) => this.emit(type === FRAME_JSON ? "message" : type === FRAME_DISPLAY ? "display" : "frame", msg));
-    this.child.stdout.on("data", (d) => dec.push(d));
-    this.child.stderr.setEncoding("utf8");
-    this.child.stderr.on("data", (d) => this.emit("stderr", d));
-    this.child.on("exit", (code, signal) => {
+    const dec = new FrameDecoder((type, msg) => {
+      if (type === FRAME_JSON) this.#onMessage(msg);
+      else this.emit(type === FRAME_DISPLAY ? "display" : "frame", msg);
+    });
+    child.stdout.on("data", (d) => dec.push(d));
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (d) => this.emit("stderr", d));
+    child.on("exit", (code, signal) => {
+      if (this.child !== child) return;
+      const r = this.pendingRestart;
+      this.pendingRestart = null;
+      if (code === RESTART_EXIT_CODE && r) {
+        this.#spawn([...this.#baseArgs(r), "--resume", r.resume, ...(r.state_temp ? ["--state", r.state, "--state-temp"] : [])]);
+        return;
+      }
       this.child = null;
       this.emit("exit", { code, signal });
     });
-    this.child.on("error", (err) => this.emit("stderr", `[jwsim] no se pudo iniciar el runner: ${err.message}\n`));
-    this.child.stdin.on("error", () => {});
-    return this;
+    child.on("error", (err) => this.emit("stderr", `[jwsim] no se pudo iniciar el runner: ${err.message}\n`));
+    child.stdin.on("error", () => {});
+  }
+  // Argumentos originales sin los de una reanudación anterior.
+  #baseArgs(r) {
+    const out = [];
+    for (let i = 0; i < this.args.length; i++) {
+      const a = this.args[i];
+      if (a === "--resume" || (r.state_temp && a === "--state")) i++;
+      else if (a !== "--state-temp") out.push(a);
+    }
+    return out;
+  }
+  async #onMessage(msg) {
+    if (msg.type === "restart") {
+      this.pendingRestart = msg;
+      this.queue = [];
+      this.emit("message", msg);
+    } else if (msg.type === "hello" && this.queue) {
+      this.emit("message", msg);
+      this.emit("restarted", { pid: this.pid, boot_ns: msg.t_ns });
+      try {
+        await this.onRestart?.();
+      } catch (err) {
+        this.emit("stderr", `[jwsim] ${err.message}\n`);
+      }
+      const queued = this.queue;
+      this.queue = null;
+      if (this.lastSubscribe) this.#write(this.lastSubscribe);
+      for (const m of queued) this.send(m);
+      if (this.lastRun?.type === "run" && !queued.some((m) => m.type === "run" || m.type === "pause")) this.#write(this.lastRun);
+      return;
+    }
+    if (msg.type === "reached") this.lastRun = null;
+    this.emit("message", msg);
+  }
+  #write(msg) {
+    if (this.child) this.child.stdin.write(encodeFrame(FRAME_JSON, msg));
   }
   send(msg) {
-    if (this.child) this.child.stdin.write(encodeFrame(FRAME_JSON, msg));
+    if (msg.type === "run" || msg.type === "pause") this.lastRun = msg;
+    if (msg.type === "subscribe") this.lastSubscribe = msg;
+    if (msg.type === "quit") this.lastRun = null;
+    if (this.queue && msg.type !== "quit") {
+      this.queue.push(msg);
+      return;
+    }
+    this.#write(msg);
   }
   get pid() {
     return this.child?.pid ?? null;
@@ -72,6 +145,8 @@ export class RunnerProcess extends EventEmitter {
     return !!this.child;
   }
   stop() {
+    this.pendingRestart = null;
+    this.queue = null;
     if (!this.child) return;
     this.send({ type: "quit" });
     const c = this.child;

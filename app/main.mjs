@@ -347,7 +347,14 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
     copyDir(st.dir, st.start);
   }
   const rtcArg = rtc ?? localRtcNow();
-  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg], { env: { JWSIM_DEBUG: "1" } });
+  // esp_restart(): el proceso nuevo tiene otro pid; con breakpoints, gdb se
+  // vuelve a adjuntar antes de que el firmware reanude.
+  const onRestart = async () => {
+    if (runner !== r) return;
+    await detachDebugger();
+    if (hasBreakpoints()) await attachDebugger();
+  };
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg], { env: { JWSIM_DEBUG: "1" }, onRestart });
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {

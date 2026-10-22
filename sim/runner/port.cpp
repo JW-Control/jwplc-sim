@@ -43,6 +43,8 @@
 #define JWSIM_WRITE _write
 #define JWSIM_DUP _dup
 #define JWSIM_DUP2 _dup2
+#include <process.h>
+#define JWSIM_GETPID _getpid
 #else
 #include <unistd.h>
 #if defined(__linux__)
@@ -52,9 +54,11 @@
 #define JWSIM_WRITE write
 #define JWSIM_DUP dup
 #define JWSIM_DUP2 dup2
+#define JWSIM_GETPID getpid
 #endif
 
 #include "jwsim/engine.h"
+#include "restart.h"
 #include "stimulus.h"
 
 namespace jwsim::runner {
@@ -259,7 +263,7 @@ void reader_thread(Inbox *inbox) {
 // ---------------------------------------------------------------- estado
 } // namespace
 
-int run_port(jwsim::boards::JwplcBasic &board) {
+int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()> &restart) {
 #if defined(__linux__) && defined(PR_SET_PTRACER)
   // Depuración (G3): la interfaz adjunta gdb a este proceso, que no es hijo
   // de gdb. Con Yama (ptrace_scope = 1, por defecto en Ubuntu) hace falta
@@ -342,7 +346,8 @@ int run_port(jwsim::boards::JwplcBasic &board) {
 
   {
     std::string hello = "{\"type\":\"hello\",\"protocol\":" + std::to_string(kProtocolVersion) +
-                        ",\"board\":" + quoted(board.name()) + ",\"signals\":[";
+                        ",\"board\":" + quoted(board.name()) + ",\"t_ns\":" + std::to_string(jwsim_now()) +
+                        ",\"pid\":" + std::to_string(JWSIM_GETPID()) + ",\"signals\":[";
     bool first = true;
     for (const auto &name : names) {
       hello += (first ? "[" : ",[") + quoted(name) + "," + (board.signal(name)->level() ? "1" : "0") + "]";
@@ -503,6 +508,16 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     jwsim_run_limits lim{jwsim_now() + step};
     if (until && lim.until_ns > until) lim.until_ns = until;
     jwsim_run(&lim);
+    if (jwsim_restart_pending()) {
+      // Lo que la interfaz envíe desde ahora llega con el ESP32 en reinicio:
+      // queda sin leer y se descarta al terminar el proceso (no se graba).
+      flush(true);
+      const RestartInfo info = restart();
+      send_json(hash_json("restart") + ",\"boot_ns\":" + std::to_string(jwsim_boot_ns()) + ",\"resume\":" +
+                quoted(info.resume) + ",\"state\":" + quoted(info.state_dir) + ",\"state_temp\":" +
+                (info.state_temp ? "true" : "false") + "}");
+      return kRestartExitCode;
+    }
     if (until && jwsim_now() >= until) {
       until = 0;
       running = false;

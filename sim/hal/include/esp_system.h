@@ -36,6 +36,9 @@ uint32_t esp_get_free_heap_size(void);
 uint32_t esp_get_free_internal_heap_size(void);
 uint32_t esp_get_minimum_free_heap_size(void);
 esp_err_t esp_register_shutdown_handler(shutdown_handler_t handle);
+esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handle);
+// Simulador: motivo del arranque que informa esp_reset_reason().
+void jwsim_set_reset_reason(int reason);
 void esp_system_abort(const char *details) __attribute__((noreturn));
 
 #ifdef __cplusplus

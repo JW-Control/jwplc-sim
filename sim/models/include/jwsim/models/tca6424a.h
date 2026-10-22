@@ -14,6 +14,7 @@
 #include <string>
 
 #include "jwsim/devices.h"
+#include "jwsim/models/persist.h"
 
 namespace jwsim::models {
 
@@ -44,6 +45,11 @@ class TCA6424A : public I2CTarget {
 
   // Estado interno (observación/depuración).
   uint8_t reg(uint8_t r) const;
+
+  // Registros que conserva un reinicio del ESP32 (el expansor sigue
+  // alimentado): salidas, polaridad, configuración.
+  void save_warm(StateWriter &w) const;
+  void load_warm(StateReader &r);
 
   // I2CTarget
   bool i2c_start(bool read) override;

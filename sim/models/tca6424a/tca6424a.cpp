@@ -147,4 +147,21 @@ uint8_t TCA6424A::i2c_read(bool) {
 
 void TCA6424A::i2c_stop() { reading_ = false; }
 
+
+void TCA6424A::save_warm(StateWriter &w) const {
+  w.bytes(output_, 3);
+  w.bytes(polarity_, 3);
+  w.bytes(config_, 3);
+  w.bytes(input_snapshot_, 3);
+}
+
+void TCA6424A::load_warm(StateReader &r) {
+  r.bytes(output_, 3);
+  r.bytes(polarity_, 3);
+  r.bytes(config_, 3);
+  r.bytes(input_snapshot_, 3);
+  apply_outputs();
+  update_interrupt();
+}
+
 } // namespace jwsim::models

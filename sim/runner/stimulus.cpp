@@ -14,6 +14,7 @@ jwsim::boards::JwplcBasic *g_board = nullptr;
 
 void apply(void *arg, jwsim_ns_t) {
   auto *ev = static_cast<InputEvent *>(arg);
+  ev->applied = true;
   if (ev->op == InputOp::Uart) {
     const uint8_t rec[2] = {'U', static_cast<uint8_t>(ev->port)};
     jwsim_trace_bytes(rec, sizeof(rec));

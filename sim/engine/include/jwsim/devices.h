@@ -80,6 +80,15 @@ class Net {
     resolve();
   }
   bool forced() const { return forced_ >= 0; }
+  // -1 sin forzar, 0/1 nivel forzado.
+  int forced_level() const { return forced_; }
+  // Nivel del manejador externo anónimo (estímulo): -1 si no hay.
+  int external_level() const {
+    for (const auto &d : drivers_) {
+      if (!d.owner) return d.level ? 1 : 0;
+    }
+    return -1;
+  }
 
   using Listener = std::function<void(Net &, bool level)>;
   void on_change(Listener cb) { listeners_.push_back(std::move(cb)); }

@@ -842,6 +842,10 @@ function onMessage(m) {
     case "serial":
       consoleWrite(m.text.replaceAll("\r", ""));
       break;
+    case "restart":
+      // esp_restart(): el runner relanza el firmware conservando lo externo.
+      consoleWrite(`\n[jwsim] esp_restart(): reinicio del ESP32 en ${fmtTime(m.boot_ns)}\n`, "sys");
+      break;
     case "fatal":
       consoleWrite(`\n${m.message}\n`, "fatal");
       setStatus("error", "Error del firmware");

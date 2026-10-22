@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "jwsim/devices.h"
+#include "jwsim/models/persist.h"
 
 namespace jwsim::models {
 
@@ -52,6 +53,11 @@ class ST7789 : public SPITarget {
   // SPITarget
   void spi_select(bool selected) override;
   uint8_t spi_transfer(uint8_t mosi) override;
+
+  // Estado que conserva un reinicio del ESP32 (la pantalla sigue
+  // alimentada): GRAM, registros y ventana de escritura.
+  void save_warm(StateWriter &w) const;
+  void load_warm(StateReader &r);
 
  private:
   void reset();

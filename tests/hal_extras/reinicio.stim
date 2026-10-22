@@ -1,0 +1,6 @@
+# JWSIM_G4_HAL_EXTRAS: estímulos de tests/sketches/g4_hal_extras/g4_restart.
+# Arranque 1 (t = 0): I0_2 en alto y la orden de reiniciar por consola.
+1000 I0_2=1
+1500 uart0 "REINICIAR\n"
+# Arranque 2 (desde ~1,5 s): I0_5 después de su setup().
+3000 I0_5=1

@@ -40,7 +40,20 @@ typedef struct jwsim_waitq jwsim_waitq;
 // Tiempo del núcleo que ejecuta la tarea actual (o el mínimo global fuera de
 // una tarea).
 jwsim_ns_t jwsim_now(void);
-uint32_t jwsim_tick_count(void);
+uint32_t jwsim_tick_count(void);             // ticks de FreeRTOS desde el arranque
+
+// Reinicio del ESP32 (esp_restart): el tiempo virtual es una línea continua
+// para estímulos, traza e interfaz, pero el firmware cuenta desde su último
+// arranque (millis, micros, ticks, esp_timer). jwsim_set_boot() fija ese
+// arranque (múltiplo del tick) y la traza acumulada antes de app_main().
+jwsim_ns_t jwsim_boot_ns(void);
+void jwsim_set_boot(jwsim_ns_t boot, uint64_t trace_hash, uint64_t trace_count);
+// Pedido de reinicio: jwsim_run() vuelve con JWSIM_STOP_REQUEST sin ejecutar
+// más firmware; el runner arranca un proceso nuevo con el estado tibio.
+void jwsim_request_restart(void);
+bool jwsim_restart_pending(void);
+// Instante del pedido de reinicio (lleva a todos los núcleos hasta él).
+jwsim_ns_t jwsim_restart_time(void);
 
 // Consume tiempo de CPU en el núcleo actual (la tarea sigue "corriendo").
 // Es un punto de sincronización: puede producir una apropiación por una tarea
