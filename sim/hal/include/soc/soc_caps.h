@@ -56,3 +56,11 @@
 #define SOC_LEDC_TIMER_BIT_WIDTH 20
 #define SOC_LEDC_SUPPORT_APB_CLOCK 1
 #define SOC_LEDC_SUPPORT_REF_TICK 1
+
+// Temporizadores de propósito general (gate JWSIM_G4_HAL_EXTRAS): 2 grupos de
+// 2 timers de 64 bits sobre el reloj APB.
+#define SOC_GPTIMER_SUPPORTED 1
+#define SOC_TIMER_GROUPS 2
+#define SOC_TIMER_GROUP_TIMERS_PER_GROUP 2
+#define SOC_TIMER_GROUP_TOTAL_TIMERS 4
+#define SOC_TIMER_GROUP_COUNTER_BIT_WIDTH 64
