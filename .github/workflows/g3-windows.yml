@@ -37,11 +37,24 @@ jobs:
 
       - name: JWSIM_G3_BREAKPOINTS_STEP y JWSIM_G3_FREEZE_TIME
         if: ${{ !cancelled() }}
+        timeout-minutes: 20
         run: node scripts/gate-g3-debug.mjs
 
       - name: JWSIM_G3_RECORD_REPLAY
         if: ${{ !cancelled() }}
+        timeout-minutes: 20
         run: node scripts/gate-g3-record-replay.mjs
+
+      - name: Dependencias de la app
+        if: ${{ !cancelled() }}
+        working-directory: app
+        run: npm ci
+
+      - name: E2E de G3 (Electron)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        working-directory: app
+        run: node tests/e2e-g3.mjs
 
       - name: Resultados
         if: ${{ always() }}

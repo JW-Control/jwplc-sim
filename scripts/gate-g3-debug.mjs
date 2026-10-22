@@ -33,7 +33,10 @@ const marks = Object.fromEntries(
 );
 
 const tc = toolchain(target);
+const step = (m) => console.log(`[g3-debug] ${m}`);
+step(`compilando g3_debug (${target}); gdb: ${tc.gdb}`);
 const { exe } = await buildSketch(sketchDir, { target, log: () => {} });
+step("compilado; lanzando el runner y adjuntando gdb");
 
 const runner = new RunnerProcess();
 let lastStatus = null;
@@ -52,7 +55,11 @@ runner.start(exe, [], { env: { JWSIM_DEBUG: "1", JWSIM_WATCHDOG_MS: "0" } });
 // El gate lee jwsim_now() (función pura del motor) con el programa detenido.
 const dbg = new DebugSession({ gdb: tc.gdb, exe, pid: runner.pid, allowCalls: true });
 let gdbOut = "";
-dbg.on("output", (t) => (gdbOut += t));
+dbg.on("output", (t) => {
+  gdbOut += t;
+  // En CI se ve en vivo lo que dice gdb (diagnóstico de cuelgues).
+  if (process.env.CI) process.stdout.write(`[gdb] ${t}${t.endsWith("\n") ? "" : "\n"}`);
+});
 const stops = [];
 let stopWaiter = null;
 dbg.on("stopped", (s) => {
@@ -83,7 +90,9 @@ try {
   runner.send({ type: "run", speed: 1 });
 
   // --- BREAKPOINTS_STEP
+  step("gdb adjunto; esperando el breakpoint");
   const s1 = await nextStop();
+  step(`detenido: ${JSON.stringify(where(s1))}`);
   const top1 = await dbg.topFrame();
   const v1 = num((await dbg.evaluate("vueltas", top1.id)).value);
   await dbg.next();
@@ -142,6 +151,7 @@ try {
       vueltas: num((await dbg.evaluate("vueltas", id)).value),
     };
   };
+  step(`pasos OK; congelado ${FREEZE_MS} ms`);
   const before = await read();
   messagesWhileFrozen = [];
   const w0 = performance.now();
@@ -173,6 +183,7 @@ try {
     wall_advance_ms: Math.round(wallAdvanceMs),
   };
 
+  step("continuar sin breakpoints; observación en vivo");
   // Observación en vivo: muestrear variables con el firmware corriendo.
   const m1 = await dbg.sample(["vueltas", "ultimo"]);
   await sleep(300);
@@ -183,6 +194,7 @@ try {
     second: m2,
   };
 } catch (err) {
+  step(`error: ${err.message}`);
   criteria.error = { pass: false, message: err.message, gdb: gdbOut.slice(-2000), runner: stderr.slice(-2000) };
 } finally {
   await dbg.stop();
