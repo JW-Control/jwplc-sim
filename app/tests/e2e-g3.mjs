@@ -76,10 +76,10 @@ await win.waitForSelector(".tab.active:has-text('g3_debug.ino')", { timeout: 100
 // ---- BREAKPOINTS_STEP
 log(`breakpoint en la línea ${marks.loop}; compilando g3_debug`);
 await t(([n, l]) => window.jwsimTest.toggleBreakpoint(n, l), ["g3_debug.ino", marks.loop]);
-// La marca en el margen (y que el breakpoint quede registrado en el editor).
-const glyph =
-  (await win.waitForSelector(".bp-glyph", { timeout: 10000 }).then(() => true, () => false)) &&
-  (await t((n) => window.jwsimTest.breakpoints(n), "g3_debug.ino")).includes(marks.loop);
+// El breakpoint queda registrado en el editor (la marca del margen se
+// informa aparte: Monaco la dibuja solo con la ventana visible).
+const glyph = (await t((n) => window.jwsimTest.breakpoints(n), "g3_debug.ino")).includes(marks.loop);
+const glyphDrawn = await win.waitForSelector(".bp-glyph", { timeout: 5000 }).then(() => true, () => false);
 await win.click("#btn-run");
 const hit = await waitStatus("break", 600000);
 const l1 = await line();
@@ -110,6 +110,7 @@ criteria.BREAKPOINTS_STEP = {
     /loop/.test(f4 ?? "") &&
     l4?.line === marks.llamada,
   glyph,
+  glyph_drawn: glyphDrawn,
   hit: l1,
   frame: f1,
   after_next: l2,

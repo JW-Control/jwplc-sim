@@ -50,6 +50,10 @@ export class DapClient extends EventEmitter {
   }
 
   #dispatch(msg) {
+    // JWSIM_DAP_TRACE=1: todo lo que envía gdb, a stderr (diagnóstico).
+    if (process.env.JWSIM_DAP_TRACE && msg.type === "event" && msg.event !== "output" && msg.event !== "module") {
+      process.stderr.write(`[dap] ${msg.event} ${JSON.stringify(msg.body ?? {})}\n`);
+    }
     if (msg.type === "response") {
       const p = this.pending.get(msg.request_seq);
       if (!p) return;

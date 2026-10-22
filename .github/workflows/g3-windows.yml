@@ -44,6 +44,8 @@ jobs:
       - name: JWSIM_G3_BREAKPOINTS_STEP y JWSIM_G3_FREEZE_TIME
         if: ${{ !cancelled() }}
         timeout-minutes: 20
+        env:
+          JWSIM_DAP_TRACE: "1"
         run: node scripts/gate-g3-debug.mjs
 
       - name: JWSIM_G3_RECORD_REPLAY

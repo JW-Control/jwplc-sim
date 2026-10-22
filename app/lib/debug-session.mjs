@@ -40,14 +40,20 @@ export class DebugSession extends EventEmitter {
       this.emit("continued");
     });
     dap.on("stopped", async (b) => {
-      // La detención propia del attach no es un breakpoint del usuario.
-      if (!this.started) return;
+      // La detención propia del attach no es un breakpoint del usuario, ni la
+      // vuelta de una llamada a función hecha al evaluar.
+      if (!this.started || b.reason === "function call") return;
       // Una pausa pedida llega como "pause" (SIGINT, Linux) o como "signal"
       // (SIGTRAP de DebugBreakProcess en Windows, en un hilo inyectado que
       // no es el del firmware: se sigue mirando el hilo principal).
       let reason = b.reason;
       if (this.pauseRequested && (reason === "pause" || reason === "signal")) {
         reason = "pause";
+      } else if (reason === "signal" && (await this.#spuriousTrap())) {
+        // En Windows, tras continuar de una pausa puede llegar otro SIGTRAP del
+        // hilo que inyectó DebugBreakProcess: no es una detención del firmware.
+        this.dap.request("continue", { threadId: this.mainThreadId ?? this.threadId }).catch(() => {});
+        return;
       } else if (b.threadId) {
         this.threadId = b.threadId;
       }
@@ -92,6 +98,17 @@ export class DebugSession extends EventEmitter {
 
   #cli(command) {
     return this.dap.request("evaluate", { expression: command, context: "repl" });
+  }
+
+  // ¿La detención actual es un SIGTRAP sin breakpoint? (las fallas reales del
+  // firmware, como SIGSEGV, se siguen informando).
+  async #spuriousTrap() {
+    try {
+      const r = await this.#cli("info program");
+      return /SIGTRAP/.test(r.result ?? "");
+    } catch {
+      return false;
+    }
   }
 
   // Lee expresiones con el firmware corriendo (tabla de observación en vivo):
