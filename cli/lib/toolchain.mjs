@@ -16,7 +16,9 @@ import { fileURLToPath } from "node:url";
 import { bundledToolchainBin, ensurePchFriendlyCompiler } from "../../scripts/fetch-toolchain.mjs";
 
 const EXTRA = (process.env.JWSIM_EXTRA_FLAGS ?? "").split(/\s+/).filter(Boolean);
-const COMMON = ["-O1", "-g", "-fno-strict-aliasing", "-Wno-unused-parameter", ...EXTRA];
+// -funsigned-char: en el ESP32 (xtensa) char no tiene signo; código válido
+// del package depende de eso (hallazgo H14 en docs/ARCHITECTURE.md).
+const COMMON = ["-O1", "-g", "-fno-strict-aliasing", "-funsigned-char", "-Wno-unused-parameter", ...EXTRA];
 
 const NEWLIB_COMPAT = ["-include", join(dirname(fileURLToPath(import.meta.url)), "..", "..", "sim", "hal", "include", "jwsim_newlib_compat.h")];
 
@@ -71,6 +73,7 @@ export function toolchain(target = "native", ccOverride) {
       cxx: ["g++", "-m32"],
       ar: ["ar"],
       nm: ["nm"],
+      objcopy: ["objcopy"],
       ldflags: ["-static", "-pthread", ...EXTRA],
       available: which("g++"),
     };
