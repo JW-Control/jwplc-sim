@@ -9,7 +9,9 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { buildSketch } from "../cli/lib/build.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
+import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
+import { DebugSession } from "./lib/debug-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
@@ -32,6 +34,10 @@ void loop()
 
 let win = null;
 let runner = null;
+let runnerExe = null;
+let debug = null; // DebugSession adjunta al runner actual
+let debugAttaching = null;
+const breakpoints = new Map(); // ruta absoluta -> líneas
 let watcher = null;
 // Contenido que la propia app escribió: un evento de fs.watch con ese mismo
 // contenido no es una edición externa.
@@ -84,13 +90,67 @@ function forward(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-function stopRunner() {
-  if (runner) {
-    runner.removeAllListeners();
-    runner.stop();
-    runner = null;
+// Suelta gdb (el proceso sigue) y luego cierra el runner.
+async function stopRunner() {
+  const r = runner;
+  runner = null;
+  r?.removeAllListeners();
+  // El resumen final (instante y hash de traza) sí llega a la interfaz.
+  r?.on("message", (m) => m.type === "stopped" && forward("sim:message", m));
+  await detachDebugger();
+  r?.stop();
+}
+
+// ---------------------------------------------------------------- depurador
+// gdb -i=dap se adjunta al runner solo cuando hace falta (hay breakpoints o
+// se pidió interrumpir); sin depurador la simulación corre igual que en G2.
+async function attachDebugger() {
+  if (debug) return debug;
+  if (debugAttaching) return debugAttaching;
+  if (!runner?.pid) throw new Error("no hay una simulación en curso");
+  const r = runner;
+  debugAttaching = (async () => {
+    r.send({ type: "debug", attached: 1 });
+    const d = new DebugSession({ gdb: toolchain().gdb, exe: runnerExe, pid: r.pid });
+    d.on("stopped", (s) => debug === d && forward("dbg:stopped", s));
+    d.on("continued", () => debug === d && forward("dbg:continued", {}));
+    d.on("output", (t) => debug === d && forward("dbg:output", t));
+    d.on("exited", () => {
+      if (debug !== d) return;
+      debug = null;
+      forward("dbg:detached", {});
+    });
+    debug = d;
+    try {
+      const verified = await d.start(breakpoints);
+      forward("dbg:attached", { verified: [...verified] });
+      return d;
+    } catch (err) {
+      debug = null;
+      d.removeAllListeners();
+      await d.stop().catch(() => {});
+      r.send({ type: "debug", attached: 0 });
+      throw new Error(`no se pudo adjuntar el depurador (gdb): ${err.message}`);
+    }
+  })();
+  try {
+    return await debugAttaching;
+  } finally {
+    debugAttaching = null;
   }
 }
+
+async function detachDebugger() {
+  const d = debug;
+  debug = null;
+  if (!d) return;
+  d.removeAllListeners();
+  await d.stop().catch(() => {});
+  runner?.send({ type: "debug", attached: 0 });
+  forward("dbg:detached", {});
+}
+
+const hasBreakpoints = () => [...breakpoints.values()].some((l) => l.length);
 
 ipcMain.handle("app:info", () => {
   const lock = readLock();
@@ -202,7 +262,7 @@ ipcMain.handle("watch:set", (_e, dir) => {
 });
 
 ipcMain.handle("sketch:build", async (_e, dir) => {
-  stopRunner();
+  await stopRunner();
   const outDir = join(app.getPath("userData"), "build", basename(dir));
   const t0 = Date.now();
   try {
@@ -213,17 +273,31 @@ ipcMain.handle("sketch:build", async (_e, dir) => {
   }
 });
 
-ipcMain.handle("sim:start", (_e, { exe }) => {
-  stopRunner();
+// stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
+ipcMain.handle("sim:start", async (_e, { exe, stim }) => {
+  await stopRunner();
   const r = new RunnerProcess();
   runner = r;
+  runnerExe = exe;
   r.on("message", (m) => forward("sim:message", m));
   r.on("stderr", (t) => forward("sim:stderr", t));
   r.on("exit", (info) => {
-    if (runner === r) runner = null;
+    if (runner === r) {
+      runner = null;
+      detachDebugger();
+    }
     forward("sim:exit", info);
   });
-  r.start(exe);
+  // JWSIM_DEBUG: el runner admite que gdb se le adjunte más tarde.
+  r.start(exe, stim ? ["--stim", stim] : [], { env: { JWSIM_DEBUG: "1" } });
+  // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
+  if (hasBreakpoints()) {
+    try {
+      await attachDebugger();
+    } catch (err) {
+      forward("sim:stderr", `[jwsim] ${err.message}\n`);
+    }
+  }
   return true;
 });
 
@@ -232,9 +306,75 @@ ipcMain.handle("sim:command", (_e, msg) => {
   return !!runner;
 });
 
-ipcMain.handle("sim:stop", () => {
-  stopRunner();
+ipcMain.handle("sim:stop", async () => {
+  await stopRunner();
   return true;
+});
+
+ipcMain.handle("dbg:setBreakpoints", async (_e, { path, lines }) => {
+  breakpoints.set(path, lines);
+  if (debug) return debug.setBreakpoints(path, lines);
+  if (runner && lines.length) {
+    await attachDebugger();
+    return null; // start() ya los fijó; llegan en dbg:attached
+  }
+  return null;
+});
+
+ipcMain.handle("dbg:command", async (_e, { cmd }) => {
+  const d = cmd === "pause" ? await attachDebugger() : debug;
+  if (!d) return false;
+  if (cmd === "detach") await detachDebugger();
+  else if (["continue", "next", "stepIn", "stepOut", "pause"].includes(cmd)) await d[cmd]();
+  return true;
+});
+
+ipcMain.handle("dbg:stack", () => debug?.stack() ?? []);
+ipcMain.handle("dbg:scopes", async (_e, frameId) => {
+  if (!debug) return [];
+  const scopes = await debug.scopes(frameId);
+  return Promise.all(scopes.map(async (sc) => ({ ...sc, vars: await debug.variables(sc.ref) })));
+});
+ipcMain.handle("dbg:variables", (_e, ref) => debug?.variables(ref) ?? []);
+ipcMain.handle("dbg:evaluate", async (_e, { expressions, frameId }) => {
+  if (!debug) return null;
+  const out = {};
+  for (const e of expressions) out[e] = await debug.evaluate(e, frameId).then((v) => v.value, (err) => `‹${err.message}›`);
+  return out;
+});
+// Tabla de observación con el firmware corriendo: adjunta gdb si hace falta.
+ipcMain.handle("dbg:sample", async (_e, expressions) => {
+  if (!runner || !expressions.length) return null;
+  const d = debug ?? (await attachDebugger());
+  return d.sample(expressions);
+});
+
+// ---------------------------------------------------------------- grabación
+ipcMain.handle("stim:save", async (_e, { text, name }) => {
+  // Pruebas E2E: sin diálogo, en la carpeta indicada.
+  if (process.env.JWSIM_E2E_STIM_DIR) {
+    const file = join(process.env.JWSIM_E2E_STIM_DIR, `${basename(name)}.stim`);
+    writeFileSync(file, text);
+    return file;
+  }
+  const r = await dialog.showSaveDialog(win, {
+    title: "Guardar grabación",
+    defaultPath: join(workspaceDir(), `${name}.stim`),
+    filters: [{ name: "Estímulos JWPLC Sim", extensions: ["stim"] }],
+  });
+  if (r.canceled || !r.filePath) return null;
+  writeFileSync(r.filePath, text);
+  return r.filePath;
+});
+ipcMain.handle("stim:open", async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: "Reproducir grabación",
+    defaultPath: workspaceDir(),
+    properties: ["openFile"],
+    filters: [{ name: "Estímulos JWPLC Sim", extensions: ["stim"] }],
+  });
+  const file = r.canceled ? null : r.filePaths[0];
+  return file ? { file, text: readFileSync(file, "utf8") } : null;
 });
 
 function buildMenu() {
@@ -262,6 +402,22 @@ function buildMenu() {
           { label: "Compilar y ejecutar", accelerator: "F5", click: send("run") },
           { label: "Pausar / continuar", accelerator: "F6", click: send("pause") },
           { label: "Detener", accelerator: "Shift+F5", click: send("stop") },
+          { type: "separator" },
+          { label: "Reproducir grabación…", click: send("replay") },
+        ],
+      },
+      {
+        label: "Depuración",
+        submenu: [
+          { label: "Alternar breakpoint", accelerator: "F9", click: send("dbgToggle") },
+          { type: "separator" },
+          { label: "Continuar", accelerator: "F8", click: send("dbgContinue") },
+          { label: "Paso por encima", accelerator: "F10", click: send("dbgNext") },
+          { label: "Paso a paso (entrar)", accelerator: "F11", click: send("dbgStepIn") },
+          { label: "Salir de la función", accelerator: "Shift+F11", click: send("dbgStepOut") },
+          { label: "Interrumpir", accelerator: "CmdOrCtrl+F8", click: send("dbgPause") },
+          { type: "separator" },
+          { label: "Soltar el depurador", click: send("dbgDetach") },
         ],
       },
       {
@@ -298,8 +454,8 @@ app.whenReady().then(() => {
   win.loadFile(join(import.meta.dirname, "renderer", "index.html"));
 });
 
-app.on("window-all-closed", () => {
+app.on("window-all-closed", async () => {
   watcher?.close();
-  stopRunner();
+  await stopRunner();
   app.quit();
 });
