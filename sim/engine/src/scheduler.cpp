@@ -301,11 +301,17 @@ void start_watchdog() {
   std::thread([limit_ms] {
     uint64_t last = g_progress.load();
     auto since = std::chrono::steady_clock::now();
+    auto prev = since;
     for (;;) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       const uint64_t now = g_progress.load(std::memory_order_relaxed);
       const auto t = std::chrono::steady_clock::now();
-      if (now != last || !g_in_run.load()) {
+      // Un salto grande entre vueltas significa que el proceso entero estuvo
+      // detenido (depurador en un breakpoint, equipo suspendido): ese lapso
+      // no es tiempo de la tarea.
+      const bool suspended = t - prev > std::chrono::seconds(1);
+      prev = t;
+      if (now != last || !g_in_run.load() || suspended) {
         last = now;
         since = t;
         continue;

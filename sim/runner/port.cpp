@@ -40,6 +40,9 @@
 #define JWSIM_DUP2 _dup2
 #else
 #include <unistd.h>
+#if defined(__linux__)
+#include <sys/prctl.h>
+#endif
 #define JWSIM_READ read
 #define JWSIM_WRITE write
 #define JWSIM_DUP dup
@@ -224,6 +227,12 @@ void reader_thread(Inbox *inbox) {
 } // namespace
 
 int run_port(jwsim::boards::JwplcBasic &board) {
+#if defined(__linux__) && defined(PR_SET_PTRACER)
+  // Depuración (G3): la interfaz adjunta gdb a este proceso, que no es hijo
+  // de gdb. Con Yama (ptrace_scope = 1, por defecto en Ubuntu) hace falta
+  // autorizarlo explícitamente.
+  if (std::getenv("JWSIM_DEBUG")) prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+#endif
   // stdout queda reservado a las tramas: cualquier printf del firmware o del
   // HAL va a stderr, que la interfaz muestra como mensajes del sistema.
   g_out_fd = JWSIM_DUP(1);
