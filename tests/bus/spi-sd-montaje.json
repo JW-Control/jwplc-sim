@@ -1,0 +1,116 @@
+{
+  "descripcion": "Montaje de la microSD tras quedar lista (ACMD41 = 0): OCR con CCS (SDHC), ACMD42, CSD 2.0 y lecturas CMD17 del MBR (LBA 0), del sector de arranque FAT32 (LBA 2048) y de FSInfo (2049), con token FEh y CRC16 válidos.",
+  "fuente": {
+    "sketch": "arbol:libraries/JWPLC_GlobalPeripherals/examples/05.microSD_Basic",
+    "until_ms": 120,
+    "filtro": "^VSPI:SD$",
+    "desde": "^ff 7a 00 00 00 00 fd.*\\|.* 00 c0 ff 80 00$",
+    "max": 7
+  },
+  "items": [
+    [
+      105846300,
+      "VSPI",
+      "SD",
+      "ff 7a 00 00 00 00 fd ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 00 c0 ff 80 00",
+      [],
+      13
+    ],
+    [
+      106107050,
+      "VSPI",
+      "SD",
+      "ff 77 00 00 00 00 65 ff ff",
+      "ff ff ff ff ff ff ff ff 00",
+      [],
+      9
+    ],
+    [
+      106287700,
+      "VSPI",
+      "SD",
+      "ff 6a 00 00 00 00 51 ff ff",
+      "ff ff ff ff ff ff ff ff 00",
+      [],
+      9
+    ],
+    [
+      106468350,
+      "VSPI",
+      "SD",
+      "ff 49 00 00 00 00 af ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 00 fe 40 0e 00 32 5b 59 00 00 00 7f 7f 80 0a 40 00 51 c0 01",
+      [],
+      28
+    ],
+    [
+      107030150,
+      "VSPI",
+      "SD",
+      "ff 51 00 00 00 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      700
+    ],
+    [
+      107338350,
+      "VSPI",
+      "SD",
+      "ff 51 00 00 08 00 e5 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      700
+    ],
+    [
+      107646550,
+      "VSPI",
+      "SD",
+      "ff 51 00 00 08 01 f7 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      700
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "SD",
+      "cmd": 58,
+      "app": false,
+      "r1": 0,
+      "ocr": 3237969920
+    },
+    {
+      "cmd": 55,
+      "app": false,
+      "r1": 0
+    },
+    {
+      "cmd": 42,
+      "app": true,
+      "r1": 0
+    },
+    {
+      "cmd": 9,
+      "app": false,
+      "r1": 0,
+      "sectors": 131072,
+      "dataCrc": true
+    },
+    {
+      "cmd": 17,
+      "arg": 0,
+      "r1": 0
+    },
+    {
+      "cmd": 17,
+      "arg": 2048,
+      "r1": 0
+    },
+    {
+      "cmd": 17,
+      "arg": 2049,
+      "r1": 0
+    }
+  ]
+}

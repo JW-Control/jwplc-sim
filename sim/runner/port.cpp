@@ -8,7 +8,7 @@
 //   UI → runner : {"type":"run","speed":1|10|0}  (0 = lo más rápido posible)
 //                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
 //                 {"type":"force","signal":"Q0_1","value":1} · {"type":"unforce","signal":"Q0_1"}
-//                 {"type":"subscribe","buses":1|0} · {"type":"quit"}
+//                 {"type":"subscribe","buses":1|0[,"lossless":1]} · {"type":"quit"}
 //                 {"type":"debug","attached":1|0} (gdb adjunto: sin vigilante)
 //                 {"type":"hash"} → {"type":"hash","t_ns","trace_hash","trace_events"}
 //                 "run" con "until_ns": corre hasta ese instante, pausa y
@@ -295,10 +295,23 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   std::string uart_bus[3];
   jwsim_ns_t uart_t0[3] = {0, 0, 0};
   jwsim_ns_t uart_last[3] = {0, 0, 0};
+  // Sin pérdidas (captura de referencia): al llenarse el envío se manda ya.
+  bool bus_lossless = false;
+  auto send_bus = [&]() {
+    if (!bus_count && !bus_dropped) return;
+    send_json("{\"type\":\"bus\",\"t_ns\":" + std::to_string(jwsim_now()) + ",\"dropped\":" + std::to_string(bus_dropped) +
+              ",\"items\":[" + bus_items + "]}");
+    bus_items.clear();
+    bus_count = 0;
+    bus_dropped = 0;
+  };
   auto bus_item = [&](const std::string &item) {
     if (bus_count >= kBusMaxItems) {
-      ++bus_dropped;
-      return;
+      if (!bus_lossless) {
+        ++bus_dropped;
+        return;
+      }
+      send_bus();
     }
     if (bus_count++) bus_items.push_back(',');
     bus_items += item;
@@ -395,12 +408,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
     if (bus_on) {
       if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->flush_capture();
     }
-    if (bus_count || bus_dropped) {
-      send_json("{\"type\":\"bus\",\"t_ns\":" + t + ",\"dropped\":" + std::to_string(bus_dropped) + ",\"items\":[" + bus_items + "]}");
-      bus_items.clear();
-      bus_count = 0;
-      bus_dropped = 0;
-    }
+    send_bus();
     for (int p = 0; p < 3; ++p) {
       const size_t n = utf8_complete_prefix(serial[p]);
       if (n == 0) continue;
@@ -470,6 +478,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
     } else if (type == "subscribe") {
       bus_on = f.count("buses") && (f.at("buses") == "1" || f.at("buses") == "true");
+      bus_lossless = f.count("lossless") && (f.at("lossless") == "1" || f.at("lossless") == "true");
       if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->set_capture(bus_on);
       if (!bus_on) {
         bus_items.clear();

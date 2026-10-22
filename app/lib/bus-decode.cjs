@@ -378,7 +378,49 @@
     const r1 = r1i >= 0 ? miso[r1i] : null;
     Object.assign(fields, { cmd, app, arg, crc: { ok: crc === want, got: crc, want }, r1 });
     const crcText = crc === want ? `CRC7 ${hx(crc)} ✓` : `CRC7 ${hx(crc)} (no verificado; esperado ${hx(want)})`;
-    return { ...base, op: name, data: `arg ${hx(arg, 8)} · ${crcText}${r1 !== null ? ` · R1 ${hx(r1)}` : " · sin respuesta"}`, fields };
+    let extra = "";
+    const u32 = (k) => ((miso[k] << 24) | (miso[k + 1] << 16) | (miso[k + 2] << 8) | miso[k + 3]) >>> 0;
+    if (r1 !== null && !app && (cmd === 8 || cmd === 58) && r1i + 4 < miso.length) {
+      // R7 (eco de voltaje y patrón) o R3 (OCR: bit 31 lista, bit 30 CCS).
+      const v = u32(r1i + 1);
+      if (cmd === 8) {
+        fields.r7 = v;
+        extra = ` · R7 ${hx(v, 8)}`;
+      } else {
+        fields.ocr = v;
+        extra = ` · OCR ${hx(v, 8)}${v & 0x80000000 ? ` · lista${v & 0x40000000 ? " · SDHC" : ""}` : " · ocupada"}`;
+      }
+    } else if (r1 === 0 && !app && (cmd === 9 || cmd === 10)) {
+      // CSD/CID: token FEh + 16 bytes + CRC16 (CCITT).
+      const tok = miso.indexOf(0xfe, r1i + 1);
+      if (tok >= 0 && tok + 18 < miso.length) {
+        const reg = miso.slice(tok + 1, tok + 17);
+        const ok = ((miso[tok + 17] << 8) | miso[tok + 18]) === crc16ccitt(reg);
+        fields[cmd === 9 ? "csd" : "cid"] = reg;
+        fields.dataCrc = ok;
+        if (cmd === 9 && reg[0] >> 6 === 1) {
+          fields.sectors = ((((reg[7] & 0x3f) << 16) | (reg[8] << 8) | reg[9]) + 1) * 1024;
+          extra = ` · CSD 2.0 · ${fields.sectors / 2048} MiB`;
+        }
+        extra += ` · CRC16 ${ok ? "✓" : "✗"}`;
+      }
+    } else if (r1 === 0 && (cmd === 17 || cmd === 18)) {
+      if (miso.indexOf(0xfe, r1i + 1) >= 0) extra = " · token FEh";
+    } else if (r1 !== null && cmd === 13 && r1i + 1 < miso.length) {
+      fields.r2 = miso[r1i + 1];
+      extra = ` · R2 ${hx(miso[r1i + 1])}`;
+    }
+    return { ...base, op: name, data: `arg ${hx(arg, 8)} · ${crcText}${r1 !== null ? ` · R1 ${hx(r1)}` : " · sin respuesta"}${extra}`, fields };
+  }
+
+  // CRC16 de los bloques de datos SD (CCITT, polinomio 0x1021, inicial 0).
+  function crc16ccitt(bytes) {
+    let crc = 0;
+    for (const b of bytes) {
+      crc ^= b << 8;
+      for (let k = 0; k < 8; k++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+    }
+    return crc;
   }
 
   function decodeW5500(base, mosi, miso, fields, total) {

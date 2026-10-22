@@ -15,6 +15,9 @@
 //   node scripts/gate-g3-bus-analyzer.mjs --record   reescribe los `items` de
 //                                                    las capturas con sketch
 //   node scripts/gate-g3-bus-analyzer.mjs --show     imprime las filas
+//
+// `fuente`: sketch, until_ms, filtro (bus:chip), max y opcionalmente desde
+// (expresión sobre "mosi|miso" del primer ítem a incluir).
 import { createRequire } from "node:module";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -67,7 +70,14 @@ for (const file of files) {
       perturbation[k] = { pass: plain?.trace_hash === c.hash, con_captura: c.hash, sin_captura: plain?.trace_hash };
     }
     const re = new RegExp(cap.fuente.filtro);
-    live = captures.get(k).filter((it) => re.test(keyOf(it))).slice(0, cap.fuente.max ?? Infinity);
+    let items = captures.get(k).filter((it) => re.test(keyOf(it)));
+    // `desde`: la captura empieza en el primer ítem cuyo "mosi|miso" coincide.
+    if (cap.fuente.desde) {
+      const from = new RegExp(cap.fuente.desde);
+      const i = items.findIndex((it) => from.test(`${it[3]}|${it[4]}`));
+      items = i < 0 ? [] : items.slice(i);
+    }
+    live = items.slice(0, cap.fuente.max ?? Infinity);
     if (record) {
       cap.items = live;
       writeFileSync(path, JSON.stringify(cap, null, 2) + "\n");

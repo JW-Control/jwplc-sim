@@ -1,0 +1,116 @@
+{
+  "descripcion": "Inicio de la microSD por el core (sd_diskio de la librería SD, sin modificar) contra el modelo de tarjeta SDHC (G4): CMD0 a modo SPI, CMD59 (CRC), CMD8 (R7), CMD58 (OCR sin listo) y el primer ACMD41 (ocupada).",
+  "fuente": {
+    "sketch": "arbol:libraries/JWPLC_GlobalPeripherals/examples/05.microSD_Basic",
+    "until_ms": 120,
+    "filtro": "^VSPI:SD$",
+    "max": 6
+  },
+  "items": [
+    [
+      4508200,
+      "VSPI",
+      "SD",
+      "ff 40 00 00 00 00 95 ff ff",
+      "ff ff ff ff ff ff ff ff 01",
+      [],
+      9
+    ],
+    [
+      4688850,
+      "VSPI",
+      "SD",
+      "ff 7b 00 00 00 01 83 ff ff",
+      "ff ff ff ff ff ff ff ff 01",
+      [],
+      9
+    ],
+    [
+      4869500,
+      "VSPI",
+      "SD",
+      "ff 48 00 00 01 aa 87 ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 01 00 00 01 aa",
+      [],
+      13
+    ],
+    [
+      5130250,
+      "VSPI",
+      "SD",
+      "ff 7a 00 00 00 00 fd ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff 01 00 ff 80 00",
+      [],
+      13
+    ],
+    [
+      5391050,
+      "VSPI",
+      "SD",
+      "ff 77 00 00 00 00 65 ff ff",
+      "ff ff ff ff ff ff ff ff 01",
+      [],
+      9
+    ],
+    [
+      5571700,
+      "VSPI",
+      "SD",
+      "ff 69 40 10 00 00 cd ff ff",
+      "ff ff ff ff ff ff ff ff 01",
+      [],
+      9
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "SD",
+      "cmd": 0,
+      "app": false,
+      "arg": 0,
+      "crc": {
+        "ok": true,
+        "got": 149
+      },
+      "r1": 1
+    },
+    {
+      "cmd": 59,
+      "app": false,
+      "arg": 1,
+      "crc": {
+        "ok": true
+      },
+      "r1": 1
+    },
+    {
+      "cmd": 8,
+      "app": false,
+      "arg": 426,
+      "crc": {
+        "ok": true,
+        "got": 135
+      },
+      "r1": 1,
+      "r7": 426
+    },
+    {
+      "cmd": 58,
+      "app": false,
+      "arg": 0,
+      "r1": 1,
+      "ocr": 16744448
+    },
+    {
+      "cmd": 55,
+      "app": false,
+      "r1": 1
+    },
+    {
+      "cmd": 41,
+      "app": true,
+      "arg": 1074790400,
+      "r1": 1
+    }
+  ]
+}
