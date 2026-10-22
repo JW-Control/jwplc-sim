@@ -9,6 +9,7 @@
 //                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
 //                 {"type":"force","signal":"Q0_1","value":1} · {"type":"unforce","signal":"Q0_1"}
 //                 {"type":"subscribe","buses":1|0} · {"type":"quit"}
+//                 {"type":"debug","attached":1|0} (gdb adjunto: sin vigilante)
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
@@ -377,6 +378,9 @@ int run_port(jwsim::boards::JwplcBasic &board) {
         bus_count = bus_dropped = 0;
         for (auto &u : uart_bus) u.clear();
       }
+    } else if (type == "debug") {
+      // La interfaz adjuntó (1) o soltó (0) el depurador.
+      jwsim_watchdog_hold(f.count("attached") && f.at("attached") == "1");
     } else if (type == "quit") {
       quit = true;
     }

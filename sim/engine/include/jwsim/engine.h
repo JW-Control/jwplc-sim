@@ -152,6 +152,11 @@ uint64_t jwsim_trace_count(void);
 #include <stdio.h>
 void jwsim_print_task_stats(FILE *out);
 
+// Suspende (1) o reanuda (0) el vigilante de tareas sin puntos de
+// sincronización: con un depurador adjunto, el tiempo detenido en
+// breakpoints o paso a paso no es un cuelgue del firmware.
+void jwsim_watchdog_hold(int on);
+
 // Fallo irrecuperable del simulador (no del firmware simulado).
 void jwsim_fatal(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
 

@@ -290,6 +290,7 @@ void run_pending_isrs() {
 std::atomic<uint64_t> g_progress{0};
 std::atomic<const char *> g_running_name{nullptr};
 std::atomic<bool> g_in_run{false};
+std::atomic<bool> g_watchdog_hold{false};
 
 void start_watchdog() {
   static bool started = false;
@@ -311,7 +312,7 @@ void start_watchdog() {
       // no es tiempo de la tarea.
       const bool suspended = t - prev > std::chrono::seconds(1);
       prev = t;
-      if (now != last || !g_in_run.load() || suspended) {
+      if (now != last || !g_in_run.load() || suspended || g_watchdog_hold.load()) {
         last = now;
         since = t;
         continue;
@@ -605,6 +606,8 @@ void jwsim_schedule_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg) { sched
 void jwsim_schedule_external_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg) {
   schedule_event(when, 1, fn, arg);
 }
+
+void jwsim_watchdog_hold(int on) { g_watchdog_hold = on != 0; }
 
 void jwsim_request_stop(void) {
   Sched &s = S();
