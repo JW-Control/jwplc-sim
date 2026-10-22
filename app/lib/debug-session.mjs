@@ -64,9 +64,9 @@ export class DebugSession extends EventEmitter {
     for (const [path, lines] of breakpoints) verified.set(path, await this.setBreakpoints(path, lines));
     await dap.request("configurationDone");
     const { threads } = await dap.request("threads");
-    // El hilo principal del runner es el del planificador (y de las fibras
-    // del firmware): el primero que lista gdb.
-    this.threadId = threads[0]?.id ?? 1;
+    // El hilo principal del runner (planificador y fibras del firmware) es el
+    // primero que creó el proceso: el de número menor en gdb.
+    this.threadId = threads.length ? Math.min(...threads.map((t) => t.id)) : 1;
     this.started = true;
     await this.continue();
     return verified;

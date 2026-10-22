@@ -11,12 +11,14 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 
 export class DapClient extends EventEmitter {
-  constructor(gdbPath, { cwd, env } = {}) {
+  // extraArgs: opciones de gdb antes de -i=dap (p. ej. -iex "set debug
+  // dap-log-file ..." para diagnosticar).
+  constructor(gdbPath, { cwd, env, extraArgs = [] } = {}) {
     super();
     this.seq = 1;
     this.pending = new Map();
     this.buf = Buffer.alloc(0);
-    this.child = spawn(gdbPath, ["-q", "-nx", "-i=dap"], { cwd, env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    this.child = spawn(gdbPath, ["-q", "-nx", ...extraArgs, "-i=dap"], { cwd, env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     this.child.stdout.on("data", (d) => this.#onData(d));
     this.child.stderr.setEncoding("utf8");
     this.child.stderr.on("data", (t) => this.emit("stderr", t));

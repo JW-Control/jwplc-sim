@@ -219,7 +219,9 @@ if (stoppedMsg) {
 }
 
 const passA = printCriteria("JWSIM_G3_BREAKPOINTS_STEP", criteria, ` (${target})`);
-const passB = printCriteria("JWSIM_G3_FREEZE_TIME", Object.keys(freeze).length ? freeze : { error: criteria.error ?? { pass: false } }, ` (${target})`);
+// Sin haber llegado al breakpoint no hay nada que medir del tiempo congelado.
+if (criteria.error || !freeze.frozen) freeze.error = { pass: false, message: criteria.error?.message ?? "no se llegó al breakpoint" };
+const passB = printCriteria("JWSIM_G3_FREEZE_TIME", freeze, ` (${target})`);
 writeReport(`JWSIM_G3_BREAKPOINTS_STEP-${target}`, { gate: "JWSIM_G3_BREAKPOINTS_STEP", target, result: passA ? "PASS" : "FAIL", criteria });
 writeReport(`JWSIM_G3_FREEZE_TIME-${target}`, { gate: "JWSIM_G3_FREEZE_TIME", target, result: passB ? "PASS" : "FAIL", criteria: freeze });
 process.exit(passA && passB ? 0 : 1);

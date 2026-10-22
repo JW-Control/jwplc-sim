@@ -35,6 +35,12 @@ jobs:
           & "$bin/gdb.exe" --version
           & "$bin/gdb.exe" -nx -batch -ex "python print('python ok')"
 
+      - name: Diagnóstico de attach de gdb
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 15
+        run: node scripts/diag-gdb-attach.mjs
+
       - name: JWSIM_G3_BREAKPOINTS_STEP y JWSIM_G3_FREEZE_TIME
         if: ${{ !cancelled() }}
         timeout-minutes: 20
@@ -44,6 +50,11 @@ jobs:
         if: ${{ !cancelled() }}
         timeout-minutes: 20
         run: node scripts/gate-g3-record-replay.mjs
+
+      - name: JWSIM_G3_BUS_ANALYZER
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g3-bus-analyzer.mjs
 
       - name: Dependencias de la app
         if: ${{ !cancelled() }}
