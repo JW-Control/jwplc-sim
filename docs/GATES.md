@@ -49,7 +49,7 @@ JWSIM_G4_TFT_HMI=PASS              (4 capturas idénticas píxel a píxel; 6 bot
 JWSIM_G4_RS485_MULTINODE=PASS      (3 nodos, choques, maestro externo por TCP; COM con pty)
 JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; alpha.12 y alpha.13)
 JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502; alpha.12 y alpha.13)
-                                   (G4: Linux y Windows bajo wine; Windows nativo con g4-windows.yml a pedido)
+                                   (G4: Windows CI corrida 2 de g4-windows.yml, Linux y wine; mismos hashes)
 JWSIM_G5_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
