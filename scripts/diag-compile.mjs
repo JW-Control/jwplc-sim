@@ -33,7 +33,8 @@ if (!cmdLine) throw new Error("no se capturó el comando del sketch");
 const argv = JSON.parse(cmdLine.slice(6));
 const [cc, ...args] = argv;
 const outIdx = args.indexOf("-o");
-const base = args.slice(0, outIdx);
+// Sin -MMD: las mediciones no deben dejar archivos .d en el directorio actual.
+const base = args.slice(0, outIdx).filter((a) => a !== "-MMD");
 const inc = base.indexOf("-include");
 const pch = inc >= 0 && /prefix/.test(base[inc + 1]) ? base[inc + 1] + ".gch" : null;
 const noPch = base.filter((a, i) => !(pch && (i === inc || i === inc + 1)) && a !== "-Winvalid-pch");
