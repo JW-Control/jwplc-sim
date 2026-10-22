@@ -4,6 +4,8 @@
 
 #include <cstdio>
 
+#include "nvs.h"
+
 namespace jwsim::boards {
 
 namespace {
@@ -171,11 +173,13 @@ namespace jwsim::boards {
 void JwplcBasic::set_state_dir(const std::string &dir) {
   fram_.set_storage(dir);
   rtc_.set_storage(dir);
+  jwsim_nvs_set_storage(dir.c_str());
 }
 
 void JwplcBasic::save_state() {
   if (!fram_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la FRAM en el directorio de estado\n");
   if (!rtc_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar el RTC en el directorio de estado\n");
+  if (!jwsim_nvs_save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la NVS en el directorio de estado\n");
 }
 
 } // namespace jwsim::boards

@@ -17,7 +17,7 @@ const DIR = join(ROOT, "tests", "sketches", "g2_unsupported");
 const EXPECT = {
   unsup_wifi: "WiFi",
   unsup_webserver: "WebServer",
-  unsup_preferences: "Preferences",
+  unsup_bluetooth: "BluetoothSerial",
   unsup_littlefs: "LittleFS",
   unsup_adc: "analogRead",
   unsup_dac: "dacWrite",

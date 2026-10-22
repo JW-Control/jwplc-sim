@@ -153,8 +153,6 @@
     "USB": "el ESP32 no tiene USB nativo. No está en el plan de gates G0–G10.",
     "ESP_HostedOTA": "no aplica al ESP32. No está en el plan de gates G0–G10.",
     "SD_MMC": "el JWPLC Basic usa la microSD por SPI: use SD / JW_SD (JWSIM_G4_SD_DATALOG).",
-    "Preferences": "la NVS en flash todavía no se simula; llega en JWSIM_G4_NVS_PREFERENCES. Mientras tanto use JW_FRAM.",
-    "EEPROM": "la emulación de EEPROM usa la NVS en flash, que todavía no se simula; llega en JWSIM_G4_NVS_PREFERENCES. Mientras tanto use JW_FRAM.",
     "LittleFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "SPIFFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "FFat": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG)."
