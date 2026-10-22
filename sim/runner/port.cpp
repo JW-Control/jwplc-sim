@@ -337,6 +337,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
   jwsim_ns_t base_t = jwsim_now();
   Clock::time_point base_wall = Clock::now();
   Clock::time_point last_flush = Clock::now();
+  Clock::time_point last_save = Clock::now();
   bool quit = false;
 
   auto flush = [&](bool force) {
@@ -474,6 +475,12 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       }
     }
     flush(false);
+    // Memoria no volátil al disco cada segundo de pared (y al salir): un
+    // cierre abrupto de la app pierde a lo sumo ese lapso.
+    if (Clock::now() - last_save > std::chrono::seconds(1)) {
+      board.save_state();
+      last_save = Clock::now();
+    }
   }
   flush(true);
   send_json(hash_json("stopped") + ",\"reason\":\"quit\"}");

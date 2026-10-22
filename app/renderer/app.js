@@ -341,7 +341,7 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
   state.replay = replay;
   if (replay) consoleWrite(`[jwsim] reproduciendo ${replay.file}${replay.t_ns ? ` hasta t=${fmtTime(replay.t_ns)}` : ""}\n`, "sys");
-  await api.start(r.exe, replay?.file);
+  await api.start(r.exe, replay?.file, state.project?.file ?? null);
   if (state.view === "buses") api.command({ type: "subscribe", buses: 1 });
   // La escena se aplica en t = 0, antes de que corra el firmware.
   for (const [signal, v] of Object.entries(scene)) {

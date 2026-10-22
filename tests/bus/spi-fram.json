@@ -1,5 +1,5 @@
 {
-  "descripcion": "Ciclos WREN/WRITE/WRDI/READ del ejemplo Basic_RW de JW_FRAM (CS GPIO13).",
+  "descripcion": "Ciclos WREN/WRITE/WRDI/READ del ejemplo Basic_RW de JW_FRAM (CS GPIO13); con el modelo MB85RS64V (G4) el READ devuelve lo escrito.",
   "fuente": {
     "sketch": "arbol:libraries/JW_FRAM/examples/Basic_RW",
     "until_ms": 1500,
@@ -93,7 +93,7 @@
       "VSPI",
       "FRAM",
       "03 00 00 ff ff ff ff",
-      "ff ff ff ff ff ff ff",
+      "ff ff ff 64 00 00 00",
       [],
       7
     ]
@@ -158,10 +158,10 @@
       "op": "READ",
       "address": 0,
       "data": [
-        255,
-        255,
-        255,
-        255
+        100,
+        0,
+        0,
+        0
       ]
     }
   ]

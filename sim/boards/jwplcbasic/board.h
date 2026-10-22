@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "jwsim/devices.h"
+#include "jwsim/models/mb85rs64v.h"
 #include "jwsim/models/tca6424a.h"
 
 namespace jwsim::boards {
@@ -45,6 +46,12 @@ class JwplcBasic : public Board {
   void flush_console();
 
   models::TCA6424A &expander() { return tca_; }
+  models::MB85RS64V &fram() { return fram_; }
+
+  // Estado persistente de la placa (FRAM, NVS, SD...) en `dir`; sin llamar,
+  // todo es volátil. save_state() escribe lo que cambió.
+  void set_state_dir(const std::string &dir);
+  void save_state();
 
  private:
   Net &add_signal(const std::string &name, bool idle);
@@ -54,6 +61,7 @@ class JwplcBasic : public Board {
   I2CBus i2c0_{"I2C0"};
   SPIBus vspi_{"VSPI"};
   models::TCA6424A tca_{"U_TCA6424A", 0x22};
+  models::MB85RS64V fram_;
   std::map<std::string, std::unique_ptr<Net>> signals_;
   std::vector<std::string> order_;
   std::string console_line_[3];

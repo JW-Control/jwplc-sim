@@ -26,6 +26,7 @@ JwplcBasic::JwplcBasic() {
   vspi_.name_chip(gpio(kTftCsGpio), "TFT", &gpio(kTftDcGpio));
   vspi_.name_chip(gpio(kSdCsGpio), "SD");
   vspi_.name_chip(gpio(kFramCsGpio), "FRAM");
+  vspi_.attach(gpio(kFramCsGpio), &fram_);
   vspi_.name_chip(gpio(kEthCsGpio), "W5500");
 
   // Entradas digitales: 0 V en reposo. Acondicionamiento no inversor
@@ -129,6 +130,16 @@ void JwplcBasic::flush_console() {
       console_line_[p].clear();
     }
   }
+}
+
+} // namespace jwsim::boards
+
+namespace jwsim::boards {
+
+void JwplcBasic::set_state_dir(const std::string &dir) { fram_.set_storage(dir); }
+
+void JwplcBasic::save_state() {
+  if (!fram_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la FRAM en el directorio de estado\n");
 }
 
 } // namespace jwsim::boards

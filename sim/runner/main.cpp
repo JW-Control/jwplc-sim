@@ -4,6 +4,7 @@
 //
 //   <exe> [--until <ms>] [--set NAME=V@<ms>]... [--stim <archivo>] [--quiet]
 //         [--realtime <factor>] [--pause <t_ms>:<pared_ms>] [--seed <n>] [--stats]
+//         [--state <dir>]   (memoria no volátil: FRAM, NVS, SD; se crea si falta)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
@@ -16,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -79,6 +81,7 @@ int main(int argc, char **argv) {
   bool quiet = false;
   bool stats = false;
   bool port = false;
+  std::string state_dir;
   std::vector<jwsim::runner::InputEvent> stims;
 
   for (int i = 1; i < argc; ++i) {
@@ -106,6 +109,7 @@ int main(int argc, char **argv) {
     }
     else if (a == "--seed") jwsim_seed_random(std::strtoull(next().c_str(), nullptr, 0));
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
+    else if (a == "--state") state_dir = next();
     else if (a == "--set") {
       const std::string v = next();
       const auto at = v.find('@');
@@ -119,6 +123,11 @@ int main(int argc, char **argv) {
 
   static jwsim::boards::JwplcBasic board;
   board.set_echo(!quiet);
+  if (!state_dir.empty()) {
+    std::error_code ec;
+    std::filesystem::create_directories(state_dir, ec);
+    board.set_state_dir(state_dir);
+  }
   for (auto &s : stims) {
     const std::string err = jwsim::runner::validate_input(board, s);
     if (!err.empty()) usage(err.c_str());
@@ -130,6 +139,7 @@ int main(int argc, char **argv) {
   app_main();
   if (port) {
     const int rc = jwsim::runner::run_port(board);
+    board.save_state();
     std::fflush(stdout);
     std::_Exit(rc);
   }
@@ -168,6 +178,7 @@ int main(int argc, char **argv) {
   const double wall_ms =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - wall_start).count();
   board.flush_console();
+  board.save_state();
 
   if (stats) {
     std::printf("--- estadísticas (tiempo virtual) ---\n");

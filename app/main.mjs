@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Proceso principal de JWPLC Sim (Electron): ventana, sketches del usuario,
 // compilación con jwsim-cli y ciclo de vida del runner (un PLC simulado).
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
 import { Worker } from "node:worker_threads";
@@ -297,8 +297,22 @@ ipcMain.handle("sketch:build", async (_e, dir) => {
   return { ...r, ms: Date.now() - t0 };
 });
 
+// Memoria no volátil de la placa (FRAM, NVS, SD): por proyecto (junto al
+// .jwsim, carpeta "<nombre>.estado") o, sin proyecto, por sketch en los datos
+// de la app. Al empezar una sesión se guarda una copia ("…inicio") para que
+// la reproducción de su grabación parta del mismo estado.
+function stateDirs(exe, projectFile) {
+  const dir = projectFile ? projectFile.replace(/\.jwsim$/i, "") + ".estado" : join(app.getPath("userData"), "estado", basename(dirname(exe)));
+  return { dir, start: `${dir}.inicio`, replay: `${dir}.reproduccion` };
+}
+function copyDir(from, to) {
+  rmSync(to, { recursive: true, force: true });
+  if (existsSync(from)) cpSync(from, to, { recursive: true });
+  else mkdirSync(to, { recursive: true });
+}
+
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
-ipcMain.handle("sim:start", async (_e, { exe, stim }) => {
+ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile }) => {
   await stopRunner();
   const r = new RunnerProcess();
   runner = r;
@@ -313,7 +327,15 @@ ipcMain.handle("sim:start", async (_e, { exe, stim }) => {
     forward("sim:exit", info);
   });
   // JWSIM_DEBUG: el runner admite que gdb se le adjunte más tarde.
-  r.start(exe, stim ? ["--stim", stim] : [], { env: { JWSIM_DEBUG: "1" } });
+  const st = stateDirs(exe, projectFile);
+  let stateDir = st.dir;
+  if (stim) {
+    copyDir(st.start, st.replay);
+    stateDir = st.replay;
+  } else {
+    copyDir(st.dir, st.start);
+  }
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir], { env: { JWSIM_DEBUG: "1" } });
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {
