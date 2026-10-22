@@ -6,7 +6,7 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0–G3 cerrados (G1 salvo la calibración contra placa) · en curso: G4 (periféricos)
+Estado: G0–G4 cerrados (G1 salvo la calibración contra placa) · siguiente: G5
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
 
@@ -58,8 +58,34 @@ Depuración (G3), con el gdb del toolchain (o el del sistema en Linux):
 - **Buses**: I2C por registro, SPI por CS (TFT, SD, FRAM, W5500), UART y
   Modbus RTU/TCP con CRC, con filtro por tipo.
 
-Pruebas E2E de la interfaz: `cd app && npm run test:e2e` (G2) y
-`npm run test:e2e:g3` (G3) (en Linux sin
+Periféricos (G4), modelados por registros contra sus hojas de datos:
+
+- **Pantalla y botonera**: la TFT ST7789 se ve en la placa en vivo; la
+  botonera responde al clic o, con foco en la pantalla, a las flechas, Enter
+  (OK) y Esc.
+- **Memoria no volátil**: FRAM, NVS (`Preferences`, `EEPROM`), RTC con
+  batería y tarjeta microSD se guardan por proyecto (carpeta
+  `<proyecto>.estado`). El RTC arranca con la hora de la PC.
+- **microSD**: tarjeta SDHC de 64 MiB formateada FAT32; `SD`, `JW_SD`,
+  `JWPLCDataLog` y `fopen("/sd/…")` funcionan como en la placa. El zócalo de
+  la placa quita y pone la tarjeta. Para usar una imagen propia, copie un
+  `.img` como `sd.img` en la carpeta de estado.
+- **Consola serie**: el campo bajo la consola envía texto por UART0 (con el
+  fin de línea elegido); queda en la grabación.
+- **Temporizadores y reinicio**: `esp_timer`, `Ticker`, timers de FreeRTOS,
+  `timerBegin` y `ESP.restart()` (el PLC reinicia conservando FRAM, NVS, SD,
+  RTC, salidas del expansor y pantalla).
+- **RS-485**: varios PLC simulados en un mismo bus Modbus RTU, y una
+  herramienta externa (JW Modbus Tool) conectada al bus por un socket TCP o
+  un puerto COM virtual: `node cli/jwsim-bus.mjs`.
+- **Ethernet (W5500)**: con `"ethernet": { "present": true }` en
+  `simulation.peripherals` del proyecto (o `node cli/jwsim-net.mjs
+  <sketch>`), el PLC está en una red virtual con DHCP cuya puerta de enlace
+  es el PC; sus puertos de escucha se publican en el PC (Modbus TCP 502 →
+  127.0.0.1:1502) y sus conexiones salen por la red del PC.
+
+Pruebas E2E de la interfaz: `cd app && npm run test:e2e` (G2),
+`npm run test:e2e:g3` (G3) y `npm run test:e2e:g4` (G4) (en Linux sin
 pantalla, `xvfb-run -a npm run test:e2e`).
 
 ## Documentación
@@ -69,7 +95,7 @@ pantalla, `xvfb-run -a npm run test:e2e`).
   límites de fidelidad, sincronización con el package y hallazgos.
 - [Gates](docs/GATES.md): G0 a G10 con criterios medibles.
 - [Licencias](docs/LICENSES.md): matriz de dependencias y recomendación.
-- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md).
+- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md).
 
 ## Prueba rápida (headless)
 
@@ -87,7 +113,9 @@ node scripts/gate-g0-poc.mjs          # gate JWSIM_G0_POC_IO_BASIC
 ```
 
 Opciones del runner: `--until <ms>`, `--set SEÑAL=V@ms`, `--stim archivo`,
-`--realtime <factor>`, `--seed <n>`, `--stats`, `--quiet`.
+`--realtime <factor>`, `--seed <n>`, `--stats`, `--quiet`, `--state <dir>`
+(FRAM, NVS, RTC y microSD persistentes), `--rtc host|fijo:AAAA-MM-DDTHH:MM:SS`,
+`--eth` (W5500 poblado).
 Depuración: `JWSIM_TRACE_TASK=<tarea> JWSIM_TRACE_BT=1` imprime dónde se
 bloquea una tarea; `JWSIM_EXTRA_FLAGS=-fsanitize=address` compila con ASan.
 

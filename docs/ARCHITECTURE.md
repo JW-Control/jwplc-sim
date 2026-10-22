@@ -99,13 +99,19 @@ nuevo del package sin clasificar hace fallar el build.
 | `esp32-hal-i2c.c`, `-i2c-ng.c` | `i2c.cpp` | transacción completa → `I2CBus`; la tarea se bloquea la duración eléctrica |
 | `esp32-hal-spi.c` | `spi.cpp` | byte a byte → `SPIBus`; `spi_t` conserva `volatile spi_dev_t *dev` como primer miembro |
 | `soc/spi_struct.h` | modelo proxy de registros | ver §11 H2 |
-| `esp32-hal-uart.c` | `uart.cpp` | UART0 → consola; UART2 (RS-485) en G4 |
+| `esp32-hal-uart.c` | `uart.cpp` | UART0 → consola; UART1/2 con tiempo de carácter, UART2 al transceptor RS-485 (§7.3) |
 | `esp32-hal-misc.c`, `-cpu.c`, `-psram.c`, `chip-debug-report.cpp` | `arduino_misc.cpp` | `millis/micros/delay` sobre tiempo virtual |
 | `Esp.cpp` | `esp_class.cpp` | valores fijos y deterministas |
 | FreeRTOS (ESP-IDF) | `freertos.cpp` + `sim/engine` | tareas, colas, semáforos, mutex recursivos, notificaciones, grupos de eventos |
-| `esp_timer`, `esp_random`, `esp_log`, `esp_system`, `esp_task_wdt`… | `esp_system.cpp` | `esp_random` determinista con semilla |
-| VFS FAT (`esp_vfs_fat_register`) | `vfs_fat.cpp` | enrutado de `fopen("/sd/…")` en G4 |
-| ADC, DAC, LEDC/PWM, tone, RMT, timers HW, touch | `unsupported.cpp` | fallan con mensaje explícito |
+| `esp_random`, `esp_log`, `esp_system`, `esp_task_wdt`… | `esp_system.cpp` | `esp_random` determinista con semilla; `esp_restart` (§7.2) |
+| `esp_timer` | `esp_timer.cpp` | tarea "esp_timer" y despacho por ISR (§7.2) **[G4]** |
+| timers de software de FreeRTOS | `freertos_timers.cpp` | tarea "Tmr Svc" y cola de comandos **[G4]** |
+| GPTimer de ESP-IDF | `gptimer.cpp` | `esp32-hal-timer.c` del core se compila sin cambios encima **[G4]** |
+| NVS de ESP-IDF (`nvs_flash`, `nvs_*`) | `nvs.cpp` | persistente en `nvs.bin`; `Preferences` y `EEPROM` se compilan tal cual **[G4]** |
+| LEDC, `analogWrite`, `tone` | `ledc.cpp` | §10 |
+| VFS FAT (`esp_vfs_fat_register`) y la libc de archivos del firmware | `vfs_fat.cpp`, `vfs.cpp` | `fopen("/sd/…")` → FatFs real (§7.2) **[G4]** |
+| hora del sistema (`time`, `gettimeofday`, `settimeofday`) | `systime.cpp` | sigue al tiempo virtual (§7.2) **[G4]** |
+| ADC, DAC, RMT, touch, sigma-delta, Bluetooth, deep sleep | `unsupported.cpp` | fallan con mensaje explícito |
 | newlib (`itoa/utoa`, y en Windows `dirent`, `stat`, `mkdir(p,m)`, `fsync`) | `newlib_compat.c`, `include-win32/` | MinGW y glibc no son newlib |
 
 ### 2.3 Headers sustitutos de ESP-IDF (sim/hal/include)
@@ -123,8 +129,8 @@ aquí.
 `vTaskSuspendAll/xTaskResumeAll`, `xTaskGetCurrentTaskHandle`, `taskYIELD`,
 `xSemaphoreCreate{Mutex,RecursiveMutex,Binary}`, `xSemaphoreTake/Give(Recursive)`,
 `vSemaphoreDelete`, `xQueueReceive/Reset` (HardwareSerial), `pdMS_TO_TICKS`,
-`portMAX_DELAY`. Todo implementado; timers de software y `esp_timer`
-quedan como "no soportado" explícito hasta que algo los use.
+`portMAX_DELAY`. Todo implementado; desde G4 también los timers de
+software (`xTimerCreate`…) y `esp_timer`.
 
 ## 3. Compilación nativa del sketch
 
@@ -280,7 +286,7 @@ Definida en [`sim/engine/include/jwsim/devices.h`](../sim/engine/include/jwsim/d
 | Señal | `Net` | Nivel lógico con varios manejadores identificados por dueño; sin manejadores → nivel de reposo (pull de la placa); con varios → AND cableado + marca de contención. Oyentes por cambio. |
 | I2C | `I2CTarget` + `I2CBus` | Eventos `start(read)`, `write(byte)→ACK`, `read(ack)→byte`, `stop()`. El bus calcula la duración a la frecuencia configurada y traza cada transacción. |
 | SPI | `SPITarget` + `SPIBus` | Selección por la red de CS (activa en bajo); `transfer(mosi)→miso` por byte. MISO en reposo = 0xFF. |
-| UART | `Board::uart_tx` / `uart_inject` | Flujo de bytes. En G4: baudios, tiempos de carácter, transceptor RS-485 half-duplex y bus multinodo. |
+| UART | `Board::uart_tx` / `uart_inject` | Flujo de bytes. **[G4]** En UART1/2, `Board::uart_char` informa cada carácter con su [inicio, fin] y `uart_inject_at` entrega un byte en un instante: transceptor RS-485 y bus multinodo (§7.3). |
 | GPIO | `jwsim::gpio(n)` | Red de cada GPIO del ESP32; el HAL la maneja en modo salida. |
 
 Reglas para modelos (`sim/models/<chip>/`):
@@ -322,13 +328,13 @@ Extraído del package (alpha.12). "Fuente" indica de dónde sale cada dato.
 | 8 DI `I0_0..I0_7` | TCA P07..P00 (`I0_k = 0x2207 − k`) | core | `pins_is.h` | placa | G1 |
 | 8 DO relé `Q0_0..Q0_7` | TCA P10..P17 (`0x2208 + k`), habilitadas por `EN_IO` | core | `pins_is.h`, `peripherals_init.cpp` | placa | G1 |
 | `EN_IO` | GPIO27 | core | `pins_is.h` | placa | G1 |
-| RTC DS3232M | I2C0 @0x68 | `JW_RTC` | `JW_RTC.h` | NACK (ausente) | G4 RTC_DS3232M |
-| FRAM | SPI (VSPI) CS GPIO13, 10 MHz, 8 KiB | `JW_FRAM` | `jwplc_spi_bus.h`, `boards.txt` | ausente | G4 FRAM_PERSIST |
-| microSD | SPI CS GPIO32, 20 MHz; detección GPIO39 (activo bajo) | `JW_SD`, `SD`, `FS` | `jwplc_hardware_config.h` | ausente (detección = sin tarjeta) | G4 SD_DATALOG |
-| TFT ST7789 170×320 BGR | SPI CS GPIO33, DC 25, RST 14, 80 MHz | `JWPLC_TFT` (TFT_eSPI 2.5.43), `JWPLC_Display` | `jwplc_spi_bus.h`, `tft_setup.h` | ausente | G4 TFT_HMI |
-| Ethernet W5500 | SPI CS GPIO5, 20 MHz; INTn GPIO15 | `JWPLC_Ethernet`, `JWPLC_ModbusTCP` | `jwplc_spi_bus.h`, `jwplc_hardware_config.h` | **en espera de alpha.13** | G4 W5500_MODEL |
-| RS-485 (MAX13487E, auto-dirección) | UART2 RX 16, TX 17 | `JWPLC_RS485`, `JWPLC_ModbusRTU` | `jwplc_hardware_config.h` | consola de bytes | G4 RS485_MULTINODE |
-| Botonera matricial 2×3 | filas GPIO12, 2; columnas 35, 34, 36 | `JW_MatrixButtons` | `JWPLC_GlobalPeripherals.cpp` | sin teclas pulsadas | G4 (con TFT_HMI) |
+| RTC DS3232M | I2C0 @0x68 | `JW_RTC` | `JW_RTC.h` | **G4** `sim/models/ds3232m` | G4 RTC_DS3232M |
+| FRAM | SPI (VSPI) CS GPIO13, 10 MHz, 8 KiB | `JW_FRAM` | `jwplc_spi_bus.h`, `boards.txt` | **G4** `sim/models/mb85rs64v` | G4 FRAM_PERSIST |
+| microSD | SPI CS GPIO32, 20 MHz; detección GPIO39 (activo bajo) | `JW_SD`, `SD`, `FS` | `jwplc_hardware_config.h` | **G4** `sim/models/sdcard` (SDHC 64 MiB; señal `SD_CARD`) | G4 SD_DATALOG |
+| TFT ST7789 170×320 BGR | SPI CS GPIO33, DC 25, RST 14, 80 MHz | `JWPLC_TFT` (TFT_eSPI 2.5.43), `JWPLC_Display` | `jwplc_spi_bus.h`, `tft_setup.h` | **G4** `sim/models/st7789` | G4 TFT_HMI |
+| Ethernet W5500 | SPI CS GPIO5, 20 MHz; INTn GPIO15 | `JWPLC_Ethernet`, `JWPLC_ModbusTCP` | `jwplc_spi_bus.h`, `jwplc_hardware_config.h` | **G4** `sim/models/w5500` con `--eth` (§7.4) | G4 W5500_MODEL |
+| RS-485 (MAX13487E, auto-dirección) | UART2 RX 16, TX 17 | `JWPLC_RS485`, `JWPLC_ModbusRTU` | `jwplc_hardware_config.h` | **G4** UART con tiempo de carácter, bus multinodo (§7.3) | G4 RS485_MULTINODE |
+| Botonera matricial 2×3 | filas GPIO12, 2; columnas 35, 34, 36 | `JW_MatrixButtons` | `JWPLC_GlobalPeripherals.cpp` | **G4** matriz por GPIO (`BTN_*`) | G4 TFT_HMI |
 | UART0 consola | TX 1, RX 3 | `HardwareSerial` | `pins_arduino.h` | consola | G1 |
 | LEDs RUN/ERR/BUS/ETH | **no encontrados en el package alpha.12** | — | — | pendiente | ver §11 H6 |
 
@@ -548,6 +554,143 @@ estado entre transacciones) y Modbus RTU (tramas separadas por CRC-16) y
 TCP (MBAP), con función, dirección, valores, excepciones y CRC. Observar
 los buses no cambia la traza.
 
+### 7.2 Periféricos, estado no volátil y reinicio **[G4]**
+
+**Modelos.** Cada periférico de la placa es un modelo por registros,
+escrito contra su hoja de datos y con un `MODEL.md` (una fila por
+comportamiento, cada una con su test en `tests/models/`, sin firmware):
+
+| Chip | Bus | Modelo |
+|---|---|---|
+| TCA6424A @0x22 | I2C0 | [`sim/models/tca6424a`](../sim/models/tca6424a/MODEL.md) (G1) |
+| DS3232M @0x68 | I2C0 | [`sim/models/ds3232m`](../sim/models/ds3232m/MODEL.md): hora desde el tiempo virtual, 12/24 h, día de semana independiente, alarmas, temperatura, SRAM; batería: persiste |
+| MB85RS64V (CS13) | VSPI | [`sim/models/mb85rs64v`](../sim/models/mb85rs64v/MODEL.md): 8 KiB, WEL, protección por bloques |
+| ST7789 (CS33, D/C 25, RST 14) | VSPI | [`sim/models/st7789`](../sim/models/st7789/MODEL.md): GRAM 240×320, MADCTL, ventana; la app recibe las zonas cambiadas (trama binaria tipo 2) |
+| microSD (CS32, detección GPIO39) | VSPI | [`sim/models/sdcard`](../sim/models/sdcard/MODEL.md): SDHC en modo SPI, CRC7/CRC16, tiempos de inicialización, lectura y programación; formato FAT32 de fábrica |
+| MAX13487E (UART2) | UART | auto-dirección: lo que transmite la UART2 sale al bus RS-485 sin eco (§7.3) |
+| W5500 (CS5, INTn GPIO15) | VSPI | [`sim/models/w5500`](../sim/models/w5500/MODEL.md): registros comunes, 8 sockets TCP/UDP con búferes de 16 KiB, comandos, plazos de ARP/TCP por RTR/RCR, interrupciones, PHY con autonegociación; la red queda detrás de un puerto (§7.4). Poblado con `--eth` |
+
+**Directorio de estado.** `--state <dir>` (la app usa uno por proyecto o
+por sketch) guarda lo no volátil: `fram.bin`, `fram-sr.bin`, `rtc.bin`,
+`nvs.bin` (NVS de ESP-IDF v5 implementada en el HAL: entradas tipadas,
+errores `ESP_ERR_NVS_*`, partición de 20 KiB), `sd.bin` (sectores no nulos
+de la tarjeta; un `sd.img` crudo tiene prioridad). Escritura atómica, cada
+segundo de pared en modo interactivo, al terminar y ante una falla del
+firmware (`jwsim_set_fatal_hook`). La app copia el estado al iniciar una
+sesión para que la reproducción de su grabación parta del mismo estado.
+
+**Libc del firmware.** El firmware (sketch, core, librerías, FatFs) no usa
+la libc del host para archivos ni para la hora: después de compilar cada
+unidad del firmware, `objcopy --redefine-syms=sim/hal/fw-libc.syms` cambia
+sus referencias a `fopen`, `fread`, `stat`, `opendir`, `unlink`, `time`,
+`gettimeofday`… (y a `__imp__time64` del CRT de Windows) por las del
+simulador. Como es a nivel de símbolo, los métodos C++ homónimos
+(`VFSImpl::rename`) no se tocan. `sim/hal/src/vfs.cpp` resuelve las rutas
+bajo un montaje de `esp_vfs_fat_register` ("/sd") contra FatFs, con la
+semántica de `vfs_fat.c` (modos, `O_APPEND`, errno, `stat` de la raíz) y un
+búfer stdio como el de newlib; cualquier otra ruta da ENOENT: el firmware
+nunca toca el disco de la PC. `systime.cpp` da la hora del ESP32: 0 (1970)
+al encender, sigue al tiempo virtual, `settimeofday` la fija y un reinicio
+no la pierde. El runner fija `TZ=UTC0`, la zona del ESP32 por defecto.
+
+**ABI.** El ESP32 (xtensa) tiene `char` sin signo; el build nativo usa
+`-funsigned-char` (H14).
+
+**Temporizadores.** `esp_timer` (tarea "esp_timer", prioridad 22, núcleo 0,
+alarma por ISR, despacho ISR o tarea, periódicos sin deriva), timers de
+software de FreeRTOS (tarea "Tmr Svc", prioridad 1, cola de 10 comandos,
+vencimiento contado desde el tick de la llamada) y GPTimer de ESP-IDF, sobre
+el que `esp32-hal-timer.c` del core (`timerBegin`, `timerAlarm`…) se compila
+sin cambios: 4 timers a 80 MHz / divisor con cuenta exacta.
+
+**Reinicio (`esp_restart`).** No se puede reiniciar el firmware dentro del
+mismo proceso (sus variables globales y constructores ya corrieron). El
+motor detiene la ejecución en el instante del pedido (desde una tarea o
+una ISR) y el runner arranca un proceso nuevo:
+
+1. guarda FRAM, NVS, RTC y SD (en un directorio temporal si no hay
+   `--state`) y escribe `reinicio.bin`: instante del nuevo arranque (el tick
+   siguiente), traza acumulada, hora del sistema, eventos del `.stim` ya
+   aplicados y el estado "tibio" de lo que no es el ESP32 (registros del
+   TCA6424A, GRAM y registros del ST7789, entradas y forzados);
+2. en modo CLI se re-ejecuta con `--resume` (`execv` en Linux; en Windows
+   lanza el proceso nuevo y devuelve su código); con `--port` informa
+   `{"type":"restart"}` y sale con 75: `RunnerProcess` de la app lanza el
+   nuevo, encola los comandos del intervalo, repone `run`/`subscribe` y
+   vuelve a adjuntar gdb al pid nuevo;
+3. el proceso nuevo arranca el firmware en ese instante con la traza
+   encadenada: `millis()`, `micros()`, los ticks y `esp_timer` cuentan desde
+   el nuevo arranque, `esp_reset_reason()` es `ESP_RST_SW` y las corridas
+   repetidas dan el mismo hash final (también entre Linux y Windows).
+
+EN_IO (GPIO27) no tiene pull en la placa: durante el reinicio los relés
+caen, igual que en un arranque en frío; los registros del TCA6424A sí se
+conservan.
+
+**Protocolo agregado en G4.** UI→runner: `{"type":"uart","port":0,"hex":"…"}`
+(texto hacia la UART desde la consola de la app; queda en la grabación como
+una entrada), `rs485` y `uart_rx` (§7.3). Runner→UI: `{"type":"restart",
+"boot_ns","resume","state"}` (reinicio por `esp_restart`), `uart_tx` (§7.3)
+y `display` como trama binaria tipo 2 con las zonas cambiadas de la GRAM
+del ST7789.
+
+### 7.3 Bus RS-485 entre PLC simulados **[G4]**
+
+En UART1 y UART2 cada carácter ocupa 1 + datos + paridad + parada bits a la
+velocidad configurada: la escritura pasa por la FIFO de 128 bytes y el
+búfer del driver, `flush()` espera el bit de parada del último y cada byte
+recibido queda disponible al terminar su carácter (UART0, la consola, sigue
+sin tiempo de carácter para no cambiar los tiempos de todos los sketches).
+
+Cada PLC es un runner con su propio tiempo virtual. `app/lib/rs485-bus.mjs`
+los avanza juntos en ventanas de Q ns (sincronización conservadora):
+`{"type":"rs485","port":2,"on":1}` hace que el runner informe cada carácter
+de UART2 con su [inicio, fin] al escribirlo (`uart_tx`; una trama larga
+puede terminar varias ventanas más adelante). Cada carácter queda "en el
+aire" hasta su fin y choca con cualquier otro de otro emisor que se solape
+(llegan corruptos, AND de ambos, a todos). A cada nodo, salvo al emisor
+(el MAX13487E no tiene eco), se le entrega con `uart_rx` en el instante
+fin + Q, justo antes de correr la ventana que contiene ese instante: para
+entonces ya se informó todo lo que podía chocar con él. El resultado es
+determinista y conserva la separación entre caracteres; la única
+diferencia con el bus real es una latencia fija Q (1 ms por defecto).
+
+Un extremo del host conecta una herramienta externa como JW Modbus Tool:
+un socket TCP con RTU crudo ("RTU over TCP") o un puerto serie (p. ej. un
+par COM virtual como com0com). Lo que llega del host sale al bus a su
+velocidad desde el comienzo de la ventana siguiente; con él el bus avanza
+a la par del reloj de pared. CLI: `node cli/jwsim-bus.mjs <sketch>...
+[--tcp puerto | --com ruta]`.
+
+### 7.4 Ethernet: el W5500 y la red del host **[G4]**
+
+El modelo del W5500 no abre sockets: lo que el chip envía (LISTEN,
+CONNECT, SEND, SENDTO, DISCON/CLOSE) sale por `W5500::Network` y lo que
+llega de la red entra con `net_*` en un instante virtual. La placa lo
+puebla con `--eth` (en la app, `simulation.peripherals.ethernet.present`
+del proyecto); sin él CS5 no responde y el runtime informa "No Ethernet
+hardware", como alpha.12 lo esperaba. La señal `ETH_CABLE` (1 =
+conectado) desconecta el cable.
+
+- **CLI** (`--eth` sin `--port`): nadie responde en la red (el ARP vence,
+  el DHCP no contesta) salvo lo que traiga el `.stim`.
+- **Protocolo**: `{"type":"net","on":1}` hace que el runner informe
+  `{"type":"net","op":…}`; `{"type":"net_in",…}` entra como una entrada
+  más, en el instante virtual actual, y queda en la grabación como
+  `T net <socket> connected|data|peer_closed|reset|timeout|udp …`. La
+  sesión se reproduce por la CLI sin red con el mismo hash.
+- **Puente** (`app/lib/net-bridge.mjs`, en la app y en
+  `node cli/jwsim-net.mjs <sketch>`): una red virtual 192.168.250.0/24
+  cuya puerta de enlace .1 es el PC. Responde DHCP (entrega .10) y DNS
+  (con el DNS del host); TCP/UDP a .1 va a 127.0.0.1 y a otra IP sale por
+  la red del host (`hosts` reasigna IPs, p. ej. el servidor del ejemplo
+  02.ModbusTCP_Client). Un puerto en LISTEN del PLC se publica en el host
+  (P + 1000 si P < 1024: Modbus TCP 502 → 1502; en 127.0.0.1 o, si se
+  pide, en la LAN), y varios PLC usan desplazamientos distintos.
+
+Con red real el tiempo virtual va a la par del reloj de pared (velocidad
+×1): los paquetes del host entran en el instante virtual en que llegan.
+
 ## 8. Formato de proyecto `.jwsim` v1
 
 JSON versionado. Un `.jwsim` **vincula** artefactos que siguen abriéndose y
@@ -627,9 +770,13 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
      algo impide simular, documentarlo como punto de extensión para una
      alpha futura (§11).
   4. Correr todos los gates ⇒ `JWSIM_PACKAGE_SYNC_ALPHAxx=PASS`.
-- **W5500**: alpha.13 cambia watchdog, PHY, inicio W5100 y pin SS; alpha.14
-  usa INTn y reutilización de FIFO. **No se modela hasta que alpha.13 se
-  publique**; hasta entonces la placa lo presenta como no poblado.
+- **W5500**: alpha.13 (publicado el 2026-10-22) cambia el acceso al
+  W5500 (dueño del bus por tarea, sockets con "lease"), el inicio sin la
+  espera de 560 ms y Modbus TCP; alpha.14 usará INTn y reutilización de
+  FIFO. El modelo (§7.4) es del chip, no de una alpha: los gates
+  W5500_MODEL y MODBUS_TCP_HOST pasan con alpha.12 y con alpha.13. La
+  placa lo trae poblado solo con `--eth` mientras el package fijado sea
+  alpha.12.
 
 ## 10. Límites de fidelidad
 
@@ -642,16 +789,19 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 | Memoria | — | Tamaño de pila/heap del ESP32, desbordes (pilas del host ≥ 256 KiB) |
 | E/S digitales | Registro a registro en el TCA6424A | Tiempos eléctricos, rebotes (los agrega el dispositivo de escena) |
 | TFT | (G4) comandos ST7789 y framebuffer | Tiempo de pintado: TFT_eSPI usa el procesador Generic, más lento que la ruta por registros del firmware real |
-| SD | (G4) protocolo SPI de tarjeta + FatFs real | Tiempos internos de la tarjeta |
-| W5500 | (G4, tras alpha.13) registros y sockets → sockets del host | PHY/enlace físico |
+| SD | (G4) SDHC en modo SPI (comandos, CRC, R1/R7/OCR/CSD/CID), FatFs y VFS reales, detección de tarjeta | Tiempos internos fijos (inicialización 100 ms, lectura 100 µs, programación 500 µs); sin desgaste ni errores del medio; sin modo SD de 4 bits |
+| NVS | (G4) formato lógico de ESP-IDF v5: entradas tipadas, espacios de nombres, errores `ESP_ERR_NVS_*` | No reproduce la disposición física de páginas de la flash ni su desgaste |
+| Timers | (G4) `esp_timer`, timers de FreeRTOS y GPTimer con la cuenta exacta del divisor | Latencia de la ISR del timer (0) |
+| UART / RS-485 | (G4) tiempo de carácter en UART1/2, FIFO de 128 bytes, `flush`, desborde de RX; choques entre nodos | UART0 (consola) sin tiempo de carácter; latencia fija Q entre nodos (§7.3); sin niveles eléctricos, terminación ni polarización del bus |
+| W5500 | (G4) registros, 8 sockets TCP/UDP → sockets del host, plazos de ARP/TCP, INTn, PHY | MACRAW, PPPoE, multicast, ICMP; red sin pérdidas (sin retransmisiones); autonegociación de duración fija (1,5 s) |
 | Registros del ESP32 | Solo los campos GP-SPI que usa el package | Cualquier otro acceso por dirección física falla (no hay MMU que lo atrape) |
 | PWM (LEDC, `analogWrite`, `tone`) | Frecuencia, resolución, ciclo e inversión por pin; fin de rampa con interrupción | No se generan flancos a la frecuencia del PWM: la red digital indica "activa si ciclo > 0" y los dispositivos de escena leen el valor PWM. Las rampas aplican el ciclo final al inicio |
-| Wi-Fi / BLE / ADC / NVS / LittleFS | — | No soportados (mensaje explícito al compilar o al usar la API) |
+| Wi-Fi / BLE / ADC / LittleFS | — | No soportados (mensaje explícito al compilar o al usar la API) |
 
 Por eso el simulador **antecede** a los gates físicos de las alphas
 (`SIM_REGRESSION`), no los reemplaza.
 
-## 11. Hallazgos para el package (G0–G1)
+## 11. Hallazgos para el package (G0–G4)
 
 Puntos de extensión o defectos detectados al compilar y ejecutar el package
 sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
@@ -669,3 +819,6 @@ sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
 | H9 | Sketches de `tools/build-speed-benchmark` que usan librerías retiradas antes de alpha.12 (`08_ethernet_bridge_link`, `09_gfx_bridge_link`, `10_gfx_physical`, `16_alpha6_ethernet_nonblocking_acceptance`). | No compilan con alpha.12. | Actualizarlos a `JWPLC_TFT`/`JWPLC_Ethernet` o moverlos a un archivo histórico. |
 | H10 | `LogicV2EnginePrototype.cpp:7` y `RuntimeUIV2EditSession.cpp:14` inicializan `_links{}`, un arreglo de `LogicV2InputLink`, cuyo constructor por defecto es `constexpr explicit LogicV2InputLink(uint16_t = …)`. La inicialización de copia de lista con un constructor `explicit` está prohibida (CWG 1518); GCC la acepta, clang la rechaza. | Solo compila con GCC. El simulador usa GCC en todos los destinos (§3.1). | Quitar `explicit` del constructor con argumento por defecto o declarar un constructor por defecto no explícito. |
 | H11 | El ejemplo `JWPLC_LogicRuntime_V2_Engine_RAM` exige `sizeof(LogicV2EnginePrototype) <= MIN_ENGINE_STORAGE_BYTES + 64`, pero `MIN_ENGINE_STORAGE_BYTES` no cuenta `_timing[100]` ni `_startedAtMs[100]` (500 bytes). En ILP32 (como el ESP32) el motor mide 2852 bytes frente a 2324 + 64. | El ejemplo informa "56 PASS, 1 FAIL" en cualquier destino; previsiblemente también en la placa. | Incluir esos arreglos en `MIN_ENGINE_STORAGE_BYTES` o ajustar el margen. |
+| H12 | **Carrera en `JWPLC_Display` al entrar al HMI de usuario** (G4, `03.Display_HMI_Pages`). `enterUserUI()` corre en `loopTask` y dibuja dentro de un lote de la TFT (`JWPLC_TFT.beginBatch()`); `jwplcSystemTask` (mayor prioridad, mismo núcleo) puede refrescar la pantalla a la vez. `_batchActive` es un indicador compartido: el `beginBatch()` del sistema devuelve verdadero dentro del lote de `loopTask` y su `endBatch()` libera los mutex que tomó `loopTask`. | En el simulador, con `CONFIG_FREERTOS_CHECK_MUTEX_GIVEN_BY_OWNER` de ESP-IDF, el firmware termina por assert ("mutex liberado por quien no es su dueño"); en la placa puede corromper el dibujo o dejar el bus SPI tomado. Se reproduce solo si OK llega en la ventana del primer refresco del sistema (~1000–1040 ms tras el arranque; 2 de 68 instantes probados). | Que el lote sea por tarea (dueño del lote) o que el refresco del sistema no entre mientras `loopTask` tiene un lote abierto. **Corregido en alpha.13** (`_batchOwner`). |
+| H13 | `JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy` espera `prepareBoot() == Unformatted` con las dos copias del superblock con CRC corrupto, pero `JWPLCLogicStorage::prepareBoot()` devuelve `CorruptMetadata` (el inspector ve la firma JWPLC en las copias), que es justamente lo que valida `Storage_Metadata_Diagnostic`. | El ejemplo informa "50 PASS, 1 FAIL" en cualquier destino (lógica pura, sin hardware). | Actualizar la expectativa del ejemplo a `CorruptMetadata`. |
+| H14 | `sd_diskio.cpp` (librería SD) guarda respuestas en `char` y compara `resp > 0x00`: depende de que `char` no tenga signo, como en xtensa (y ARM). | Sin `-funsigned-char`, en x86 0xFF es -1 y la SD nunca se selecciona. El simulador compila con `-funsigned-char` (§7.2); en la placa no hay problema. | Usar `uint8_t` en `sd_diskio.cpp` (código heredado de arduino-esp32; también vale reportarlo allí). |

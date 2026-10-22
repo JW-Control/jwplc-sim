@@ -15,7 +15,8 @@ Convenciones:
   `trace_hash` (línea `JWSIM_RESULT` del runner).
 - Tiempos "virtuales" se miden con el reloj del simulador; "de pared", con el
   reloj del host de CI de referencia: GitHub Actions `windows-latest` (x64),
-  workflows `.github/workflows/g2-windows.yml` y `g3-windows.yml`.
+  workflows `.github/workflows/g2-windows.yml`, `g3-windows.yml` y
+  `g4-windows.yml`.
 
 ## Estado actual
 
@@ -39,7 +40,17 @@ JWSIM_G3_FREEZE_TIME=PASS          (10 s detenido: millis() y tiempo virtual id�
 JWSIM_G3_WATCH_FORCE_IO=PASS       (variables en vivo, forzado de I0/Q0 con marca visual, en la grabación)
 JWSIM_G3_BUS_ANALYZER=PASS         (11 capturas de referencia; I2C, SPI por CS, UART, Modbus RTU/TCP)
 JWSIM_G3_RECORD_REPLAY=PASS        (CLI, protocolo y app: mismo hash)
-JWSIM_G4_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G4_RTC_DS3232M=PASS          (10 tests del modelo; 03.RTC_Basic; hora fija, del host y con batería)
+JWSIM_G4_NVS_PREFERENCES=PASS      (Preferences, EEPROM y los 10 ejemplos de JWPLC_LogicRuntime; H13 conocido)
+JWSIM_G4_HAL_EXTRAS=PASS           (esp_timer, timers de FreeRTOS y de hardware, esp_restart con estado tibio)
+JWSIM_G4_FRAM_PERSIST=PASS         (04.FRAM_Basic cuenta arranques; mismo hash con el mismo estado)
+JWSIM_G4_SD_DATALOG=PASS           (SDHC SPI, FatFs y VFS reales; JWPLCDataLog con extracción; lector FAT32 propio)
+JWSIM_G4_TFT_HMI=PASS              (4 capturas idénticas píxel a píxel; 6 botones; E2E en la app)
+JWSIM_G4_RS485_MULTINODE=PASS      (3 nodos, choques, maestro externo por TCP; COM con pty)
+JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; alpha.12 y alpha.13)
+JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502; alpha.12 y alpha.13)
+                                   (G4: Linux y Windows bajo wine; Windows nativo con g4-windows.yml a pedido)
+JWSIM_G5_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---
@@ -94,7 +105,7 @@ JWSIM_G4_*=PENDING ... JWSIM_G10_*=PENDING
 | `JWSIM_G4_SD_DATALOG` | Tarjeta SD en modo SPI (CMD0/8/55/41/58/9/10/17/18/24/25, CRC) sobre imagen FAT; FatFs real; VFS enruta `fopen("/sd/…")` a FatFs sin tocar el disco del host; `05.microSD_Basic` y DataLog pasan; detección de tarjeta. | Ejemplos + comparación de la imagen resultante. |
 | `JWSIM_G4_TFT_HMI` | Modelo ST7789 (comandos, ventana, RGB565, rotación, inversión) con framebuffer en la UI; HMI de `JWPLC_Display` visible y navegable con la botonera virtual; captura PNG comparable píxel a píxel con una referencia. | Comparación de capturas. |
 | `JWSIM_G4_RS485_MULTINODE` | UART con tiempo de carácter por baudios; bus RS-485 entre varios runners y con un COM virtual del host; `JWPLC_ModbusRTU` maestro/esclavo interoperando con una herramienta externa (JW Modbus Tool). | Prueba con 3 nodos y herramienta externa. |
-| `JWSIM_G4_W5500_MODEL` | **Solo tras publicarse alpha.13.** Modelo W5500 por registros (común, 8 sockets, buffers, INTn), TCP/UDP mapeados a sockets del host; ejemplos de `JWPLC_Ethernet` pasan con el comportamiento de alpha.13/14. | Ejemplos + tests del modelo. |
+| `JWSIM_G4_W5500_MODEL` | **Tras publicarse alpha.13** (2026-10-22). Modelo W5500 por registros (común, 8 sockets, buffers, INTn), TCP/UDP mapeados a sockets del host; ejemplos de `JWPLC_Ethernet` pasan con el comportamiento de alpha.13/14. | Ejemplos + tests del modelo. |
 | `JWSIM_G4_MODBUS_TCP_HOST` | `JWPLC_ModbusTCP` accesible desde el host (localhost/LAN) por un cliente externo; varios PLC simulados en puertos distintos. | Cliente Modbus TCP externo. |
 
 ## G5 — CI del package
