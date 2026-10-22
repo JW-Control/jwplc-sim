@@ -10,6 +10,8 @@
 //   I0_k  ── acondicionamiento de entrada ── TCA6424A P0(7-k)
 //   TCA6424A P1k ── driver de relé (habilitado por EN_IO=GPIO27) ── Q0_k
 //   UART0 (TX=1) ── consola
+//   VSPI ── ST7789 (CS33), microSD (CS32, detección GPIO39), FRAM (CS13),
+//           W5500 (CS5, sin modelo hasta alpha.13)
 #ifndef JWSIM_BOARD_JWPLCBASIC_H
 #define JWSIM_BOARD_JWPLCBASIC_H
 
@@ -22,6 +24,7 @@
 #include "jwsim/devices.h"
 #include "jwsim/models/ds3232m.h"
 #include "jwsim/models/mb85rs64v.h"
+#include "jwsim/models/sdcard.h"
 #include "jwsim/models/st7789.h"
 #include "jwsim/models/tca6424a.h"
 
@@ -51,6 +54,7 @@ class JwplcBasic : public Board {
   models::MB85RS64V &fram() { return fram_; }
   models::DS3232M &rtc() { return rtc_; }
   models::ST7789 &tft() { return *tft_; }
+  models::SdCard &sd() { return sd_; }
 
   // Estado persistente de la placa (FRAM, NVS, SD...) en `dir`; sin llamar,
   // todo es volátil. save_state() escribe lo que cambió.
@@ -74,6 +78,7 @@ class JwplcBasic : public Board {
   models::TCA6424A tca_{"U_TCA6424A", 0x22};
   models::MB85RS64V fram_;
   models::DS3232M rtc_;
+  models::SdCard sd_;
   std::unique_ptr<models::ST7789> tft_;
   std::map<std::string, std::unique_ptr<Net>> signals_;
   std::vector<std::string> order_;

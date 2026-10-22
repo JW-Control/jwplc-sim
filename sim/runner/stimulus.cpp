@@ -107,8 +107,9 @@ std::string validate_input(jwsim::boards::JwplcBasic &board, const InputEvent &e
     return "";
   }
   if (!board.signal(ev.signal)) return "señal desconocida: " + ev.signal;
-  // Entradas: bornes I0_k y botones del frente (BTN_LEFT, BTN_OK...).
-  const bool input = ev.signal.rfind("I0_", 0) == 0 || ev.signal.rfind("BTN_", 0) == 0;
+  // Entradas: bornes I0_k, botones del frente (BTN_LEFT, BTN_OK...) y la
+  // tarjeta microSD (SD_CARD: 1 = insertada).
+  const bool input = ev.signal.rfind("I0_", 0) == 0 || ev.signal.rfind("BTN_", 0) == 0 || ev.signal == "SD_CARD";
   const bool output = ev.signal.rfind("Q0_", 0) == 0;
   if (ev.op == InputOp::Set && !input) return "solo las entradas (I0_k, BTN_*) se asignan; las salidas se fuerzan: " + ev.signal;
   if (!input && !output) return "solo se fuerzan entradas (I0_k, BTN_*) y salidas Q0_k: " + ev.signal;

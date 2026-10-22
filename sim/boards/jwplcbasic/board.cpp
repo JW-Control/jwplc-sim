@@ -37,6 +37,7 @@ JwplcBasic::JwplcBasic() {
   tft_ = std::make_unique<models::ST7789>(gpio(kTftDcGpio), &gpio(kTftRstGpio), models::ST7789::Panel{});
   vspi_.attach(gpio(kTftCsGpio), tft_.get());
   vspi_.name_chip(gpio(kSdCsGpio), "SD");
+  vspi_.attach(gpio(kSdCsGpio), &sd_);
   vspi_.name_chip(gpio(kFramCsGpio), "FRAM");
   vspi_.attach(gpio(kFramCsGpio), &fram_);
   vspi_.name_chip(gpio(kEthCsGpio), "W5500");
@@ -69,6 +70,16 @@ JwplcBasic::JwplcBasic() {
   //  - GPIO15 INTn del W5500 (JWPLC_ETH_INT_PIN).
   gpio(kSdDetectGpio).set_idle(true);
   gpio(kEthIntGpio).set_idle(true);
+
+  // microSD: señal "SD_CARD" (1 = insertada, como viene la placa). El
+  // interruptor del zócalo lleva GPIO39 a bajo con la tarjeta puesta.
+  add_signal("SD_CARD", true).on_change([this](Net &net, bool level) {
+    log_signal(net, level);
+    sd_.set_inserted(level);
+    if (level) gpio(kSdDetectGpio).drive(&sd_, false);
+    else gpio(kSdDetectGpio).release(&sd_);
+  });
+  gpio(kSdDetectGpio).drive(&sd_, false);
 
   // Botones: señales de bornera "BTN_*" (1 = pulsado), como las entradas.
   for (int r = 0; r < 2; ++r) {
@@ -122,7 +133,7 @@ void JwplcBasic::log_signal(const Net &net, bool level) {
   jwsim_trace_bytes(net.name().data(), net.name().size());
   jwsim_trace_bytes(rec, sizeof(rec));
   jwsim_trace_u64(jwsim_now());
-  const char *kind = net.name()[0] == 'I' ? "DI" : net.name()[0] == 'Q' ? "DO" : "BTN";
+  const char *kind = net.name()[0] == 'I' ? "DI" : net.name()[0] == 'Q' ? "DO" : net.name()[0] == 'S' ? "SD" : "BTN";
   if (echo_) std::printf("[%10.3f ms] %-5s %s = %d\n", now_ms(), kind, net.name().c_str(), level);
 }
 
@@ -172,6 +183,7 @@ namespace jwsim::boards {
 
 void JwplcBasic::set_state_dir(const std::string &dir) {
   fram_.set_storage(dir);
+  sd_.set_storage(dir);
   rtc_.set_storage(dir);
   jwsim_nvs_set_storage(dir.c_str());
 }
@@ -180,6 +192,7 @@ void JwplcBasic::save_state() {
   if (!fram_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la FRAM en el directorio de estado\n");
   if (!rtc_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar el RTC en el directorio de estado\n");
   if (!jwsim_nvs_save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la NVS en el directorio de estado\n");
+  if (!sd_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la tarjeta microSD en el directorio de estado\n");
 }
 
 void JwplcBasic::save_warm(models::StateWriter &w) const {
