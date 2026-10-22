@@ -18,7 +18,7 @@ import { DebugSession } from "../app/lib/debug-session.mjs";
 import { RunnerProcess } from "../app/lib/sim-port.mjs";
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
-import { printCriteria, targetArg, writeReport } from "./lib/gate-util.mjs";
+import { parseResult, printCriteria, runExe, targetArg, writeReport } from "./lib/gate-util.mjs";
 
 const target = targetArg();
 const FREEZE_MS = Number(process.env.JWSIM_FREEZE_MS ?? 10000);
@@ -39,7 +39,9 @@ const runner = new RunnerProcess();
 let lastStatus = null;
 let messagesWhileFrozen = null;
 let stderr = "";
+let stoppedMsg = null;
 runner.on("message", (m) => {
+  if (m.type === "stopped") stoppedMsg = m;
   if (m.t_ns !== undefined) lastStatus = { t_ns: m.t_ns, wall: performance.now() };
   if (messagesWhileFrozen) messagesWhileFrozen.push(m.type);
 });
@@ -47,7 +49,8 @@ runner.on("stderr", (t) => (stderr += t));
 const exited = new Promise((r) => runner.on("exit", r));
 runner.start(exe, [], { env: { JWSIM_DEBUG: "1", JWSIM_WATCHDOG_MS: "0" } });
 
-const dbg = new DebugSession({ gdb: tc.gdb, exe, pid: runner.pid });
+// El gate lee jwsim_now() (función pura del motor) con el programa detenido.
+const dbg = new DebugSession({ gdb: tc.gdb, exe, pid: runner.pid, allowCalls: true });
 let gdbOut = "";
 dbg.on("output", (t) => (gdbOut += t));
 const stops = [];
@@ -75,6 +78,7 @@ const num = (v) => Number(String(v).match(/-?\d+/)?.[0]);
 const criteria = {};
 const freeze = {};
 try {
+  runner.send({ type: "debug", attached: 1 });
   const verified = await dbg.start(new Map([[ino, [marks.loop]]]));
   runner.send({ type: "run", speed: 1 });
 
@@ -168,6 +172,16 @@ try {
     virtual_advance_ms: Math.round(virtAdvanceMs),
     wall_advance_ms: Math.round(wallAdvanceMs),
   };
+
+  // Observación en vivo: muestrear variables con el firmware corriendo.
+  const m1 = await dbg.sample(["vueltas", "ultimo"]);
+  await sleep(300);
+  const m2 = await dbg.sample(["vueltas", "ultimo"]);
+  criteria.live_watch = {
+    pass: !!m1 && !!m2 && num(m2.vueltas) > num(m1.vueltas) && num(m2.ultimo) === 2 * num(m2.vueltas),
+    first: m1,
+    second: m2,
+  };
 } catch (err) {
   criteria.error = { pass: false, message: err.message, gdb: gdbOut.slice(-2000), runner: stderr.slice(-2000) };
 } finally {
@@ -175,6 +189,21 @@ try {
   runner.send({ type: "quit" });
   await Promise.race([exited, sleep(3000)]);
   runner.stop();
+}
+
+// Depurar no altera la simulación: la misma corrida sin depurador, hasta el
+// mismo instante virtual, da el mismo hash de traza (no hubo entradas).
+if (stoppedMsg) {
+  const until = (stoppedMsg.t_ns / 1e6).toFixed(6);
+  const replay = parseResult(runExe(exe, ["--until", until, "--quiet"]).stdout);
+  freeze.no_perturbation = {
+    pass: replay?.trace_hash === stoppedMsg.trace_hash,
+    t_end_ms: Number(until),
+    debug_hash: stoppedMsg.trace_hash,
+    plain_hash: replay?.trace_hash,
+  };
+} else {
+  freeze.no_perturbation = { pass: false, message: "el runner no informó 'stopped'" };
 }
 
 const passA = printCriteria("JWSIM_G3_BREAKPOINTS_STEP", criteria, ` (${target})`);

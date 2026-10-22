@@ -12,11 +12,16 @@ import { EventEmitter } from "node:events";
 import { DapClient } from "./dap-client.mjs";
 
 export class DebugSession extends EventEmitter {
-  constructor({ gdb, exe, pid }) {
+  // allowCalls: permitir que las expresiones llamen funciones del firmware.
+  // Por defecto no: una llamada (p. ej. millis()) corre código del sketch y le
+  // cobra CPU virtual, y la simulación dejaría de ser reproducible.
+  constructor({ gdb, exe, pid, allowCalls = false }) {
     super();
     this.gdb = gdb;
     this.exe = exe;
     this.pid = pid;
+    this.allowCalls = allowCalls;
+    this.sampleWaiter = null;
     this.threadId = null;
     this.stoppedNow = false;
     this.started = false;
@@ -35,10 +40,18 @@ export class DebugSession extends EventEmitter {
       this.emit("continued");
     });
     dap.on("stopped", async (b) => {
-      this.stoppedNow = true;
-      if (b.threadId) this.threadId = b.threadId;
+      if (b.threadId && this.started) this.threadId = b.threadId;
       // La detención propia del attach no es un breakpoint del usuario.
       if (!this.started) return;
+      if (this.sampleWaiter) {
+        const w = this.sampleWaiter;
+        this.sampleWaiter = null;
+        w(b.reason);
+        // La pausa de un muestreo no se informa; un breakpoint que llegó
+        // antes que la pausa, sí.
+        if (b.reason === "pause") return;
+      }
+      this.stoppedNow = true;
       const frame = await this.topFrame().catch(() => null);
       this.emit("stopped", { reason: b.reason, frame });
     });
@@ -46,6 +59,7 @@ export class DebugSession extends EventEmitter {
     await dap.request("initialize", { adapterID: "gdb", clientID: "jwplc-sim", linesStartAt1: true, columnsStartAt1: true, pathFormat: "path" });
     await dap.request("attach", { pid: this.pid, program: this.exe });
     await initialized;
+    await this.#cli(`set may-call-functions ${this.allowCalls ? "on" : "off"}`);
     const verified = new Map();
     for (const [path, lines] of breakpoints) verified.set(path, await this.setBreakpoints(path, lines));
     await dap.request("configurationDone");
@@ -56,6 +70,37 @@ export class DebugSession extends EventEmitter {
     this.started = true;
     await this.continue();
     return verified;
+  }
+
+  #cli(command) {
+    return this.dap.request("evaluate", { expression: command, context: "repl" });
+  }
+
+  // Lee expresiones con el firmware corriendo (tabla de observación en vivo):
+  // detiene el proceso un instante, evalúa y continúa. El tiempo virtual no
+  // avanza mientras tanto, así que no altera la simulación. Devuelve null si
+  // el programa ya está detenido por el usuario (la interfaz evalúa aparte).
+  async sample(expressions) {
+    if (!this.started || this.stoppedNow || this.sampling) return null;
+    this.sampling = true;
+    try {
+      const reason = new Promise((resolve) => (this.sampleWaiter = resolve));
+      await this.dap.request("pause", { threadId: this.threadId });
+      const why = await Promise.race([reason, new Promise((r) => setTimeout(() => r(null), 3000))]);
+      this.sampleWaiter = null;
+      if (why === null) return null;
+      const out = {};
+      for (const e of expressions) {
+        out[e] = await this.evaluate(e).then(
+          (v) => v.value,
+          (err) => `‹${err.message}›`,
+        );
+      }
+      if (why === "pause") await this.dap.request("continue", { threadId: this.threadId });
+      return out;
+    } finally {
+      this.sampling = false;
+    }
   }
 
   async setBreakpoints(path, lines) {
