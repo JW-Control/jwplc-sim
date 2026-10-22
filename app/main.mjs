@@ -13,6 +13,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
+import { NetBridge } from "./lib/net-bridge.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
@@ -95,6 +96,8 @@ function forward(channel, payload) {
 async function stopRunner() {
   const r = runner;
   runner = null;
+  bridge?.close();
+  bridge = null;
   r?.removeAllListeners();
   // El resumen final (instante y hash de traza) sí llega a la interfaz.
   r?.on("message", (m) => m.type === "stopped" && forward("sim:message", m));
@@ -311,6 +314,21 @@ function copyDir(from, to) {
   else mkdirSync(to, { recursive: true });
 }
 
+// W5500 de la placa: el proyecto lo puebla con
+// simulation.peripherals.ethernet.present (y opcionalmente "ip" para el DHCP
+// de la red virtual, "listenHost" "0.0.0.0" para publicar en la LAN y
+// "portOffset" para los puertos de escucha). Sin proyecto, no poblado.
+let bridge = null;
+function ethernetConfig(projectFile) {
+  if (!projectFile) return null;
+  try {
+    const eth = loadProject(projectFile).project.simulation?.peripherals?.ethernet;
+    return eth?.present ? eth : null;
+  } catch {
+    return null;
+  }
+}
+
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
 // Hora local de la PC como "fijo:AAAA-MM-DDTHH:MM:SS" para el RTC simulado.
 function localRtcNow() {
@@ -354,7 +372,20 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
     await detachDebugger();
     if (hasBreakpoints()) await attachDebugger();
   };
-  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg], { env: { JWSIM_DEBUG: "1" }, onRestart });
+  const eth = ethernetConfig(projectFile);
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg, ...(eth ? ["--eth"] : [])], { env: { JWSIM_DEBUG: "1" }, onRestart });
+  // Red del host para el W5500 (al reproducir una grabación, la red sale
+  // del .stim: sin puente).
+  if (eth && !stim) {
+    bridge = new NetBridge({
+      plcIp: eth.ip,
+      listenHost: eth.listenHost ?? "127.0.0.1",
+      ...(eth.portOffset !== undefined ? { listenPort: (p) => p + eth.portOffset } : {}),
+    });
+    bridge.on("listening", (p, hp) => forward("sim:stderr", `[jwsim] Ethernet: puerto ${p} del PLC en ${bridge.listenHost}:${hp}\n`));
+    bridge.on("error", (err) => forward("sim:stderr", `[jwsim] Ethernet: ${err.message}\n`));
+    bridge.attach(r);
+  }
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {

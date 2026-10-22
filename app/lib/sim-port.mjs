@@ -60,7 +60,7 @@ export class RunnerProcess extends EventEmitter {
     this.env = env;
     this.onRestart = onRestart;
     this.lastRun = null;
-    this.lastSubscribe = null;
+    this.sticky = new Map();
     this.queue = null;   // comandos durante un reinicio
     this.#spawn(args);
     return this;
@@ -120,7 +120,7 @@ export class RunnerProcess extends EventEmitter {
       }
       const queued = this.queue;
       this.queue = null;
-      if (this.lastSubscribe) this.#write(this.lastSubscribe);
+      for (const m of this.sticky.values()) this.#write(m);
       for (const m of queued) this.send(m);
       if (this.lastRun?.type === "run" && !queued.some((m) => m.type === "run" || m.type === "pause")) this.#write(this.lastRun);
       return;
@@ -133,7 +133,9 @@ export class RunnerProcess extends EventEmitter {
   }
   send(msg) {
     if (msg.type === "run" || msg.type === "pause") this.lastRun = msg;
-    if (msg.type === "subscribe") this.lastSubscribe = msg;
+    // Configuración de la sesión que el proceso nuevo tras un reinicio debe
+    // recibir otra vez (analizador, red del W5500, bus RS-485).
+    if (msg.type === "subscribe" || msg.type === "rs485" || (msg.type === "net" && "on" in msg)) this.sticky.set(msg.type, msg);
     if (msg.type === "quit") this.lastRun = null;
     if (this.queue && msg.type !== "quit") {
       this.queue.push(msg);
