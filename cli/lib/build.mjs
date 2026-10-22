@@ -185,12 +185,25 @@ export function parseDepFile(text) {
     .map((d) => d.replace(/\\([ :#])/g, "$1"));
 }
 
-function upToDate(obj, depFile, cmdHash, stampFile) {
-  if (!existsSync(obj) || !existsSync(depFile) || !existsSync(stampFile)) return false;
+// Fecha de modificación (o -1 si no existe), con caché por build: las ~90
+// unidades comparten cientos de headers, y en Windows cada consulta al disco
+// es cara (un build sin cambios hacía decenas de miles).
+function mtimeOf(path, cache) {
+  let t = cache?.get(path);
+  if (t === undefined) {
+    t = statSync(path, { throwIfNoEntry: false })?.mtimeMs ?? -1;
+    cache?.set(path, t);
+  }
+  return t;
+}
+
+function upToDate(obj, depFile, cmdHash, stampFile, cache) {
+  const objTime = mtimeOf(obj);
+  if (objTime < 0 || !existsSync(depFile) || !existsSync(stampFile)) return false;
   if (readFileSync(stampFile, "utf8") !== cmdHash) return false;
-  const objTime = statSync(obj).mtimeMs;
   for (const p of parseDepFile(readFileSync(depFile, "utf8"))) {
-    if (!existsSync(p) || statSync(p).mtimeMs > objTime) return false;
+    const t = mtimeOf(p, cache);
+    if (t < 0 || t > objTime) return false;
   }
   return true;
 }
@@ -222,6 +235,7 @@ export async function buildSketch(sketchDir, options = {}) {
       last = now;
     };
   })();
+  const phaseNote = process.env.JWSIM_BUILD_TIMING || options.timing ? (m) => log(`[tiempo] ${m}`) : () => {};
   await fetchAll();
   const thirdParty = Object.fromEntries(readSources().packages.map((p) => [p.name, thirdPartyDir(p)]));
   const pkgTree = join(pkgRoot, lock.JWPLC_PACKAGE_TREE);
@@ -419,6 +433,7 @@ export async function buildSketch(sketchDir, options = {}) {
   phase("pch");
 
   const failures = [];
+  const mtimes = new Map();
   const objects = await pool(units, availableParallelism(), async (u) => {
     const rel = relative(ROOT, u.file).split(sep).join("/").replace(/^\.jwsim\//, "");
     const cc = u.file.endsWith(".c") ? tc.cc : tc.cxx;
@@ -439,7 +454,8 @@ export async function buildSketch(sketchDir, options = {}) {
         : join(cacheDir, cmdHash + "_" + basename(u.file) + ".o");
     mkdirSync(dirname(obj), { recursive: true });
     const args = [...compile, "-o", obj];
-    if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd")) return { ...u, obj };
+    if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd", mtimes)) return { ...u, obj };
+    const tUnit = performance.now();
     let r = await run(cc[0], args);
     if (r.code !== 0 && withPch && /\.gch|precompiled|PCH/i.test(r.out)) {
       // PCH inválido para este host (p. ej. reubicación en Windows): sin él.
@@ -451,6 +467,10 @@ export async function buildSketch(sketchDir, options = {}) {
       failures.push({ rel, out: r.out });
       return null;
     }
+    if (withPch && /Winvalid-pch|not used because/.test(r.out)) {
+      log(`[build] aviso: GCC no usó el header precompilado: ${r.out.split(/\r?\n/).find((l) => /pch|gch/i.test(l)) ?? ""}`);
+    }
+    if (u.group === "sketch") phaseNote(`gcc ${basename(u.file)}: ${Math.round(performance.now() - tUnit)} ms`);
     writeFileSync(obj + ".cmd", cmdHash);
     return { ...u, obj };
   });
