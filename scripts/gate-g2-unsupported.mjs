@@ -22,9 +22,9 @@ const EXPECT = {
   unsup_adc: "analogRead",
   unsup_dac: "dacWrite",
   unsup_i2c_slave: "i2cSlave",
-  unsup_freertos_timer: "xTimerCreate",
-  unsup_esp_timer: "esp_timer_create",
-  unsup_restart: "esp_restart",
+  unsup_touch: "touchRead",
+  unsup_rmt: "rmtInit",
+  unsup_deep_sleep: "deep sleep",
 };
 const PLAN = /JWSIM_G\d+_[A-Z0-9_]+|No está en el plan de gates G0–G10/;
 

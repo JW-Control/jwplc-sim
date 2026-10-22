@@ -18,6 +18,7 @@
     "base64.cpp",
     "cbuf.cpp",
     "esp32-hal-periman.c",
+    "esp32-hal-timer.c",
     "freertos_stats.cpp",
     "jwplc_peripherals.cpp",
     "libb64/cdecode.c",
@@ -49,7 +50,6 @@
     "esp32-hal-ledc.c": "sim/hal/src/ledc.cpp",
     "esp32-hal-rmt.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-sigmadelta.c": "sim/hal/src/unsupported.cpp",
-    "esp32-hal-timer.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-touch.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-touch-ng.c": "sim/hal/src/unsupported.cpp",
     "esp32-hal-time.c": "sim/hal/src/unsupported.cpp",
@@ -156,5 +156,14 @@
     "LittleFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "SPIFFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "FFat": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG)."
+  },
+  "unsupportedApis": {
+    "$comment": "APIs del core ESP32 que el JWPLC Basic simulado no ofrece: si el compilador no las encuentra ('X' was not declared / does not name a type), el error lleva esta explicación. Una clave terminada en * cubre el prefijo.",
+    "touch*": "el sensor táctil del ESP32 no se simula (el JWPLC Basic no expone pads táctiles). No está en el plan de gates G0–G10.",
+    "rmt*": "el periférico RMT del ESP32 no se simula. No está en el plan de gates G0–G10.",
+    "sigmaDelta*": "la modulación sigma-delta del ESP32 no se simula. No está en el plan de gates G0–G10.",
+    "rgbLed*": "el JWPLC Basic no tiene un LED RGB direccionable. No está en el plan de gates G0–G10.",
+    "neopixelWrite": "el JWPLC Basic no tiene un LED RGB direccionable. No está en el plan de gates G0–G10.",
+    "hallRead": "el sensor Hall del ESP32 no se simula. No está en el plan de gates G0–G10."
   }
 }

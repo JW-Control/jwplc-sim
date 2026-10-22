@@ -156,6 +156,20 @@ export function parseDiagnostics(text) {
   return out;
 }
 
+// Notas para identificadores no declarados que son APIs no soportadas.
+export function unsupportedApiNotes(diagnostics, table) {
+  const notes = [];
+  for (const d of diagnostics) {
+    if (d.severity !== "error") continue;
+    const m = d.message.match(/^'(\w+)' (?:was not declared in this scope|does not name a type|has not been declared)/);
+    if (!m) continue;
+    const name = m[1];
+    const key = Object.keys(table).find((k) => k !== "$comment" && (k.endsWith("*") ? name.startsWith(k.slice(0, -1)) : k === name));
+    if (key) notes.push({ ...d, severity: "note", message: `${name} no está soportado por JWPLC Sim: ${table[key]}` });
+  }
+  return notes;
+}
+
 function run(cmd, args, opts = {}) {
   return new Promise((resolvePromise) => {
     const child = spawn(cmd, args, { ...opts, stdio: ["ignore", "pipe", "pipe"] });
@@ -515,8 +529,13 @@ export async function buildSketch(sketchDir, options = {}) {
   });
   if (failures.length) {
     for (const f of failures) log(`\n[build] ERROR compilando ${f.rel}\n${f.out}`);
-    const err = new Error(`${failures.length} unidades no compilaron`);
-    err.diagnostics = failures.flatMap((f) => parseDiagnostics(f.out));
+    const diagnostics = failures.flatMap((f) => parseDiagnostics(f.out));
+    // API del ESP32 que el JWPLC Basic simulado no ofrece: el error del
+    // compilador lleva la explicación (G2 UNSUPPORTED_LIB_MSG).
+    const notes = unsupportedApiNotes(diagnostics, manifest.unsupportedApis ?? {});
+    diagnostics.push(...notes);
+    const err = new Error([`${failures.length} unidades no compilaron`, ...new Set(notes.map((n) => n.message))].join("\n"));
+    err.diagnostics = diagnostics;
     err.output = failures.map((f) => `${f.rel}\n${f.out}`).join("\n");
     throw err;
   }
