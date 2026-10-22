@@ -14,6 +14,7 @@
 // Informe en build/gates/JWSIM_G2_E2E.json y capturas en build/gates/g2/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g2.mjs
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -33,11 +34,15 @@ process.on("unhandledRejection", (err) => {
   process.exitCode = 1;
 });
 
+// Electron descarga su binario la primera vez que se pide su ruta: se hace
+// antes de medir el arranque en frío.
+createRequire(import.meta.url)("electron");
 log(`iniciando Electron (carpeta de trabajo temporal: ${workspace})`);
 const t0 = Date.now();
 const args = [APP];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
-const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace } });
+// JWSIM_BUILD_TIMING: el log de compilación de la app incluye tiempos por fase.
+const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_BUILD_TIMING: "1" } });
 const win = await app.firstWindow();
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForSelector(".tab.active:has-text('02_io_basic.ino')", { timeout: 30000 });
@@ -54,6 +59,9 @@ const until = async (fn, timeout = 5000) => {
   }
   return false;
 };
+// Tiempos por fase y avisos del último build, desde el panel de compilación.
+const buildPhases = () =>
+  win.$eval("#build-log", (e) => e.textContent.split("\n").filter((l) => /\[tiempo\]|aviso/.test(l)).map((l) => l.replace(/^\[\w+\] /, "")));
 const setModel = (suffix, text) =>
   win.evaluate(([sfx, t]) => window.monaco.editor.getModels().find((m) => m.uri.path.endsWith(sfx)).setValue(t), [suffix, text]);
 
@@ -84,7 +92,7 @@ await win.click("#btn-run");
 await waitStatus("running");
 const rebuildMs = Date.now() - tb;
 const reported = await win.$eval("#sb-build", (e) => e.textContent);
-criteria.LOCAL_COMPILE = { pass: rebuildMs < 3000, rebuild_and_start_ms: rebuildMs, status: reported };
+criteria.LOCAL_COMPILE = { pass: rebuildMs < 3000, rebuild_and_start_ms: rebuildMs, status: reported, fases: await buildPhases() };
 
 log("EXTERNAL_EDIT_RELOAD");
 // ---- EXTERNAL_EDIT_RELOAD: con I0_0 activa, otro editor invierte la lógica
@@ -106,6 +114,7 @@ criteria.EXTERNAL_EDIT_RELOAD = {
   editor_updated: editorHas,
   scene_kept_I0_0: sceneKept,
   new_behavior_Q0_0_off: newBehavior,
+  fases: await buildPhases(),
 };
 
 log("ERROR_MAPPING");
