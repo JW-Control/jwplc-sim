@@ -4,8 +4,18 @@
 // package se compila sin cambios encima de esta API.
 //
 // TX: los bytes se entregan a la placa (consola para UART0, transceptor RS-485
-// para UART2 en G4). RX: buffer alimentado con jwsim::uart_inject().
-// La temporización por baudios de RX/TX se modela en G4 (RS485_MULTINODE).
+// para UART2). RX: buffer alimentado con jwsim::uart_inject().
+//
+// Tiempo de carácter (gate JWSIM_G4_RS485_MULTINODE): en UART1 y UART2 cada
+// byte ocupa en la línea 1 + datos + paridad + parada bits a la velocidad
+// configurada. TX pasa por la FIFO de hardware (128 bytes) más el búfer del
+// driver que pidió HardwareSerial (setTxBufferSize): si están llenos,
+// escribir espera a que salga el carácter más antiguo; flush() espera el bit
+// de parada del último. RX: cada byte que llega desde afuera queda disponible
+// al terminar su carácter; lo que excede la FIFO + el búfer de RX se pierde
+// (desborde). UART0 (consola) sigue sin tiempo de carácter: así no cambian
+// los tiempos de todos los sketches que imprimen.
+#include <algorithm>
 #include <deque>
 #include <vector>
 
@@ -25,8 +35,13 @@ struct uart_struct_t {
   int8_t cts_pin = -1;
   int8_t rts_pin = -1;
   size_t rx_buffer = 256;
+  size_t tx_buffer = 0;
   std::deque<uint8_t> rx;
   QueueHandle_t events = nullptr;
+  // Tiempo de carácter (UART1/UART2).
+  jwsim_ns_t tx_free_at = 0;           // fin del último carácter encolado
+  std::deque<jwsim_ns_t> tx_ends;      // fin de cada carácter aún en la FIFO/búfer
+  uint64_t rx_overflow = 0;
 };
 
 namespace {
@@ -36,17 +51,72 @@ int g_debug_uart = 0;
 
 uart_struct_t *get(uint8_t n) { return n < SOC_UART_NUM ? &g_uart[n] : nullptr; }
 
+constexpr size_t kHwFifo = 128;   // SOC_UART_FIFO_LEN
+
+bool timed(const uart_struct_t *u) { return u->num != 0; }
+
+// Bits por carácter según el config de arduino-esp32 (UART_CONF_*):
+// datos ((c >> 2) & 3) + 5, paridad (c & 3: 2 par, 3 impar), parada
+// ((c >> 4) & 3: 1, 1,5 o 2).
+jwsim_ns_t char_ns(const uart_struct_t *u) {
+  const uint32_t c = u->config;
+  const double data = ((c >> 2) & 3) + 5;
+  const double parity = (c & 3) >= 2 ? 1 : 0;
+  const uint32_t s = (c >> 4) & 3;
+  const double stop = s == 2 ? 1.5 : s == 3 ? 2 : 1;
+  const uint32_t baud = u->baud ? u->baud : 115200;
+  return static_cast<jwsim_ns_t>((1 + data + parity + stop) * 1e9 / baud + 0.5);
+}
+
+void drop_sent(uart_struct_t *u, jwsim_ns_t now) {
+  while (!u->tx_ends.empty() && u->tx_ends.front() <= now) u->tx_ends.pop_front();
+}
+
+void rx_push(uart_struct_t *u, uint8_t b) {
+  if (timed(u) && u->rx.size() >= u->rx_buffer + kHwFifo) {
+    ++u->rx_overflow;
+    return;
+  }
+  u->rx.push_back(b);
+}
+
+struct RxByte {
+  uart_struct_t *u;
+  uint8_t b;
+};
+
+void rx_event(void *arg, jwsim_ns_t) {
+  auto *e = static_cast<RxByte *>(arg);
+  rx_push(e->u, e->b);
+  jwsim_trace_bytes(&e->b, 1);
+  delete e;
+}
+
 int8_t default_rx(uint8_t n) { return n == 0 ? SOC_RX0 : n == 1 ? SOC_RX1 : SOC_RX2; }
 int8_t default_tx(uint8_t n) { return n == 0 ? SOC_TX0 : n == 1 ? SOC_TX1 : SOC_TX2; }
 
 } // namespace
 
 namespace jwsim {
+// Bytes que llegan desde afuera a partir de ahora: en UART1/UART2, uno por
+// tiempo de carácter (el primero disponible al terminar su carácter).
 void uart_inject(int port, const uint8_t *data, size_t len) {
   uart_struct_t *u = get(static_cast<uint8_t>(port));
   if (!u) return;
-  u->rx.insert(u->rx.end(), data, data + len);
-  jwsim_trace_bytes(data, len);
+  if (!timed(u)) {
+    u->rx.insert(u->rx.end(), data, data + len);
+    jwsim_trace_bytes(data, len);
+    return;
+  }
+  const jwsim_ns_t now = jwsim_now(), ch = char_ns(u);
+  for (size_t i = 0; i < len; ++i) jwsim_schedule_external_event(now + (i + 1) * ch, rx_event, new RxByte{u, data[i]});
+}
+
+// Un byte que termina de llegar en el instante `at` (bus RS-485 entre nodos).
+void uart_inject_at(int port, uint8_t byte, jwsim_ns_t at) {
+  uart_struct_t *u = get(static_cast<uint8_t>(port));
+  if (!u) return;
+  jwsim_schedule_external_event(std::max(at, jwsim_now()), rx_event, new RxByte{u, byte});
 }
 } // namespace jwsim
 
@@ -55,7 +125,7 @@ extern "C" {
 bool _testUartBegin(uint8_t, uint32_t, uint32_t, int8_t, int8_t, uint32_t, uint32_t, bool, uint8_t) { return false; }
 
 uart_t *uartBegin(uint8_t num, uint32_t baud, uint32_t config, int8_t rxPin, int8_t txPin, uint32_t rxBuf,
-                  uint32_t, bool, uint8_t) {
+                  uint32_t txBuf, bool, uint8_t) {
   uart_struct_t *u = get(num);
   if (!u) return nullptr;
   u->num = num;
@@ -67,6 +137,7 @@ uart_t *uartBegin(uint8_t num, uint32_t baud, uint32_t config, int8_t rxPin, int
   if (u->rx_pin < 0) u->rx_pin = default_rx(num);
   if (u->tx_pin < 0) u->tx_pin = default_tx(num);
   u->rx_buffer = rxBuf;
+  u->tx_buffer = txBuf;
   return u;
 }
 
@@ -82,7 +153,13 @@ void uartGetEventQueue(uart_t *, QueueHandle_t *q) {
 }
 
 uint32_t uartAvailable(uart_t *u) { return u ? static_cast<uint32_t>(u->rx.size()) : 0; }
-uint32_t uartAvailableForWrite(uart_t *u) { return u ? 128 : 0; }
+uint32_t uartAvailableForWrite(uart_t *u) {
+  if (!u) return 0;
+  if (!timed(u)) return kHwFifo;
+  drop_sent(u, jwsim_now());
+  const size_t cap = kHwFifo + u->tx_buffer;
+  return static_cast<uint32_t>(cap > u->tx_ends.size() ? cap - u->tx_ends.size() : 0);
+}
 
 size_t uartReadBytes(uart_t *u, uint8_t *buffer, size_t size, uint32_t) {
   if (!u) return 0;
@@ -110,11 +187,38 @@ void uartWriteBuf(uart_t *u, const uint8_t *data, size_t len) {
   jwsim_trace_bytes(data, len);
   jwsim::board().uart_tx(u->num, data, len);
   jwsim_cpu(jwsim_costs()->hal_call);
+  if (!timed(u)) return;
+  const jwsim_ns_t ch = char_ns(u);
+  const size_t cap = kHwFifo + u->tx_buffer;
+  for (size_t i = 0; i < len; ++i) {
+    jwsim_ns_t now = jwsim_now();
+    drop_sent(u, now);
+    // FIFO y búfer llenos: espera a que salga el carácter más antiguo.
+    while (u->tx_ends.size() >= cap) {
+      jwsim_wait(u->tx_ends.front() - now);
+      now = jwsim_now();
+      drop_sent(u, now);
+    }
+    const jwsim_ns_t start = std::max(now, u->tx_free_at);
+    u->tx_free_at = start + ch;
+    u->tx_ends.push_back(u->tx_free_at);
+    jwsim::board().uart_char(u->num, data[i], start, u->tx_free_at);
+  }
 }
 
 void uartWrite(uart_t *u, uint8_t c) { uartWriteBuf(u, &c, 1); }
-void uartFlush(uart_t *) {}
-void uartFlushTxOnly(uart_t *, bool) {}
+// Espera el bit de parada del último carácter (y, con txOnly = false,
+// descarta lo recibido, como el driver de ESP-IDF).
+void uartFlushTxOnly(uart_t *u, bool txOnly) {
+  if (!u) return;
+  if (timed(u)) {
+    const jwsim_ns_t now = jwsim_now();
+    if (u->tx_free_at > now) jwsim_wait(u->tx_free_at - now);
+    drop_sent(u, jwsim_now());
+  }
+  if (!txOnly) u->rx.clear();
+}
+void uartFlush(uart_t *u) { uartFlushTxOnly(u, true); }
 bool uartSetBaudRate(uart_t *u, uint32_t baud) { return u && ((u->baud = baud), true); }
 uint32_t uartGetBaudRate(uart_t *u) { return u ? u->baud : 0; }
 bool uartPinSignalInversion(uart_t *, uint32_t, bool) { return true; }

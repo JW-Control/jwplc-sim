@@ -9,6 +9,8 @@
 //                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
 //                 {"type":"force","signal":"Q0_1","value":1} · {"type":"unforce","signal":"Q0_1"}
 //                 {"type":"subscribe","buses":1|0[,"lossless":1]} · {"type":"quit"}
+//                 {"type":"rs485","port":2,"on":1} → {"type":"uart_tx","port":2,"bytes":[[inicio,fin,byte]...]}
+//                 {"type":"uart_rx","port":2,"data":"t_ns:hh,t_ns:hh"}
 //                 {"type":"debug","attached":1|0} (gdb adjunto: sin vigilante)
 //                 {"type":"hash"} → {"type":"hash","t_ns","trace_hash","trace_events"}
 //                 "run" con "until_ns": corre hasta ese instante, pausa y
@@ -295,6 +297,15 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   std::string uart_bus[3];
   jwsim_ns_t uart_t0[3] = {0, 0, 0};
   jwsim_ns_t uart_last[3] = {0, 0, 0};
+  // Bus RS-485 entre runners (app/lib/rs485-bus.mjs): caracteres de la UART
+  // enlazada con su [inicio, fin], enviados en cada volcado.
+  int link_port = -1;
+  std::string link_items;
+  board.set_uart_link([&](int p, uint8_t b, jwsim_ns_t start, jwsim_ns_t end) {
+    if (p != link_port) return;
+    if (!link_items.empty()) link_items.push_back(',');
+    link_items += "[" + std::to_string(start) + "," + std::to_string(end) + "," + std::to_string(b) + "]";
+  });
   // Sin pérdidas (captura de referencia): al llenarse el envío se manda ya.
   bool bus_lossless = false;
   auto send_bus = [&]() {
@@ -409,6 +420,10 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->flush_capture();
     }
     send_bus();
+    if (!link_items.empty()) {
+      send_json("{\"type\":\"uart_tx\",\"port\":" + std::to_string(link_port) + ",\"bytes\":[" + link_items + "]}");
+      link_items.clear();
+    }
     for (int p = 0; p < 3; ++p) {
       const size_t n = utf8_complete_prefix(serial[p]);
       if (n == 0) continue;
@@ -476,6 +491,20 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       inputs.push_back(ev);
       schedule_input(board, &inputs.back());
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
+    } else if (type == "rs485") {
+      link_port = f.count("on") && f.at("on") == "1" ? (f.count("port") ? std::atoi(f.at("port").c_str()) : 2) : -1;
+    } else if (type == "uart_rx") {
+      // "t_ns:hh,t_ns:hh...": cada byte termina de llegar en su instante.
+      const int p = f.count("port") ? std::atoi(f.at("port").c_str()) : 2;
+      const std::string d = f.count("data") ? f.at("data") : std::string();
+      for (size_t i = 0; i < d.size();) {
+        const size_t colon = d.find(':', i), comma = d.find(',', i);
+        if (colon == std::string::npos) break;
+        const jwsim_ns_t at = std::strtoull(d.substr(i, colon - i).c_str(), nullptr, 10);
+        const uint8_t b = static_cast<uint8_t>(std::strtoul(d.substr(colon + 1, (comma == std::string::npos ? d.size() : comma) - colon - 1).c_str(), nullptr, 16));
+        jwsim::uart_inject_at(p, b, at);
+        i = comma == std::string::npos ? d.size() : comma + 1;
+      }
     } else if (type == "subscribe") {
       bus_on = f.count("buses") && (f.at("buses") == "1" || f.at("buses") == "true");
       bus_lossless = f.count("lossless") && (f.at("lossless") == "1" || f.at("lossless") == "true");

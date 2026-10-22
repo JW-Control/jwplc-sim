@@ -243,6 +243,9 @@ struct Board {
   virtual Net *signal(const std::string &name) = 0; // señales de bornera (I0_0, Q0_0...)
   // Bytes transmitidos por la UART `port` del ESP32 (consola, RS-485...).
   virtual void uart_tx(int port, const uint8_t *data, size_t len) = 0;
+  // Un carácter en la línea TX de una UART con tiempo de carácter (UART1/2):
+  // [start, end] del bit de inicio al de parada.
+  virtual void uart_char(int, uint8_t, jwsim_ns_t, jwsim_ns_t) {}
   virtual std::vector<std::string> signal_names() const = 0;
 };
 
@@ -255,6 +258,8 @@ Net &gpio(int pin);
 
 // Inyecta bytes en la recepción de la UART `port` (lo provee el HAL).
 void uart_inject(int port, const uint8_t *data, size_t len);
+// Un byte que termina de llegar a la UART `port` en el instante `at`.
+void uart_inject_at(int port, uint8_t byte, jwsim_ns_t at);
 
 } // namespace jwsim
 

@@ -46,6 +46,13 @@ class JwplcBasic : public Board {
   // Bytes crudos que el firmware transmite por cada UART (modo interactivo).
   using UartSink = std::function<void(int port, const uint8_t *data, size_t len)>;
   void set_uart_sink(UartSink sink) { uart_sink_ = std::move(sink); }
+  // Transceptor RS-485 (MAX13487E con auto-dirección) en UART2: cada
+  // carácter que sale al bus con su [inicio, fin].
+  using UartLink = std::function<void(int port, uint8_t byte, jwsim_ns_t start, jwsim_ns_t end)>;
+  void set_uart_link(UartLink link) { uart_link_ = std::move(link); }
+  void uart_char(int port, uint8_t byte, jwsim_ns_t start, jwsim_ns_t end) override {
+    if (uart_link_) uart_link_(port, byte, start, end);
+  }
   uint8_t inputs() const;    // bit k = I0_k
   uint8_t outputs() const;   // bit k = Q0_k
   void flush_console();
@@ -85,6 +92,7 @@ class JwplcBasic : public Board {
   std::string console_line_[3];
   bool echo_ = true;
   UartSink uart_sink_;
+  UartLink uart_link_;
 };
 
 } // namespace jwsim::boards
