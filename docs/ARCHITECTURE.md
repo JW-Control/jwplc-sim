@@ -269,7 +269,11 @@ GNU ld 2.41 y lld 18 no los resuelven si otro objeto los referencia
 antes de enlazar y genera un objeto con un salto a la definición weak
 (cuando no hay definición fuerte) o con dirección 0 (referencia weak sin
 definición), que es exactamente la semántica ELF del ESP32. Si el sketch
-define el símbolo, gana su definición fuerte.
+define el símbolo, gana su definición fuerte. **[G4]** GCC lee esas
+referencias por un puntero `.refptr` con reubicación de base: el ejecutable
+se enlaza sin ASLR (`--disable-dynamicbase`) para que el 0 siga siendo 0.
+Con ASLR, `serialEventRun()` del core llamaba a una dirección basura al
+recibir por la UART (Windows nativo; bajo wine no ocurre).
 
 GCC nombra el valor por defecto `.weak.X.<primer símbolo global del
 archivo>`, y dos unidades pueden generar el mismo nombre (en

@@ -47,6 +47,14 @@ function base(os) {
   };
 }
 
+// Ejecutables de Windows sin ASLR: una referencia weak sin definición vale 0
+// (cli/lib/weak-pe.mjs) y GCC la lee por un puntero .refptr con reubicación
+// de base; si la imagen se carga en otra dirección, el cargador le suma el
+// desplazamiento y `if (serialEvent)` da verdadero con una dirección basura
+// (caída al recibir por la UART en Windows nativo; bajo wine la imagen
+// carga en su base preferida y no se veía).
+const PE_LDFLAGS = ["-Wl,--disable-dynamicbase", "-Wl,--disable-high-entropy-va"];
+
 export function toolchain(target = "native", ccOverride) {
   if (target === "windows" && process.platform !== "win32") {
     const prefix = process.env.JWSIM_MINGW_PREFIX ?? "x86_64-w64-mingw32-";
@@ -60,7 +68,7 @@ export function toolchain(target = "native", ccOverride) {
       nm: [`${prefix}nm`],
       objcopy: [`${prefix}objcopy`],
       weakPE: true,
-      ldflags: ["-static", ...EXTRA],
+      ldflags: ["-static", ...PE_LDFLAGS, ...EXTRA],
       available: which(`${prefix}g++${suffix}`),
     };
   }
@@ -103,7 +111,7 @@ export function toolchain(target = "native", ccOverride) {
     // Depurador para G3 (gdb -i=dap): el del toolchain incluido o el del PATH.
     gdb: useClang ? "lldb" : tool("gdb"),
     weakPE: os === "windows" && !useClang,
-    ldflags: os === "windows" ? ["-static", ...EXTRA] : ["-pthread", ...EXTRA],
+    ldflags: os === "windows" ? ["-static", ...PE_LDFLAGS, ...EXTRA] : ["-pthread", ...EXTRA],
     available: !!bin || which(useClang ? "clang++" : "g++"),
   };
 }

@@ -16,6 +16,9 @@
 //                            objeto (equivale a elegir la definición weak);
 //   - X = 0                  cuando X solo tiene referencias weak, sin
 //                            definición (como ELF: `if (callback)` es falso).
+//                            Requiere enlazar sin ASLR (PE_LDFLAGS en
+//                            toolchain.mjs): el 0 se lee por un puntero
+//                            .refptr que el cargador reubica.
 // Si existe una definición fuerte no se genera nada y gana la fuerte, igual
 // que en el ESP32.
 //
