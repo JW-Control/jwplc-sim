@@ -69,6 +69,16 @@ jobs:
         timeout-minutes: 30
         run: node scripts/gate-g4-rs485.mjs
 
+      - name: JWSIM_G4_W5500_MODEL
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-w5500.mjs
+
+      - name: JWSIM_G4_MODBUS_TCP_HOST
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-modbus-tcp.mjs
+
       - name: JWSIM_G3_BUS_ANALYZER (capturas con los modelos de G4)
         if: ${{ !cancelled() }}
         timeout-minutes: 30
