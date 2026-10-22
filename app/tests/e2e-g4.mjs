@@ -9,6 +9,9 @@
 //   NVS       Storage_API_Rollback de JWPLC_LogicRuntime: la palabra que pide
 //             se escribe en la consola (UART0), la prueba pasa (respaldo en
 //             NVS) y el envío queda en la grabación como uart0 "…"
+//   SD        05.microSD_Basic dos veces: /taller.txt conserva la línea del
+//             primer arranque (estado por sketch); el zócalo de la placa
+//             quita la tarjeta (SD_CARD=0 en la grabación)
 // Informe en build/gates/JWSIM_G4_E2E.json y capturas en build/gates/g4/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g4.mjs
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -144,6 +147,38 @@ criteria.NVS_CONSOLE = {
   pregunta: !!asked,
   resultado: done,
   grabacion: recText.split("\n").filter((l) => /uart0/.test(l)),
+};
+
+// ---- SD: persistencia y zócalo
+log("SD");
+await t((dir) => window.jwsimTest.openSketchDir(dir), join(examples, "JWPLC_GlobalPeripherals", "examples", "05.microSD_Basic"));
+await win.waitForSelector(".tab.active:has-text('05.microSD_Basic.ino')", { timeout: 10000 });
+const sdRun = async () => {
+  await win.click("#btn-run");
+  await until(async () => (await status()) === "running", 600000);
+  const ok = await until(async () => /Contenido de \/taller\.txt:/.test(await consoleText()), 15000);
+  await win.waitForTimeout(500);   // el resto del archivo llega en el mismo instante virtual
+  const c = await consoleText();
+  return ok ? (c.slice(c.lastIndexOf("Contenido de /taller.txt:")).match(/Arranque ms=\d+/g) ?? []).length : null;
+};
+const n1 = await sdRun();
+await win.click("#btn-stop");
+await win.waitForTimeout(800);
+const n2 = await sdRun();
+const inserted = await win.$eval("#sd-slot", (e) => e.classList.contains("on"));
+await win.click("#sd-slot");
+const removed = await until(async () => !(await win.$eval("#sd-slot", (e) => e.classList.contains("on"))), 3000);
+await win.screenshot({ path: join(OUT, "05-sin-tarjeta.png") });
+const recSd = await t(() => window.jwsimTest.saveRecording());
+const recSdText = recSd ? readFileSync(recSd.file, "utf8") : "";
+await win.click("#btn-stop");
+criteria.SD_APP = {
+  pass: n1 === 1 && n2 === 2 && inserted && !!removed && /^\d+(\.\d+)? SD_CARD=0$/m.test(recSdText),
+  lineas_primer_arranque: n1,
+  lineas_segundo_arranque: n2,
+  tarjeta_al_iniciar: inserted,
+  quitada: !!removed,
+  grabacion: recSdText.split("\n").filter((l) => /SD_CARD/.test(l)),
 };
 
 await app.close();
