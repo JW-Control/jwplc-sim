@@ -4,6 +4,7 @@
 // la app): corre a máxima velocidad hasta `untilMs` virtuales con el monitor
 // de buses activo y devuelve los ítems crudos en orden.
 import { RunnerProcess } from "../../app/lib/sim-port.mjs";
+import { WINE } from "./gate-util.mjs";
 
 export async function captureBuses(exe, untilMs, { stim } = {}) {
   const r = new RunnerProcess();
@@ -20,7 +21,9 @@ export async function captureBuses(exe, untilMs, { stim } = {}) {
   });
   r.on("stderr", (t) => (stderr += t));
   const exited = new Promise((res) => r.on("exit", res));
-  r.start(exe, stim ? ["--stim", stim] : []);
+  // Un .exe fuera de Windows corre con wine (--target windows).
+  const launcher = exe.endsWith(".exe") && process.platform !== "win32" ? WINE : undefined;
+  r.start(exe, stim ? ["--stim", stim] : [], { launcher, env: launcher ? { WINEDEBUG: "-all" } : undefined });
   // Sin pérdidas: la captura de referencia debe estar completa aunque un
   // tramo tenga más ítems que lo que la interfaz muestra por envío.
   r.send({ type: "subscribe", buses: 1, lossless: 1 });
