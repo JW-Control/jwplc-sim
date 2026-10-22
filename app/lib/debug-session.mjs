@@ -42,7 +42,7 @@ export class DebugSession extends EventEmitter {
     dap.on("stopped", async (b) => {
       // La detención propia del attach no es un breakpoint del usuario, ni la
       // vuelta de una llamada a función hecha al evaluar.
-      if (!this.started || b.reason === "function call") return;
+      if (!this.started || b.reason === "function call" || this.dap !== dap) return;
       // Una pausa pedida llega como "pause" (SIGINT, Linux) o, en Windows,
       // como "stopped" o "signal" (DebugBreakProcess, en un hilo inyectado
       // que no es el del firmware: se sigue mirando el hilo principal).
@@ -191,12 +191,24 @@ export class DebugSession extends EventEmitter {
     return this.dap.request("pause", { threadId: this.threadId });
   }
 
+  // Suelta el proceso sin terminarlo. gdb solo puede desprenderse de un
+  // proceso detenido, y en Windows matar al depurador mata también al
+  // depurado: primero se pausa, luego se desconecta y se espera a que gdb
+  // salga; recién entonces, si sigue vivo, se lo termina.
   async stop() {
-    if (!this.dap) return;
-    await Promise.race([
-      this.dap.request("disconnect", { terminateDebuggee: false }).catch(() => {}),
-      new Promise((r) => setTimeout(r, 1500)),
-    ]);
-    this.dap.kill();
+    const dap = this.dap;
+    if (!dap) return;
+    this.dap = null;
+    const wait = (p, ms) => Promise.race([p.catch(() => {}), new Promise((r) => setTimeout(r, ms))]);
+    const exited = new Promise((r) => (dap.child.exitCode !== null ? r() : dap.child.once("exit", r)));
+    if (this.started && !this.stoppedNow) {
+      const stopped = new Promise((r) => dap.once("stopped", r));
+      this.pauseRequested = true;
+      await wait(dap.request("pause", { threadId: this.mainThreadId ?? this.threadId }, 5000), 5000);
+      await wait(stopped, 5000);
+    }
+    await wait(dap.request("disconnect", { terminateDebuggee: false }, 10000), 10000);
+    await wait(exited, 3000);
+    dap.kill();
   }
 }
