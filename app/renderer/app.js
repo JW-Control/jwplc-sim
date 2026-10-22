@@ -371,6 +371,9 @@ function onMessage(m) {
     case "hello":
       $("board-name").textContent = `${m.board} · package ${state.packageRef}`;
       for (const [name, level] of m.signals ?? []) {
+        // Las entradas que la interfaz ya fijó (escena reaplicada al
+        // reiniciar) mandan sobre el estado inicial que informa el runner.
+        if (name.startsWith("I0_") && state.levels.has(name)) continue;
         state.levels.set(name, !!level);
         renderSignal(name, level);
       }

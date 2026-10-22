@@ -24,6 +24,8 @@ import { resolveWeakPE } from "./weak-pe.mjs";
 
 export const ROOT = resolve(import.meta.dirname, "..", "..");
 const SRC_EXT = /\.(c|cpp|cc|S)$/;
+// Fallas de GCC atribuibles al header precompilado (no a errores del sketch).
+const PCH_FAILURE = /one or more PCH files were found|had to relocate PCH|(?:could not|cannot) (?:read|open|map|load)[^\n]*\.gch|\.gch: (?:created by|not used)|precompiled header[^\n]*(?:invalid|corrupt|failed)/i;
 
 // ------------------------------------------------------------ boards.txt
 export function readBoard(pkgTree, boardId) {
@@ -406,7 +408,11 @@ export async function buildSketch(sketchDir, options = {}) {
   const pchKey = hash([tc.cxx[0], ...inoFlags, ...forced, ...pchIncs].join("\0"));
   const pchDir = join(cacheDir, "pch", pchKey);
   const pchHeader = join(pchDir, "jwsim_sketch_prefix.h");
-  let usePch = !existsSync(join(pchDir, "disabled"));
+  // Marca de PCH inutilizable en este host (con la salida de GCC que lo
+  // probó). Una marca "disabled" de versiones anteriores se ignora: se creaba
+  // ante cualquier error que mencionara la ruta .../pch/.
+  const pchOff = join(pchDir, "pch-desactivado.txt");
+  let usePch = !existsSync(pchOff);
   if (usePch) {
     mkdirSync(pchDir, { recursive: true });
     const text = [...forced.map((f) => `#include "${f.replaceAll("\\", "/")}"`), "#include <Arduino.h>", ""].join("\n");
@@ -425,7 +431,7 @@ export async function buildSketch(sketchDir, options = {}) {
       }
       else {
         log("[build] aviso: no se pudo precompilar Arduino.h; se compila sin PCH");
-        writeFileSync(join(pchDir, "disabled"), r.out);
+        writeFileSync(pchOff, r.out);
         usePch = false;
       }
     }
@@ -458,11 +464,16 @@ export async function buildSketch(sketchDir, options = {}) {
     const tUnit = performance.now();
     if (process.env.JWSIM_BUILD_VERBOSE) log(`[cmd] ${JSON.stringify([cc[0], ...args])}`);
     let r = await run(cc[0], args);
-    if (r.code !== 0 && withPch && /\.gch|precompiled|PCH/i.test(r.out)) {
-      // PCH inválido para este host (p. ej. reubicación en Windows): sin él.
-      writeFileSync(join(pchDir, "disabled"), r.out);
+    // Solo los mensajes de GCC sobre el PCH en sí (no rutas que contengan
+    // "pch"). Se desactiva únicamente si sin PCH la unidad sí compila.
+    if (r.code !== 0 && withPch && PCH_FAILURE.test(r.out)) {
       const plain = [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file, "-o", obj];
-      r = await run(cc[0], plain);
+      const r2 = await run(cc[0], plain);
+      if (r2.code === 0) {
+        writeFileSync(pchOff, r.out);
+        log("[build] aviso: GCC no pudo usar el header precompilado en este host; se compila sin él");
+      }
+      r = r2;
     }
     if (r.code !== 0) {
       failures.push({ rel, out: r.out });

@@ -56,6 +56,8 @@ const time = (label, a) => {
 const empty = join(work, "vacio.cpp");
 writeFileSync(empty, "int x;\n");
 console.log(`compilador: ${cc}`);
+for (const l of lines.filter((x) => /aviso/.test(x))) console.log(l);
+if (!pch) console.log("header precompilado: NO se usa en este build (ver avisos)");
 if (pch) console.log(`header precompilado: ${(statSync(pch).size / 1e6).toFixed(1)} MB`);
 console.log("fases del build incremental:", lines.filter((l) => l.startsWith("[tiempo]")).map((l) => l.slice(9)).join(" · "));
 console.log("— mejor de 3 corridas —");
