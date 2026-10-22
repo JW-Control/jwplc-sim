@@ -7,8 +7,11 @@
 // = JSON UTF-8. Mensajes del MVP de G2:
 //   UI → runner : {"type":"run","speed":1|10|0}  (0 = lo más rápido posible)
 //                 {"type":"pause"} · {"type":"set","signal":"I0_3","value":1}
+//                 {"type":"force","signal":"Q0_1","value":1} · {"type":"unforce","signal":"Q0_1"}
 //                 {"type":"subscribe","buses":1|0} · {"type":"quit"}
-//   runner → UI : hello · signals · serial · bus · status · stopped
+//   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
+//                 input: cada entrada aplicada con su t_ns, en formato .stim,
+//                 para grabar la sesión y reproducirla con el mismo hash.
 // El firmware avanza en tramos de 1 ms virtual sincronizados con el reloj de
 // pared según la velocidad; los comandos se aplican entre tramos como eventos
 // en el instante virtual actual, así una sesión interactiva queda en la traza
@@ -44,6 +47,7 @@
 #endif
 
 #include "jwsim/engine.h"
+#include "stimulus.h"
 
 namespace jwsim::runner {
 namespace {
@@ -217,16 +221,6 @@ void reader_thread(Inbox *inbox) {
 }
 
 // ---------------------------------------------------------------- estado
-struct InputEvent {
-  jwsim::Net *net;
-  bool level;
-};
-
-void apply_input(void *arg, jwsim_ns_t) {
-  auto *e = static_cast<InputEvent *>(arg);
-  e->net->drive(e->level);
-}
-
 } // namespace
 
 int run_port(jwsim::boards::JwplcBasic &board) {
@@ -350,17 +344,23 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     } else if (type == "pause") {
       running = false;
       flush(true);
-    } else if (type == "set") {
-      jwsim::Net *net = f.count("signal") ? board.signal(f.at("signal")) : nullptr;
-      if (!net || f.at("signal").rfind("I0_", 0) != 0) {
-        std::fprintf(stderr, "[jwsim] set: señal de entrada desconocida\n");
+    } else if (type == "set" || type == "force" || type == "unforce") {
+      InputEvent ev;
+      ev.op = type == "set" ? InputOp::Set : type == "force" ? InputOp::Force : InputOp::Unforce;
+      ev.signal = f.count("signal") ? f.at("signal") : std::string();
+      const auto v = f.count("value") ? f.at("value") : std::string("0");
+      ev.level = v == "1" || v == "true";
+      ev.when = jwsim_now();
+      const std::string err = validate_input(board, ev);
+      if (!err.empty()) {
+        std::fprintf(stderr, "[jwsim] %s: %s\n", type.c_str(), err.c_str());
         return;
       }
-      const auto &v = f.count("value") ? f.at("value") : std::string("0");
-      inputs.push_back(InputEvent{net, v == "1" || v == "true"});
+      inputs.push_back(ev);
       // En pausa el evento queda pendiente y se aplica al continuar, en el
       // mismo instante virtual (el firmware no corre mientras tanto).
-      jwsim_schedule_event(jwsim_now(), apply_input, &inputs.back());
+      schedule_input(board, &inputs.back());
+      send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
     } else if (type == "subscribe") {
       bus_on = f.count("buses") && (f.at("buses") == "1" || f.at("buses") == "true");
       if (!bus_on) {
@@ -406,7 +406,10 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     flush(false);
   }
   flush(true);
-  send_json("{\"type\":\"stopped\",\"reason\":\"quit\",\"t_ns\":" + std::to_string(jwsim_now()) + "}");
+  char hash[24];
+  std::snprintf(hash, sizeof(hash), "0x%016llx", static_cast<unsigned long long>(jwsim_trace_hash()));
+  send_json("{\"type\":\"stopped\",\"reason\":\"quit\",\"t_ns\":" + std::to_string(jwsim_now()) +
+            ",\"trace_hash\":\"" + hash + "\",\"trace_events\":" + std::to_string(jwsim_trace_count()) + "}");
   return 0;
 }
 

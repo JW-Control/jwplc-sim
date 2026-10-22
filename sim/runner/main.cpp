@@ -25,19 +25,13 @@
 #include "board.h"
 #include "jwsim/engine.h"
 #include "port.h"
+#include "stimulus.h"
 
 extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
 
 namespace {
 
-struct Stimulus {
-  jwsim_ns_t when;
-  std::string signal;
-  bool level;
-};
-
-jwsim::boards::JwplcBasic *g_board = nullptr;
 
 [[noreturn]] void usage(const char *msg) {
   std::fprintf(stderr, "error: %s\n", msg);
@@ -55,16 +49,7 @@ jwsim_ns_t parse_ms(const std::string &s) {
   return static_cast<jwsim_ns_t>(ms * 1e6 + 0.5);
 }
 
-Stimulus parse_assignment(const std::string &assign, jwsim_ns_t when) {
-  const auto eq = assign.find('=');
-  if (eq == std::string::npos) usage(("estímulo inválido: " + assign).c_str());
-  const std::string name = assign.substr(0, eq);
-  const std::string value = assign.substr(eq + 1);
-  if (value != "0" && value != "1") usage(("valor inválido (0/1): " + assign).c_str());
-  return Stimulus{when, name, value == "1"};
-}
-
-void load_stim_file(const char *path, std::vector<Stimulus> &out) {
+void load_stim_file(const char *path, std::vector<jwsim::runner::InputEvent> &out) {
   std::ifstream in(path);
   if (!in) usage((std::string("no se puede abrir ") + path).c_str());
   std::string line;
@@ -72,17 +57,16 @@ void load_stim_file(const char *path, std::vector<Stimulus> &out) {
     const auto hash = line.find('#');
     if (hash != std::string::npos) line.resize(hash);
     std::istringstream ss(line);
-    std::string t, assign;
+    std::string t;
     if (!(ss >> t)) continue;
-    if (!(ss >> assign)) usage(("línea de estímulo incompleta: " + line).c_str());
-    out.push_back(parse_assignment(assign, parse_ms(t)));
+    std::string rest;
+    std::getline(ss, rest);
+    jwsim::runner::InputEvent ev;
+    const std::string err = jwsim::runner::parse_input(rest, ev);
+    if (!err.empty()) usage((err + " (línea: " + line + ")").c_str());
+    ev.when = parse_ms(t);
+    out.push_back(ev);
   }
-}
-
-void apply_stimulus(void *arg, jwsim_ns_t) {
-  auto *s = static_cast<Stimulus *>(arg);
-  jwsim::Net *net = g_board->signal(s->signal);
-  net->drive(s->level);
 }
 
 } // namespace
@@ -95,7 +79,7 @@ int main(int argc, char **argv) {
   bool quiet = false;
   bool stats = false;
   bool port = false;
-  std::vector<Stimulus> stims;
+  std::vector<jwsim::runner::InputEvent> stims;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -125,17 +109,20 @@ int main(int argc, char **argv) {
     else if (a == "--set") {
       const std::string v = next();
       const auto at = v.find('@');
-      stims.push_back(parse_assignment(v.substr(0, at), at == std::string::npos ? 0 : parse_ms(v.substr(at + 1))));
+      jwsim::runner::InputEvent ev;
+      const std::string err = jwsim::runner::parse_input(v.substr(0, at), ev);
+      if (!err.empty()) usage(err.c_str());
+      ev.when = at == std::string::npos ? 0 : parse_ms(v.substr(at + 1));
+      stims.push_back(ev);
     } else usage(("opción desconocida: " + a).c_str());
   }
 
   static jwsim::boards::JwplcBasic board;
-  g_board = &board;
   board.set_echo(!quiet);
   for (auto &s : stims) {
-    jwsim::Net *net = board.signal(s.signal);
-    if (!net || s.signal.rfind("I0_", 0) != 0) usage(("señal de entrada desconocida: " + s.signal).c_str());
-    jwsim_schedule_event(s.when, apply_stimulus, &s);
+    const std::string err = jwsim::runner::validate_input(board, s);
+    if (!err.empty()) usage(err.c_str());
+    jwsim::runner::schedule_input(board, &s);
   }
 
   // Arranque idéntico al firmware real: app_main() del core del package crea

@@ -76,6 +76,7 @@ struct Core {
 
 struct Event {
   jwsim_ns_t when;
+  int external;  // 0 interno, 1 externo (a igual instante, después)
   uint64_t seq;
   jwsim_event_fn fn;
   void *arg;
@@ -130,7 +131,9 @@ Sched &S() {
 }
 
 bool event_after(const Event &a, const Event &b) {
-  return a.when != b.when ? a.when > b.when : a.seq > b.seq;
+  if (a.when != b.when) return a.when > b.when;
+  if (a.external != b.external) return a.external > b.external;
+  return a.seq > b.seq;
 }
 
 jwsim_ns_t tick_to_ns(uint32_t tick) { return static_cast<jwsim_ns_t>(tick) * JWSIM_TICK_NS; }
@@ -581,14 +584,20 @@ void jwsim_task_notify(jwsim_task *t, uint32_t value, int action, uint32_t *prev
   }
 }
 
-void jwsim_schedule_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg) {
+static void schedule_event(jwsim_ns_t when, int external, jwsim_event_fn fn, void *arg) {
   Sched &s = S();
-  s.events.push_back(Event{when, s.next_event_seq++, fn, arg});
+  s.events.push_back(Event{when, external, s.next_event_seq++, fn, arg});
   std::push_heap(s.events.begin(), s.events.end(), event_after);
   if (s.running) {
     Core &core = s.cores[s.running_core];
     core.horizon = std::min(core.horizon, when);
   }
+}
+
+void jwsim_schedule_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg) { schedule_event(when, 0, fn, arg); }
+
+void jwsim_schedule_external_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg) {
+  schedule_event(when, 1, fn, arg);
 }
 
 void jwsim_request_stop(void) {

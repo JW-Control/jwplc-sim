@@ -121,6 +121,10 @@ void jwsim_request_stop(void);
 // antes de que cualquier núcleo lo sobrepase.
 typedef void (*jwsim_event_fn)(void *arg, jwsim_ns_t when);
 void jwsim_schedule_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg);
+// Evento externo (entrada de la interfaz, estímulo de un .stim, forzado): a
+// igual instante corre después de los eventos internos. Así una sesión
+// interactiva y su reproducción desde archivo ordenan igual los eventos.
+void jwsim_schedule_external_event(jwsim_ns_t when, jwsim_event_fn fn, void *arg);
 
 // ---------------------------------------------------------------- costos
 // Modelo de costos de CPU (ns virtuales) de operaciones del HAL. Configurable

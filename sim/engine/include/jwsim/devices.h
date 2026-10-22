@@ -68,6 +68,18 @@ class Net {
     resolve();
   }
 
+  // Forzado (G3), como el forzado de E/S de un PLC: el nivel queda fijo sin
+  // importar los manejadores hasta unforce().
+  void force(bool level) {
+    forced_ = level ? 1 : 0;
+    resolve();
+  }
+  void unforce() {
+    forced_ = -1;
+    resolve();
+  }
+  bool forced() const { return forced_ >= 0; }
+
   using Listener = std::function<void(Net &, bool level)>;
   void on_change(Listener cb) { listeners_.push_back(std::move(cb)); }
 
@@ -84,6 +96,7 @@ class Net {
       for (auto &d : drivers_) lvl = lvl && d.level;
       for (auto &d : drivers_) contention_ = contention_ || (d.level != lvl);
     }
+    if (forced_ >= 0) lvl = forced_ != 0;
     if (lvl == level_) return;
     level_ = lvl;
     for (auto &cb : listeners_) cb(*this, level_);
@@ -93,6 +106,7 @@ class Net {
   bool idle_;
   bool level_ = idle_;
   bool contention_ = false;
+  int forced_ = -1;  // -1 sin forzar, 0/1 nivel forzado
   std::vector<Driver> drivers_;
   std::vector<Listener> listeners_;
 };
