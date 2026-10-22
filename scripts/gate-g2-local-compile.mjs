@@ -48,11 +48,12 @@ const phases = lines.filter((l) => l.startsWith("[tiempo]") || /aviso|weak PE/.t
 const run = parseResult(runExe(exe, ["--until", "1000", "--quiet"]).stdout);
 criteria.C2_incremental = { pass: incMs < 3000 && run?.DO === "0b00000001", ms: incMs, DO_con_I0_0_en_0: run?.DO, fases: phases };
 
-// C3: prototipos automáticos entre pestañas.
+// C3: prototipos automáticos entre pestañas (setup() corre a ~0,7 s: el
+// core inicializa la microSD en el arranque).
 const proto = await buildSketch(join(ROOT, "tests", "sketches", "g2_prototipos"), { target, log: () => {} }).catch((e) => ({ error: e.message }));
 let c3 = { pass: false, error: proto.error };
 if (proto.exe) {
-  const r = runExe(proto.exe, ["--until", "600", "--set", "I0_0=1@400"]);
+  const r = runExe(proto.exe, ["--until", "1000", "--set", "I0_0=1@800"]);
   const res = parseResult(r.stdout);
   c3 = { pass: /doble=42/.test(r.stdout) && res?.DO === "0b00000000" && res?.DI === "0b00000001", serial: (r.stdout.match(/doble=\d+/) ?? [null])[0], DO: res?.DO };
 }
