@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Gates de G2 en Windows (host de CI de referencia: windows-latest, x64).
+# Solo se ejecuta a pedido (workflow_dispatch). Resultados en el artefacto
+# "gates-windows" (build/gates/*.json y capturas de la E2E).
+name: G2 en Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  g2:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package y toolchain fijados
+        run: |
+          node scripts/fetch-package.mjs
+          node scripts/fetch-toolchain.mjs
+
+      - name: Tests unitarios del build
+        run: node --test tests/build/depfile_test.mjs tests/build/prototypes_test.mjs tests/build/project_test.mjs
+
+      - name: JWSIM_G2_LOCAL_COMPILE (la primera corrida llena las cachés)
+        if: ${{ !cancelled() }}
+        run: |
+          node scripts/gate-g2-local-compile.mjs
+          node scripts/gate-g2-local-compile.mjs
+
+      - name: Diagnóstico de la recompilación
+        if: ${{ !cancelled() }}
+        run: node scripts/diag-compile.mjs
+
+      - name: JWSIM_G2_UNSUPPORTED_LIB_MSG
+        if: ${{ !cancelled() }}
+        run: node scripts/gate-g2-unsupported.mjs
+
+      - name: Dependencias de la app
+        if: ${{ !cancelled() }}
+        working-directory: app
+        run: npm ci
+
+      - name: E2E de G2 (Electron)
+        if: ${{ !cancelled() }}
+        working-directory: app
+        run: node tests/e2e-g2.mjs
+
+      - name: Resultados
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-windows
+          path: build/gates
