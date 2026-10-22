@@ -25,29 +25,65 @@
 // "multiple definition of .weak.X...". Esos nombres se renombran con objcopy
 // en una copia del objeto (la caché compartida no se toca).
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const STRONG = new Set(["T", "D", "B", "R", "C", "S", "G", "I"]);
 
-// Devuelve { asm, objects, thunks, zeros, renamed }: `objects` es la lista de
-// objetos a enlazar (con las copias renombradas donde hizo falta).
-export function resolveWeakPE(tc, objectFiles, outDir) {
-  const strong = new Set();
-  const weakRefs = new Set();
-  const defaults = new Map(); // X -> { name, type, file }
-  const defaultOwners = new Map(); // .weak.X.Y -> [archivos]
+const WEAK = new Set(["w", "W", "v", "V"]);
+const stamp = (f) => {
+  const st = statSync(f);
+  return `${st.mtimeMs}:${st.size}`;
+};
+
+// Símbolos relevantes de cada objeto ([nombre, tipo]), con caché por archivo
+// (fecha y tamaño): en una recompilación solo cambia el objeto del sketch, y
+// en Windows correr nm sobre ~700 objetos cuesta ~0,2 s por build.
+function symbolsOf(tc, objectFiles, cacheFile) {
+  let cache = {};
+  try {
+    cache = JSON.parse(readFileSync(cacheFile, "utf8"));
+  } catch {
+    cache = {};
+  }
+  const stale = objectFiles.filter((f) => cache[f]?.stamp !== stamp(f));
   // nm por lotes para no exceder la longitud de línea de comandos.
-  for (let i = 0; i < objectFiles.length; i += 200) {
-    const batch = objectFiles.slice(i, i + 200);
+  for (let i = 0; i < stale.length; i += 200) {
+    const batch = stale.slice(i, i + 200);
     const r = spawnSync(tc.nm[0], [...tc.nm.slice(1), "-P", "-A", ...batch], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
     if (r.status !== 0) throw new Error(`nm falló: ${r.stderr}`);
+    // nm repite la ruta tal como se le pasó; se normaliza por si en Windows
+    // cambia el separador o las mayúsculas de la unidad.
+    const norm = (f) => f.replaceAll("\\", "/").toLowerCase();
+    const found = new Map(batch.map((f) => [norm(f), []]));
     for (const line of r.stdout.split(/\r?\n/)) {
       // "<archivo>: <nombre> <tipo> [valor] [tamaño]"
       const m = line.match(/: (\S+) ([A-Za-z?]) ?/);
       if (!m) continue;
       const [, name, type] = m;
-      const file = line.slice(0, m.index);
+      if (!(STRONG.has(type) || WEAK.has(type) || name.startsWith(".weak."))) continue;
+      const list = found.get(norm(line.slice(0, m.index)));
+      if (!list) throw new Error(`nm: no se reconoce el archivo en "${line}"`);
+      list.push([name, type]);
+    }
+    for (const f of batch) cache[f] = { stamp: stamp(f), syms: found.get(norm(f)) };
+  }
+  if (stale.length) writeFileSync(cacheFile, JSON.stringify(cache));
+  return objectFiles.map((f) => [f, cache[f].syms]);
+}
+
+// Devuelve { asm, changed, objects, thunks, zeros, renamed }: `objects` es la
+// lista de objetos a enlazar (con las copias renombradas donde hizo falta) y
+// `changed` indica si el .S generado cambió respecto del build anterior.
+export function resolveWeakPE(tc, objectFiles, outDir) {
+  const strong = new Set();
+  const weakRefs = new Set();
+  const defaults = new Map(); // X -> { name, type, file }
+  const defaultOwners = new Map(); // .weak.X.Y -> [archivos]
+  const fixDir = join(outDir, "obj", "weak-pe");
+  mkdirSync(fixDir, { recursive: true });
+  for (const [file, syms] of symbolsOf(tc, objectFiles, join(fixDir, "nm-cache.json"))) {
+    for (const [name, type] of syms) {
       if (name.startsWith(".weak.")) {
         defaultOwners.set(name, [...(defaultOwners.get(name) ?? []), file]);
         const rest = name.slice(".weak.".length);
@@ -56,7 +92,7 @@ export function resolveWeakPE(tc, objectFiles, outDir) {
         if (dot > 0 && STRONG.has(type) && !defaults.has(rest.slice(0, dot))) {
           defaults.set(rest.slice(0, dot), { name, type, file });
         }
-      } else if (type === "w" || type === "W" || type === "v" || type === "V") {
+      } else if (WEAK.has(type)) {
         weakRefs.add(name);
       } else if (STRONG.has(type)) {
         strong.add(name);
@@ -70,13 +106,14 @@ export function resolveWeakPE(tc, objectFiles, outDir) {
     if (files.length < 2) continue;
     files.forEach((f, i) => renames.set(f, [...(renames.get(f) ?? []), [name, `${name}.jwsim${i}`]]));
   }
-  const fixDir = join(outDir, "obj", "weak-pe");
-  mkdirSync(fixDir, { recursive: true });
   const patched = new Map();
   for (const [file, pairs] of renames) {
     const out = join(fixDir, basename(file));
-    const r = spawnSync(tc.objcopy[0], [...tc.objcopy.slice(1), ...pairs.flatMap(([a, b]) => ["--redefine-sym", `${a}=${b}`]), file, out], { encoding: "utf8" });
+    const spec = JSON.stringify([stamp(file), pairs]);
+    const reuse = existsSync(out) && existsSync(`${out}.spec`) && readFileSync(`${out}.spec`, "utf8") === spec;
+    const r = reuse ? { status: 0 } : spawnSync(tc.objcopy[0], [...tc.objcopy.slice(1), ...pairs.flatMap(([a, b]) => ["--redefine-sym", `${a}=${b}`]), file, out], { encoding: "utf8" });
     if (r.status !== 0) throw new Error(`objcopy falló para ${file}: ${r.stderr}`);
+    if (!reuse) writeFileSync(`${out}.spec`, spec);
     patched.set(file, out);
     for (const d of defaults.values()) {
       const pair = d.file === file && pairs.find(([a]) => a === d.name);
@@ -111,6 +148,8 @@ export function resolveWeakPE(tc, objectFiles, outDir) {
     throw new Error(`variables weak sin definición fuerte no soportadas en Windows: ${dataWeak.join(", ")}`);
   }
   const asm = join(outDir, "jwsim_weak_pe.S");
-  writeFileSync(asm, lines.join("\n") + "\n");
-  return { asm, objects: objectFiles.map((f) => patched.get(f) ?? f), thunks, zeros, renamed: patched.size };
+  const text = lines.join("\n") + "\n";
+  const changed = !existsSync(asm) || readFileSync(asm, "utf8") !== text;
+  if (changed) writeFileSync(asm, text);
+  return { asm, changed, objects: objectFiles.map((f) => patched.get(f) ?? f), thunks, zeros, renamed: patched.size };
 }

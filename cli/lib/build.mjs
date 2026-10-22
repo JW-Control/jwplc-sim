@@ -522,7 +522,8 @@ export async function buildSketch(sketchDir, options = {}) {
     const w = resolveWeakPE(tc, objects.map((o) => o.obj), outDir);
     w.objects.forEach((obj, i) => (objects[i] = { ...objects[i], obj }));
     weakObj = w.asm.replace(/\.S$/, ".o");
-    const r = await run(tc.cc[0], [...tc.cc.slice(1), "-c", w.asm, "-o", weakObj]);
+    // El .S solo se reensambla si cambió (un proceso menos por build).
+    const r = !w.changed && existsSync(weakObj) ? { code: 0 } : await run(tc.cc[0], [...tc.cc.slice(1), "-c", w.asm, "-o", weakObj]);
     if (r.code !== 0) throw new Error(`no se pudo ensamblar ${w.asm}: ${r.out}`);
     log(`[build] weak PE/COFF: ${w.thunks} definiciones elegidas, ${w.zeros} referencias a 0, ${w.renamed} objetos renombrados`);
   }
