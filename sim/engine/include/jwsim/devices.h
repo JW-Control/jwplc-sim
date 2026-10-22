@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -160,22 +161,53 @@ class SPITarget {
   virtual uint8_t spi_transfer(uint8_t mosi) = 0;
 };
 
+// Transacción SPI capturada (analizador de buses, G3): los bytes entre la
+// bajada y la subida de un CS. `dc` marca los cambios de la línea D/C
+// (pantallas): pares (índice del byte, nivel) desde el primer byte.
+struct SPITransaction {
+  std::string chip;  // nombre del CS ("FRAM", "TFT"...) o "sin CS"
+  jwsim_ns_t t_start = 0;
+  std::vector<uint8_t> mosi, miso;
+  std::vector<std::pair<size_t, bool>> dc;
+};
+
 class SPIBus {
  public:
   explicit SPIBus(std::string name) : name_(std::move(name)) {}
   // El dispositivo queda seleccionado mientras su CS (activo en bajo) esté en 0.
   void attach(Net &cs, SPITarget *target);
+  // Nombra una línea CS para la captura (con o sin modelo de dispositivo).
+  void name_chip(Net &cs, std::string chip, Net *dc = nullptr);
   // Transfiere un byte con todos los dispositivos seleccionados. Sin
   // dispositivo seleccionado, MISO queda en reposo (0xFF).
   uint8_t transfer(uint8_t mosi);
   const std::string &name() const { return name_; }
 
+  // Captura: con un observador activo, cada transacción completa (subida del
+  // CS) se le entrega. Los bytes sin CS se entregan al seleccionarse un chip
+  // o con flush_capture().
+  using Observer = std::function<void(const SPIBus &, const SPITransaction &)>;
+  void observe(Observer cb) { observer_ = std::move(cb); }
+  void set_capture(bool on);
+  void flush_capture();
+
   uint64_t bytes = 0;            // bytes transferidos
   uint64_t unselected_bytes = 0; // bytes sin ningún dispositivo seleccionado
 
  private:
+  struct Chip {
+    Net *cs;
+    Net *dc;
+    SPITransaction tr;
+  };
+  void emit(SPITransaction &tr);
+
   std::string name_;
   std::vector<std::pair<Net *, SPITarget *>> targets_;
+  std::vector<std::unique_ptr<Chip>> chips_;
+  SPITransaction loose_;  // bytes sin CS
+  Observer observer_;
+  bool capture_ = false;
 };
 
 // ------------------------------------------------------------------ placa

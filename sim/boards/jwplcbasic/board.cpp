@@ -10,12 +10,23 @@ namespace {
 constexpr int kEnIoGpio = 27;      // EN_IO en pins_is.h
 constexpr int kSdDetectGpio = 39;  // JWPLC_SD_DETECT_PIN en jwplc_hardware_config.h
 constexpr int kEthIntGpio = 15;    // JWPLC_ETH_INT_PIN en jwplc_hardware_config.h
+// Bus SPI compartido (VSPI): CS y D/C de jwplc_spi_bus.h.
+constexpr int kTftCsGpio = 33;
+constexpr int kTftDcGpio = 25;
+constexpr int kSdCsGpio = 32;
+constexpr int kFramCsGpio = 13;
+constexpr int kEthCsGpio = 5;
 
 double now_ms() { return static_cast<double>(jwsim_now()) / 1e6; }
 } // namespace
 
 JwplcBasic::JwplcBasic() {
   i2c0_.attach(tca_.address(), &tca_);
+  // Chips del bus SPI para el analizador (los modelos llegan en G4).
+  vspi_.name_chip(gpio(kTftCsGpio), "TFT", &gpio(kTftDcGpio));
+  vspi_.name_chip(gpio(kSdCsGpio), "SD");
+  vspi_.name_chip(gpio(kFramCsGpio), "FRAM");
+  vspi_.name_chip(gpio(kEthCsGpio), "W5500");
 
   // Entradas digitales: 0 V en reposo. Acondicionamiento no inversor
   // (entrada activa => pin del TCA en alto; confirmado por JW Control). El

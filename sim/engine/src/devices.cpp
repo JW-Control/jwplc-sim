@@ -86,6 +86,53 @@ void SPIBus::attach(Net &cs, SPITarget *target) {
   cs.on_change([target](Net &, bool level) { target->spi_select(!level); });
 }
 
+void SPIBus::name_chip(Net &cs, std::string chip, Net *dc) {
+  chips_.push_back(std::make_unique<Chip>());
+  Chip *c = chips_.back().get();
+  c->cs = &cs;
+  c->dc = dc;
+  c->tr.chip = std::move(chip);
+  cs.on_change([this, c](Net &, bool level) {
+    if (!capture_) return;
+    if (!level) {
+      // Bajada: empieza una transacción; lo suelto anterior se entrega antes.
+      flush_capture();
+      c->tr.t_start = jwsim_now();
+      c->tr.mosi.clear();
+      c->tr.miso.clear();
+      c->tr.dc.clear();
+    } else {
+      emit(c->tr);
+    }
+  });
+  if (dc) {
+    dc->on_change([this, c](Net &, bool level) {
+      if (capture_ && !c->cs->level() && !c->tr.mosi.empty()) c->tr.dc.emplace_back(c->tr.mosi.size(), level);
+    });
+  }
+}
+
+void SPIBus::set_capture(bool on) {
+  capture_ = on && observer_;
+  for (auto &c : chips_) {
+    c->tr.mosi.clear();
+    c->tr.miso.clear();
+    c->tr.dc.clear();
+    c->tr.t_start = jwsim_now();
+  }
+  loose_.mosi.clear();
+  loose_.miso.clear();
+}
+
+void SPIBus::flush_capture() { emit(loose_); }
+
+void SPIBus::emit(SPITransaction &tr) {
+  if (capture_ && !tr.mosi.empty()) observer_(*this, tr);
+  tr.mosi.clear();
+  tr.miso.clear();
+  tr.dc.clear();
+}
+
 uint8_t SPIBus::transfer(uint8_t mosi) {
   uint8_t miso = 0xFF;
   bool any = false;
@@ -97,6 +144,24 @@ uint8_t SPIBus::transfer(uint8_t mosi) {
   }
   ++bytes;
   if (!any) ++unselected_bytes;
+  if (capture_) {
+    bool named = false;
+    for (auto &c : chips_) {
+      if (c->cs->level()) continue;
+      if (c->tr.mosi.empty() && c->dc) c->tr.dc.emplace_back(0, c->dc->level());
+      c->tr.mosi.push_back(mosi);
+      c->tr.miso.push_back(miso);
+      named = true;
+    }
+    if (!named) {
+      if (loose_.mosi.empty()) {
+        loose_.chip = "sin CS";
+        loose_.t_start = jwsim_now();
+      }
+      loose_.mosi.push_back(mosi);
+      loose_.miso.push_back(miso);
+    }
+  }
   return miso;
 }
 
