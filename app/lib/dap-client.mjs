@@ -59,11 +59,21 @@ export class DapClient extends EventEmitter {
     }
   }
 
-  request(command, args = {}) {
+  // timeoutMs: gdb puede quedar colgado (p. ej. un attach que no progresa);
+  // la interfaz no debe esperar para siempre.
+  request(command, args = {}, timeoutMs = 30000) {
     const seq = this.seq++;
     const body = Buffer.from(JSON.stringify({ seq, type: "request", command, arguments: args }), "utf8");
     return new Promise((resolve, reject) => {
-      this.pending.set(seq, { resolve, reject, command });
+      const t = setTimeout(() => {
+        this.pending.delete(seq);
+        reject(new Error(`gdb no respondió '${command}' en ${timeoutMs} ms`));
+      }, timeoutMs);
+      const done = (fn) => (v) => {
+        clearTimeout(t);
+        fn(v);
+      };
+      this.pending.set(seq, { resolve: done(resolve), reject: done(reject), command });
       this.child.stdin.write(Buffer.concat([Buffer.from(`Content-Length: ${body.length}\r\n\r\n`, "ascii"), body]));
     });
   }
