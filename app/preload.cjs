@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   openDialog: () => ipcRenderer.invoke("sketch:openDialog"),
   save: (sketch) => ipcRenderer.invoke("sketch:save", sketch),
   build: (dir) => ipcRenderer.invoke("sketch:build", dir),
-  start: (exe, stim, projectFile) => ipcRenderer.invoke("sim:start", { exe, stim, projectFile }),
+  start: (exe, stim, projectFile, rtc) => ipcRenderer.invoke("sim:start", { exe, stim, projectFile, rtc }),
   command: (msg) => ipcRenderer.invoke("sim:command", msg),
   stop: () => ipcRenderer.invoke("sim:stop"),
   openProject: () => ipcRenderer.invoke("project:open"),

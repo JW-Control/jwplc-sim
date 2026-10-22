@@ -29,6 +29,7 @@ double now_ms() { return static_cast<double>(jwsim_now()) / 1e6; }
 
 JwplcBasic::JwplcBasic() {
   i2c0_.attach(tca_.address(), &tca_);
+  i2c0_.attach(models::DS3232M::kAddress, &rtc_);
   // Chips del bus SPI para el analizador (los modelos llegan en G4).
   vspi_.name_chip(gpio(kTftCsGpio), "TFT", &gpio(kTftDcGpio));
   tft_ = std::make_unique<models::ST7789>(gpio(kTftDcGpio), &gpio(kTftRstGpio), models::ST7789::Panel{});
@@ -167,10 +168,14 @@ void JwplcBasic::flush_console() {
 
 namespace jwsim::boards {
 
-void JwplcBasic::set_state_dir(const std::string &dir) { fram_.set_storage(dir); }
+void JwplcBasic::set_state_dir(const std::string &dir) {
+  fram_.set_storage(dir);
+  rtc_.set_storage(dir);
+}
 
 void JwplcBasic::save_state() {
   if (!fram_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar la FRAM en el directorio de estado\n");
+  if (!rtc_.save()) std::fprintf(stderr, "[jwsim] no se pudo guardar el RTC en el directorio de estado\n");
 }
 
 } // namespace jwsim::boards

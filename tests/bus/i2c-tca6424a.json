@@ -1,5 +1,5 @@
 {
-  "descripcion": "Inicialización y lectura del TCA6424A @0x22 por el core (02_io_basic del package).",
+  "descripcion": "Lectura del RTC DS3232M (@0x68, recién alimentado: sin hora válida) e inicialización del TCA6424A @0x22 por el core (02_io_basic del package).",
   "fuente": {
     "sketch": "package:tools/build-speed-benchmark/sketches/02_io_basic",
     "until_ms": 600,
@@ -12,11 +12,35 @@
       "I2C0",
       104,
       "00",
-      "",
-      1
+      "00",
+      0
     ],
     [
-      583041050,
+      2391550,
+      "I2C0",
+      104,
+      "00",
+      "00 00 00 07 01 01 00",
+      0
+    ],
+    [
+      3322050,
+      "I2C0",
+      104,
+      "0f",
+      "88",
+      0
+    ],
+    [
+      3712550,
+      "I2C0",
+      104,
+      "0f",
+      "88",
+      0
+    ],
+    [
+      585041050,
       "I2C0",
       34,
       "00",
@@ -24,7 +48,7 @@
       0
     ],
     [
-      583431550,
+      585431550,
       "I2C0",
       34,
       "05 00",
@@ -32,7 +56,7 @@
       0
     ],
     [
-      583722050,
+      585722050,
       "I2C0",
       34,
       "06 00",
@@ -40,7 +64,7 @@
       0
     ],
     [
-      584012550,
+      586012550,
       "I2C0",
       34,
       "0c ff",
@@ -48,7 +72,7 @@
       0
     ],
     [
-      584303050,
+      586303050,
       "I2C0",
       34,
       "0d 00",
@@ -56,34 +80,10 @@
       0
     ],
     [
-      584593550,
+      586593550,
       "I2C0",
       34,
       "0e ff",
-      "",
-      0
-    ],
-    [
-      586000200,
-      "I2C0",
-      34,
-      "00",
-      "00",
-      0
-    ],
-    [
-      586390750,
-      "I2C0",
-      34,
-      "0c",
-      "ff",
-      0
-    ],
-    [
-      586781250,
-      "I2C0",
-      34,
-      "0c ff",
       "",
       0
     ]
@@ -91,9 +91,45 @@
   "esperado": [
     {
       "addr": 104,
-      "result": 1,
-      "level": "warn",
-      "dev": "DS3232M (RTC) @0x68"
+      "dev": "DS3232M (RTC) @0x68",
+      "reg": 0,
+      "regName": "Segundos",
+      "read": [
+        0
+      ],
+      "level": "ok"
+    },
+    {
+      "addr": 104,
+      "dev": "DS3232M (RTC) @0x68",
+      "reg": 0,
+      "read": [
+        0,
+        0,
+        0,
+        7,
+        1,
+        1,
+        0
+      ],
+      "time": "00:00:00",
+      "date": "01/01/00"
+    },
+    {
+      "addr": 104,
+      "dev": "DS3232M (RTC) @0x68",
+      "reg": 15,
+      "read": [
+        136
+      ]
+    },
+    {
+      "addr": 104,
+      "dev": "DS3232M (RTC) @0x68",
+      "reg": 15,
+      "read": [
+        136
+      ]
     },
     {
       "addr": 34,
@@ -145,31 +181,6 @@
       "regName": "Config. 2",
       "write": [
         14,
-        255
-      ]
-    },
-    {
-      "addr": 34,
-      "reg": 0,
-      "regName": "Entrada 0",
-      "read": [
-        0
-      ]
-    },
-    {
-      "addr": 34,
-      "reg": 12,
-      "regName": "Config. 0",
-      "read": [
-        255
-      ]
-    },
-    {
-      "addr": 34,
-      "reg": 12,
-      "regName": "Config. 0",
-      "write": [
-        12,
         255
       ]
     }

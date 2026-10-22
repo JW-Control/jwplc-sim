@@ -8,6 +8,9 @@
 //         [--screen <archivo>] (imagen final de la pantalla: "JWFB", u16 ancho,
 //                               u16 alto y píxeles RGB565 little-endian)
 //         [--screen-at <ms>:<archivo>]... (la pantalla en ese instante virtual)
+//         [--rtc host|fijo:AAAA-MM-DDTHH:MM:SS] (hora del RTC al arrancar; sin
+//                               esta opción sigue la del estado o, sin estado,
+//                               un RTC sin hora válida)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
@@ -20,6 +23,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -36,6 +40,18 @@ extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
 
 namespace {
+
+// timegm portátil (UTC, sin zona horaria del host).
+std::time_t jwsim_timegm(const std::tm *tm) {
+  int y = tm->tm_year + 1900, m = tm->tm_mon + 1;
+  y -= m <= 2;
+  const long era = (y >= 0 ? y : y - 399) / 400;
+  const long yoe = y - era * 400;
+  const long doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + tm->tm_mday - 1;
+  const long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+  const long long days = era * 146097LL + doe - 719468;
+  return static_cast<std::time_t>(days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 + tm->tm_sec);
+}
 
 void write_screen(jwsim::models::ST7789 &tft, const std::string &file) {
   std::string out = "JWFB";
@@ -104,6 +120,7 @@ int main(int argc, char **argv) {
   bool port = false;
   std::string state_dir;
   std::string screen_file;
+  std::string rtc_mode;
   std::vector<ScreenShot> shots;
   std::vector<jwsim::runner::InputEvent> stims;
 
@@ -134,6 +151,7 @@ int main(int argc, char **argv) {
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--state") state_dir = next();
     else if (a == "--screen") screen_file = next();
+    else if (a == "--rtc") rtc_mode = next();
     else if (a == "--screen-at") {
       const std::string v = next();
       const auto colon = v.find(':');
@@ -157,6 +175,34 @@ int main(int argc, char **argv) {
     std::error_code ec;
     std::filesystem::create_directories(state_dir, ec);
     board.set_state_dir(state_dir);
+  }
+  if (!rtc_mode.empty()) {
+    if (rtc_mode == "host") {
+      // Como sincronizar el RTC con la PC al encender (no reproducible). El
+      // RTC guarda la hora de pared local, sin zona horaria.
+      const std::time_t now = std::time(nullptr);
+      std::tm local{};
+#if defined(_WIN32)
+      localtime_s(&local, &now);
+#else
+      localtime_r(&now, &local);
+#endif
+      board.rtc().set_time(static_cast<int64_t>(jwsim_timegm(&local)));
+    } else if (rtc_mode.rfind("fijo:", 0) == 0) {
+      int y, mo, d, h = 0, mi = 0, se = 0;
+      if (std::sscanf(rtc_mode.c_str() + 5, "%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &se) < 3 || y < 2000 || y > 2199)
+        usage("--rtc fijo:AAAA-MM-DDTHH:MM:SS (años 2000 a 2199)");
+      std::tm tm{};
+      tm.tm_year = y - 1900;
+      tm.tm_mon = mo - 1;
+      tm.tm_mday = d;
+      tm.tm_hour = h;
+      tm.tm_min = mi;
+      tm.tm_sec = se;
+      board.rtc().set_time(static_cast<int64_t>(jwsim_timegm(&tm)));
+    } else {
+      usage("--rtc admite 'host' o 'fijo:AAAA-MM-DDTHH:MM:SS'");
+    }
   }
   // Capturas en instantes dados: eventos externos (no cambian la traza).
   for (auto &shot : shots) {

@@ -312,7 +312,17 @@ function copyDir(from, to) {
 }
 
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
-ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile }) => {
+// Hora local de la PC como "fijo:AAAA-MM-DDTHH:MM:SS" para el RTC simulado.
+function localRtcNow() {
+  const d = new Date();
+  const p = (v) => String(v).padStart(2, "0");
+  return `fijo:${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// rtc: hora de arranque del RTC ("fijo:…"); sin ella, la hora local de la PC
+// (como sincronizar el reloj al encender). Se devuelve para guardarla en la
+// grabación: la reproducción arranca con la misma hora.
+ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
   await stopRunner();
   const r = new RunnerProcess();
   runner = r;
@@ -336,7 +346,8 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile }) => {
   } else {
     copyDir(st.dir, st.start);
   }
-  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir], { env: { JWSIM_DEBUG: "1" } });
+  const rtcArg = rtc ?? localRtcNow();
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg], { env: { JWSIM_DEBUG: "1" } });
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {
@@ -345,7 +356,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile }) => {
       forward("sim:stderr", `[jwsim] ${err.message}\n`);
     }
   }
-  return true;
+  return { rtc: rtcArg };
 });
 
 ipcMain.handle("sim:command", (_e, msg) => {

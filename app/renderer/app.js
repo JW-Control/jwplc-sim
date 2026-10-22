@@ -399,7 +399,8 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
   state.replay = replay;
   if (replay) consoleWrite(`[jwsim] reproduciendo ${replay.file}${replay.t_ns ? ` hasta t=${fmtTime(replay.t_ns)}` : ""}\n`, "sys");
-  await api.start(r.exe, replay?.file, state.project?.file ?? null);
+  const started = await api.start(r.exe, replay?.file, state.project?.file ?? null, replay?.rtc ?? null);
+  state.sessionRtc = started?.rtc ?? null;
   if (state.view === "buses") api.command({ type: "subscribe", buses: 1 });
   // La escena se aplica en t = 0, antes de que corra el firmware.
   for (const [signal, v] of Object.entries(scene)) {
@@ -764,6 +765,7 @@ async function saveRecording() {
     const lines = [
       `# Grabación de JWPLC Sim · sketch ${state.sketch.name} · package ${state.packageRef}`,
       `# fin t_ns=${h.t_ns} hash=${h.trace_hash}`,
+      ...(state.sessionRtc ? [`# rtc ${state.sessionRtc}`] : []),
       ...state.record.filter((e) => e.t_ns <= h.t_ns).map((e) => `${(e.t_ns / 1e6).toFixed(6)} ${e.stim}`),
     ];
     const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
@@ -778,7 +780,8 @@ async function saveRecording() {
 
 function parseStimHeader(text) {
   const m = text.match(/^# fin t_ns=(\d+) hash=(0x[0-9a-f]+)/m);
-  return m ? { t_ns: Number(m[1]), hash: m[2] } : { t_ns: 0, hash: null };
+  const rtc = text.match(/^# rtc (fijo:\S+)/m)?.[1] ?? null;
+  return m ? { t_ns: Number(m[1]), hash: m[2], rtc } : { t_ns: 0, hash: null, rtc };
 }
 
 async function replayFile(file, text) {
