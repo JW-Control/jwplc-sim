@@ -97,6 +97,8 @@ export function toolchain(target = "native", ccOverride) {
     ar: [tool("ar")],
     nm: [tool("nm")],
     objcopy: [tool("objcopy")],
+    // Depurador para G3 (gdb -i=dap): el del toolchain incluido o el del PATH.
+    gdb: useClang ? "lldb" : tool("gdb"),
     weakPE: os === "windows" && !useClang,
     ldflags: os === "windows" ? ["-static", ...EXTRA] : ["-pthread", ...EXTRA],
     available: !!bin || which(useClang ? "clang++" : "g++"),

@@ -305,6 +305,11 @@ export async function buildSketch(sketchDir, options = {}) {
   const usedLibs = [];
   const includeDirs = [...baseIncludes];
 
+  // El sketch se compila sin optimizar (-O0) para depurarlo con fidelidad
+  // (G3: variables y pasos línea a línea). No cambia el comportamiento
+  // simulado: el modelo de costos no depende del código generado.
+  const sketchRoots = [resolve(sketchDir), join(outDir, "sketch")].map((d) => d + sep);
+  const isSketchUnit = (file) => sketchRoots.some((r) => resolve(file).startsWith(r));
   const flagsFor = (file) => {
     const norm = file.split(sep).join("/");
     const extra = [];
@@ -313,7 +318,8 @@ export async function buildSketch(sketchDir, options = {}) {
       if (o.match.some((m) => norm.endsWith(m))) extra.push(...o.add.map((a) => a.replaceAll("${ROOT}", ROOT)));
     }
     const isC = file.endsWith(".c");
-    return [...(isC ? tc.cflags : tc.cxxflags), ...defines, ...extra];
+    const base = isC ? tc.cflags : tc.cxxflags;
+    return [...(isSketchUnit(file) ? base.map((f) => (f === "-O1" ? "-O0" : f)) : base), ...defines, ...extra];
   };
 
   phase("package, terceros y placa");
