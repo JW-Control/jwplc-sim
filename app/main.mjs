@@ -5,9 +5,10 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
+import { Worker } from "node:worker_threads";
+
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
-import { buildSketch } from "../cli/lib/build.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
@@ -261,16 +262,39 @@ ipcMain.handle("watch:set", (_e, dir) => {
   return true;
 });
 
+// Un worker persistente: conserva las cachés en memoria entre compilaciones.
+let builder = null;
+let buildSeq = 0;
+const builds = new Map();
+function buildInWorker(dir, outDir) {
+  if (!builder) {
+    builder = new Worker(new URL("./lib/build-worker.mjs", import.meta.url));
+    builder.on("message", ({ id, log, done }) => {
+      if (log !== undefined) forward("build:log", log);
+      if (done) {
+        builds.get(id)?.(done);
+        builds.delete(id);
+      }
+    });
+    builder.on("error", (err) => {
+      for (const resolveBuild of builds.values()) resolveBuild({ ok: false, message: `el compilador interno falló: ${err.message}`, diagnostics: [], output: "" });
+      builds.clear();
+      builder = null;
+    });
+  }
+  const id = ++buildSeq;
+  return new Promise((resolveBuild) => {
+    builds.set(id, resolveBuild);
+    builder.postMessage({ id, dir, outDir });
+  });
+}
+
 ipcMain.handle("sketch:build", async (_e, dir) => {
   await stopRunner();
   const outDir = join(app.getPath("userData"), "build", basename(dir));
   const t0 = Date.now();
-  try {
-    const { exe, libraries } = await buildSketch(dir, { outDir, log: (m) => forward("build:log", m) });
-    return { ok: true, exe, libraries, ms: Date.now() - t0 };
-  } catch (err) {
-    return { ok: false, message: err.message, diagnostics: err.diagnostics ?? [], output: err.output ?? "", ms: Date.now() - t0 };
-  }
+  const r = await buildInWorker(dir, outDir);
+  return { ...r, ms: Date.now() - t0 };
 });
 
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
@@ -456,6 +480,7 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", async () => {
   watcher?.close();
+  builder?.terminate();
   await stopRunner();
   app.quit();
 });
