@@ -39,6 +39,7 @@ export async function fetchAll({ relock = false } = {}) {
   let changed = false;
   for (const entry of sources.packages) {
     const dir = thirdPartyDir(entry);
+    let downloaded = false;
     for (const [rel, expected] of Object.entries(entry.files)) {
       const dest = join(dir, entry.layout?.[rel] ?? rel);
       if (!relock && expected && existsSync(dest) && sha256(readFileSync(dest)) === expected) continue;
@@ -54,8 +55,9 @@ export async function fetchAll({ relock = false } = {}) {
       }
       mkdirSync(dirname(dest), { recursive: true });
       writeFileSync(dest, data);
+      downloaded = true;
     }
-    console.error(`[fetch-third-party] ${entry.name} ${entry.version} listo`);
+    if (downloaded) console.error(`[fetch-third-party] ${entry.name} ${entry.version} listo`);
   }
   if (changed) writeFileSync(SOURCES, JSON.stringify(sources, null, 2) + "\n");
 }

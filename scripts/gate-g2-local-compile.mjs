@@ -39,11 +39,14 @@ if (process.platform === "linux") {
 await buildSketch(sketch, { target, log: () => {} });
 const ino = join(sketch, "lc_io.ino");
 writeFileSync(ino, readFileSync(ino, "utf8").replace("digitalWrite(Q0_0, digitalRead(I0_0));", "digitalWrite(Q0_0, !digitalRead(I0_0));"));
+const lines = [];
 const t1 = performance.now();
-const { exe } = await buildSketch(sketch, { target, log: () => {} });
+const { exe } = await buildSketch(sketch, { target, timing: true, log: (m) => lines.push(m) });
 const incMs = Math.round(performance.now() - t1);
+// Desglose por fase y avisos del build (p. ej. PCH no utilizable en este host).
+const phases = lines.filter((l) => l.startsWith("[tiempo]") || /aviso|weak PE/.test(l)).map((l) => l.replace(/^\[\w+\] /, ""));
 const run = parseResult(runExe(exe, ["--until", "1000", "--quiet"]).stdout);
-criteria.C2_incremental = { pass: incMs < 3000 && run?.DO === "0b00000001", ms: incMs, DO_con_I0_0_en_0: run?.DO };
+criteria.C2_incremental = { pass: incMs < 3000 && run?.DO === "0b00000001", ms: incMs, DO_con_I0_0_en_0: run?.DO, fases: phases };
 
 // C3: prototipos automáticos entre pestañas.
 const proto = await buildSketch(join(ROOT, "tests", "sketches", "g2_prototipos"), { target, log: () => {} }).catch((e) => ({ error: e.message }));

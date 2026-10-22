@@ -172,13 +172,24 @@ async function pool(items, limit, fn) {
   return results;
 }
 
+// Dependencias de un archivo .d de GCC (formato make). El objetivo termina en
+// el primer ":" seguido de espacio: en Windows el ":" de "C:\" no cuenta.
+export function parseDepFile(text) {
+  const body = text.replace(/\\\r?\n/g, " ");
+  const m = body.match(/:(?=\s)/);
+  if (!m) return [];
+  return body
+    .slice(m.index + 1)
+    .split(/(?<!\\)\s+/)
+    .filter(Boolean)
+    .map((d) => d.replace(/\\([ :#])/g, "$1"));
+}
+
 function upToDate(obj, depFile, cmdHash, stampFile) {
   if (!existsSync(obj) || !existsSync(depFile) || !existsSync(stampFile)) return false;
   if (readFileSync(stampFile, "utf8") !== cmdHash) return false;
   const objTime = statSync(obj).mtimeMs;
-  const deps = readFileSync(depFile, "utf8").replace(/\\\r?\n/g, " ").split(":").slice(1).join(":");
-  for (const d of deps.split(/(?<!\\)\s+/).filter(Boolean)) {
-    const p = d.replace(/\\ /g, " ");
+  for (const p of parseDepFile(readFileSync(depFile, "utf8"))) {
     if (!existsSync(p) || statSync(p).mtimeMs > objTime) return false;
   }
   return true;
@@ -200,6 +211,17 @@ export async function buildSketch(sketchDir, options = {}) {
   }
 
   const { root: pkgRoot, lock } = resolvePackageRoot();
+  // Tiempos por fase (JWSIM_BUILD_TIMING=1 u options.timing): duración de
+  // cada fase, para diagnosticar recompilaciones lentas.
+  const phase = (() => {
+    if (!process.env.JWSIM_BUILD_TIMING && !options.timing) return () => {};
+    let last = performance.now();
+    return (name) => {
+      const now = performance.now();
+      log(`[tiempo] ${name}: ${Math.round(now - last)} ms`);
+      last = now;
+    };
+  })();
   await fetchAll();
   const thirdParty = Object.fromEntries(readSources().packages.map((p) => [p.name, thirdPartyDir(p)]));
   const pkgTree = join(pkgRoot, lock.JWPLC_PACKAGE_TREE);
@@ -273,6 +295,7 @@ export async function buildSketch(sketchDir, options = {}) {
     return [...(isC ? tc.cflags : tc.cxxflags), ...defines, ...extra];
   };
 
+  phase("package, terceros y placa");
   // Descubrimiento iterativo de librerías.
   const sketchSources = preprocessSketch(resolve(sketchDir), join(outDir, "sketch", `${sketchName}.ino.cpp`));
   const isSketchFile = new Set(sketchSources);
@@ -332,6 +355,7 @@ export async function buildSketch(sketchDir, options = {}) {
   }
 
   writeFileSync(discoveryFile, JSON.stringify({ key: discoveryKey, libraries: usedLibs.map((l) => l.name) }) + "\n");
+  phase(cached && !cached.includes(undefined) ? "descubrimiento (caché)" : "descubrimiento");
 
   // Unidades de compilación agrupadas en archivos .a (como el build real).
   const units = [];
@@ -348,7 +372,6 @@ export async function buildSketch(sketchDir, options = {}) {
   const simIncludes = [join(ROOT, "sim", "models", "include"), join(ROOT, "sim", "boards", boardId)];
 
   log(`[build] ${units.length} unidades, ${usedLibs.length} librerías, destino ${target}`);
-  const phase = process.env.JWSIM_BUILD_TIMING ? ((t0) => (name) => log(`[tiempo] ${name}: ${Math.round(performance.now() - t0)} ms`))(performance.now()) : () => {};
   // Header precompilado para el .ino: el preprocesado empieza con
   // #include <Arduino.h>, que con el autoload arrastra 16 librerías. GCC solo
   // usa un PCH si es lo primero que se incluye, así que se precompila un
@@ -451,6 +474,7 @@ export async function buildSketch(sketchDir, options = {}) {
     log(`[build] weak PE/COFF: ${w.thunks} definiciones elegidas, ${w.zeros} referencias a 0, ${w.renamed} objetos renombrados`);
   }
 
+  phase("weak PE/COFF");
   // Archivos .a por grupo (salvo sketch y runtime, que se enlazan directos).
   const groups = new Map();
   for (const o of objects) groups.set(o.group, [...(groups.get(o.group) ?? []), o.obj]);
