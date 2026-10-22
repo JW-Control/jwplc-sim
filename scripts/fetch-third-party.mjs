@@ -72,6 +72,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
   } catch (err) {
     console.error(`[fetch-third-party] ERROR: ${err.message}`);
-    process.exit(1);
+    process.exitCode = 1;
   }
 }

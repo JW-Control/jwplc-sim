@@ -70,8 +70,10 @@ async function main() {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // exitCode en vez de process.exit(): en Windows, Node 24 aborta con
+  // "Assertion failed ... UV_HANDLE_CLOSING" si se sale con fetch abierto.
   main().catch((err) => {
     console.error(`[fetch-toolchain] ERROR: ${err.message}`);
-    process.exit(1);
+    process.exitCode = 1;
   });
 }

@@ -27,6 +27,13 @@ const workspace = mkdtempSync(join(tmpdir(), "jwsim-ws-"));
 const criteria = {};
 const shot = (win, name) => win.screenshot({ path: join(OUT, name) });
 
+const log = (m) => console.log(`[e2e] ${m}`);
+process.on("unhandledRejection", (err) => {
+  console.error(`[e2e] ERROR: ${err?.stack ?? err}`);
+  process.exitCode = 1;
+});
+
+log(`iniciando Electron (carpeta de trabajo temporal: ${workspace})`);
 const t0 = Date.now();
 const args = [APP];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
@@ -50,6 +57,7 @@ const until = async (fn, timeout = 5000) => {
 const setModel = (suffix, text) =>
   win.evaluate(([sfx, t]) => window.monaco.editor.getModels().find((m) => m.uri.path.endsWith(sfx)).setValue(t), [suffix, text]);
 
+log(`ventana lista en ${coldMs} ms; compilando 02_io_basic (la primera vez tarda ~15 s)`);
 // ---- RUN_IO + SPLIT_UI (Buses)
 await win.click("#btn-run");
 await waitStatus("running");
@@ -68,6 +76,7 @@ const panes = await win.evaluate(() => ["#editor", ".board-card", "#tab-console"
 criteria.SPLIT_UI = { pass: coldMs < 5000 && panes && busOk, cold_start_ms: coldMs, panes, bus_tca_rows: busOk, bus_sample: busSample };
 criteria.RUN_IO = { pass: q0 && q0off && others.length === 0, q0_on: q0, q0_off: q0off, other_outputs_on: others };
 
+log("RUN_IO y Buses listos; LOCAL_COMPILE");
 // ---- LOCAL_COMPILE: cambio en loop() y recompilación dentro de la app
 await setModel("02_io_basic.ino", "void setup()\n{\n  pinMode(I0_0, INPUT);\n  pinMode(Q0_0, OUTPUT);\n}\n\nvoid loop()\n{\n  digitalWrite(Q0_0, digitalRead(I0_0));\n  delay(1);\n}\n");
 const tb = Date.now();
@@ -77,6 +86,7 @@ const rebuildMs = Date.now() - tb;
 const reported = await win.$eval("#sb-build", (e) => e.textContent);
 criteria.LOCAL_COMPILE = { pass: rebuildMs < 3000, rebuild_and_start_ms: rebuildMs, status: reported };
 
+log("EXTERNAL_EDIT_RELOAD");
 // ---- EXTERNAL_EDIT_RELOAD: con I0_0 activa, otro editor invierte la lógica
 await win.click(".io.input[data-signal='I0_0']");
 await until(() => isOn("Q0_0"), 3000);
@@ -98,6 +108,7 @@ criteria.EXTERNAL_EDIT_RELOAD = {
   new_behavior_Q0_0_off: newBehavior,
 };
 
+log("ERROR_MAPPING");
 // ---- ERROR_MAPPING: 5 errores en 2 pestañas
 await win.click("#btn-stop");
 await win.evaluate((dir) => window.jwsimTest.openSketchDir(dir), join(ROOT, "tests", "sketches", "g2_errores"));
@@ -118,6 +129,7 @@ await win.click(".tab:has-text('extra.ino')");
 await shot(win, "04-errores.png");
 criteria.ERROR_MAPPING = { pass: listed && marked && problems.length === 5 && noPrototypeError, problems, markers };
 
+log("PROJECT_LINKING");
 // ---- PROJECT_LINKING: .jwsim v0 → v1
 const projDir = join(workspace, "proyecto");
 cpSync(join(ROOT, "tests", "projects", "demo"), projDir, { recursive: true });
@@ -160,4 +172,4 @@ const pass = Object.values(criteria).every((c) => c.pass);
 for (const [k, v] of Object.entries(criteria)) console.log(`${k}: ${v.pass ? "OK" : "FALLA"} ${JSON.stringify(v)}`);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_G2_E2E.json"), JSON.stringify({ result: pass ? "PASS" : "FAIL", platform: process.platform, criteria }, null, 2) + "\n");
 console.log(`JWSIM_G2_E2E=${pass ? "PASS" : "FAIL"}`);
-process.exit(pass ? 0 : 1);
+process.exitCode = pass ? 0 : 1;

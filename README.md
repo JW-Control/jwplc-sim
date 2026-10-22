@@ -35,8 +35,8 @@ npm start
 ```
 
 Con el toolchain incluido no hace falta GCC en el `PATH`:
-`node scripts/fetch-toolchain.mjs` (la primera vez, con `--lock`, fija su
-SHA-256 en `third_party/toolchain.json`).
+`node scripts/fetch-toolchain.mjs` descarga WinLibs GCC 14.3.0 (~245 MB) a
+`.jwsim/toolchain/` y verifica su SHA-256.
 
 La primera compilación de un sketch tarda ~10–15 s (core + 16 librerías del
 package); un cambio posterior, menos de 1 s. Los ejemplos del package se

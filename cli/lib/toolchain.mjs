@@ -83,7 +83,7 @@ export function toolchain(target = "native", ccOverride) {
   const useClang = ccOverride === "clang";
   // Toolchain incluido (scripts/fetch-toolchain.mjs) antes que el del PATH.
   const bin = useClang ? null : bundledToolchainBin();
-  const tool = (name) => (bin ? join(bin, name) : name);
+  const tool = (name) => (bin ? join(bin, process.platform === "win32" ? `${name}.exe` : name) : name);
   return {
     ...base(os),
     dataModel: os === "windows" ? "LLP64" : "LP64",
