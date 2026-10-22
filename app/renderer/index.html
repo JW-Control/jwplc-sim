@@ -46,7 +46,16 @@
 
     <main class="workspace">
       <section class="pane code-pane">
-        <div class="tabs" id="tabs"></div>
+        <div class="code-head">
+          <div class="tabs" id="tabs"></div>
+          <div class="group dbg" aria-label="Depuración">
+            <button id="btn-dbg-continue" class="icon" title="Continuar (F8)" aria-label="Continuar" disabled>⏵</button>
+            <button id="btn-dbg-next" class="icon" title="Paso por encima (F10)" aria-label="Paso por encima" disabled>↷</button>
+            <button id="btn-dbg-in" class="icon" title="Entrar en la función (F11)" aria-label="Entrar" disabled>↓</button>
+            <button id="btn-dbg-out" class="icon" title="Salir de la función (Mayús+F11)" aria-label="Salir" disabled>↑</button>
+            <button id="btn-dbg-pause" class="icon" title="Interrumpir el firmware en el código (Ctrl+F8)" aria-label="Interrumpir" disabled>⏸</button>
+          </div>
+        </div>
         <div id="editor"></div>
         <div class="build-output" id="output-panel">
           <div class="panel-head">
@@ -100,6 +109,8 @@
           <div class="panel-head tabbar" role="tablist">
             <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console">Consola serie</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses">Buses</button>
+            <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch">Observación</button>
+            <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug">Depuración</button>
             <span class="muted" id="view-note">UART0 · 115200</span>
             <button id="btn-view-clear" class="ghost small">Limpiar</button>
           </div>
@@ -111,6 +122,32 @@
               </thead>
               <tbody id="bus-rows"></tbody>
             </table>
+          </div>
+          <div id="watch" class="watch view" data-view="watch" hidden>
+            <div class="watch-tools">
+              <form id="watch-add">
+                <input id="watch-expr" placeholder="Variable o expresión del sketch (p. ej. contador)" spellcheck="false" />
+                <button type="submit">Agregar</button>
+              </form>
+              <span class="rec" id="rec-info" title="Toda la sesión se graba desde t = 0: entradas, pulsos y forzados">● 0 eventos</span>
+              <button id="btn-rec-save" title="Guardar la sesión como archivo .stim reproducible" disabled>Guardar grabación</button>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Nombre</th><th>Valor</th><th>Forzar</th></tr>
+              </thead>
+              <tbody id="watch-rows"></tbody>
+            </table>
+          </div>
+          <div id="debug" class="debug view" data-view="debug" hidden>
+            <div class="dbg-col">
+              <div class="dbg-title">Pila de llamadas</div>
+              <ol id="dbg-stack" class="dbg-stack"></ol>
+            </div>
+            <div class="dbg-col">
+              <div class="dbg-title">Variables</div>
+              <div id="dbg-vars" class="tree"></div>
+            </div>
           </div>
         </div>
       </section>

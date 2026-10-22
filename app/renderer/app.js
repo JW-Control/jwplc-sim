@@ -12,7 +12,7 @@ const state = {
   saved: new Map(), // nombre -> contenido guardado
   active: null,
   exe: null,
-  sim: "idle", // idle | building | running | paused | error
+  sim: "idle", // idle | building | running | paused | break | error
   speed: 1,
   inputMode: "toggle",
   levels: new Map(),
@@ -20,6 +20,17 @@ const state = {
   view: "console", // console | buses
   project: null, // { file, project, links, missing }
   pendingInputs: null, // niveles iniciales de entradas del proyecto
+  // G3
+  bpDecos: new Map(), // nombre de archivo -> ids de decoraciones de breakpoints
+  bpVerified: new Map(), // nombre -> Set de líneas que gdb aceptó
+  lineDecos: new Map(), // nombre -> ids de la decoración de línea actual
+  dbgAttached: false,
+  frameId: null,
+  forced: new Map(), // señal -> 0 | 1
+  record: [], // entradas aplicadas en la sesión: { t_ns, stim }
+  watches: [], // expresiones de la tabla de observación
+  replay: null, // { file, t_ns, hash } de la grabación que se reproduce
+  hashWaiter: null,
 };
 
 // ------------------------------------------------------------- buses
@@ -85,7 +96,7 @@ function setView(view) {
     b.setAttribute("aria-selected", String(on));
   }
   for (const v of document.querySelectorAll(".view")) v.hidden = v.dataset.view !== view;
-  $("view-note").textContent = view === "console" ? "UART0 · 115200" : "I2C0 y UART en vivo";
+  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C0 y UART en vivo", watch: "E/S y variables", debug: "gdb" }[view];
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
 }
 
@@ -112,8 +123,8 @@ function setStatus(kind, text) {
   const el = $("status");
   el.className = `status ${kind}`;
   el.textContent = text;
-  const live = kind === "running" || kind === "paused";
-  $("btn-pause").disabled = !live;
+  const live = kind === "running" || kind === "paused" || kind === "break";
+  $("btn-pause").disabled = !live || kind === "break";
   $("btn-stop").disabled = !live;
   $("btn-run").disabled = kind === "building";
   $("btn-pause").textContent = kind === "paused" ? "▶ Continuar" : "❚❚ Pausa";
@@ -121,6 +132,9 @@ function setStatus(kind, text) {
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
   for (const b of document.querySelectorAll("#inputs .io")) b.disabled = !live;
+  for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
+  $("btn-dbg-pause").disabled = kind !== "running";
+  $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
 }
 
 function consoleWrite(text, cls) {
@@ -199,6 +213,9 @@ function loadSketch(sketch) {
   showProjectStatus();
   for (const m of state.models.values()) m.dispose();
   state.models.clear();
+  state.bpDecos.clear();
+  state.bpVerified.clear();
+  state.lineDecos.clear();
   state.saved.clear();
   state.sketch = sketch;
   for (const f of sketch.files) {
@@ -295,13 +312,14 @@ function currentInputs() {
   return out;
 }
 
-async function buildAndRun({ keepScene = false } = {}) {
+async function buildAndRun({ keepScene = false, replay = null } = {}) {
   if (!state.sketch || state.sim === "building") return false;
-  const scene = keepScene ? currentInputs() : (state.pendingInputs ?? {});
+  const scene = replay ? {} : keepScene ? currentInputs() : (state.pendingInputs ?? {});
   state.pendingInputs = null;
   await saveSketch();
   await api.stop();
   resetBoard();
+  resetSession();
   setStatus("building", "Compilando…");
   $("output-panel").classList.remove("collapsed");
   $("btn-output-toggle").textContent = "Ocultar";
@@ -319,7 +337,11 @@ async function buildAndRun({ keepScene = false } = {}) {
   $("build-log").textContent += `\nOK · ${r.libraries.length} librerías del package\n`;
   $("console").textContent = "";
   $("bus-rows").textContent = "";
-  await api.start(r.exe);
+  // Breakpoints con las líneas actuales (las ediciones los desplazan).
+  for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
+  state.replay = replay;
+  if (replay) consoleWrite(`[jwsim] reproduciendo ${replay.file}${replay.t_ns ? ` hasta t=${fmtTime(replay.t_ns)}` : ""}\n`, "sys");
+  await api.start(r.exe, replay?.file);
   if (state.view === "buses") api.command({ type: "subscribe", buses: 1 });
   // La escena se aplica en t = 0, antes de que corra el firmware.
   for (const [signal, v] of Object.entries(scene)) {
@@ -328,8 +350,8 @@ async function buildAndRun({ keepScene = false } = {}) {
     renderSignal(signal, true);
     api.command({ type: "set", signal, value: 1 });
   }
-  api.command({ type: "run", speed: state.speed });
-  setStatus("running", "Ejecutando");
+  api.command({ type: "run", speed: state.speed, ...(replay?.t_ns ? { until_ns: replay.t_ns } : {}) });
+  setStatus("running", replay ? "Reproduciendo" : "Ejecutando");
   return true;
 }
 
@@ -345,7 +367,8 @@ function togglePause() {
 
 function stopSim() {
   api.stop();
-  if (state.sim === "running" || state.sim === "paused") setStatus("idle", "Detenido");
+  clearDebugView();
+  if (state.sim === "running" || state.sim === "paused" || state.sim === "break") setStatus("idle", "Detenido");
 }
 
 function setInputMode(mode) {
@@ -366,6 +389,350 @@ function setSpeed(speed) {
   if (state.sim === "running") api.command({ type: "run", speed });
 }
 
+// ------------------------------------------------------------- depuración (G3)
+// Líneas con breakpoint según las decoraciones (siguen las ediciones).
+function bpLines(name) {
+  const model = state.models.get(name);
+  const ids = state.bpDecos.get(name) ?? [];
+  const lines = ids.map((id) => model.getDecorationRange(id)?.startLineNumber).filter(Boolean);
+  return [...new Set(lines)].sort((a, b) => a - b);
+}
+
+function renderBreakpoints(name, lines) {
+  const model = state.models.get(name);
+  const verified = state.dbgAttached ? state.bpVerified.get(name) : null;
+  const decos = lines.map((line) => ({
+    range: new monacoRef.Range(line, 1, line, 1),
+    options: {
+      glyphMarginClassName: verified && !verified.has(line) ? "bp-glyph unverified" : "bp-glyph",
+      glyphMarginHoverMessage: { value: verified && !verified.has(line) ? "Breakpoint sin código asociado" : "Breakpoint" },
+      stickiness: monacoRef.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+    },
+  }));
+  state.bpDecos.set(name, model.deltaDecorations(state.bpDecos.get(name) ?? [], decos));
+}
+
+async function toggleBreakpoint(name, line) {
+  if (!state.models.has(name)) return;
+  const lines = bpLines(name);
+  const i = lines.indexOf(line);
+  if (i >= 0) lines.splice(i, 1);
+  else lines.push(line);
+  renderBreakpoints(name, lines);
+  try {
+    const verified = await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, lines);
+    if (Array.isArray(verified)) {
+      state.bpVerified.set(name, new Set(verified));
+      renderBreakpoints(name, bpLines(name));
+    }
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+}
+
+function cleanError(err) {
+  return String(err.message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+}
+
+function fileNameOf(path) {
+  if (!path) return null;
+  return [...state.models.keys()].find((n) => normPath(state.models.get(n).uri.fsPath) === normPath(path)) ?? null;
+}
+
+function setCurrentLine(name, line) {
+  for (const [n, ids] of state.lineDecos) state.models.get(n)?.deltaDecorations(ids, []);
+  state.lineDecos.clear();
+  if (!name) return;
+  if (state.active !== name) showFile(name);
+  const ids = state.models.get(name).deltaDecorations([], [
+    { range: new monacoRef.Range(line, 1, line, 1), options: { isWholeLine: true, className: "dbg-line", linesDecorationsClassName: "dbg-arrow" } },
+  ]);
+  state.lineDecos.set(name, ids);
+  editor.revealLineInCenterIfOutsideViewport(line);
+}
+
+function clearDebugView() {
+  setCurrentLine(null);
+  state.frameId = null;
+  $("dbg-stack").textContent = "";
+  $("dbg-vars").innerHTML = `<div class="empty">${state.dbgAttached ? "En ejecución: se muestran al detenerse." : "Ponga un breakpoint (F9 o clic en el margen) o interrumpa con Ctrl+F8."}</div>`;
+}
+
+async function onDbgStopped({ reason }) {
+  const labels = { breakpoint: "En breakpoint", step: "Paso a paso", pause: "Interrumpido" };
+  setStatus("break", labels[reason] ?? "Detenido (depurador)");
+  let frames = [];
+  try {
+    frames = await api.dbgStack();
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+  const list = $("dbg-stack");
+  list.textContent = "";
+  // Los marcos sin símbolo (arranque de las fibras del planificador) no aportan.
+  for (const f of frames.filter((x) => !/^\?+$/.test(x.name))) {
+    const li = document.createElement("li");
+    li.dataset.id = f.id;
+    li.textContent = f.name;
+    const loc = document.createElement("span");
+    loc.className = "loc";
+    loc.textContent = f.path ? `${f.path.split(/[\\/]/).pop()}:${f.line}` : "";
+    li.appendChild(loc);
+    li.addEventListener("click", () => selectFrame(f));
+    list.appendChild(li);
+  }
+  // Primer marco con código del sketch (al interrumpir puede estar en el HAL).
+  const mine = frames.find((f) => fileNameOf(f.path)) ?? frames[0];
+  if (mine) await selectFrame(mine);
+  if (state.view !== "watch") setView("debug");
+}
+
+async function selectFrame(f) {
+  state.frameId = f.id;
+  for (const li of $("dbg-stack").children) li.classList.toggle("active", Number(li.dataset.id) === f.id);
+  const name = fileNameOf(f.path);
+  setCurrentLine(name, f.line);
+  const box = $("dbg-vars");
+  box.textContent = "";
+  try {
+    for (const sc of await api.dbgScopes(f.id)) {
+      const head = document.createElement("div");
+      head.className = "node scope";
+      head.textContent = sc.name === "Locals" ? "Locales" : sc.name === "Arguments" ? "Argumentos" : sc.name;
+      box.appendChild(head);
+      for (const v of sc.vars) box.appendChild(varNode(v, 1));
+      if (!sc.vars.length) head.textContent += " (vacío)";
+    }
+  } catch (err) {
+    box.innerHTML = `<div class="empty"></div>`;
+    box.firstChild.textContent = cleanError(err);
+  }
+  await refreshWatchValues();
+}
+
+function varNode(v, depth) {
+  const wrap = document.createElement("div");
+  const row = document.createElement("div");
+  row.className = "node";
+  row.style.paddingLeft = `${8 + depth * 12}px`;
+  const tog = document.createElement("span");
+  tog.className = "toggle";
+  tog.textContent = v.ref ? "▸" : "";
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = v.name;
+  const val = document.createElement("span");
+  val.className = "val";
+  val.textContent = ` = ${v.value}`;
+  const type = document.createElement("span");
+  type.className = "type";
+  type.textContent = v.type;
+  row.append(tog, name, val, type);
+  wrap.appendChild(row);
+  if (v.ref) {
+    let open = false;
+    let kids = null;
+    tog.addEventListener("click", async () => {
+      open = !open;
+      tog.textContent = open ? "▾" : "▸";
+      if (open && !kids) {
+        kids = document.createElement("div");
+        for (const c of await api.dbgVariables(v.ref)) kids.appendChild(varNode(c, depth + 1));
+        wrap.appendChild(kids);
+      }
+      if (kids) kids.hidden = !open;
+    });
+  }
+  return wrap;
+}
+
+function dbgCommand(cmd) {
+  if (cmd === "pause" ? state.sim !== "running" : state.sim !== "break") return;
+  if (cmd !== "pause") {
+    setCurrentLine(null);
+    setStatus("running", "Ejecutando");
+  }
+  api.dbgCommand(cmd).catch((err) => consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal"));
+}
+
+// ------------------------------------------------------------- observación y forzado
+const IO_SIGNALS = [...Array(8).keys()].map((k) => `I0_${k}`).concat([...Array(8).keys()].map((k) => `Q0_${k}`));
+const watchCells = new Map(); // señal o expresión -> celda de valor
+
+function renderWatch() {
+  const body = $("watch-rows");
+  body.textContent = "";
+  watchCells.clear();
+  const group = (text) => {
+    const tr = document.createElement("tr");
+    tr.className = "group";
+    tr.innerHTML = `<td colspan="3"></td>`;
+    tr.firstChild.textContent = text;
+    body.appendChild(tr);
+  };
+  group("Entradas digitales");
+  for (const sig of IO_SIGNALS) {
+    if (sig === "Q0_0") group("Salidas relé");
+    const tr = document.createElement("tr");
+    tr.dataset.signal = sig;
+    const name = document.createElement("td");
+    name.textContent = sig.replace("_", ".");
+    const val = document.createElement("td");
+    val.className = "value";
+    const f = document.createElement("td");
+    f.className = "force";
+    for (const [label, v] of [["Libre", null], ["0", 0], ["1", 1]]) {
+      const b = document.createElement("button");
+      b.className = `seg ${v === null ? "free" : `f${v}`}`;
+      b.textContent = label;
+      b.title = v === null ? "Sin forzar" : `Forzar a ${v}`;
+      b.addEventListener("click", () => setForce(sig, v));
+      f.appendChild(b);
+    }
+    tr.append(name, val, f);
+    body.appendChild(tr);
+    watchCells.set(sig, val);
+    updateWatchSignal(sig);
+  }
+  group("Variables del sketch");
+  for (const expr of state.watches) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    name.textContent = expr;
+    const val = document.createElement("td");
+    val.className = "value";
+    val.textContent = "—";
+    const del = document.createElement("td");
+    const b = document.createElement("button");
+    b.className = "ghost small del";
+    b.textContent = "Quitar";
+    b.addEventListener("click", () => {
+      state.watches = state.watches.filter((w) => w !== expr);
+      renderWatch();
+    });
+    del.appendChild(b);
+    tr.append(name, val, del);
+    body.appendChild(tr);
+    watchCells.set(`expr:${expr}`, val);
+  }
+}
+
+function updateWatchSignal(sig) {
+  const cell = watchCells.get(sig);
+  if (!cell) return;
+  const forced = state.forced.get(sig);
+  cell.textContent = `${state.levels.get(sig) ? 1 : 0}${forced !== undefined ? `  (forzada a ${forced})` : ""}`;
+  const tr = cell.parentElement;
+  tr.classList.toggle("forced", forced !== undefined);
+  for (const b of tr.querySelectorAll(".force .seg")) {
+    const v = b.classList.contains("free") ? undefined : b.classList.contains("f1") ? 1 : 0;
+    b.classList.toggle("active", v === forced);
+  }
+}
+
+function setForce(signal, value) {
+  if (!["running", "paused", "break"].includes(state.sim)) return;
+  if (value === null) {
+    state.forced.delete(signal);
+    api.command({ type: "unforce", signal });
+  } else {
+    state.forced.set(signal, value);
+    api.command({ type: "force", signal, value });
+  }
+  const el = document.querySelector(`.io[data-signal="${signal}"]`);
+  el?.classList.toggle("forced", value !== null);
+  if (el) el.title = value === null ? el.title.replace(/ · forzada.*$/, "") : `${el.title.replace(/ · forzada.*$/, "")} · forzada a ${value}`;
+  updateWatchSignal(signal);
+}
+
+function setWatchValues(values) {
+  if (!values) return;
+  for (const [expr, v] of Object.entries(values)) {
+    const cell = watchCells.get(`expr:${expr}`);
+    if (cell) cell.textContent = v;
+  }
+}
+
+async function refreshWatchValues() {
+  if (!state.watches.length) return;
+  try {
+    if (state.sim === "break") setWatchValues(await api.dbgEvaluate(state.watches, state.frameId));
+    else if (state.sim === "running" && state.view === "watch") setWatchValues(await api.dbgSample(state.watches));
+  } catch (err) {
+    for (const w of state.watches) {
+      const cell = watchCells.get(`expr:${w}`);
+      if (cell) cell.textContent = `‹${cleanError(err)}›`;
+    }
+  }
+}
+
+// Sesión nueva: sin forzados, grabación vacía.
+function resetSession() {
+  state.forced.clear();
+  for (const el of document.querySelectorAll(".io.forced")) el.classList.remove("forced");
+  state.record = [];
+  $("rec-info").textContent = "● 0 eventos";
+  state.replay = null;
+  clearDebugView();
+  renderWatch();
+}
+
+// ------------------------------------------------------------- grabación
+function requestHash() {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      state.hashWaiter = null;
+      reject(new Error("la simulación no respondió (¿detenida en el depurador?)"));
+    }, 3000);
+    state.hashWaiter = (m) => {
+      clearTimeout(t);
+      resolve(m);
+    };
+    api.command({ type: "hash" });
+  });
+}
+
+async function saveRecording() {
+  if (!state.sketch || !(state.sim === "running" || state.sim === "paused")) return null;
+  try {
+    const h = await requestHash();
+    const lines = [
+      `# Grabación de JWPLC Sim · sketch ${state.sketch.name} · package ${state.packageRef}`,
+      `# fin t_ns=${h.t_ns} hash=${h.trace_hash}`,
+      ...state.record.filter((e) => e.t_ns <= h.t_ns).map((e) => `${(e.t_ns / 1e6).toFixed(6)} ${e.stim}`),
+    ];
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
+    const file = await api.saveStim(lines.join("\n") + "\n", `${state.sketch.name}-${stamp}`);
+    if (file) consoleWrite(`[jwsim] grabación guardada: ${file} (t=${fmtTime(h.t_ns)}, hash ${h.trace_hash})\n`, "sys");
+    return file ? { file, t_ns: h.t_ns, hash: h.trace_hash } : null;
+  } catch (err) {
+    consoleWrite(`[jwsim] no se pudo guardar la grabación: ${cleanError(err)}\n`, "fatal");
+    return null;
+  }
+}
+
+function parseStimHeader(text) {
+  const m = text.match(/^# fin t_ns=(\d+) hash=(0x[0-9a-f]+)/m);
+  return m ? { t_ns: Number(m[1]), hash: m[2] } : { t_ns: 0, hash: null };
+}
+
+async function replayFile(file, text) {
+  const h = parseStimHeader(text);
+  return buildAndRun({ replay: { file, ...h } });
+}
+
+function onReplayEnd(m) {
+  const rp = state.replay;
+  setStatus("paused", "Fin de la reproducción");
+  const ok = rp?.hash ? m.trace_hash === rp.hash : null;
+  consoleWrite(
+    `[jwsim] reproducción terminada en t=${fmtTime(m.t_ns)} · hash ${m.trace_hash}` +
+      (ok === null ? "\n" : ok ? " · coincide con la grabación ✓\n" : ` · NO coincide con la grabación (${rp.hash})\n`),
+    ok === false ? "fatal" : "sys",
+  );
+  state.lastReplay = { t_ns: m.t_ns, hash: m.trace_hash, match: ok };
+}
+
 function onMessage(m) {
   switch (m.type) {
     case "hello":
@@ -382,6 +749,7 @@ function onMessage(m) {
       for (const [name, level] of m.changes) {
         state.levels.set(name, !!level);
         renderSignal(name, level);
+        updateWatchSignal(name);
       }
       $("clock").textContent = fmtTime(m.t_ns);
       break;
@@ -397,6 +765,20 @@ function onMessage(m) {
     case "fatal":
       consoleWrite(`\n${m.message}\n`, "fatal");
       setStatus("error", "Error del firmware");
+      break;
+    case "input":
+      state.record.push({ t_ns: m.t_ns, stim: m.stim });
+      $("rec-info").textContent = `● ${state.record.length} evento${state.record.length === 1 ? "" : "s"}`;
+      break;
+    case "hash":
+      state.hashWaiter?.(m);
+      state.hashWaiter = null;
+      break;
+    case "reached":
+      onReplayEnd(m);
+      break;
+    case "stopped":
+      consoleWrite(`[jwsim] sesión terminada en t=${fmtTime(m.t_ns)} · hash de traza ${m.trace_hash} (${m.trace_events} eventos)\n`, "sys");
       break;
     default:
       break;
@@ -528,6 +910,46 @@ function wireUi() {
   $("btn-project-open").addEventListener("click", openProject);
   $("btn-project-save").addEventListener("click", saveProjectFile);
   api.onFileChanged(onExternalChange);
+  $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
+  $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));
+  $("btn-dbg-in").addEventListener("click", () => dbgCommand("stepIn"));
+  $("btn-dbg-out").addEventListener("click", () => dbgCommand("stepOut"));
+  $("btn-dbg-pause").addEventListener("click", () => dbgCommand("pause"));
+  $("btn-rec-save").addEventListener("click", saveRecording);
+  $("watch-add").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const expr = $("watch-expr").value.trim();
+    if (expr && !state.watches.includes(expr)) {
+      state.watches.push(expr);
+      renderWatch();
+      refreshWatchValues();
+    }
+    $("watch-expr").value = "";
+  });
+  setInterval(() => state.sim === "running" && state.view === "watch" && refreshWatchValues(), 500);
+  api.onDbgStopped(onDbgStopped);
+  api.onDbgContinued(() => {
+    if (state.sim !== "break") return;
+    setCurrentLine(null);
+    setStatus("running", "Ejecutando");
+  });
+  api.onDbgAttached(({ verified }) => {
+    state.dbgAttached = true;
+    for (const [path, lines] of verified) {
+      const name = fileNameOf(path);
+      if (!name) continue;
+      state.bpVerified.set(name, new Set(lines));
+      renderBreakpoints(name, bpLines(name));
+    }
+    consoleWrite("[jwsim] depurador (gdb) adjunto\n", "sys");
+    clearDebugView();
+  });
+  api.onDbgDetached(() => {
+    state.dbgAttached = false;
+    for (const name of state.models.keys()) renderBreakpoints(name, bpLines(name));
+    if (state.sim === "break") setStatus("running", "Ejecutando");
+    clearDebugView();
+  });
   $("btn-view-clear").addEventListener("click", () => {
     if (state.view === "console") $("console").textContent = "";
     else $("bus-rows").textContent = "";
@@ -548,7 +970,8 @@ function wireUi() {
   api.onMessage(onMessage);
   api.onStderr((t) => consoleWrite(t, /FATAL|no está soportad/.test(t) ? "fatal" : "sys"));
   api.onExit(({ code }) => {
-    if (state.sim === "running" || state.sim === "paused") {
+    if (state.sim === "running" || state.sim === "paused" || state.sim === "break") {
+      clearDebugView();
       if (code === 0 || code === null) setStatus("idle", "Detenido");
       else {
         consoleWrite(`\n[jwsim] el firmware terminó (código ${code})\n`, "fatal");
@@ -565,6 +988,16 @@ function wireUi() {
     else if (cmd === "stop") stopSim();
     else if (cmd === "openProject") openProject();
     else if (cmd === "saveProject") saveProjectFile();
+    else if (cmd === "dbgToggle" && state.active) toggleBreakpoint(state.active, editor.getPosition().lineNumber);
+    else if (cmd === "dbgContinue") dbgCommand("continue");
+    else if (cmd === "dbgNext") dbgCommand("next");
+    else if (cmd === "dbgStepIn") dbgCommand("stepIn");
+    else if (cmd === "dbgStepOut") dbgCommand("stepOut");
+    else if (cmd === "dbgPause") dbgCommand("pause");
+    else if (cmd === "dbgDetach") api.dbgCommand("detach");
+    else if (cmd === "replay") {
+      api.openStim().then((r) => r && replayFile(r.file, r.text));
+    }
   });
 }
 
@@ -587,6 +1020,13 @@ function initMonaco() {
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         tabSize: 2,
+        glyphMargin: true,
+      });
+      // Clic en el margen: alterna un breakpoint en esa línea.
+      editor.onMouseDown((e) => {
+        if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active) {
+          toggleBreakpoint(state.active, e.target.position.lineNumber);
+        }
       });
       resolveInit();
     });
@@ -598,6 +1038,26 @@ window.jwsimTest = {
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
   saveProject: () => saveProjectFile(),
+  toggleBreakpoint: (name, line) => toggleBreakpoint(name, line),
+  breakpoints: (name) => bpLines(name),
+  dbg: (cmd) => dbgCommand(cmd),
+  status: () => state.sim,
+  currentLine: () => {
+    const [name, ids] = [...state.lineDecos][0] ?? [];
+    return name ? { name, line: state.models.get(name).getDecorationRange(ids[0])?.startLineNumber } : null;
+  },
+  frameName: () => document.querySelector("#dbg-stack li.active")?.firstChild?.textContent ?? null,
+  variables: () => [...document.querySelectorAll("#dbg-vars .node:not(.scope)")].map((n) => n.textContent),
+  addWatch: (expr) => {
+    $("watch-expr").value = expr;
+    $("watch-add").requestSubmit();
+  },
+  watchValue: (key) => watchCells.get(key)?.textContent ?? null,
+  setForce: (signal, value) => setForce(signal, value),
+  saveRecording: () => saveRecording(),
+  replay: (file, text) => replayFile(file, text),
+  lastReplay: () => state.lastReplay ?? null,
+  clock: () => $("clock").textContent,
 };
 
 async function main() {
@@ -609,6 +1069,8 @@ async function main() {
   $("board-name").textContent = `JWPLC Basic · package ${info.packageRef}`;
   $("sb-package").textContent = `platform-jwplc ${info.packageRef} (${info.packageCommit})`;
   await initMonaco();
+  renderWatch();
+  clearDebugView();
   const examples = await populateExamples();
   // Primer arranque: el ejemplo de E/S básico del package.
   const first = examples.find((e) => e.name === "02_io_basic") ?? examples[0];
