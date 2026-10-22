@@ -23,6 +23,7 @@
 #include "port.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -440,6 +441,26 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       inputs.push_back(ev);
       // En pausa el evento queda pendiente y se aplica al continuar, en el
       // mismo instante virtual (el firmware no corre mientras tanto).
+      schedule_input(board, &inputs.back());
+      send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
+    } else if (type == "uart") {
+      // Bytes recibidos por una UART (consola desde la interfaz), en hex.
+      InputEvent ev;
+      ev.op = InputOp::Uart;
+      ev.port = f.count("port") ? std::atoi(f.at("port").c_str()) : 0;
+      const std::string h = f.count("hex") ? f.at("hex") : std::string();
+      auto nib = [](char c) { return c <= '9' ? c - '0' : (c | 0x20) - 'a' + 10; };
+      for (size_t i = 0; i + 1 < h.size() && std::isxdigit(static_cast<unsigned char>(h[i])) &&
+                         std::isxdigit(static_cast<unsigned char>(h[i + 1]));
+           i += 2)
+        ev.data.push_back(static_cast<char>(nib(h[i]) << 4 | nib(h[i + 1])));
+      ev.when = jwsim_now();
+      const std::string err = validate_input(board, ev);
+      if (!err.empty() || ev.data.empty()) {
+        std::fprintf(stderr, "[jwsim] uart: %s\n", err.empty() ? "sin datos" : err.c_str());
+        return;
+      }
+      inputs.push_back(ev);
       schedule_input(board, &inputs.back());
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
     } else if (type == "subscribe") {

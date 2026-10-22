@@ -160,6 +160,11 @@ void jwsim_watchdog_hold(int on);
 // Fallo irrecuperable del simulador (no del firmware simulado).
 void jwsim_fatal(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
 
+// Función que jwsim_fatal llama antes de terminar (el runner guarda ahí el
+// estado persistente: lo escrito en FRAM o NVS antes de la falla queda, como
+// en la placa real).
+void jwsim_set_fatal_hook(void (*hook)(void));
+
 #ifdef __cplusplus
 }
 #endif

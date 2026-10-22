@@ -716,6 +716,10 @@ void jwsim_trace_u64(uint64_t v) {
 uint64_t jwsim_trace_hash(void) { return S().trace_hash; }
 uint64_t jwsim_trace_count(void) { return S().trace_count; }
 
+static void (*g_fatal_hook)(void) = nullptr;
+
+void jwsim_set_fatal_hook(void (*hook)(void)) { g_fatal_hook = hook; }
+
 void jwsim_fatal(const char *fmt, ...) {
   std::fprintf(stderr, "[jwsim] FATAL: ");
   va_list ap;
@@ -723,6 +727,12 @@ void jwsim_fatal(const char *fmt, ...) {
   std::vfprintf(stderr, fmt, ap);
   va_end(ap);
   std::fprintf(stderr, "\n");
+  std::fflush(stderr);
+  // Una sola vez: si el gancho falla, no se vuelve a entrar.
+  if (void (*hook)(void) = g_fatal_hook) {
+    g_fatal_hook = nullptr;
+    hook();
+  }
   std::abort();
 }
 

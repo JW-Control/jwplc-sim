@@ -93,8 +93,7 @@ void load_stim_file(const char *path, std::vector<jwsim::runner::InputEvent> &ou
   if (!in) usage((std::string("no se puede abrir ") + path).c_str());
   std::string line;
   while (std::getline(in, line)) {
-    const auto hash = line.find('#');
-    if (hash != std::string::npos) line.resize(hash);
+    line = jwsim::runner::strip_comment(line);
     std::istringstream ss(line);
     std::string t;
     if (!(ss >> t)) continue;
@@ -176,6 +175,12 @@ int main(int argc, char **argv) {
     std::filesystem::create_directories(state_dir, ec);
     board.set_state_dir(state_dir);
   }
+  // Ante una falla del firmware (abort, assert, vigilante) lo ya escrito en
+  // FRAM, NVS y RTC queda guardado, como en la placa.
+  jwsim_set_fatal_hook([] {
+    board.flush_console();
+    board.save_state();
+  });
   if (!rtc_mode.empty()) {
     if (rtc_mode == "host") {
       // Como sincronizar el RTC con la PC al encender (no reproducible). El
