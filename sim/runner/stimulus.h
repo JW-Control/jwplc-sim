@@ -11,6 +11,10 @@
 //   T unforce Q0_3      quitar el forzado
 //   T uart0 "START\n"   bytes recibidos por la UART 0 (consola) o 2 (RS-485);
 //                       escapes \n \r \t \\ \" \xHH
+//   T net 0 connected 192.168.250.1:50123   la red responde al socket 0 del
+//   T net 0 data 48656c6c6f                 W5500: conexión, datos (hex), FIN
+//   T net 0 peer_closed | reset | timeout   del par, RST, rechazo/plazo,
+//   T net 3 udp 192.168.250.1:67 0201...    datagrama UDP
 #ifndef JWSIM_RUNNER_STIMULUS_H
 #define JWSIM_RUNNER_STIMULUS_H
 
@@ -21,7 +25,7 @@
 
 namespace jwsim::runner {
 
-enum class InputOp { Set, Force, Unforce, Uart };
+enum class InputOp { Set, Force, Unforce, Uart, Net };
 
 struct InputEvent {
   jwsim_ns_t when = 0;
@@ -29,7 +33,10 @@ struct InputEvent {
   std::string signal;
   bool level = false;
   int port = -1;      // InputOp::Uart
-  std::string data;   // bytes recibidos (InputOp::Uart)
+  std::string data;   // bytes recibidos (InputOp::Uart, InputOp::Net)
+  std::string net_op;  // InputOp::Net: connected, data, peer_closed, reset, timeout, udp (socket en `port`)
+  uint32_t ip = 0;
+  uint16_t ip_port = 0;
   bool applied = false;   // ya se aplicó (para reanudar tras un reinicio)
 };
 

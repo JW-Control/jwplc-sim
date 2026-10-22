@@ -11,6 +11,8 @@
 //         [--rtc host|fijo:AAAA-MM-DDTHH:MM:SS] (hora del RTC al arrancar; sin
 //                               esta opción sigue la del estado o, sin estado,
 //                               un RTC sin hora válida)
+//         [--eth]          (W5500 poblado; la red la dan las líneas "net" del
+//                               .stim o, con --port, app/lib/net-bridge.mjs)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //   --resume <archivo>   (interno: proceso nuevo tras esp_restart; ver restart.h)
 //
@@ -130,6 +132,7 @@ int main(int argc, char **argv) {
   bool state_temp = false;
   bool seeded = false;
   uint64_t seed = 0;
+  bool eth = false;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -160,6 +163,7 @@ int main(int argc, char **argv) {
     }
     else if (a == "--resume") resume_file = next();
     else if (a == "--state-temp") state_temp = true;
+    else if (a == "--eth") eth = true;
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--state") state_dir = next();
     else if (a == "--screen") screen_file = next();
@@ -197,6 +201,23 @@ int main(int argc, char **argv) {
 
   static jwsim::boards::JwplcBasic board;
   board.set_echo(!quiet);
+  // Red del W5500 fuera de la interfaz: lo que el chip envía no llega a
+  // nadie; las respuestas vienen del .stim (líneas "net", p. ej. una sesión
+  // grabada). run_port() la reemplaza por la de la interfaz.
+  struct NoPeers : jwsim::models::W5500::Network {
+    void tcp_listen(int, uint16_t) override {}
+    void tcp_connect(int, uint16_t, uint32_t, uint16_t) override {}
+    void tcp_send(int, const uint8_t *, size_t) override {}
+    void tcp_close(int, bool) override {}
+    void udp_open(int, uint16_t) override {}
+    void udp_send(int, uint32_t, uint16_t, const uint8_t *, size_t) override {}
+    void udp_close(int) override {}
+  };
+  static NoPeers no_peers;
+  if (eth) {
+    board.set_ethernet(true);
+    board.eth().set_network(&no_peers);
+  }
   if (!state_dir.empty()) {
     std::error_code ec;
     std::filesystem::create_directories(state_dir, ec);

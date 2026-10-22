@@ -11,7 +11,7 @@
 //   TCA6424A P1k ── driver de relé (habilitado por EN_IO=GPIO27) ── Q0_k
 //   UART0 (TX=1) ── consola
 //   VSPI ── ST7789 (CS33), microSD (CS32, detección GPIO39), FRAM (CS13),
-//           W5500 (CS5, sin modelo hasta alpha.13)
+//           W5500 (CS5, INTn GPIO15; poblado con set_ethernet)
 #ifndef JWSIM_BOARD_JWPLCBASIC_H
 #define JWSIM_BOARD_JWPLCBASIC_H
 
@@ -27,6 +27,7 @@
 #include "jwsim/models/sdcard.h"
 #include "jwsim/models/st7789.h"
 #include "jwsim/models/tca6424a.h"
+#include "jwsim/models/w5500.h"
 
 namespace jwsim::boards {
 
@@ -62,6 +63,13 @@ class JwplcBasic : public Board {
   models::DS3232M &rtc() { return rtc_; }
   models::ST7789 &tft() { return *tft_; }
   models::SdCard &sd() { return sd_; }
+  models::W5500 &eth() { return eth_; }
+
+  // W5500 poblado (antes de arrancar el firmware): CS5, INTn en GPIO15 y la
+  // señal ETH_CABLE (1 = cable conectado). Sin llamar, CS5 no responde
+  // (MISO en reposo), como una placa sin el chip.
+  void set_ethernet(bool present);
+  bool ethernet() const { return eth_present_; }
 
   // Estado persistente de la placa (FRAM, NVS, SD...) en `dir`; sin llamar,
   // todo es volátil. save_state() escribe lo que cambió.
@@ -86,6 +94,8 @@ class JwplcBasic : public Board {
   models::MB85RS64V fram_;
   models::DS3232M rtc_;
   models::SdCard sd_;
+  models::W5500 eth_;
+  bool eth_present_ = false;
   std::unique_ptr<models::ST7789> tft_;
   std::map<std::string, std::unique_ptr<Net>> signals_;
   std::vector<std::string> order_;

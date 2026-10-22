@@ -99,6 +99,25 @@ JwplcBasic::JwplcBasic() {
   set_board(this);
 }
 
+void JwplcBasic::set_ethernet(bool present) {
+  if (!present || eth_present_) return;
+  eth_present_ = true;
+  vspi_.attach(gpio(kEthCsGpio), &eth_);
+  eth_.set_int_net(&gpio(kEthIntGpio));
+  eth_.set_scheduler([](jwsim_ns_t at, std::function<void()> fn) {
+    auto *f = new std::function<void()>(std::move(fn));
+    jwsim_schedule_event(at, [](void *arg, jwsim_ns_t) {
+      auto *g = static_cast<std::function<void()> *>(arg);
+      (*g)();
+      delete g;
+    }, f);
+  });
+  add_signal("ETH_CABLE", true).on_change([this](Net &net, bool level) {
+    log_signal(net, level);
+    eth_.set_cable(level);
+  });
+}
+
 Net &JwplcBasic::add_signal(const std::string &name, bool idle) {
   auto net = std::make_unique<Net>(name, idle);
   Net &ref = *net;
@@ -133,7 +152,7 @@ void JwplcBasic::log_signal(const Net &net, bool level) {
   jwsim_trace_bytes(net.name().data(), net.name().size());
   jwsim_trace_bytes(rec, sizeof(rec));
   jwsim_trace_u64(jwsim_now());
-  const char *kind = net.name()[0] == 'I' ? "DI" : net.name()[0] == 'Q' ? "DO" : net.name()[0] == 'S' ? "SD" : "BTN";
+  const char *kind = net.name()[0] == 'I' ? "DI" : net.name()[0] == 'Q' ? "DO" : net.name()[0] == 'S' ? "SD" : net.name()[0] == 'E' ? "ETH" : "BTN";
   if (echo_) std::printf("[%10.3f ms] %-5s %s = %d\n", now_ms(), kind, net.name().c_str(), level);
 }
 

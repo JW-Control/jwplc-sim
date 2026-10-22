@@ -3,6 +3,7 @@
 #include "stimulus.h"
 
 #include <cctype>
+#include <cstdio>
 #include <sstream>
 
 #include "jwsim/devices.h"
@@ -15,6 +16,20 @@ jwsim::boards::JwplcBasic *g_board = nullptr;
 void apply(void *arg, jwsim_ns_t) {
   auto *ev = static_cast<InputEvent *>(arg);
   ev->applied = true;
+  if (ev->op == InputOp::Net) {
+    const uint8_t rec[3] = {'N', static_cast<uint8_t>(ev->port), static_cast<uint8_t>(ev->net_op[0])};
+    jwsim_trace_bytes(rec, sizeof(rec));
+    jwsim_trace_bytes(ev->data.data(), ev->data.size());
+    auto &eth = g_board->eth();
+    const auto *d = reinterpret_cast<const uint8_t *>(ev->data.data());
+    if (ev->net_op == "connected") eth.net_connected(ev->port, ev->ip, ev->ip_port);
+    else if (ev->net_op == "data") eth.net_data(ev->port, d, ev->data.size());
+    else if (ev->net_op == "peer_closed") eth.net_peer_closed(ev->port);
+    else if (ev->net_op == "reset") eth.net_reset(ev->port);
+    else if (ev->net_op == "timeout") eth.net_timeout(ev->port);
+    else if (ev->net_op == "udp") eth.net_udp(ev->port, ev->ip, ev->ip_port, d, ev->data.size());
+    return;
+  }
   if (ev->op == InputOp::Uart) {
     const uint8_t rec[2] = {'U', static_cast<uint8_t>(ev->port)};
     jwsim_trace_bytes(rec, sizeof(rec));
@@ -26,7 +41,7 @@ void apply(void *arg, jwsim_ns_t) {
     case InputOp::Set: net->drive(ev->level); break;
     case InputOp::Force: net->force(ev->level); break;
     case InputOp::Unforce: net->unforce(); break;
-    case InputOp::Uart: break;
+    case InputOp::Uart: case InputOp::Net: break;
   }
   // Los forzados quedan en la traza aunque no cambien el nivel.
   if (ev->op != InputOp::Set) {
@@ -73,6 +88,48 @@ std::string parse_uart(const std::string &text, InputEvent &out) {
   return "";
 }
 
+bool parse_endpoint(const std::string &s, uint32_t &ip, uint16_t &port) {
+  unsigned a, b, c, d, p;
+  char tail;
+  if (std::sscanf(s.c_str(), "%u.%u.%u.%u:%u%c", &a, &b, &c, &d, &p, &tail) != 5 || a > 255 || b > 255 || c > 255 ||
+      d > 255 || p > 65535)
+    return false;
+  ip = a << 24 | b << 16 | c << 8 | d;
+  port = static_cast<uint16_t>(p);
+  return true;
+}
+
+bool parse_hex(const std::string &h, std::string &out) {
+  if (h.size() % 2) return false;
+  out.clear();
+  for (size_t i = 0; i < h.size(); i += 2) {
+    if (!std::isxdigit(static_cast<unsigned char>(h[i])) || !std::isxdigit(static_cast<unsigned char>(h[i + 1]))) return false;
+    out.push_back(static_cast<char>(std::stoi(h.substr(i, 2), nullptr, 16)));
+  }
+  return true;
+}
+
+// 'net <socket> <op> [ip:puerto] [hex]'.
+std::string parse_net(const std::string &text, InputEvent &out) {
+  std::istringstream ss(text);
+  std::string word, op, a, b;
+  int s = -1;
+  ss >> word >> s >> op;
+  out.op = InputOp::Net;
+  out.port = s;
+  out.net_op = op;
+  out.data.clear();
+  if (s < 0 || s > 7) return "socket del W5500 inválido (0 a 7): " + text;
+  if (op == "peer_closed" || op == "reset" || op == "timeout") return "";
+  if (op == "data") return (ss >> a) && parse_hex(a, out.data) ? "" : "datos en hex inválidos: " + text;
+  if (op == "connected") return (ss >> a) && parse_endpoint(a, out.ip, out.ip_port) ? "" : "falta ip:puerto: " + text;
+  if (op == "udp") {
+    if (!(ss >> a) || !parse_endpoint(a, out.ip, out.ip_port)) return "falta ip:puerto: " + text;
+    return (ss >> b) && parse_hex(b, out.data) ? "" : "datos en hex inválidos: " + text;
+  }
+  return "operación de red desconocida: " + text;
+}
+
 } // namespace
 
 std::string parse_input(const std::string &text, InputEvent &out) {
@@ -80,6 +137,7 @@ std::string parse_input(const std::string &text, InputEvent &out) {
   std::string first, second;
   ss >> first;
   if (first.rfind("uart", 0) == 0) return parse_uart(text, out);
+  if (first == "net") return parse_net(text, out);
   if (first == "force" || first == "unforce") {
     out.op = first == "force" ? InputOp::Force : InputOp::Unforce;
     if (!(ss >> second)) return "falta la señal después de '" + first + "'";
@@ -102,6 +160,7 @@ std::string parse_input(const std::string &text, InputEvent &out) {
 }
 
 std::string validate_input(jwsim::boards::JwplcBasic &board, const InputEvent &ev) {
+  if (ev.op == InputOp::Net) return board.ethernet() ? "" : "la placa no tiene el W5500 (--eth)";
   if (ev.op == InputOp::Uart) {
     if (ev.port != 0 && ev.port != 2) return "solo se recibe por la UART 0 (consola) y la 2 (RS-485): uart" + std::to_string(ev.port);
     return "";
@@ -109,7 +168,7 @@ std::string validate_input(jwsim::boards::JwplcBasic &board, const InputEvent &e
   if (!board.signal(ev.signal)) return "señal desconocida: " + ev.signal;
   // Entradas: bornes I0_k, botones del frente (BTN_LEFT, BTN_OK...) y la
   // tarjeta microSD (SD_CARD: 1 = insertada).
-  const bool input = ev.signal.rfind("I0_", 0) == 0 || ev.signal.rfind("BTN_", 0) == 0 || ev.signal == "SD_CARD";
+  const bool input = ev.signal.rfind("I0_", 0) == 0 || ev.signal.rfind("BTN_", 0) == 0 || ev.signal == "SD_CARD" || ev.signal == "ETH_CABLE";
   const bool output = ev.signal.rfind("Q0_", 0) == 0;
   if (ev.op == InputOp::Set && !input) return "solo las entradas (I0_k, BTN_*) se asignan; las salidas se fuerzan: " + ev.signal;
   if (!input && !output) return "solo se fuerzan entradas (I0_k, BTN_*) y salidas Q0_k: " + ev.signal;
@@ -138,6 +197,20 @@ std::string format_input(const InputEvent &ev) {
         else out += static_cast<char>(c);
       }
       return out + "\"";
+    }
+    case InputOp::Net: {
+      std::string out = "net " + std::to_string(ev.port) + " " + ev.net_op;
+      if (ev.net_op == "connected" || ev.net_op == "udp") {
+        char ep[32];
+        std::snprintf(ep, sizeof ep, " %u.%u.%u.%u:%u", ev.ip >> 24, (ev.ip >> 16) & 255, (ev.ip >> 8) & 255, ev.ip & 255, ev.ip_port);
+        out += ep;
+      }
+      if (ev.net_op == "data" || ev.net_op == "udp") {
+        static const char *digits = "0123456789abcdef";
+        out += ' ';
+        for (unsigned char c : ev.data) out += std::string{digits[c >> 4], digits[c & 15]};
+      }
+      return out;
     }
   }
   return "";

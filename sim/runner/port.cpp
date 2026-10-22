@@ -11,6 +11,12 @@
 //                 {"type":"subscribe","buses":1|0[,"lossless":1]} · {"type":"quit"}
 //                 {"type":"rs485","port":2,"on":1} → {"type":"uart_tx","port":2,"bytes":[[inicio,fin,byte]...]}
 //                 {"type":"uart_rx","port":2,"data":"t_ns:hh,t_ns:hh"}
+//                 {"type":"net","on":1} → el runner informa lo que el W5500
+//                   envía: {"type":"net","op":"listen|connect|send|close|
+//                   udp_open|sendto|udp_close","s",...} (app/lib/net-bridge.mjs)
+//                 {"type":"net_in","op":"connected|data|peer_closed|reset|
+//                   timeout|udp","s",["ip","port"],["hex"]}: lo que llega de
+//                   la red, como entrada (queda en la grabación)
 //                 {"type":"debug","attached":1|0} (gdb adjunto: sin vigilante)
 //                 {"type":"hash"} → {"type":"hash","t_ns","trace_hash","trace_events"}
 //                 "run" con "until_ns": corre hasta ese instante, pausa y
@@ -306,6 +312,42 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
     if (!link_items.empty()) link_items.push_back(',');
     link_items += "[" + std::to_string(start) + "," + std::to_string(end) + "," + std::to_string(b) + "]";
   });
+  // Red del W5500 (app/lib/net-bridge.mjs): lo que el chip envía se manda
+  // en cada volcado, solo si la interfaz lo pidió.
+  bool net_on = false;
+  std::vector<std::string> net_out;
+  struct PortNet : jwsim::models::W5500::Network {
+    bool *on;
+    std::vector<std::string> *out;
+    static std::string ip(uint32_t v) {
+      return std::to_string(v >> 24) + "." + std::to_string((v >> 16) & 255) + "." + std::to_string((v >> 8) & 255) + "." +
+             std::to_string(v & 255);
+    }
+    static std::string hex(const uint8_t *d, size_t n) {
+      static const char *digits = "0123456789abcdef";
+      std::string h;
+      for (size_t i = 0; i < n; ++i) h += std::string{digits[d[i] >> 4], digits[d[i] & 15]};
+      return h;
+    }
+    void emit(int s, const std::string &op, const std::string &rest) {
+      if (*on) out->push_back("{\"type\":\"net\",\"t_ns\":" + std::to_string(jwsim_now()) + ",\"op\":\"" + op + "\",\"s\":" + std::to_string(s) + rest + "}");
+    }
+    void tcp_listen(int s, uint16_t port) override { emit(s, "listen", ",\"port\":" + std::to_string(port)); }
+    void tcp_connect(int s, uint16_t lport, uint32_t a, uint16_t port) override {
+      emit(s, "connect", ",\"lport\":" + std::to_string(lport) + ",\"ip\":\"" + ip(a) + "\",\"port\":" + std::to_string(port));
+    }
+    void tcp_send(int s, const uint8_t *d, size_t n) override { emit(s, "send", ",\"hex\":\"" + hex(d, n) + "\""); }
+    void tcp_close(int s, bool fin) override { emit(s, "close", std::string(",\"fin\":") + (fin ? "1" : "0")); }
+    void udp_open(int s, uint16_t port) override { emit(s, "udp_open", ",\"port\":" + std::to_string(port)); }
+    void udp_send(int s, uint32_t a, uint16_t port, const uint8_t *d, size_t n) override {
+      emit(s, "sendto", ",\"ip\":\"" + ip(a) + "\",\"port\":" + std::to_string(port) + ",\"hex\":\"" + hex(d, n) + "\"");
+    }
+    void udp_close(int s) override { emit(s, "udp_close", ""); }
+  };
+  PortNet port_net;
+  port_net.on = &net_on;
+  port_net.out = &net_out;
+  if (board.ethernet()) board.eth().set_network(&port_net);
   // Sin pérdidas (captura de referencia): al llenarse el envío se manda ya.
   bool bus_lossless = false;
   auto send_bus = [&]() {
@@ -420,6 +462,8 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->flush_capture();
     }
     send_bus();
+    for (const auto &m : net_out) send_json(m);
+    net_out.clear();
     if (!link_items.empty()) {
       send_json("{\"type\":\"uart_tx\",\"port\":" + std::to_string(link_port) + ",\"bytes\":[" + link_items + "]}");
       link_items.clear();
@@ -488,6 +532,25 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
         std::fprintf(stderr, "[jwsim] uart: %s\n", err.empty() ? "sin datos" : err.c_str());
         return;
       }
+      inputs.push_back(ev);
+      schedule_input(board, &inputs.back());
+      send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
+    } else if (type == "net") {
+      net_on = f.count("on") && f.at("on") == "1";
+    } else if (type == "net_in") {
+      // Lo que llega de la red al W5500: entrada como las demás (se graba).
+      auto get = [&](const char *k) { return f.count(k) ? f.at(k) : std::string(); };
+      std::string text = "net " + get("s") + " " + get("op");
+      if (!get("ip").empty()) text += " " + get("ip") + ":" + get("port");
+      if (!get("hex").empty()) text += " " + get("hex");
+      InputEvent ev;
+      std::string err = parse_input(text, ev);
+      if (err.empty()) err = validate_input(board, ev);
+      if (!err.empty()) {
+        std::fprintf(stderr, "[jwsim] net_in: %s\n", err.c_str());
+        return;
+      }
+      ev.when = jwsim_now();
       inputs.push_back(ev);
       schedule_input(board, &inputs.back());
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
