@@ -93,9 +93,15 @@
                 <span class="led-sm" id="led-run" title="Firmware en ejecución"></span><span>RUN</span>
                 <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
               </div>
-              <div class="screen" title="Pantalla TFT (llega en G4)">
-                <span>TFT 170×320</span>
-                <small>disponible en G4</small>
+              <canvas id="tft" class="screen" width="320" height="170" tabindex="0"
+                title="Pantalla TFT 170×320 (con foco: flechas, Enter = OK, Esc = ESC)"></canvas>
+              <div class="keypad" id="keypad" aria-label="Botonera frontal">
+                <button class="key" data-btn="BTN_LEFT" title="LEFT (←)" aria-label="Izquierda">◀</button>
+                <button class="key" data-btn="BTN_UP" title="UP (↑)" aria-label="Arriba">▲</button>
+                <button class="key" data-btn="BTN_RIGHT" title="RIGHT (→)" aria-label="Derecha">▶</button>
+                <button class="key small" data-btn="BTN_ESC" title="ESC (Esc)">ESC</button>
+                <button class="key small" data-btn="BTN_OK" title="OK (Enter)">OK</button>
+                <button class="key" data-btn="BTN_DOWN" title="DOWN (↓)" aria-label="Abajo">▼</button>
               </div>
             </div>
             <div class="terminal-strip bottom">

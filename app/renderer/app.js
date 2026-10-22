@@ -131,7 +131,7 @@ function setStatus(kind, text) {
   $("led-pwr").classList.toggle("on", live);
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
-  for (const b of document.querySelectorAll("#inputs .io")) b.disabled = !live;
+  for (const b of document.querySelectorAll("#inputs .io, #keypad .key")) b.disabled = !live;
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
   $("btn-dbg-pause").disabled = kind !== "running";
   $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
@@ -182,6 +182,63 @@ function buildBoard() {
   }
 }
 
+// ------------------------------------------------------------- pantalla y botonera
+let tftCtx = null;
+function drawDisplay(buf) {
+  const b = new Uint8Array(buf);
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const x = dv.getUint16(0, true), y = dv.getUint16(2, true), w = dv.getUint16(4, true), h = dv.getUint16(6, true);
+  if (!w || !h) return;
+  tftCtx ??= $("tft").getContext("2d");
+  const img = tftCtx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    const v = dv.getUint16(8 + i * 2, true);
+    const r = (v >> 11) & 0x1f, g = (v >> 5) & 0x3f, bl = v & 0x1f;
+    img.data[i * 4] = (r << 3) | (r >> 2);
+    img.data[i * 4 + 1] = (g << 2) | (g >> 4);
+    img.data[i * 4 + 2] = (bl << 3) | (bl >> 2);
+    img.data[i * 4 + 3] = 255;
+  }
+  tftCtx.putImageData(img, x, y);
+}
+
+function clearDisplay() {
+  tftCtx ??= $("tft").getContext("2d");
+  tftCtx.fillStyle = "#000";
+  tftCtx.fillRect(0, 0, 320, 170);
+}
+
+const KEYMAP = { ArrowLeft: "BTN_LEFT", ArrowUp: "BTN_UP", ArrowRight: "BTN_RIGHT", ArrowDown: "BTN_DOWN", Enter: "BTN_OK", Escape: "BTN_ESC" };
+function pressKey(signal, down) {
+  if (!["running", "paused", "break"].includes(state.sim)) return;
+  if (!!state.levels.get(signal) === down) return;
+  setInput(signal, down);
+}
+
+function wireKeypad() {
+  for (const k of document.querySelectorAll("#keypad .key")) {
+    const sig = k.dataset.btn;
+    k.addEventListener("pointerdown", (e) => {
+      k.setPointerCapture?.(e.pointerId);
+      pressKey(sig, true);
+    });
+    const up = () => pressKey(sig, false);
+    k.addEventListener("pointerup", up);
+    k.addEventListener("pointercancel", up);
+  }
+  const tft = $("tft");
+  tft.addEventListener("keydown", (e) => {
+    const sig = KEYMAP[e.key];
+    if (!sig) return;
+    e.preventDefault();
+    if (!e.repeat) pressKey(sig, true);
+  });
+  tft.addEventListener("keyup", (e) => {
+    const sig = KEYMAP[e.key];
+    if (sig) pressKey(sig, false);
+  });
+}
+
 function setInput(signal, value) {
   state.levels.set(signal, value);
   renderSignal(signal, value);
@@ -189,13 +246,14 @@ function setInput(signal, value) {
 }
 
 function renderSignal(name, level) {
-  const el = document.querySelector(`.io[data-signal="${name}"]`);
+  const el = document.querySelector(`.io[data-signal="${name}"], .key[data-btn="${name}"]`);
   if (el) el.classList.toggle("on", !!level);
 }
 
 function resetBoard() {
   state.levels.clear();
-  for (const el of document.querySelectorAll(".io")) el.classList.remove("on");
+  for (const el of document.querySelectorAll(".io, .key")) el.classList.remove("on");
+  clearDisplay();
 }
 
 // ------------------------------------------------------------- editor
@@ -976,6 +1034,8 @@ function wireUi() {
     log.scrollTop = log.scrollHeight;
   });
   api.onMessage(onMessage);
+  api.onDisplay(drawDisplay);
+  wireKeypad();
   api.onStderr((t) => consoleWrite(t, /FATAL|no está soportad/.test(t) ? "fatal" : "sys"));
   api.onExit(({ code }) => {
     if (state.sim === "running" || state.sim === "paused" || state.sim === "break") {
@@ -1066,6 +1126,9 @@ window.jwsimTest = {
   replay: (file, text) => replayFile(file, text),
   lastReplay: () => state.lastReplay ?? null,
   clock: () => $("clock").textContent,
+  // Píxel de la pantalla en la vista (RGB).
+  tftPixel: (x, y) => Array.from($("tft").getContext("2d").getImageData(x, y, 1, 1).data.slice(0, 3)),
+  tftDataUrl: () => $("tft").toDataURL("image/png"),
 };
 
 async function main() {

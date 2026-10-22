@@ -303,7 +303,16 @@ BaseType_t xSemaphoreTake(SemaphoreHandle_t s, TickType_t ticks) {
 BaseType_t xSemaphoreGive(SemaphoreHandle_t s) {
   if (!s) return pdFAIL;
   if (s->kind == QKind::Mutex || s->kind == QKind::Recursive) {
-    if (s->owner != jwsim_task_self()) return pdFAIL;
+    if (s->owner && s->owner != jwsim_task_self()) {
+      // ESP-IDF (CONFIG_FREERTOS_CHECK_MUTEX_GIVEN_BY_OWNER, activo por
+      // defecto) aborta con un assert en xQueueGenericSend: el ESP32 se
+      // reinicia. Se reproduce con un mensaje que nombra las dos tareas.
+      jwsim_fatal("assert failed: xQueueGenericSend (mutex liberado por quien no es su dueño). La tarea '%s' "
+                  "libera un mutex que tomó '%s'; en el ESP32 esto aborta y reinicia la placa "
+                  "(CONFIG_FREERTOS_CHECK_MUTEX_GIVEN_BY_OWNER). Revise que cada tarea libere solo lo que tomó.",
+                  jwsim_task_self() ? pcTaskGetName(jwsim_task_self()) : "?", pcTaskGetName(s->owner));
+    }
+    if (!s->owner) return pdFAIL;
     if (s->kind == QKind::Recursive && --s->recursion > 0) return pdTRUE;
     s->owner = nullptr;
     s->recursion = 0;

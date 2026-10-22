@@ -1,0 +1,9 @@
+# 03.Display_HMI_Pages: OK entra al HMI (página 0), I0_0 en alto, RIGHT
+# pasa a la página 1 (RTC) y ESC vuelve a la pantalla de reposo.
+1500 BTN_OK=1
+1600 BTN_OK=0
+2000 I0_0=1
+2800 BTN_RIGHT=1
+2900 BTN_RIGHT=0
+3800 BTN_ESC=1
+3900 BTN_ESC=0

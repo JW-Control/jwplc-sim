@@ -9,6 +9,7 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 
 export const FRAME_JSON = 1;
+export const FRAME_DISPLAY = 2;
 
 export function encodeFrame(type, payload) {
   const body = Buffer.isBuffer(payload) ? payload : Buffer.from(JSON.stringify(payload), "utf8");
@@ -37,8 +38,9 @@ export class FrameDecoder {
   }
 }
 
-// Un runner (un PLC simulado). Eventos: "message" (objeto JSON), "stderr"
-// (texto), "exit" ({ code, signal }).
+// Un runner (un PLC simulado). Eventos: "message" (objeto JSON), "display"
+// (Buffer con la zona cambiada de la pantalla), "stderr" (texto), "exit"
+// ({ code, signal }).
 export class RunnerProcess extends EventEmitter {
   // env: variables extra para el proceso (p. ej. JWSIM_DEBUG para depurar).
   start(exe, args = [], { env } = {}) {
@@ -47,7 +49,8 @@ export class RunnerProcess extends EventEmitter {
       windowsHide: true,
       env: env ? { ...process.env, ...env } : process.env,
     });
-    const dec = new FrameDecoder((type, msg) => type === FRAME_JSON && this.emit("message", msg));
+    // Tipo 2: zona cambiada de la pantalla (binario, ver port.cpp).
+    const dec = new FrameDecoder((type, msg) => this.emit(type === FRAME_JSON ? "message" : type === FRAME_DISPLAY ? "display" : "frame", msg));
     this.child.stdout.on("data", (d) => dec.push(d));
     this.child.stderr.setEncoding("utf8");
     this.child.stderr.on("data", (d) => this.emit("stderr", d));

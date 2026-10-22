@@ -65,6 +65,7 @@ using Fields = std::map<std::string, std::string>;
 constexpr uint8_t kFrameJson = 1;
 constexpr int kProtocolVersion = 1;
 constexpr auto kFlushPeriod = std::chrono::milliseconds(20);
+constexpr uint8_t kFrameDisplay = 2;
 constexpr size_t kBusMaxItems = 400;  // por envío; el resto se cuenta como descartado
 constexpr size_t kBusMaxUartBytes = 256;
 constexpr size_t kBusMaxSpiBytes = 64;
@@ -177,18 +178,41 @@ size_t utf8_complete_prefix(const std::string &buf) {
 // ---------------------------------------------------------------- E/S
 int g_out_fd = -1;
 
-void send_json(const std::string &json) {
+void send_frame(uint8_t type, const std::string &payload) {
   std::string frame(5, '\0');
-  const uint32_t len = static_cast<uint32_t>(json.size() + 1);
+  const uint32_t len = static_cast<uint32_t>(payload.size() + 1);
   for (int b = 0; b < 4; ++b) frame[b] = static_cast<char>((len >> (8 * b)) & 0xff);
-  frame[4] = static_cast<char>(kFrameJson);
-  frame += json;
+  frame[4] = static_cast<char>(type);
+  frame += payload;
   size_t off = 0;
   while (off < frame.size()) {
     const auto w = JWSIM_WRITE(g_out_fd, frame.data() + off, static_cast<unsigned>(frame.size() - off));
     if (w <= 0) std::_Exit(0);  // la interfaz cerró el pipe
     off += static_cast<size_t>(w);
   }
+}
+
+void send_json(const std::string &json) { send_frame(kFrameJson, json); }
+
+// Zona cambiada de la pantalla: [u16 x][u16 y][u16 w][u16 h][w·h píxeles
+// RGB565 little-endian], todo little-endian (trama tipo 2).
+void send_display(jwsim::models::ST7789 &tft) {
+  int x, y, w, h;
+  if (!tft.take_dirty(x, y, w, h)) return;
+  std::string p;
+  p.reserve(8 + static_cast<size_t>(w) * h * 2);
+  auto u16 = [&p](int v) {
+    p.push_back(static_cast<char>(v & 0xff));
+    p.push_back(static_cast<char>((v >> 8) & 0xff));
+  };
+  u16(x);
+  u16(y);
+  u16(w);
+  u16(h);
+  for (int yy = y; yy < y + h; ++yy) {
+    for (int xx = x; xx < x + w; ++xx) u16(tft.view_pixel(xx, yy));
+  }
+  send_frame(kFrameDisplay, p);
 }
 
 struct Inbox {
@@ -380,6 +404,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       send_json(m);
       serial[p].erase(0, n);
     }
+    send_display(board.tft());
   };
 
   auto hash_json = [&](const char *type) {

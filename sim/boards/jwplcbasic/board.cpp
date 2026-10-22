@@ -16,6 +16,13 @@ constexpr int kTftDcGpio = 25;
 constexpr int kSdCsGpio = 32;
 constexpr int kFramCsGpio = 13;
 constexpr int kEthCsGpio = 5;
+constexpr int kTftRstGpio = 14;
+// Botonera frontal (JWPLC_GlobalPeripherals.cpp): matriz 2 × 3. La fila
+// activa se pone en alto y la columna lee alto con la tecla pulsada (diodos
+// y pull-downs de la placa: sin tecla, las columnas leen bajo).
+constexpr int kBtnRows[2] = {12, 2};
+constexpr int kBtnCols[3] = {35, 34, 36};
+constexpr const char *kBtnNames[2][3] = {{"BTN_LEFT", "BTN_UP", "BTN_RIGHT"}, {"BTN_ESC", "BTN_OK", "BTN_DOWN"}};
 
 double now_ms() { return static_cast<double>(jwsim_now()) / 1e6; }
 } // namespace
@@ -24,6 +31,8 @@ JwplcBasic::JwplcBasic() {
   i2c0_.attach(tca_.address(), &tca_);
   // Chips del bus SPI para el analizador (los modelos llegan en G4).
   vspi_.name_chip(gpio(kTftCsGpio), "TFT", &gpio(kTftDcGpio));
+  tft_ = std::make_unique<models::ST7789>(gpio(kTftDcGpio), &gpio(kTftRstGpio), models::ST7789::Panel{});
+  vspi_.attach(gpio(kTftCsGpio), tft_.get());
   vspi_.name_chip(gpio(kSdCsGpio), "SD");
   vspi_.name_chip(gpio(kFramCsGpio), "FRAM");
   vspi_.attach(gpio(kFramCsGpio), &fram_);
@@ -58,6 +67,19 @@ JwplcBasic::JwplcBasic() {
   gpio(kSdDetectGpio).set_idle(true);
   gpio(kEthIntGpio).set_idle(true);
 
+  // Botones: señales de bornera "BTN_*" (1 = pulsado), como las entradas.
+  for (int r = 0; r < 2; ++r) {
+    for (int c = 0; c < 3; ++c) {
+      add_signal(kBtnNames[r][c], false).on_change([this](Net &net, bool level) {
+        log_signal(net, level);
+        update_buttons();
+      });
+    }
+    gpio(kBtnRows[r]).on_change([this](Net &, bool) { update_buttons(); });
+  }
+  for (int c : kBtnCols) gpio(c).set_idle(false);
+  update_buttons();
+
   gpio(kEnIoGpio).on_change([this](Net &, bool) { update_relays(); });
   update_relays();
   set_board(this);
@@ -84,12 +106,21 @@ void JwplcBasic::update_relays() {
   }
 }
 
+void JwplcBasic::update_buttons() {
+  for (int c = 0; c < 3; ++c) {
+    bool level = false;
+    for (int r = 0; r < 2; ++r) level = level || (gpio(kBtnRows[r]).level() && signals_[kBtnNames[r][c]]->level());
+    gpio(kBtnCols[c]).drive(this, level);
+  }
+}
+
 void JwplcBasic::log_signal(const Net &net, bool level) {
   uint8_t rec[2] = {'B', static_cast<uint8_t>(level)};
   jwsim_trace_bytes(net.name().data(), net.name().size());
   jwsim_trace_bytes(rec, sizeof(rec));
   jwsim_trace_u64(jwsim_now());
-  if (echo_) std::printf("[%10.3f ms] %-5s %s = %d\n", now_ms(), net.name()[0] == 'I' ? "DI" : "DO", net.name().c_str(), level);
+  const char *kind = net.name()[0] == 'I' ? "DI" : net.name()[0] == 'Q' ? "DO" : "BTN";
+  if (echo_) std::printf("[%10.3f ms] %-5s %s = %d\n", now_ms(), kind, net.name().c_str(), level);
 }
 
 uint8_t JwplcBasic::inputs() const {

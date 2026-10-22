@@ -318,6 +318,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile }) => {
   runner = r;
   runnerExe = exe;
   r.on("message", (m) => forward("sim:message", m));
+  r.on("display", (buf) => forward("sim:display", buf));
   r.on("stderr", (t) => forward("sim:stderr", t));
   r.on("exit", (info) => {
     if (runner === r) {

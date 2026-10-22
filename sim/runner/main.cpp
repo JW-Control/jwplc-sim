@@ -5,6 +5,9 @@
 //   <exe> [--until <ms>] [--set NAME=V@<ms>]... [--stim <archivo>] [--quiet]
 //         [--realtime <factor>] [--pause <t_ms>:<pared_ms>] [--seed <n>] [--stats]
 //         [--state <dir>]   (memoria no volátil: FRAM, NVS, SD; se crea si falta)
+//         [--screen <archivo>] (imagen final de la pantalla: "JWFB", u16 ancho,
+//                               u16 alto y píxeles RGB565 little-endian)
+//         [--screen-at <ms>:<archivo>]... (la pantalla en ese instante virtual)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //
 // Estímulos: "NAME=V@T" o, en archivo, líneas "<T> NAME=V" (T en ms; '#'
@@ -33,6 +36,24 @@ extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
 
 namespace {
+
+void write_screen(jwsim::models::ST7789 &tft, const std::string &file) {
+  std::string out = "JWFB";
+  auto u16 = [&out](int v) {
+    out.push_back(static_cast<char>(v & 0xff));
+    out.push_back(static_cast<char>((v >> 8) & 0xff));
+  };
+  u16(tft.view_width());
+  u16(tft.view_height());
+  for (int y = 0; y < tft.view_height(); ++y)
+    for (int x = 0; x < tft.view_width(); ++x) u16(tft.view_pixel(x, y));
+  std::ofstream(file, std::ios::binary).write(out.data(), static_cast<std::streamsize>(out.size()));
+}
+
+struct ScreenShot {
+  jwsim_ns_t when;
+  std::string file;
+};
 
 
 [[noreturn]] void usage(const char *msg) {
@@ -82,6 +103,8 @@ int main(int argc, char **argv) {
   bool stats = false;
   bool port = false;
   std::string state_dir;
+  std::string screen_file;
+  std::vector<ScreenShot> shots;
   std::vector<jwsim::runner::InputEvent> stims;
 
   for (int i = 1; i < argc; ++i) {
@@ -110,6 +133,13 @@ int main(int argc, char **argv) {
     else if (a == "--seed") jwsim_seed_random(std::strtoull(next().c_str(), nullptr, 0));
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--state") state_dir = next();
+    else if (a == "--screen") screen_file = next();
+    else if (a == "--screen-at") {
+      const std::string v = next();
+      const auto colon = v.find(':');
+      if (colon == std::string::npos) usage("--screen-at requiere <ms>:<archivo>");
+      shots.push_back({parse_ms(v.substr(0, colon)), v.substr(colon + 1)});
+    }
     else if (a == "--set") {
       const std::string v = next();
       const auto at = v.find('@');
@@ -127,6 +157,13 @@ int main(int argc, char **argv) {
     std::error_code ec;
     std::filesystem::create_directories(state_dir, ec);
     board.set_state_dir(state_dir);
+  }
+  // Capturas en instantes dados: eventos externos (no cambian la traza).
+  for (auto &shot : shots) {
+    jwsim_schedule_external_event(shot.when, [](void *arg, jwsim_ns_t) {
+      auto *s = static_cast<ScreenShot *>(arg);
+      write_screen(static_cast<jwsim::boards::JwplcBasic &>(jwsim::board()).tft(), s->file);
+    }, &shot);
   }
   for (auto &s : stims) {
     const std::string err = jwsim::runner::validate_input(board, s);
@@ -179,6 +216,7 @@ int main(int argc, char **argv) {
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - wall_start).count();
   board.flush_console();
   board.save_state();
+  if (!screen_file.empty()) write_screen(board.tft(), screen_file);
 
   if (stats) {
     std::printf("--- estadísticas (tiempo virtual) ---\n");
