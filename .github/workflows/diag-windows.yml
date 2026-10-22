@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Diagnóstico de caídas del runner en Windows (gdb del toolchain incluido).
+# Solo a pedido.
+name: Diagnóstico en Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package y toolchain fijados
+        run: |
+          node scripts/fetch-package.mjs
+          node scripts/fetch-toolchain.mjs
+
+      - name: Caídas bajo gdb
+        run: node scripts/diag-windows-crash.mjs
