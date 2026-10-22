@@ -472,6 +472,13 @@ export async function buildSketch(sketchDir, options = {}) {
 
   const failures = [];
   const mtimes = new Map();
+  const fwSymsFile = join(ROOT, "sim", "hal", "fw-libc.syms");
+  const fwSymsText = readFileSync(fwSymsFile, "utf8");
+  const fwSyms = {
+    file: fwSymsFile,
+    hash: hash(fwSymsText),
+    names: new Set(fwSymsText.split(/\r?\n/).map((l) => l.trim().split(/\s+/)[0]).filter(Boolean)),
+  };
   const objects = await pool(units, availableParallelism(), async (u) => {
     const rel = relative(ROOT, u.file).split(sep).join("/").replace(/^\.jwsim\//, "");
     const cc = u.file.endsWith(".c") ? tc.cc : tc.cxx;
@@ -483,7 +490,11 @@ export async function buildSketch(sketchDir, options = {}) {
     ].map((d) => `-I${d}`);
     const flags = withPch ? [...inoFlags, "-include", pchHeader, "-Winvalid-pch"] : flagsFor(u.file);
     const compile = [...cc.slice(1), "-c", "-MMD", ...flags, ...incs, u.file];
-    const cmdHash = hash(cc[0] + "\0" + compile.join("\0"));
+    // El firmware no usa la libc del host para archivos ni hora: sus
+    // referencias se redirigen al VFS y al reloj del simulador (la tabla
+    // forma parte de la clave de la caché).
+    const fwLibc = u.group !== "jwsim";
+    const cmdHash = hash(cc[0] + "\0" + compile.join("\0") + (fwLibc ? "\0" + fwSyms.hash : ""));
     // Caché de objetos compartida entre sketches: la clave es el comando
     // completo (flags + include path + archivo). El sketch va en su carpeta.
     const obj =
@@ -516,6 +527,17 @@ export async function buildSketch(sketchDir, options = {}) {
     if (r.code !== 0) {
       failures.push({ rel, out: r.out });
       return null;
+    }
+    if (fwLibc) {
+      const nm = await run(tc.nm[0], [...tc.nm.slice(1), "-u", obj]);
+      const used = nm.out.split(/\r?\n/).map((l) => l.trim().split(/\s+/).pop());
+      if (used.some((name) => fwSyms.names.has(name))) {
+        const oc = await run(tc.objcopy[0], [...tc.objcopy.slice(1), `--redefine-syms=${fwSyms.file}`, obj]);
+        if (oc.code !== 0) {
+          failures.push({ rel, out: `objcopy --redefine-syms falló:\n${oc.out}` });
+          return null;
+        }
+      }
     }
     if (withPch && /Winvalid-pch|not used because/.test(r.out)) {
       log(`[build] aviso: GCC no usó el header precompilado: ${r.out.split(/\r?\n/).find((l) => /pch|gch/i.test(l)) ?? ""}`);

@@ -35,6 +35,7 @@ struct Resume {
   uint64_t trace_hash = 0;
   uint64_t trace_count = 0;
   uint32_t restarts = 0;            // reinicios acumulados en la sesión
+  int64_t systime_base_us = 0;      // hora del sistema del ESP32 (sigue tras el reinicio)
   std::vector<uint32_t> applied;    // índices de eventos .stim ya aplicados
   std::vector<uint8_t> warm;        // estado tibio de la placa
 };

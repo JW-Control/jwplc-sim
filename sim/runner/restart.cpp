@@ -17,10 +17,12 @@
 
 #include "jwsim/models/persist.h"
 
+extern "C" int64_t jwsim_systime_base(void);
+
 namespace jwsim::runner {
 namespace {
 
-constexpr uint32_t kVersion = 1;
+constexpr uint32_t kVersion = 2;
 
 [[noreturn]] void fail(const std::string &msg) {
   std::fprintf(stderr, "[jwsim] reinicio: %s\n", msg.c_str());
@@ -66,6 +68,7 @@ Resume read_resume(const std::string &path) {
   out.trace_hash = r.u64();
   out.trace_count = r.u64();
   out.restarts = r.u32();
+  out.systime_base_us = static_cast<int64_t>(r.u64());
   const uint32_t n = r.u32();
   for (uint32_t i = 0; i < n && r.ok(); ++i) out.applied.push_back(r.u32());
   const uint32_t warm = r.u32();
@@ -118,6 +121,7 @@ std::string prepare_restart(jwsim::boards::JwplcBasic &board, std::string &state
   w.u64(jwsim_trace_hash());
   w.u64(jwsim_trace_count());
   w.u32(restarts + 1);
+  w.u64(static_cast<uint64_t>(jwsim_systime_base()));
   w.u32(static_cast<uint32_t>(applied.size()));
   for (uint32_t i : applied) w.u32(i);
   w.u32(static_cast<uint32_t>(warm.data().size()));

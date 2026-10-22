@@ -41,6 +41,7 @@
 extern "C" void app_main(void);
 extern "C" void jwsim_seed_random(uint64_t seed);
 extern "C" void jwsim_set_reset_reason(int reason);
+extern "C" void jwsim_systime_set_base(int64_t base_us);
 
 namespace {
 
@@ -187,6 +188,7 @@ int main(int argc, char **argv) {
     resume = jwsim::runner::read_resume(resume_file);
     jwsim_set_boot(resume.boot, resume.trace_hash, resume.trace_count);
     jwsim_set_reset_reason(3);   // ESP_RST_SW
+    jwsim_systime_set_base(resume.systime_base_us);   // el RTC del ESP32 sigue contando
     rtc_mode.clear();            // el RTC tiene batería: no se vuelve a fijar
   }
   // El generador de números aleatorios no repite la secuencia en cada
@@ -244,6 +246,15 @@ int main(int argc, char **argv) {
       usage("--rtc admite 'host' o 'fijo:AAAA-MM-DDTHH:MM:SS'");
     }
   }
+  // Zona horaria del firmware: la del ESP32 por defecto (UTC), no la de la
+  // PC; un setenv("TZ", ...) + tzset() del sketch la cambia como en la placa.
+#if defined(_WIN32)
+  _putenv_s("TZ", "UTC0");
+  _tzset();
+#else
+  setenv("TZ", "UTC0", 1);
+  tzset();
+#endif
   // Capturas en instantes dados: eventos externos (no cambian la traza).
   for (auto &shot : shots) {
     if (shot.when < jwsim_boot_ns()) continue;
