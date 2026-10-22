@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Gates de G3 en Windows (windows-latest, x64), con el gdb del toolchain
+# incluido (WinLibs). Solo a pedido. Resultados en el artefacto "gates-g3-windows".
+name: G3 en Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  g3:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package y toolchain fijados
+        run: |
+          node scripts/fetch-package.mjs
+          node scripts/fetch-toolchain.mjs
+
+      - name: gdb del toolchain (DAP necesita Python)
+        run: |
+          $bin = node scripts/fetch-toolchain.mjs --print
+          & "$bin/gdb.exe" --version
+          & "$bin/gdb.exe" -nx -batch -ex "python print('python ok')"
+
+      - name: JWSIM_G3_BREAKPOINTS_STEP y JWSIM_G3_FREEZE_TIME
+        if: ${{ !cancelled() }}
+        run: node scripts/gate-g3-debug.mjs
+
+      - name: JWSIM_G3_RECORD_REPLAY
+        if: ${{ !cancelled() }}
+        run: node scripts/gate-g3-record-replay.mjs
+
+      - name: Resultados
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-g3-windows
+          path: build/gates
