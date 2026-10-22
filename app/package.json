@@ -9,7 +9,8 @@
   "main": "main.mjs",
   "scripts": {
     "start": "electron .",
-    "test:e2e": "node tests/e2e-g2.mjs"
+    "test:e2e": "node tests/e2e-g2.mjs",
+    "test:e2e:g3": "node tests/e2e-g3.mjs"
   },
   "dependencies": {
     "monaco-editor": "0.57.0"

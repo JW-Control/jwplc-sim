@@ -402,7 +402,9 @@ escaneo hasta ≈67 ms la primera vez (§11 H4).
 - **Grabación/reproducción**: se graban solo las **entradas** con su instante
   virtual (archivo de estímulos `.stim`, mismo formato que acepta el runner);
   reproducir = misma ejecución. La **traza** (hash FNV-1a de cambios de pin,
-  transacciones de bus y bytes de UART) prueba la igualdad.
+  transacciones de bus y bytes de UART) prueba la igualdad. **[G3]** La app
+  graba la sesión interactiva (entradas, pulsos y forzados) y la reproduce
+  comparando el hash (§7.1).
 
 ### 6.6 Sincronización con el motor de escena
 
@@ -490,6 +492,61 @@ todo mensaje lleva `t_ns` virtual; el runner nunca bloquea esperando a la UI
 salvo en `horizon`. La depuración (G3) usa DAP: el main lanza GDB/LLDB
 nativo contra el runner y actúa de proxy; pausar en un breakpoint congela el
 tiempo virtual porque el planificador también se detiene.
+
+### 7.1 Depuración, forzado, grabación y analizador **[G3]**
+
+**Depurador.** `gdb -i=dap` (DAP nativo de GDB ≥ 14, con Python; el gdb
+16.3 de WinLibs y el de las distribuciones lo traen) se **adjunta** por pid
+al runner ya lanzado (`app/lib/debug-session.mjs`), así el protocolo por
+stdio queda intacto. La app lanza siempre el runner con `JWSIM_DEBUG=1` (en
+Linux autoriza el ptrace con `PR_SET_PTRACER`, necesario con Yama) y adjunta
+gdb solo cuando hace falta: breakpoints al ejecutar o puestos en caliente,
+"Interrumpir" o variables en la tabla de observación. Al adjuntar envía
+`{"type":"debug","attached":1}`, que suspende el vigilante de tareas
+(`jwsim_watchdog_hold`); el vigilante además ignora los saltos de reloj de
+pared de un proceso detenido. Las unidades del sketch se compilan con `-O0`
+para que las líneas y variables coincidan con el `.ino` (el resto, `-O1`;
+el hash de traza no cambia).
+
+- *Tiempo congelado:* gdb detiene todos los hilos del runner, así que el
+  planificador no avanza; al continuar, el runner detecta el atraso (> 250
+  ms) y se re-sincroniza con el reloj sin "recuperar" el tiempo perdido.
+- *Sin perturbación:* gdb no puede llamar funciones del firmware (`set
+  may-call-functions off`): una llamada como `millis()` correría código del
+  sketch y le cobraría CPU virtual. Depurar no cambia el hash de traza
+  (verificado por el gate).
+- *Observación en vivo:* `DebugSession.sample()` pausa el proceso un
+  instante, evalúa las expresiones y continúa; el tiempo virtual no avanza
+  mientras tanto.
+
+**Forzado.** `force`/`unforce` fijan el nivel de una red (`Net::force`)
+sin importar sus manejadores, como el forzado de un PLC; valen para `I0_k`
+y `Q0_k`. Se aplican como eventos externos en el instante virtual actual y
+quedan en la traza (registro `F`) y en la grabación (`T force NAME=V`,
+`T unforce NAME`).
+
+**Grabación.** Cada entrada aplicada vuelve como `{"type":"input","t_ns",
+"stim"}`; la app acumula la sesión desde t = 0 y, al guardar, pide
+`{"type":"hash"}` (respuesta con `t_ns`, `trace_hash`, `trace_events`) y
+escribe el `.stim` con la cabecera `# fin t_ns=… hash=…`. Reproducir lanza
+el runner con `--stim` y `run` con `until_ns`; al llegar responde
+`{"type":"reached",…}` con el hash, que la app compara con el grabado.
+
+**Analizador de buses.** Con `subscribe buses=1` el runner envía:
+
+| Bus | Ítem |
+|---|---|
+| I2C | `[t_ns, "I2C0", dirección, escritos_hex, leídos_hex, resultado]` (0 OK, 1 NACK de dirección, 2 NACK de datos) |
+| SPI | `[t_ns, "VSPI", chip, mosi_hex, miso_hex, [[índice, dc]...], bytes]`: una transacción por ciclo de CS (`SPIBus::name_chip`: TFT con D/C, SD, FRAM, W5500); hasta 64 bytes de muestra y el total |
+| UART | `[t_ns, "UARTn TX", -1, hex, "", 0, bytes]`: fragmentos separados por 500 µs virtuales de silencio (una trama Modbus RTU por fragmento con la UART instantánea de G3) |
+
+`app/lib/bus-decode.cjs` (el mismo en la app y en el gate) decodifica
+TCA6424A y DS3232M por registro, FRAM (opcodes y dirección), SD (comandos,
+ACMD, CRC7 y R1), W5500 (bloque, registro, lectura/escritura y Modbus TCP
+dentro de los buffers de socket), ST7789 (comando y datos por D/C, con
+estado entre transacciones) y Modbus RTU (tramas separadas por CRC-16) y
+TCP (MBAP), con función, dirección, valores, excepciones y CRC. Observar
+los buses no cambia la traza.
 
 ## 8. Formato de proyecto `.jwsim` v1
 

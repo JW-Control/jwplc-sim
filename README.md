@@ -45,7 +45,21 @@ F6 pausa. Proyecto → Abrir/Guardar maneja archivos `.jwsim` (sketch,
 vínculos a OpenPLC y HMI, escena). Si edita el sketch con el Arduino IDE, la
 simulación se recarga sola.
 
-Prueba E2E de la interfaz: `cd app && npm run test:e2e` (en Linux sin
+Depuración (G3), con el gdb del toolchain (o el del sistema en Linux):
+
+- **Breakpoints**: clic en el margen del editor o F9. F8 continúa, F10 paso
+  por encima, F11 entra, Mayús+F11 sale, Ctrl+F8 interrumpe. Detenido, el
+  tiempo virtual no avanza; la pestaña Depuración muestra la pila y las
+  variables.
+- **Observación**: E/S y variables del sketch en vivo; forzado de entradas y
+  salidas (marca "F" en la placa).
+- **Grabación**: toda la sesión (entradas y forzados) se guarda como `.stim`
+  con su hash; Simulación → Reproducir grabación la repite y compara el hash.
+- **Buses**: I2C por registro, SPI por CS (TFT, SD, FRAM, W5500), UART y
+  Modbus RTU/TCP con CRC, con filtro por tipo.
+
+Pruebas E2E de la interfaz: `cd app && npm run test:e2e` (G2) y
+`npm run test:e2e:g3` (G3) (en Linux sin
 pantalla, `xvfb-run -a npm run test:e2e`).
 
 ## Documentación
