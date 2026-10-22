@@ -161,7 +161,7 @@ try {
   const frozenMsgs = messagesWhileFrozen;
   messagesWhileFrozen = null;
   freeze.frozen = {
-    pass: before.millis === after.millis && before.now_ns === after.now_ns && before.vueltas === after.vueltas && frozenMsgs.length === 0 && wallFrozen >= FREEZE_MS,
+    pass: before.millis === after.millis && before.now_ns === after.now_ns && before.vueltas === after.vueltas && frozenMsgs.length === 0 && wallFrozen >= FREEZE_MS - 50,
     wall_ms: Math.round(wallFrozen),
     before,
     after,

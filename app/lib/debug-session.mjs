@@ -43,11 +43,11 @@ export class DebugSession extends EventEmitter {
       // La detención propia del attach no es un breakpoint del usuario, ni la
       // vuelta de una llamada a función hecha al evaluar.
       if (!this.started || b.reason === "function call") return;
-      // Una pausa pedida llega como "pause" (SIGINT, Linux) o como "signal"
-      // (SIGTRAP de DebugBreakProcess en Windows, en un hilo inyectado que
-      // no es el del firmware: se sigue mirando el hilo principal).
+      // Una pausa pedida llega como "pause" (SIGINT, Linux) o, en Windows,
+      // como "stopped" o "signal" (DebugBreakProcess, en un hilo inyectado
+      // que no es el del firmware: se sigue mirando el hilo principal).
       let reason = b.reason;
-      if (this.pauseRequested && (reason === "pause" || reason === "signal")) {
+      if (this.pauseRequested && ["pause", "signal", "stopped"].includes(reason)) {
         reason = "pause";
       } else if (reason === "signal" && (await this.#spuriousTrap())) {
         // En Windows, tras continuar de una pausa puede llegar otro SIGTRAP del
