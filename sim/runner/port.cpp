@@ -10,6 +10,9 @@
 //                 {"type":"force","signal":"Q0_1","value":1} · {"type":"unforce","signal":"Q0_1"}
 //                 {"type":"subscribe","buses":1|0} · {"type":"quit"}
 //                 {"type":"debug","attached":1|0} (gdb adjunto: sin vigilante)
+//                 {"type":"hash"} → {"type":"hash","t_ns","trace_hash","trace_events"}
+//                 "run" con "until_ns": corre hasta ese instante, pausa y
+//                 responde {"type":"reached",...} con el hash (reproducción)
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
@@ -295,6 +298,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
   std::deque<InputEvent> inputs;  // direcciones estables para los eventos
 
   bool running = false;
+  jwsim_ns_t until = 0;  // 0 = sin límite
   double speed = 1.0;  // 0 = sin sincronizar con el reloj de pared
   jwsim_ns_t base_t = jwsim_now();
   Clock::time_point base_wall = Clock::now();
@@ -344,10 +348,18 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     }
   };
 
+  auto hash_json = [&](const char *type) {
+    char hash[24];
+    std::snprintf(hash, sizeof(hash), "0x%016llx", static_cast<unsigned long long>(jwsim_trace_hash()));
+    return std::string("{\"type\":\"") + type + "\",\"t_ns\":" + std::to_string(jwsim_now()) + ",\"trace_hash\":\"" +
+           hash + "\",\"trace_events\":" + std::to_string(jwsim_trace_count());
+  };
+
   auto handle = [&](const Fields &f) {
     const auto type = f.count("type") ? f.at("type") : std::string();
     if (type == "run") {
       if (f.count("speed")) speed = std::max(0.0, std::atof(f.at("speed").c_str()));
+      if (f.count("until_ns")) until = static_cast<jwsim_ns_t>(std::strtoull(f.at("until_ns").c_str(), nullptr, 10));
       running = true;
       base_t = jwsim_now();
       base_wall = Clock::now();
@@ -378,6 +390,9 @@ int run_port(jwsim::boards::JwplcBasic &board) {
         bus_count = bus_dropped = 0;
         for (auto &u : uart_bus) u.clear();
       }
+    } else if (type == "hash") {
+      flush(true);
+      send_json(hash_json("hash") + "}");
     } else if (type == "debug") {
       // La interfaz adjuntó (1) o soltó (0) el depurador.
       jwsim_watchdog_hold(f.count("attached") && f.at("attached") == "1");
@@ -405,7 +420,15 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     // costo por tramo; los comandos se atienden igual cada ≤ 10 ms virtuales).
     const jwsim_ns_t step = speed > 0.0 ? JWSIM_NS_PER_MS : 10 * JWSIM_NS_PER_MS;
     jwsim_run_limits lim{jwsim_now() + step};
+    if (until && lim.until_ns > until) lim.until_ns = until;
     jwsim_run(&lim);
+    if (until && jwsim_now() >= until) {
+      until = 0;
+      running = false;
+      flush(true);
+      send_json(hash_json("reached") + "}");
+      continue;
+    }
     if (speed > 0.0) {
       const auto target = base_wall + std::chrono::nanoseconds(static_cast<int64_t>((jwsim_now() - base_t) / speed));
       // Si el host no da abasto, no se acumula atraso infinito.
@@ -419,10 +442,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     flush(false);
   }
   flush(true);
-  char hash[24];
-  std::snprintf(hash, sizeof(hash), "0x%016llx", static_cast<unsigned long long>(jwsim_trace_hash()));
-  send_json("{\"type\":\"stopped\",\"reason\":\"quit\",\"t_ns\":" + std::to_string(jwsim_now()) +
-            ",\"trace_hash\":\"" + hash + "\",\"trace_events\":" + std::to_string(jwsim_trace_count()) + "}");
+  send_json(hash_json("stopped") + ",\"reason\":\"quit\"}");
   return 0;
 }
 

@@ -58,6 +58,23 @@ async function session(exe, speed) {
   return { recorded, stopped };
 }
 
+// Reproducción como en la app: runner en modo protocolo con --stim y
+// "run" con until_ns; responde "reached" con el hash al llegar.
+async function replayPort(exe, stim, untilNs) {
+  const r = new RunnerProcess();
+  let reached = null;
+  r.on("message", (m) => {
+    if (m.type === "reached") reached = m;
+  });
+  const exited = new Promise((res) => r.on("exit", res));
+  r.start(exe, ["--stim", stim]);
+  r.send({ type: "run", speed: 0, until_ns: untilNs });
+  for (let i = 0; i < 600 && !reached; i++) await sleep(50);
+  r.send({ type: "quit" });
+  await exited;
+  return reached;
+}
+
 const { exe } = await buildSketch(join(ROOT, "tests", "sketches", "start_stop_8io"), { target, log: () => {} });
 const criteria = {};
 for (const [label, speed] of [["max", 0], ["x10", 10]]) {
@@ -70,12 +87,18 @@ for (const [label, speed] of [["max", 0], ["x10", 10]]) {
   writeFileSync(stim, lines.join("\n") + "\n");
   const until = (stopped.t_ns / 1e6).toFixed(6);
   const replay = parseResult(runExe(exe, ["--stim", stim, "--until", until, "--quiet"]).stdout);
+  const reached = await replayPort(exe, stim, stopped.t_ns);
   criteria[`replay_${label}`] = {
-    pass: recorded.length === SCRIPT.filter(([, m]) => m && /set|force/.test(m.type)).length && replay?.trace_hash === stopped.trace_hash,
+    pass:
+      recorded.length === SCRIPT.filter(([, m]) => m && /set|force/.test(m.type)).length &&
+      replay?.trace_hash === stopped.trace_hash &&
+      reached?.trace_hash === stopped.trace_hash &&
+      reached?.t_ns === stopped.t_ns,
     inputs_recorded: recorded.length,
     t_end_ms: Number(until),
     session_hash: stopped.trace_hash,
     replay_hash: replay?.trace_hash,
+    port_replay_hash: reached?.trace_hash,
     stim,
   };
 }
