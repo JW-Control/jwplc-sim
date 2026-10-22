@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Gates de G4 en Windows (windows-latest, x64), con el toolchain incluido
+# (WinLibs). Solo a pedido. Resultados en el artefacto "gates-g4-windows".
+name: G4 en Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  g4:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package y toolchain fijados
+        run: |
+          node scripts/fetch-package.mjs
+          node scripts/fetch-toolchain.mjs
+
+      - name: Tests de los modelos
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
+        run: node scripts/test-models.mjs
+
+      - name: JWSIM_G4_FRAM_PERSIST
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
+        run: node scripts/gate-g4-fram.mjs
+
+      - name: JWSIM_G4_RTC_DS3232M
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
+        run: node scripts/gate-g4-rtc.mjs
+
+      - name: JWSIM_G4_TFT_HMI
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        run: node scripts/gate-g4-tft.mjs
+
+      - name: JWSIM_G4_NVS_PREFERENCES
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-nvs.mjs
+
+      - name: JWSIM_G4_HAL_EXTRAS
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-hal-extras.mjs
+
+      - name: JWSIM_G4_SD_DATALOG
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-sd.mjs
+
+      - name: JWSIM_G4_RS485_MULTINODE
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g4-rs485.mjs
+
+      - name: JWSIM_G3_BUS_ANALYZER (capturas con los modelos de G4)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g3-bus-analyzer.mjs
+
+      - name: Dependencias de la app
+        if: ${{ !cancelled() }}
+        working-directory: app
+        run: npm ci
+
+      - name: E2E de G4 (Electron)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        working-directory: app
+        run: node tests/e2e-g4.mjs
+
+      - name: Resultados
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-g4-windows
+          path: build/gates
