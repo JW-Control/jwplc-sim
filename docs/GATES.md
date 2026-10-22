@@ -14,7 +14,8 @@ Convenciones:
 - "Determinista" = N corridas con los mismos estímulos producen el mismo
   `trace_hash` (línea `JWSIM_RESULT` del runner).
 - Tiempos "virtuales" se miden con el reloj del simulador; "de pared", con el
-  reloj del host de CI (Windows 11 x64, 4 núcleos, de referencia).
+  reloj del host de CI de referencia: GitHub Actions `windows-latest` (x64),
+  workflow `.github/workflows/g2-windows.yml`.
 
 ## Estado actual
 
@@ -27,12 +28,12 @@ JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS
 JWSIM_G1_PACKAGE_EXAMPLES_IO=PENDING (tablas de verdad PASS; calibración requiere medición en placa)
-JWSIM_G2_SPLIT_UI=PENDING           (criterios PASS en Linux: arranque 1,0 s, pestaña Buses; falta corrida en Windows 11)
-JWSIM_G2_LOCAL_COMPILE=PENDING      (PASS en Linux y destino Windows: incremental 0,4/0,7 s, sin red, prototipos; falta la corrida en Windows 11)
+JWSIM_G2_SPLIT_UI=PASS              (Windows CI: arranque 2,6 s; pestañas Sketch, Placa, Consola, Buses)
+JWSIM_G2_LOCAL_COMPILE=PASS         (Windows CI: incremental 1,2 s; toolchain incluido; prototipos)
 JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
 JWSIM_G2_UNSUPPORTED_LIB_MSG=PASS   (10 familias; mensaje con API y gate)
 JWSIM_G2_PROJECT_LINKING=PASS       (esquema jwsim-1, migración v0 → v1)
-JWSIM_G2_EXTERNAL_EDIT_RELOAD=PENDING (PASS en Linux: recarga 0,44–0,56 s con la escena; falta Windows 11)
+JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI: recarga 1,86 s con la escena)
 JWSIM_G3_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 

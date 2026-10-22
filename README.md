@@ -6,7 +6,7 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0 y G1 cerrados (salvo calibración contra placa) · G2: 3 gates PASS, 3 a la espera de la corrida en Windows 11
+Estado: G0, G1 y G2 cerrados (G1 salvo la calibración contra placa) · siguiente: G3 (depuración)
 Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
 ```
 
