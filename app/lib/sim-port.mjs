@@ -52,8 +52,10 @@ export const RESTART_EXIT_CODE = 75;
 
 export class RunnerProcess extends EventEmitter {
   // env: variables extra para el proceso (p. ej. JWSIM_DEBUG para depurar).
-  start(exe, args = [], { env, onRestart } = {}) {
+  // launcher: programa que ejecuta el runner (wine para un .exe en Linux).
+  start(exe, args = [], { env, onRestart, launcher } = {}) {
     this.exe = exe;
+    this.launcher = launcher;
     this.args = args;
     this.env = env;
     this.onRestart = onRestart;
@@ -64,7 +66,8 @@ export class RunnerProcess extends EventEmitter {
     return this;
   }
   #spawn(args) {
-    const child = spawn(this.exe, ["--port", "stdio", ...args], {
+    const cmd = this.launcher ? [this.launcher, this.exe] : [this.exe];
+    const child = spawn(cmd[0], [...cmd.slice(1), "--port", "stdio", ...args], {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       env: this.env ? { ...process.env, ...this.env } : process.env,

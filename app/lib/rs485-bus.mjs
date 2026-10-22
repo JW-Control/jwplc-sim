@@ -42,7 +42,7 @@ export class Rs485Bus extends EventEmitter {
     return Math.round((10 * 1e9) / this.baud);
   }
 
-  addNode(name, exe, args = [], { env } = {}) {
+  addNode(name, exe, args = [], { env, launcher } = {}) {
     const proc = new RunnerProcess();
     const node = { name, proc, tx: [], console: "", hash: null, exited: null, waiter: null };
     proc.on("message", (m) => {
@@ -61,7 +61,7 @@ export class Rs485Bus extends EventEmitter {
       node.exited = info;
       node.waiter?.(null);
     });
-    proc.start(exe, args, { env });
+    proc.start(exe, args, { env, launcher });
     proc.send({ type: "rs485", port: this.port, on: 1 });
     this.nodes.push(node);
     return node;

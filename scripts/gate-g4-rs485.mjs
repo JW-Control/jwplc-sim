@@ -44,7 +44,7 @@ const exes = {
 const node = (bus, name, exe, dir) => {
   mkdirSync(dir, { recursive: true });
   return exe.endsWith(".exe") && process.platform !== "win32"
-    ? bus.addNode(name, WINE, [exe, "--state", `Z:${dir.replaceAll("/", "\\")}`], { env: { WINEDEBUG: "-all" } })
+    ? bus.addNode(name, exe, ["--state", `Z:${dir.replaceAll("/", "\\")}`], { env: { WINEDEBUG: "-all" }, launcher: WINE })
     : bus.addNode(name, exe, ["--state", dir]);
 };
 
