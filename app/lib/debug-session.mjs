@@ -40,20 +40,30 @@ export class DebugSession extends EventEmitter {
       this.emit("continued");
     });
     dap.on("stopped", async (b) => {
-      if (b.threadId && this.started) this.threadId = b.threadId;
       // La detención propia del attach no es un breakpoint del usuario.
       if (!this.started) return;
+      // Una pausa pedida llega como "pause" (SIGINT, Linux) o como "signal"
+      // (SIGTRAP de DebugBreakProcess en Windows, en un hilo inyectado que
+      // no es el del firmware: se sigue mirando el hilo principal).
+      let reason = b.reason;
+      if (this.pauseRequested && (reason === "pause" || reason === "signal")) {
+        reason = "pause";
+      } else if (b.threadId) {
+        this.threadId = b.threadId;
+      }
+      this.pauseRequested = false;
+      if (reason === "pause") this.threadId = this.mainThreadId ?? this.threadId;
       if (this.sampleWaiter) {
         const w = this.sampleWaiter;
         this.sampleWaiter = null;
-        w(b.reason);
+        w(reason);
         // La pausa de un muestreo no se informa; un breakpoint que llegó
         // antes que la pausa, sí.
-        if (b.reason === "pause") return;
+        if (reason === "pause") return;
       }
       this.stoppedNow = true;
       const frame = await this.topFrame().catch(() => null);
-      this.emit("stopped", { reason: b.reason, frame });
+      this.emit("stopped", { reason, frame });
     });
     const initialized = dap.waitEvent("initialized");
     await dap.request("initialize", { adapterID: "gdb", clientID: "jwplc-sim", linesStartAt1: true, columnsStartAt1: true, pathFormat: "path" });
@@ -74,6 +84,7 @@ export class DebugSession extends EventEmitter {
     // El hilo principal del runner (planificador y fibras del firmware) es el
     // primero que creó el proceso: el de número menor en gdb.
     this.threadId = threads.length ? Math.min(...threads.map((t) => t.id)) : 1;
+    this.mainThreadId = this.threadId;
     this.started = true;
     await this.continue();
     return verified;
@@ -92,6 +103,7 @@ export class DebugSession extends EventEmitter {
     this.sampling = true;
     try {
       const reason = new Promise((resolve) => (this.sampleWaiter = resolve));
+      this.pauseRequested = true;
       await this.dap.request("pause", { threadId: this.threadId });
       const why = await Promise.race([reason, new Promise((r) => setTimeout(() => r(null), 3000))]);
       this.sampleWaiter = null;
@@ -158,6 +170,7 @@ export class DebugSession extends EventEmitter {
     return this.#step("stepOut");
   }
   pause() {
+    this.pauseRequested = true;
     return this.dap.request("pause", { threadId: this.threadId });
   }
 

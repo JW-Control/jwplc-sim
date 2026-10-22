@@ -76,7 +76,10 @@ await win.waitForSelector(".tab.active:has-text('g3_debug.ino')", { timeout: 100
 // ---- BREAKPOINTS_STEP
 log(`breakpoint en la línea ${marks.loop}; compilando g3_debug`);
 await t(([n, l]) => window.jwsimTest.toggleBreakpoint(n, l), ["g3_debug.ino", marks.loop]);
-const glyph = await win.waitForSelector(".bp-glyph", { timeout: 5000 }).then(() => true, () => false);
+// La marca en el margen (y que el breakpoint quede registrado en el editor).
+const glyph =
+  (await win.waitForSelector(".bp-glyph", { timeout: 10000 }).then(() => true, () => false)) &&
+  (await t((n) => window.jwsimTest.breakpoints(n), "g3_debug.ino")).includes(marks.loop);
 await win.click("#btn-run");
 const hit = await waitStatus("break", 600000);
 const l1 = await line();
@@ -103,6 +106,7 @@ criteria.BREAKPOINTS_STEP = {
     /doble/.test(f3 ?? "") &&
     l3?.line === marks.doble &&
     vars3.some((v) => /^\s*x = 1\b/.test(v.replace(/[▸▾]/g, ""))) &&
+    !vars3.some((v) => /^\s*A13 = /.test(v)) &&
     /loop/.test(f4 ?? "") &&
     l4?.line === marks.llamada,
   glyph,

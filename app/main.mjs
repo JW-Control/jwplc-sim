@@ -357,7 +357,10 @@ ipcMain.handle("dbg:stack", () => debug?.stack() ?? []);
 ipcMain.handle("dbg:scopes", async (_e, frameId) => {
   if (!debug) return [];
   const scopes = await debug.scopes(frameId);
-  return Promise.all(scopes.map(async (sc) => ({ ...sc, vars: await debug.variables(sc.ref) })));
+  // Argumentos y locales se muestran abiertos; otros ámbitos (gdb 16 agrega
+  // uno con todas las globales y constantes del programa) se cargan al abrirlos.
+  const open = (sc) => sc.name === "Arguments" || sc.name === "Locals";
+  return Promise.all(scopes.map(async (sc) => ({ ...sc, lazy: !open(sc), vars: open(sc) ? await debug.variables(sc.ref) : [] })));
 });
 ipcMain.handle("dbg:variables", (_e, ref) => debug?.variables(ref) ?? []);
 ipcMain.handle("dbg:evaluate", async (_e, { expressions, frameId }) => {

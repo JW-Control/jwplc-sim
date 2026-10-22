@@ -495,10 +495,16 @@ async function selectFrame(f) {
   const box = $("dbg-vars");
   box.textContent = "";
   try {
+    const names = { Locals: "Locales", Arguments: "Argumentos", Globals: "Globales", Static: "Estáticas" };
     for (const sc of await api.dbgScopes(f.id)) {
+      if (sc.lazy) {
+        // Ámbito grande (p. ej. globales): plegado hasta que se abra.
+        box.appendChild(varNode({ name: names[sc.name] ?? sc.name, value: "", type: "", ref: sc.ref }, 0, true));
+        continue;
+      }
       const head = document.createElement("div");
       head.className = "node scope";
-      head.textContent = sc.name === "Locals" ? "Locales" : sc.name === "Arguments" ? "Argumentos" : sc.name;
+      head.textContent = names[sc.name] ?? sc.name;
       box.appendChild(head);
       for (const v of sc.vars) box.appendChild(varNode(v, 1));
       if (!sc.vars.length) head.textContent += " (vacío)";
@@ -510,7 +516,7 @@ async function selectFrame(f) {
   await refreshWatchValues();
 }
 
-function varNode(v, depth) {
+function varNode(v, depth, isScope = false) {
   const wrap = document.createElement("div");
   const row = document.createElement("div");
   row.className = "node";
@@ -523,7 +529,8 @@ function varNode(v, depth) {
   name.textContent = v.name;
   const val = document.createElement("span");
   val.className = "val";
-  val.textContent = ` = ${v.value}`;
+  val.textContent = isScope ? "" : ` = ${v.value}`;
+  if (isScope) name.className = "scope";
   const type = document.createElement("span");
   type.className = "type";
   type.textContent = v.type;
