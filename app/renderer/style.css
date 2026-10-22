@@ -562,6 +562,26 @@ button.io.on {
   color: #4a525b;
   align-self: start;
 }
+.sd-slot {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #4a525b;
+  background: #c9ced4;
+  border: 1px dashed #7d858e;
+  border-radius: 3px;
+}
+.sd-slot.on {
+  color: #e7ebef;
+  background: linear-gradient(180deg, #3a4048, #262a2f);
+  border: 1px solid #1a1d21;
+}
+.sd-slot:hover:not(:disabled) {
+  border-color: var(--accent);
+}
 .led-sm {
   width: 9px;
   height: 9px;

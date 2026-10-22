@@ -131,7 +131,7 @@ function setStatus(kind, text) {
   $("led-pwr").classList.toggle("on", live);
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
-  for (const b of document.querySelectorAll("#inputs .io, #keypad .key")) b.disabled = !live;
+  for (const b of document.querySelectorAll("#inputs .io, #keypad .key, #sd-slot")) b.disabled = !live;
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
   $("btn-dbg-pause").disabled = kind !== "running";
   $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
@@ -227,6 +227,10 @@ function wireKeypad() {
     k.addEventListener("pointerup", up);
     k.addEventListener("pointercancel", up);
   }
+  // Zócalo microSD: quitar o poner la tarjeta (señal SD_CARD, se graba).
+  $("sd-slot").addEventListener("click", () => {
+    if (["running", "paused", "break"].includes(state.sim)) setInput("SD_CARD", !state.levels.get("SD_CARD"));
+  });
   const tft = $("tft");
   tft.addEventListener("keydown", (e) => {
     const sig = KEYMAP[e.key];
@@ -247,13 +251,15 @@ function setInput(signal, value) {
 }
 
 function renderSignal(name, level) {
-  const el = document.querySelector(`.io[data-signal="${name}"], .key[data-btn="${name}"]`);
+  const el = document.querySelector(`.io[data-signal="${name}"], .key[data-btn="${name}"], #sd-slot[data-signal="${name}"]`);
   if (el) el.classList.toggle("on", !!level);
+  if (name === "SD_CARD") $("sd-slot").title = level ? "microSD insertada: clic para quitarla" : "Sin tarjeta: clic para insertarla";
 }
 
 function resetBoard() {
   state.levels.clear();
   for (const el of document.querySelectorAll(".io, .key")) el.classList.remove("on");
+  $("sd-slot").classList.add("on");   // la placa arranca con la tarjeta puesta
   clearDisplay();
 }
 
