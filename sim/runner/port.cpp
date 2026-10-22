@@ -67,6 +67,10 @@ constexpr int kProtocolVersion = 1;
 constexpr auto kFlushPeriod = std::chrono::milliseconds(20);
 constexpr size_t kBusMaxItems = 400;  // por envío; el resto se cuenta como descartado
 constexpr size_t kBusMaxUartBytes = 256;
+constexpr size_t kBusMaxSpiBytes = 64;
+// Silencio que separa dos fragmentos de UART (tramas Modbus RTU incluidas:
+// con la UART instantánea de G3, los bytes de una trama llegan juntos).
+constexpr jwsim_ns_t kUartGapNs = 500 * JWSIM_NS_PER_US;
 
 std::string hex(const uint8_t *data, size_t len) {
   static const char *digits = "0123456789abcdef";
@@ -260,6 +264,8 @@ int run_port(jwsim::boards::JwplcBasic &board) {
   size_t bus_count = 0;
   size_t bus_dropped = 0;
   std::string uart_bus[3];
+  jwsim_ns_t uart_t0[3] = {0, 0, 0};
+  jwsim_ns_t uart_last[3] = {0, 0, 0};
   auto bus_item = [&](const std::string &item) {
     if (bus_count >= kBusMaxItems) {
       ++bus_dropped;
@@ -268,10 +274,38 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     if (bus_count++) bus_items.push_back(',');
     bus_items += item;
   };
+  // Fragmento de UART: [t, "UARTn TX", -1, hex, "", 0, bytes].
+  auto uart_item = [&](int p) {
+    if (uart_bus[p].empty()) return;
+    const size_t n = std::min(uart_bus[p].size(), kBusMaxUartBytes);
+    bus_item("[" + std::to_string(uart_t0[p]) + ",\"UART" + std::to_string(p) + " TX\",-1,\"" +
+             hex(reinterpret_cast<const uint8_t *>(uart_bus[p].data()), n) + "\",\"\",0," +
+             std::to_string(uart_bus[p].size()) + "]");
+    uart_bus[p].clear();
+  };
   board.set_uart_sink([&](int port, const uint8_t *data, size_t len) {
     serial[port].append(reinterpret_cast<const char *>(data), len);
-    if (bus_on) uart_bus[port].append(reinterpret_cast<const char *>(data), len);
+    if (!bus_on) return;
+    const jwsim_ns_t now = jwsim_now();
+    if (!uart_bus[port].empty() && now - uart_last[port] > kUartGapNs) uart_item(port);
+    if (uart_bus[port].empty()) uart_t0[port] = now;
+    uart_bus[port].append(reinterpret_cast<const char *>(data), len);
+    uart_last[port] = now;
   });
+  // SPI por CS: [t, "VSPI", chip, mosi, miso, [[i,dc]...], bytes].
+  if (jwsim::SPIBus *spi = board.spi_bus(3)) {
+    spi->observe([&](const jwsim::SPIBus &bus, const jwsim::SPITransaction &tr) {
+      const size_t n = std::min(tr.mosi.size(), kBusMaxSpiBytes);
+      std::string dc = "[";
+      for (size_t i = 0; i < tr.dc.size() && tr.dc[i].first < n; ++i) {
+        dc += (i ? ",[" : "[") + std::to_string(tr.dc[i].first) + "," + (tr.dc[i].second ? "1" : "0") + "]";
+      }
+      dc += "]";
+      bus_item("[" + std::to_string(tr.t_start) + "," + quoted(bus.name()) + "," + quoted(tr.chip) + ",\"" +
+               hex(tr.mosi.data(), n) + "\",\"" + hex(tr.miso.data(), n) + "\"," + dc + "," +
+               std::to_string(tr.mosi.size()) + "]");
+    });
+  }
   if (jwsim::I2CBus *i2c = board.i2c_bus(0)) {
     i2c->observe([&](const jwsim::I2CBus &bus, uint8_t addr, const uint8_t *w, size_t wl, const uint8_t *r, size_t rl,
                      jwsim::I2CResult res) {
@@ -323,13 +357,12 @@ int run_port(jwsim::boards::JwplcBasic &board) {
     } else {
       send_json("{\"type\":\"status\",\"t_ns\":" + t + ",\"state\":\"" + (running ? "running" : "paused") + "\"}");
     }
+    // Fragmentos de UART cerrados (sin bytes nuevos desde hace un silencio).
     for (int p = 0; p < 3 && bus_on; ++p) {
-      if (uart_bus[p].empty()) continue;
-      const size_t n = std::min(uart_bus[p].size(), kBusMaxUartBytes);
-      std::string data = hex(reinterpret_cast<const uint8_t *>(uart_bus[p].data()), n);
-      if (uart_bus[p].size() > n) data += " …";
-      bus_item("[" + t + ",\"UART" + std::to_string(p) + " TX\",-1,\"" + data + "\",\"\",0]");
-      uart_bus[p].clear();
+      if (force || jwsim_now() - uart_last[p] > kUartGapNs) uart_item(p);
+    }
+    if (bus_on) {
+      if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->flush_capture();
     }
     if (bus_count || bus_dropped) {
       send_json("{\"type\":\"bus\",\"t_ns\":" + t + ",\"dropped\":" + std::to_string(bus_dropped) + ",\"items\":[" + bus_items + "]}");
@@ -385,6 +418,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
     } else if (type == "subscribe") {
       bus_on = f.count("buses") && (f.at("buses") == "1" || f.at("buses") == "true");
+      if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->set_capture(bus_on);
       if (!bus_on) {
         bus_items.clear();
         bus_count = bus_dropped = 0;
