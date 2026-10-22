@@ -1,0 +1,145 @@
+{
+  "descripcion": "Sintética: inicialización de una tarjeta SD en modo SPI (CMD0, CMD8, CMD55 + ACMD41, CMD58) y lectura de un bloque (CMD17 sin CRC, token 0xFE).",
+  "items": [
+    [
+      1000,
+      "VSPI",
+      "SD",
+      "ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff ff ff ff",
+      [],
+      10
+    ],
+    [
+      2000,
+      "VSPI",
+      "SD",
+      "40 00 00 00 00 95 ff ff",
+      "ff ff ff ff ff ff ff 01",
+      [],
+      8
+    ],
+    [
+      3000,
+      "VSPI",
+      "SD",
+      "48 00 00 01 aa 87 ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff 01 00 00 01 aa",
+      [],
+      12
+    ],
+    [
+      4000,
+      "VSPI",
+      "SD",
+      "77 00 00 00 00 65 ff ff",
+      "ff ff ff ff ff ff ff 01",
+      [],
+      8
+    ],
+    [
+      5000,
+      "VSPI",
+      "SD",
+      "69 40 00 00 00 77 ff ff",
+      "ff ff ff ff ff ff ff 00",
+      [],
+      8
+    ],
+    [
+      6000,
+      "VSPI",
+      "SD",
+      "7a 00 00 00 00 fd ff ff ff ff ff ff",
+      "ff ff ff ff ff ff ff 00 c0 ff 80 00",
+      [],
+      12
+    ],
+    [
+      7000,
+      "VSPI",
+      "SD",
+      "51 00 00 00 00 ff ff ff",
+      "ff ff ff ff ff ff ff 00",
+      [],
+      8
+    ],
+    [
+      8000,
+      "VSPI",
+      "SD",
+      "ff ff ff ff ff ff ff ff",
+      "ff ff fe 01 02 03 04 05",
+      [],
+      8
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "SD",
+      "total": 10
+    },
+    {
+      "cmd": 0,
+      "app": false,
+      "arg": 0,
+      "crc": {
+        "ok": true,
+        "got": 149
+      },
+      "r1": 1
+    },
+    {
+      "cmd": 8,
+      "app": false,
+      "arg": 426,
+      "crc": {
+        "ok": true,
+        "got": 135
+      },
+      "r1": 1
+    },
+    {
+      "cmd": 55,
+      "app": false,
+      "crc": {
+        "ok": true,
+        "got": 101
+      },
+      "r1": 1
+    },
+    {
+      "cmd": 41,
+      "app": true,
+      "arg": 1073741824,
+      "crc": {
+        "ok": true,
+        "got": 119
+      },
+      "r1": 0
+    },
+    {
+      "cmd": 58,
+      "app": false,
+      "crc": {
+        "ok": true,
+        "got": 253
+      },
+      "r1": 0
+    },
+    {
+      "cmd": 17,
+      "app": false,
+      "arg": 0,
+      "crc": {
+        "ok": false,
+        "got": 255
+      },
+      "r1": 0,
+      "level": "ok"
+    },
+    {
+      "token": 254
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "descripcion": "Sintética: tramas Modbus RTU con CRC de los ejemplos de la especificación (petición y respuesta FC03, FC06 con eco, FC16, excepción, FC01) y casos de error.",
+  "items": [
+    [
+      1000,
+      "UART2 TX",
+      -1,
+      "01 03 00 00 00 0a c5 cd",
+      "",
+      0,
+      8
+    ],
+    [
+      2000,
+      "UART2 TX",
+      -1,
+      "01 03 04 00 0a 00 0b 9b f6",
+      "",
+      0,
+      9
+    ],
+    [
+      3000,
+      "UART2 TX",
+      -1,
+      "01 06 00 01 00 03 98 0b 01 06 00 01 00 03 98 0b",
+      "",
+      0,
+      16
+    ],
+    [
+      4000,
+      "UART2 TX",
+      -1,
+      "01 10 00 01 00 02 04 00 0a 01 02 92 30",
+      "",
+      0,
+      13
+    ],
+    [
+      5000,
+      "UART2 TX",
+      -1,
+      "01 10 00 01 00 02 10 08",
+      "",
+      0,
+      8
+    ],
+    [
+      6000,
+      "UART2 TX",
+      -1,
+      "01 83 02 c0 f1",
+      "",
+      0,
+      5
+    ],
+    [
+      7000,
+      "UART2 TX",
+      -1,
+      "01 01 01 05 91 8b",
+      "",
+      0,
+      6
+    ],
+    [
+      8000,
+      "UART2 TX",
+      -1,
+      "01 03 00 00 00 0a c5 ce",
+      "",
+      0,
+      8
+    ],
+    [
+      9000,
+      "UART2 TX",
+      -1,
+      "aa bb",
+      "",
+      0,
+      2
+    ]
+  ],
+  "esperado": [
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 3,
+      "kind": "petición",
+      "start": 0,
+      "qty": 10,
+      "crc": "ok",
+      "level": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 3,
+      "kind": "respuesta",
+      "byteCount": 4,
+      "values": [
+        10,
+        11
+      ],
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 6,
+      "kind": "petición o eco",
+      "address": 1,
+      "value": 3,
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 6,
+      "kind": "petición o eco",
+      "address": 1,
+      "value": 3,
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 16,
+      "kind": "petición",
+      "start": 1,
+      "qty": 2,
+      "byteCount": 4,
+      "values": [
+        10,
+        258
+      ],
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 16,
+      "kind": "respuesta",
+      "start": 1,
+      "qty": 2,
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 3,
+      "kind": "excepción",
+      "exception": 2,
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 1,
+      "kind": "respuesta",
+      "byteCount": 1,
+      "bits": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "crc": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 1,
+      "fn": 3,
+      "kind": "petición",
+      "start": 0,
+      "qty": 10,
+      "crc": "mal",
+      "level": "err"
+    },
+    {
+      "dev": "RS-485",
+      "bytes": [
+        170,
+        187
+      ]
+    }
+  ]
+}

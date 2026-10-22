@@ -1,0 +1,113 @@
+{
+  "descripcion": "Arranque del W5500 por el core (CS GPIO5), incluidos los sondeos de chip del driver.",
+  "fuente": {
+    "sketch": "arbol:libraries/JWPLC_ModbusRTU/examples/02.ModbusRTU_Master_Read",
+    "until_ms": 3500,
+    "filtro": "^VSPI:W5500$",
+    "max": 6
+  },
+  "items": [
+    [
+      1004934500,
+      "VSPI",
+      "W5500",
+      "00 17 04 27 10",
+      "ff ff ff ff ff",
+      [],
+      5
+    ],
+    [
+      1004937600,
+      "VSPI",
+      "W5500",
+      "00 19 04 03",
+      "ff ff ff ff",
+      [],
+      4
+    ],
+    [
+      1004940500,
+      "VSPI",
+      "W5500",
+      "00 00 80 01 80",
+      "ff ff ff ff ff",
+      [],
+      5
+    ],
+    [
+      1004942900,
+      "VSPI",
+      "W5500",
+      "00 00 00 01 00",
+      "ff ff ff ff ff",
+      [],
+      5
+    ],
+    [
+      1005000000,
+      "VSPI",
+      "W5500",
+      "00 00 00 01 00",
+      "ff ff ff ff ff",
+      [],
+      5
+    ],
+    [
+      1006001900,
+      "VSPI",
+      "W5500",
+      "00 00 00 01 00",
+      "ff ff ff ff ff",
+      [],
+      5
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "W5500",
+      "bsb": 0,
+      "write": true,
+      "address": 23,
+      "data": [
+        39,
+        16
+      ]
+    },
+    {
+      "chip": "W5500",
+      "bsb": 0,
+      "write": true,
+      "address": 25,
+      "reg": "RTR",
+      "data": [
+        3
+      ]
+    },
+    {
+      "chip": "W5500",
+      "bsb": 16,
+      "level": "warn"
+    },
+    {
+      "chip": "W5500",
+      "bsb": 0,
+      "write": false,
+      "address": 0,
+      "reg": "MR"
+    },
+    {
+      "chip": "W5500",
+      "bsb": 0,
+      "write": false,
+      "address": 0,
+      "reg": "MR"
+    },
+    {
+      "chip": "W5500",
+      "bsb": 0,
+      "write": false,
+      "address": 0,
+      "reg": "MR"
+    }
+  ]
+}

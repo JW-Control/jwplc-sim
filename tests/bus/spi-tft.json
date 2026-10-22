@@ -1,0 +1,551 @@
+{
+  "descripcion": "Inicialización de la pantalla ST7789 por el core (CS GPIO33, D/C GPIO25).",
+  "fuente": {
+    "sketch": "package:tools/build-speed-benchmark/sketches/02_io_basic",
+    "until_ms": 600,
+    "filtro": "^VSPI:TFT$",
+    "max": 24
+  },
+  "items": [
+    [
+      2724150,
+      "VSPI",
+      "TFT",
+      "00",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      177324750,
+      "VSPI",
+      "TFT",
+      "2a 00 00 00 a9 2b 00 00 01 3f 2c f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8 00 f8",
+      "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          10,
+          0
+        ],
+        [
+          11,
+          1
+        ]
+      ],
+      108811
+    ],
+    [
+      194621200,
+      "VSPI",
+      "TFT",
+      "11",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314000400,
+      "VSPI",
+      "TFT",
+      "13",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314001800,
+      "VSPI",
+      "TFT",
+      "36",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314003200,
+      "VSPI",
+      "TFT",
+      "08",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      314004600,
+      "VSPI",
+      "TFT",
+      "b6",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314006000,
+      "VSPI",
+      "TFT",
+      "0a",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      314007400,
+      "VSPI",
+      "TFT",
+      "82",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      314008800,
+      "VSPI",
+      "TFT",
+      "b0",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314010200,
+      "VSPI",
+      "TFT",
+      "00",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      314011600,
+      "VSPI",
+      "TFT",
+      "e0",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      314013000,
+      "VSPI",
+      "TFT",
+      "3a",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      314014400,
+      "VSPI",
+      "TFT",
+      "55",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324000400,
+      "VSPI",
+      "TFT",
+      "b2",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      324001800,
+      "VSPI",
+      "TFT",
+      "0c",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324003200,
+      "VSPI",
+      "TFT",
+      "0c",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324004600,
+      "VSPI",
+      "TFT",
+      "00",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324006000,
+      "VSPI",
+      "TFT",
+      "33",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324007400,
+      "VSPI",
+      "TFT",
+      "33",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324008800,
+      "VSPI",
+      "TFT",
+      "b7",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      324010200,
+      "VSPI",
+      "TFT",
+      "35",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ],
+    [
+      324011600,
+      "VSPI",
+      "TFT",
+      "bb",
+      "ff",
+      [
+        [
+          0,
+          0
+        ]
+      ],
+      1
+    ],
+    [
+      324013000,
+      "VSPI",
+      "TFT",
+      "28",
+      "ff",
+      [
+        [
+          0,
+          1
+        ]
+      ],
+      1
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "TFT",
+      "commands": [
+        0
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        42,
+        43,
+        44
+      ],
+      "caset": [
+        0,
+        169
+      ],
+      "raset": [
+        0,
+        319
+      ],
+      "ramwrBytes": 108800,
+      "total": 108811
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        17
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        19
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        54
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 54,
+      "data": [
+        8
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        182
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 182,
+      "data": [
+        10
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 182,
+      "data": [
+        130
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        176
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 176,
+      "data": [
+        0
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 176,
+      "data": [
+        224
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        58
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 58,
+      "data": [
+        85
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        178
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 178,
+      "data": [
+        12
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 178,
+      "data": [
+        12
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 178,
+      "data": [
+        0
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 178,
+      "data": [
+        51
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 178,
+      "data": [
+        51
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        183
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 183,
+      "data": [
+        53
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [
+        187
+      ]
+    },
+    {
+      "chip": "TFT",
+      "commands": [],
+      "cmd": 187,
+      "data": [
+        40
+      ]
+    }
+  ]
+}

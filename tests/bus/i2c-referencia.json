@@ -1,0 +1,96 @@
+{
+  "descripcion": "Sintética: lectura de hora del DS3232M (BCD), escritura con autoincremento (AI) en el TCA6424A, NACK de datos y de dirección.",
+  "items": [
+    [
+      1000,
+      "I2C0",
+      104,
+      "00",
+      "30 59 23 04 31 12 25",
+      0
+    ],
+    [
+      2000,
+      "I2C0",
+      34,
+      "84 01 02 03",
+      "",
+      0
+    ],
+    [
+      3000,
+      "I2C0",
+      34,
+      "8c ff",
+      "",
+      0
+    ],
+    [
+      4000,
+      "I2C0",
+      34,
+      "04 55",
+      "",
+      2
+    ],
+    [
+      5000,
+      "I2C0",
+      80,
+      "00",
+      "",
+      1
+    ]
+  ],
+  "esperado": [
+    {
+      "addr": 104,
+      "reg": 0,
+      "regName": "Segundos",
+      "read": [
+        48,
+        89,
+        35,
+        4,
+        49,
+        18,
+        37
+      ],
+      "time": "23:59:30",
+      "date": "31/12/25",
+      "dev": "DS3232M (RTC) @0x68"
+    },
+    {
+      "addr": 34,
+      "reg": 132,
+      "regName": "Salida 0",
+      "write": [
+        132,
+        1,
+        2,
+        3
+      ],
+      "dev": "TCA6424A (E/S) @0x22"
+    },
+    {
+      "addr": 34,
+      "reg": 140,
+      "regName": "Config. 0",
+      "write": [
+        140,
+        255
+      ]
+    },
+    {
+      "addr": 34,
+      "result": 2,
+      "level": "warn"
+    },
+    {
+      "addr": 80,
+      "result": 1,
+      "level": "warn",
+      "dev": "@0x50"
+    }
+  ]
+}

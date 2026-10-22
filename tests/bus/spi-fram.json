@@ -1,0 +1,168 @@
+{
+  "descripcion": "Ciclos WREN/WRITE/WRDI/READ del ejemplo Basic_RW de JW_FRAM (CS GPIO13).",
+  "fuente": {
+    "sketch": "arbol:libraries/JW_FRAM/examples/Basic_RW",
+    "until_ms": 1500,
+    "filtro": "^VSPI:FRAM$",
+    "max": 10
+  },
+  "items": [
+    [
+      586392050,
+      "VSPI",
+      "FRAM",
+      "06",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586401150,
+      "VSPI",
+      "FRAM",
+      "02 00 00 64 00 00 00",
+      "ff ff ff ff ff ff ff",
+      [],
+      7
+    ],
+    [
+      586458350,
+      "VSPI",
+      "FRAM",
+      "04",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586467450,
+      "VSPI",
+      "FRAM",
+      "06",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586476550,
+      "VSPI",
+      "FRAM",
+      "02 00 08 19 04 9e 3f",
+      "ff ff ff ff ff ff ff",
+      [],
+      7
+    ],
+    [
+      586533750,
+      "VSPI",
+      "FRAM",
+      "04",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586542850,
+      "VSPI",
+      "FRAM",
+      "06",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586551950,
+      "VSPI",
+      "FRAM",
+      "02 00 10 01",
+      "ff ff ff ff",
+      [],
+      4
+    ],
+    [
+      586585150,
+      "VSPI",
+      "FRAM",
+      "04",
+      "ff",
+      [],
+      1
+    ],
+    [
+      586594250,
+      "VSPI",
+      "FRAM",
+      "03 00 00 ff ff ff ff",
+      "ff ff ff ff ff ff ff",
+      [],
+      7
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "FRAM",
+      "op": "WREN"
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRITE",
+      "address": 0,
+      "data": [
+        100,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRDI"
+    },
+    {
+      "chip": "FRAM",
+      "op": "WREN"
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRITE",
+      "address": 8,
+      "data": [
+        25,
+        4,
+        158,
+        63
+      ]
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRDI"
+    },
+    {
+      "chip": "FRAM",
+      "op": "WREN"
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRITE",
+      "address": 16,
+      "data": [
+        1
+      ]
+    },
+    {
+      "chip": "FRAM",
+      "op": "WRDI"
+    },
+    {
+      "chip": "FRAM",
+      "op": "READ",
+      "address": 0,
+      "data": [
+        255,
+        255,
+        255,
+        255
+      ]
+    }
+  ]
+}

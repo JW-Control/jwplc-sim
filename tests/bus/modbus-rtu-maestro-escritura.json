@@ -1,0 +1,30 @@
+{
+  "descripcion": "Peticiones FC06 del ejemplo 03.ModbusRTU_Master_Write del package por RS-485 (UART2).",
+  "fuente": {
+    "sketch": "arbol:libraries/JWPLC_ModbusRTU/examples/03.ModbusRTU_Master_Write",
+    "until_ms": 3500,
+    "filtro": "^UART2"
+  },
+  "items": [
+    [
+      1000000900,
+      "UART2 TX",
+      -1,
+      "02 06 00 01 00 01 19 f9",
+      "",
+      0,
+      8
+    ]
+  ],
+  "esperado": [
+    {
+      "proto": "Modbus RTU",
+      "slave": 2,
+      "fn": 6,
+      "kind": "petición o eco",
+      "address": 1,
+      "value": 1,
+      "crc": "ok"
+    }
+  ]
+}

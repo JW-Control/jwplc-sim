@@ -1,0 +1,136 @@
+{
+  "descripcion": "Sintética: Modbus TCP (MBAP + PDU, ejemplos de la especificación) dentro de los buffers del socket 0 del W5500, como lo verá el analizador con el modelo W5500 de G4.",
+  "items": [
+    [
+      1000,
+      "VSPI",
+      "W5500",
+      "00 01 0c 01",
+      "ff ff ff ff",
+      [],
+      4
+    ],
+    [
+      2000,
+      "VSPI",
+      "W5500",
+      "00 00 18 ff ff ff ff ff ff ff ff ff ff ff ff",
+      "ff ff ff 00 01 00 00 00 06 01 03 00 00 00 0a",
+      [],
+      15
+    ],
+    [
+      3000,
+      "VSPI",
+      "W5500",
+      "00 00 14 00 01 00 00 00 07 01 03 04 00 0a 00 0b",
+      "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      16
+    ],
+    [
+      4000,
+      "VSPI",
+      "W5500",
+      "00 0c 14 00 02 00 00 00 03 01 83 02",
+      "ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      12
+    ],
+    [
+      5000,
+      "VSPI",
+      "W5500",
+      "00 18 14 00 03 00 00 00 09 01 0f 00 13 00 0a 02 cd 01",
+      "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+      [],
+      18
+    ],
+    [
+      6000,
+      "VSPI",
+      "W5500",
+      "00 24 14 47 45 54 20 2f",
+      "ff ff ff ff ff ff ff ff",
+      [],
+      8
+    ]
+  ],
+  "esperado": [
+    {
+      "chip": "W5500",
+      "bsb": 1,
+      "write": true,
+      "reg": "Sn_CR",
+      "data": [
+        1
+      ]
+    },
+    {
+      "chip": "W5500",
+      "bsb": 3,
+      "write": false,
+      "modbus": {
+        "tid": 1,
+        "unit": 1,
+        "fn": 3,
+        "kind": "petición",
+        "start": 0,
+        "qty": 10
+      }
+    },
+    {
+      "chip": "W5500",
+      "bsb": 2,
+      "write": true,
+      "modbus": {
+        "tid": 1,
+        "unit": 1,
+        "fn": 3,
+        "kind": "respuesta",
+        "values": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "chip": "W5500",
+      "bsb": 2,
+      "modbus": {
+        "tid": 2,
+        "unit": 1,
+        "fn": 3,
+        "kind": "excepción",
+        "exception": 2
+      }
+    },
+    {
+      "chip": "W5500",
+      "bsb": 2,
+      "modbus": {
+        "tid": 3,
+        "unit": 1,
+        "fn": 15,
+        "kind": "petición",
+        "start": 19,
+        "qty": 10,
+        "byteCount": 2
+      }
+    },
+    {
+      "chip": "W5500",
+      "bsb": 2,
+      "write": true,
+      "address": 36,
+      "reg": "buffer 0x0024",
+      "data": [
+        71,
+        69,
+        84,
+        32,
+        47
+      ]
+    }
+  ]
+}

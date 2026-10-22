@@ -1,0 +1,50 @@
+{
+  "descripcion": "Peticiones FC03 del ejemplo 02.ModbusRTU_Master_Read del package por RS-485 (UART2).",
+  "fuente": {
+    "sketch": "arbol:libraries/JWPLC_ModbusRTU/examples/02.ModbusRTU_Master_Read",
+    "until_ms": 3500,
+    "filtro": "^UART2"
+  },
+  "items": [
+    [
+      1000000900,
+      "UART2 TX",
+      -1,
+      "02 03 00 00 00 04 44 3a",
+      "",
+      0,
+      8
+    ],
+    [
+      3000001950,
+      "UART2 TX",
+      -1,
+      "02 03 00 00 00 04 44 3a",
+      "",
+      0,
+      8
+    ]
+  ],
+  "esperado": [
+    {
+      "proto": "Modbus RTU",
+      "slave": 2,
+      "fn": 3,
+      "kind": "petición",
+      "start": 0,
+      "qty": 4,
+      "crc": "ok",
+      "level": "ok"
+    },
+    {
+      "proto": "Modbus RTU",
+      "slave": 2,
+      "fn": 3,
+      "kind": "petición",
+      "start": 0,
+      "qty": 4,
+      "crc": "ok",
+      "level": "ok"
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "descripcion": "Inicialización y lectura del TCA6424A @0x22 por el core (02_io_basic del package).",
+  "fuente": {
+    "sketch": "package:tools/build-speed-benchmark/sketches/02_io_basic",
+    "until_ms": 600,
+    "filtro": "^I2C0$",
+    "max": 10
+  },
+  "items": [
+    [
+      2001050,
+      "I2C0",
+      104,
+      "00",
+      "",
+      1
+    ],
+    [
+      583041050,
+      "I2C0",
+      34,
+      "00",
+      "00",
+      0
+    ],
+    [
+      583431550,
+      "I2C0",
+      34,
+      "05 00",
+      "",
+      0
+    ],
+    [
+      583722050,
+      "I2C0",
+      34,
+      "06 00",
+      "",
+      0
+    ],
+    [
+      584012550,
+      "I2C0",
+      34,
+      "0c ff",
+      "",
+      0
+    ],
+    [
+      584303050,
+      "I2C0",
+      34,
+      "0d 00",
+      "",
+      0
+    ],
+    [
+      584593550,
+      "I2C0",
+      34,
+      "0e ff",
+      "",
+      0
+    ],
+    [
+      586000200,
+      "I2C0",
+      34,
+      "00",
+      "00",
+      0
+    ],
+    [
+      586390750,
+      "I2C0",
+      34,
+      "0c",
+      "ff",
+      0
+    ],
+    [
+      586781250,
+      "I2C0",
+      34,
+      "0c ff",
+      "",
+      0
+    ]
+  ],
+  "esperado": [
+    {
+      "addr": 104,
+      "result": 1,
+      "level": "warn",
+      "dev": "DS3232M (RTC) @0x68"
+    },
+    {
+      "addr": 34,
+      "reg": 0,
+      "regName": "Entrada 0",
+      "read": [
+        0
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 5,
+      "regName": "Salida 1",
+      "write": [
+        5,
+        0
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 6,
+      "regName": "Salida 2",
+      "write": [
+        6,
+        0
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 12,
+      "regName": "Config. 0",
+      "write": [
+        12,
+        255
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 13,
+      "regName": "Config. 1",
+      "write": [
+        13,
+        0
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 14,
+      "regName": "Config. 2",
+      "write": [
+        14,
+        255
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 0,
+      "regName": "Entrada 0",
+      "read": [
+        0
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 12,
+      "regName": "Config. 0",
+      "read": [
+        255
+      ]
+    },
+    {
+      "addr": 34,
+      "reg": 12,
+      "regName": "Config. 0",
+      "write": [
+        12,
+        255
+      ]
+    }
+  ]
+}
