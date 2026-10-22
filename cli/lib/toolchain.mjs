@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { bundledToolchainBin } from "../../scripts/fetch-toolchain.mjs";
+import { bundledToolchainBin, ensurePchFriendlyCompiler } from "../../scripts/fetch-toolchain.mjs";
 
 const EXTRA = (process.env.JWSIM_EXTRA_FLAGS ?? "").split(/\s+/).filter(Boolean);
 const COMMON = ["-O1", "-g", "-fno-strict-aliasing", "-Wno-unused-parameter", ...EXTRA];
@@ -84,10 +84,14 @@ export function toolchain(target = "native", ccOverride) {
   // Toolchain incluido (scripts/fetch-toolchain.mjs) antes que el del PATH.
   const bin = useClang ? null : bundledToolchainBin();
   const tool = (name) => (bin ? join(bin, process.platform === "win32" ? `${name}.exe` : name) : name);
+  // En Windows, cc1/cc1plus sin ASLR para que el PCH cargue siempre
+  // (scripts/fetch-toolchain.mjs). La etiqueta separa los PCH generados antes.
+  const pchTag = bin && os === "windows" && ensurePchFriendlyCompiler(bin) ? "sin-aslr" : "";
   return {
     ...base(os),
     dataModel: os === "windows" ? "LLP64" : "LP64",
     bundled: !!bin,
+    pchTag,
     cc: [useClang ? "clang" : tool("gcc")],
     cxx: [useClang ? "clang++" : tool("g++")],
     ar: [tool("ar")],

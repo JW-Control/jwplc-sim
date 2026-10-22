@@ -53,7 +53,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | Electron (Chromium + Node.js) | MIT (Electron, Node.js); BSD-3-Clause y otras (Chromium) | Distribuir `LICENSES.chromium.html` (electron-builder lo genera). |
 | Monaco Editor | MIT | |
 | three.js | MIT | |
-| MinGW-w64 GCC 13 + binutils (toolchain incluido para compilar sketches) | GPL-3.0-or-later (GCC, binutils) + avisos mingw-w64 | Herramienta, no se enlaza en la app. Se distribuye sin modificar junto con sus fuentes o una oferta escrita (GPL §6), p. ej. enlazando la versión exacta de WinLibs/MSYS2 usada. |
+| MinGW-w64 GCC 13 + binutils (toolchain incluido para compilar sketches) | GPL-3.0-or-later (GCC, binutils) + avisos mingw-w64 | Herramienta, no se enlaza en la app. Se descarga de WinLibs (versión y SHA-256 en `third_party/toolchain.json`). Única modificación local: se quitan los bits ASLR del encabezado PE de `cc1.exe`/`cc1plus.exe` para que el PCH funcione (ARCHITECTURE §3.1); al redistribuirlo, avisar de esa modificación y ofrecer las fuentes (GPL §5–6). |
 | Intérprete para dispositivos de escena (si se embebe QuickJS) | MIT | Opcional (G7). |
 | Playwright (solo desarrollo/CI) | Apache-2.0 | No se distribuye. |
 

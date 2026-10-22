@@ -410,7 +410,7 @@ export async function buildSketch(sketchDir, options = {}) {
     else inoFlags.push(f[i.v]);
   }
   const pchIncs = includeDirs.map((d) => `-I${d}`);
-  const pchKey = hash([tc.cxx[0], ...inoFlags, ...forced, ...pchIncs].join("\0"));
+  const pchKey = hash([tc.cxx[0], tc.pchTag ?? "", ...inoFlags, ...forced, ...pchIncs].join("\0"));
   const pchDir = join(cacheDir, "pch", pchKey);
   const pchHeader = join(pchDir, "jwsim_sketch_prefix.h");
   // Marca de PCH inutilizable en este host (con la salida de GCC que lo
@@ -476,7 +476,8 @@ export async function buildSketch(sketchDir, options = {}) {
     const tUnit = performance.now();
     if (process.env.JWSIM_BUILD_VERBOSE) log(`[cmd] ${JSON.stringify([cc[0], ...args])}`);
     let r = await run(cc[0], args);
-    for (let k = 1; withPch && r.code !== 0 && PCH_TRANSIENT.test(r.out) && k < PCH_ATTEMPTS; k++) r = await run(cc[0], args);
+    let pchTries = 1;
+    for (; withPch && r.code !== 0 && PCH_TRANSIENT.test(r.out) && pchTries < PCH_ATTEMPTS; pchTries++) r = await run(cc[0], args);
     if (r.code !== 0 && withPch && PCH_TRANSIENT.test(r.out)) {
       log(`[build] aviso: GCC no pudo cargar el header precompilado en ${PCH_ATTEMPTS} intentos (ASLR de Windows); esta compilación va sin él`);
       r = await run(cc[0], [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file, "-o", obj]);
@@ -499,7 +500,10 @@ export async function buildSketch(sketchDir, options = {}) {
     if (withPch && /Winvalid-pch|not used because/.test(r.out)) {
       log(`[build] aviso: GCC no usó el header precompilado: ${r.out.split(/\r?\n/).find((l) => /pch|gch/i.test(l)) ?? ""}`);
     }
-    if (u.group === "sketch") phaseNote(`gcc ${basename(u.file)}: ${Math.round(performance.now() - tUnit)} ms`);
+    if (u.group === "sketch") {
+      const pchInfo = withPch ? ` (PCH, ${pchTries} intento${pchTries > 1 ? "s" : ""})` : u.file === inoUnit ? " (sin PCH)" : "";
+      phaseNote(`gcc ${basename(u.file)}: ${Math.round(performance.now() - tUnit)} ms${pchInfo}`);
+    }
     writeFileSync(obj + ".cmd", cmdHash);
     return { ...u, obj };
   });

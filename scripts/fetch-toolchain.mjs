@@ -12,7 +12,7 @@
 //   node scripts/fetch-toolchain.mjs --print  # imprime la carpeta bin/ si está instalado
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,6 +29,68 @@ export function bundledToolchainBin(os) {
   if (!spec) return null;
   const bin = join(ROOT, ".jwsim", "toolchain", `${spec.name}-${spec.version}`, spec.bin);
   return existsSync(join(bin, process.platform === "win32" ? "g++.exe" : "g++")) ? bin : null;
+}
+
+// ---------------------------------------------------------------- PCH en Windows
+// GCC para MinGW carga el header precompilado en la dirección donde se
+// generó. cc1/cc1plus de WinLibs vienen con ASLR (DYNAMIC_BASE y
+// HIGH_ENTROPY_VA, por defecto en binutils >= 2.36): la disposición de memoria
+// cambia en cada proceso y a veces esa dirección ya está ocupada
+// ("mingw32_gt_pch_use_address ... PCH allocation failure"). Se quitan esos
+// dos bits del encabezado PE de cc1/cc1plus (no se toca el código; GCC es
+// GPL y admite modificación) para que el PCH siempre encuentre su dirección.
+const DYNAMIC_BASE = 0x0040;
+const HIGH_ENTROPY_VA = 0x0020;
+
+function compilerProperExes(bin) {
+  const root = join(bin, "..", "libexec", "gcc");
+  const out = [];
+  if (!existsSync(root)) return out;
+  for (const triple of readdirSync(root)) {
+    for (const ver of readdirSync(join(root, triple))) {
+      for (const exe of ["cc1.exe", "cc1plus.exe"]) {
+        const p = join(root, triple, ver, exe);
+        if (existsSync(p)) out.push(p);
+      }
+    }
+  }
+  return out;
+}
+
+// Offset de DllCharacteristics en el encabezado PE, o -1 si no es un PE.
+function dllCharacteristicsOffset(fd) {
+  const head = Buffer.alloc(0x40);
+  readSync(fd, head, 0, head.length, 0);
+  if (head.readUInt16LE(0) !== 0x5a4d) return -1; // "MZ"
+  const pe = head.readUInt32LE(0x3c);
+  const sig = Buffer.alloc(4);
+  readSync(fd, sig, 0, 4, pe);
+  if (sig.readUInt32LE(0) !== 0x00004550) return -1; // "PE\0\0"
+  return pe + 4 + 20 + 70; // firma + encabezado COFF + campo del encabezado opcional
+}
+
+// Devuelve true si cc1/cc1plus quedan sin ASLR (ya estaban o se corrigieron).
+export function ensurePchFriendlyCompiler(bin) {
+  const exes = compilerProperExes(bin);
+  if (!exes.length) return false;
+  for (const exe of exes) {
+    const fd = openSync(exe, "r+");
+    try {
+      const off = dllCharacteristicsOffset(fd);
+      if (off < 0) return false;
+      const buf = Buffer.alloc(2);
+      readSync(fd, buf, 0, 2, off);
+      const flags = buf.readUInt16LE(0);
+      const fixed = flags & ~(DYNAMIC_BASE | HIGH_ENTROPY_VA);
+      if (fixed !== flags) {
+        buf.writeUInt16LE(fixed, 0);
+        writeSync(fd, buf, 0, 2, off);
+      }
+    } finally {
+      closeSync(fd);
+    }
+  }
+  return true;
 }
 
 async function main() {
@@ -66,6 +128,7 @@ async function main() {
   execFileSync("tar", ["-xf", zip, "-C", dest], { stdio: "inherit" });
   rmSync(zip);
   if (!bundledToolchainBin()) throw new Error(`no se encontró ${spec.bin}/g++ tras extraer ${spec.url}`);
+  if (process.platform === "win32") ensurePchFriendlyCompiler(bundledToolchainBin());
   console.error(`[fetch-toolchain] listo: ${bundledToolchainBin()}`);
 }
 
