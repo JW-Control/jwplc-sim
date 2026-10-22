@@ -156,7 +156,11 @@ a ~0,4 s en Linux, ~0,6 s en el destino Windows):
 - Header precompilado del prefijo del `.ino` (`-include` forzados +
   `Arduino.h`, que con el autoload arrastra 16 librerías), en la caché
   compartida e indexado por flags e include path. Si GCC no puede usarlo se
-  compila sin él; el resultado (hash de traza) es idéntico.
+  compila sin él; el resultado (hash de traza) es idéntico. En Windows, GCC
+  carga el PCH en una dirección fija y a veces ASLR ya la ocupó
+  (`mingw32_gt_pch_use_address … PCH allocation failure`, aleatorio por
+  proceso): se reintenta hasta 3 veces y, si persiste, esa compilación va
+  sin PCH. Medido en Windows 11: `.ino` con PCH 0,77 s, sin PCH 2,34 s.
 - El `.ino.cpp` preprocesado y los `.a` solo se reescriben si cambian.
 
 Sin red **[G2]**: con el package y los terceros ya descargados, compilar no

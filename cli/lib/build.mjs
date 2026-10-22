@@ -24,6 +24,11 @@ import { resolveWeakPE } from "./weak-pe.mjs";
 
 export const ROOT = resolve(import.meta.dirname, "..", "..");
 const SRC_EXT = /\.(c|cpp|cc|S)$/;
+// GCC para Windows carga el PCH en una dirección fija; si ASLR ya ocupó esa
+// zona del proceso falla ("PCH allocation failure"). Es aleatorio por
+// proceso: se reintenta y, si persiste, esa compilación va sin PCH.
+const PCH_TRANSIENT = /gt_pch_use_address|PCH allocation failure/;
+const PCH_ATTEMPTS = 3;
 // Fallas de GCC atribuibles al header precompilado (no a errores del sketch).
 const PCH_FAILURE = /one or more PCH files were found|had to relocate PCH|(?:could not|cannot) (?:read|open|map|load)[^\n]*\.gch|\.gch: (?:created by|not used)|precompiled header[^\n]*(?:invalid|corrupt|failed)/i;
 
@@ -424,15 +429,22 @@ export async function buildSketch(sketchDir, options = {}) {
       // Escritura atómica: otro build puede estar usando el mismo PCH.
       const tmp = `${pchFile}.${process.pid}.tmp`;
       const args = pchArgs.map((x) => (x === pchFile ? tmp : x));
-      const r = await run(tc.cxx[0], [...args, "-MF", pchHeader.replace(/\.h$/, ".d")]);
+      let r;
+      for (let k = 0; k < PCH_ATTEMPTS; k++) {
+        r = await run(tc.cxx[0], [...args, "-MF", pchHeader.replace(/\.h$/, ".d")]);
+        if (r.code === 0 || !PCH_TRANSIENT.test(r.out)) break;
+      }
       if (r.code === 0) {
         renameSync(tmp, pchFile);
         writeFileSync(pchFile + ".cmd", pchHash);
-      }
-      else {
-        log("[build] aviso: no se pudo precompilar Arduino.h; se compila sin PCH");
-        writeFileSync(pchOff, r.out);
+      } else {
         usePch = false;
+        if (PCH_TRANSIENT.test(r.out)) {
+          log("[build] aviso: GCC no pudo generar el header precompilado (ASLR de Windows); este build va sin él");
+        } else {
+          log("[build] aviso: no se pudo precompilar Arduino.h; se compila sin PCH");
+          writeFileSync(pchOff, r.out);
+        }
       }
     }
   }
@@ -464,6 +476,11 @@ export async function buildSketch(sketchDir, options = {}) {
     const tUnit = performance.now();
     if (process.env.JWSIM_BUILD_VERBOSE) log(`[cmd] ${JSON.stringify([cc[0], ...args])}`);
     let r = await run(cc[0], args);
+    for (let k = 1; withPch && r.code !== 0 && PCH_TRANSIENT.test(r.out) && k < PCH_ATTEMPTS; k++) r = await run(cc[0], args);
+    if (r.code !== 0 && withPch && PCH_TRANSIENT.test(r.out)) {
+      log(`[build] aviso: GCC no pudo cargar el header precompilado en ${PCH_ATTEMPTS} intentos (ASLR de Windows); esta compilación va sin él`);
+      r = await run(cc[0], [...cc.slice(1), "-c", "-MMD", ...flagsFor(u.file), ...incs, u.file, "-o", obj]);
+    }
     // Solo los mensajes de GCC sobre el PCH en sí (no rutas que contengan
     // "pch"). Se desactiva únicamente si sin PCH la unidad sí compila.
     if (r.code !== 0 && withPch && PCH_FAILURE.test(r.out)) {
