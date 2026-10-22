@@ -116,6 +116,16 @@
           </div>
           <pre id="console" class="console view" data-view="console"></pre>
           <div id="buses" class="buses view" data-view="buses" hidden>
+            <div class="bus-tools">
+              <label for="bus-filter">Mostrar</label>
+              <select id="bus-filter">
+                <option value="">Todo</option>
+                <option value="I2C">I2C</option>
+                <option value="SPI">SPI (por CS)</option>
+                <option value="UART">UART</option>
+                <option value="Modbus">Modbus</option>
+              </select>
+            </div>
             <table>
               <thead>
                 <tr><th>t (ms)</th><th>Bus</th><th>Dispositivo</th><th>Operación</th><th>Datos</th></tr>
@@ -161,6 +171,7 @@
     </footer>
 
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="../lib/bus-decode.cjs"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -34,48 +34,48 @@ const state = {
 };
 
 // ------------------------------------------------------------- buses
-const TCA_REGS = ["Entrada", "Entrada", "Entrada", null, "Salida", "Salida", "Salida", null, "Polaridad", "Polaridad", "Polaridad", null, "Config.", "Config.", "Config."];
-const I2C_DEVICES = { 0x22: "TCA6424A (E/S)" };
+// Decodificación en app/lib/bus-decode.cjs (la misma que usa el gate).
 const MAX_BUS_ROWS = 1000;
+let busDecoder = window.JwsimBus.createDecoder();
 
-function hexAddr(a) {
-  return `0x${a.toString(16).padStart(2, "0")}`;
+function busKind(row) {
+  if (/^Modbus/.test(row.dev)) return "Modbus";
+  if (/^I2C/.test(row.bus)) return "I2C";
+  if (/SPI/.test(row.bus)) return "SPI";
+  return "UART";
 }
 
-// [t_ns, bus, addr, w_hex, r_hex, result] → fila decodificada.
-function decodeBus([t, bus, addr, w, r, res]) {
-  if (addr < 0) return { t, bus, dev: "—", op: "TX", data: w, nack: false };
-  const dev = I2C_DEVICES[addr] ? `${I2C_DEVICES[addr]} @${hexAddr(addr)}` : hexAddr(addr);
-  if (res === 1) return { t, bus, dev, op: "NACK de dirección", data: w, nack: true };
-  const wb = w ? w.split(" ") : [];
-  let op = r ? "Escritura + lectura" : "Escritura";
-  if (addr === 0x22 && wb.length) {
-    const cmd = parseInt(wb[0], 16);
-    const reg = TCA_REGS[cmd & 0x7f];
-    const name = reg ? `${reg} ${(cmd & 0x7f) % 4}` : `reg ${hexAddr(cmd & 0x7f)}`;
-    const ai = cmd & 0x80 ? " (AI)" : "";
-    op = r ? `Leer ${name}${ai}` : `Escribir ${name}${ai}`;
-    return { t, bus, dev, op, data: r ? `→ ${r}` : `← ${wb.slice(1).join(" ")}`, nack: res === 2 };
-  }
-  return { t, bus, dev, op, data: r ? `${w} → ${r}` : w, nack: res === 2 };
+function resetBuses() {
+  busDecoder = window.JwsimBus.createDecoder();
+  $("bus-rows").textContent = "";
+}
+
+function applyBusFilter() {
+  const f = $("bus-filter").value;
+  for (const tr of $("bus-rows").children) tr.hidden = !!f && tr.dataset.kind !== f && !(f === "Modbus" && tr.dataset.modbus);
 }
 
 function appendBus(items, dropped) {
   const body = $("bus-rows");
   const box = $("buses");
   const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+  const filter = $("bus-filter").value;
   const frag = document.createDocumentFragment();
   for (const it of items) {
-    const d = decodeBus(it);
-    const tr = document.createElement("tr");
-    if (d.nack) tr.className = "nack";
-    for (const [v, cls] of [[(d.t / 1e6).toFixed(3)], [d.bus], [d.dev], [d.op], [d.data, "data"]]) {
-      const td = document.createElement("td");
-      td.textContent = v;
-      if (cls) td.className = cls;
-      tr.appendChild(td);
+    for (const d of busDecoder.decode(it)) {
+      const tr = document.createElement("tr");
+      if (d.level !== "ok") tr.className = d.level === "err" ? "nack" : "warn";
+      tr.dataset.kind = busKind(d);
+      if (d.fields?.modbus) tr.dataset.modbus = "1";
+      tr.hidden = !!filter && tr.dataset.kind !== filter && !(filter === "Modbus" && tr.dataset.modbus);
+      for (const [v, cls] of [[(d.t / 1e6).toFixed(3)], [d.bus], [d.dev], [d.op, "op"], [d.data, "data"]]) {
+        const td = document.createElement("td");
+        td.textContent = v;
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+      }
+      frag.appendChild(tr);
     }
-    frag.appendChild(tr);
   }
   if (dropped) {
     const tr = document.createElement("tr");
@@ -96,7 +96,7 @@ function setView(view) {
     b.setAttribute("aria-selected", String(on));
   }
   for (const v of document.querySelectorAll(".view")) v.hidden = v.dataset.view !== view;
-  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C0 y UART en vivo", watch: "E/S y variables", debug: "gdb" }[view];
+  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C, SPI por CS y UART en vivo", watch: "E/S y variables", debug: "gdb" }[view];
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
 }
 
@@ -336,7 +336,7 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   state.exe = r.exe;
   $("build-log").textContent += `\nOK · ${r.libraries.length} librerías del package\n`;
   $("console").textContent = "";
-  $("bus-rows").textContent = "";
+  resetBuses();
   // Breakpoints con las líneas actuales (las ediciones los desplazan).
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
   state.replay = replay;
@@ -723,7 +723,7 @@ async function replayFile(file, text) {
 
 function onReplayEnd(m) {
   const rp = state.replay;
-  setStatus("paused", "Fin de la reproducción");
+  setStatus("paused", "Reproducida");
   const ok = rp?.hash ? m.trace_hash === rp.hash : null;
   consoleWrite(
     `[jwsim] reproducción terminada en t=${fmtTime(m.t_ns)} · hash ${m.trace_hash}` +
@@ -916,6 +916,7 @@ function wireUi() {
   $("btn-dbg-out").addEventListener("click", () => dbgCommand("stepOut"));
   $("btn-dbg-pause").addEventListener("click", () => dbgCommand("pause"));
   $("btn-rec-save").addEventListener("click", saveRecording);
+  $("bus-filter").addEventListener("change", applyBusFilter);
   $("watch-add").addEventListener("submit", (e) => {
     e.preventDefault();
     const expr = $("watch-expr").value.trim();
@@ -952,7 +953,7 @@ function wireUi() {
   });
   $("btn-view-clear").addEventListener("click", () => {
     if (state.view === "console") $("console").textContent = "";
-    else $("bus-rows").textContent = "";
+    else if (state.view === "buses") resetBuses();
   });
   for (const b of document.querySelectorAll(".ptab")) b.addEventListener("click", () => setView(b.dataset.view));
   $("btn-output-toggle").addEventListener("click", () => {

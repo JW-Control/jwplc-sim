@@ -12,6 +12,8 @@
 //                     marca visual en la placa
 //   RECORD_REPLAY     la sesión (entradas y forzados) se guarda como .stim y
 //                     su reproducción en la app da el mismo hash de traza
+//   BUS_ANALYZER      durante la reproducción, la pestaña Buses decodifica el
+//                     TCA6424A por registro y la pantalla por CS (filtro SPI)
 // Informe en build/gates/JWSIM_G3_E2E.json y capturas en build/gates/g3/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g3.mjs
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -161,6 +163,7 @@ await win.waitForTimeout(300);
 const rec = await t(() => window.jwsimTest.saveRecording());
 const text = rec ? readFileSync(rec.file, "utf8") : "";
 const events = text.split("\n").filter((l) => /^\d/.test(l));
+await win.click("#tab-buses");
 if (rec) await t(([f, x]) => window.jwsimTest.replay(f, x), [rec.file, text]);
 const rp = await until(() => t(() => window.jwsimTest.lastReplay()), 60000);
 await shot(win, "04-reproduccion.png");
@@ -169,6 +172,21 @@ criteria.RECORD_REPLAY = {
   recording: rec,
   events: events.length,
   replay: rp,
+};
+
+// ---- BUS_ANALYZER (interfaz)
+log("BUS_ANALYZER");
+const visibleRows = () => win.$$eval("#bus-rows tr:not([hidden])", (r) => r.map((x) => x.textContent));
+const i2cRows = (await visibleRows()).filter((x) => /TCA6424A.*(Leer|Escribir) (Entrada|Salida|Config)/.test(x));
+await win.selectOption("#bus-filter", "SPI");
+const spiRows = await visibleRows();
+await shot(win, "05-buses-spi.png");
+await win.selectOption("#bus-filter", "");
+criteria.BUS_ANALYZER_UI = {
+  pass: i2cRows.length > 0 && spiRows.length > 0 && spiRows.every((x) => /VSPI/.test(x)) && spiRows.some((x) => /TFT.*(CASET|RAMWR|SLPOUT|MADCTL)/.test(x)),
+  i2c_example: i2cRows[0],
+  spi_rows: spiRows.length,
+  spi_example: spiRows.find((x) => /RAMWR/.test(x)) ?? spiRows[0],
 };
 
 await app.close();

@@ -826,3 +826,26 @@ button.io.on {
     gap: 8px;
   }
 }
+.bus-tools {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 12px;
+  color: var(--muted);
+}
+.buses th {
+  top: 32px;
+}
+.buses td.op {
+  white-space: normal;
+}
+.buses tr.warn td {
+  color: var(--warn);
+}
