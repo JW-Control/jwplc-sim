@@ -456,6 +456,7 @@ export async function buildSketch(sketchDir, options = {}) {
     const args = [...compile, "-o", obj];
     if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd", mtimes)) return { ...u, obj };
     const tUnit = performance.now();
+    if (process.env.JWSIM_BUILD_VERBOSE) log(`[cmd] ${JSON.stringify([cc[0], ...args])}`);
     let r = await run(cc[0], args);
     if (r.code !== 0 && withPch && /\.gch|precompiled|PCH/i.test(r.out)) {
       // PCH inválido para este host (p. ej. reubicación en Windows): sin él.
