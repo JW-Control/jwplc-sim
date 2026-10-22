@@ -303,7 +303,7 @@ int run_port(jwsim::boards::JwplcBasic &board) {
       dc += "]";
       bus_item("[" + std::to_string(tr.t_start) + "," + quoted(bus.name()) + "," + quoted(tr.chip) + ",\"" +
                hex(tr.mosi.data(), n) + "\",\"" + hex(tr.miso.data(), n) + "\"," + dc + "," +
-               std::to_string(tr.mosi.size()) + "]");
+               std::to_string(tr.total) + "]");
     });
   }
   if (jwsim::I2CBus *i2c = board.i2c_bus(0)) {

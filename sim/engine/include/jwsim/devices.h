@@ -165,10 +165,24 @@ class SPITarget {
 // bajada y la subida de un CS. `dc` marca los cambios de la línea D/C
 // (pantallas): pares (índice del byte, nivel) desde el primer byte.
 struct SPITransaction {
+  static constexpr size_t kMaxBytes = 256;  // muestra guardada por transacción
   std::string chip;  // nombre del CS ("FRAM", "TFT"...) o "sin CS"
   jwsim_ns_t t_start = 0;
+  size_t total = 0;  // bytes transferidos (puede superar la muestra)
   std::vector<uint8_t> mosi, miso;
   std::vector<std::pair<size_t, bool>> dc;
+  void clear() {
+    total = 0;
+    mosi.clear();
+    miso.clear();
+    dc.clear();
+  }
+  void push(uint8_t out, uint8_t in) {
+    if (total++ < kMaxBytes) {
+      mosi.push_back(out);
+      miso.push_back(in);
+    }
+  }
 };
 
 class SPIBus {
