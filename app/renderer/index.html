@@ -121,6 +121,16 @@
             <button id="btn-view-clear" class="ghost small">Limpiar</button>
           </div>
           <pre id="console" class="console view" data-view="console"></pre>
+          <form id="serial-send" class="serial-send view" data-view="console">
+            <input id="serial-text" placeholder="Texto para UART0 (Enter envía)" spellcheck="false" autocomplete="off" aria-label="Texto para enviar por UART0" />
+            <select id="serial-eol" title="Fin de línea que se agrega al enviar" aria-label="Fin de línea">
+              <option value="lf">Nueva línea</option>
+              <option value="crlf">CR y NL</option>
+              <option value="cr">Retorno de carro</option>
+              <option value="none">Sin ajuste</option>
+            </select>
+            <button type="submit" id="btn-serial-send" disabled>Enviar</button>
+          </form>
           <div id="buses" class="buses view" data-view="buses" hidden>
             <div class="bus-tools">
               <label for="bus-filter">Mostrar</label>

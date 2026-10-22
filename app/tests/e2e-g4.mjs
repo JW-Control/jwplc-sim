@@ -6,9 +6,12 @@
 //             03.Display_HMI_Pages: reposo → página 0 → página 1 → reposo
 //   FRAM      04.FRAM_Basic: el contador de arranques persiste entre dos
 //             ejecuciones en la app (estado por sketch)
+//   NVS       Storage_API_Rollback de JWPLC_LogicRuntime: la palabra que pide
+//             se escribe en la consola (UART0), la prueba pasa (respaldo en
+//             NVS) y el envío queda en la grabación como uart0 "…"
 // Informe en build/gates/JWSIM_G4_E2E.json y capturas en build/gates/g4/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g4.mjs
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -23,6 +26,7 @@ const OUT = join(ROOT, "build", "gates", "g4");
 mkdirSync(OUT, { recursive: true });
 const workspace = mkdtempSync(join(tmpdir(), "jwsim-ws-"));
 const userData = mkdtempSync(join(tmpdir(), "jwsim-ud-"));
+const stimDir = mkdtempSync(join(tmpdir(), "jwsim-stim-"));
 const criteria = {};
 const log = (m) => console.log(`[e2e] ${m}`);
 process.on("unhandledRejection", (err) => {
@@ -36,7 +40,7 @@ const examples = join(root, lock.JWPLC_PACKAGE_TREE, "libraries");
 createRequire(import.meta.url)("electron");
 const args = [APP, `--user-data-dir=${userData}`];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
-const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace } });
+const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_E2E_STIM_DIR: stimDir } });
 const win = await app.firstWindow();
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForSelector(".tab.active", { timeout: 30000 });
@@ -119,6 +123,28 @@ const bootCount = async () => {
 const b1 = await bootCount();
 const b2 = await bootCount();
 criteria.FRAM_PERSIST_APP = { pass: b1 !== null && b2 === b1 + 1, primera: b1, segunda: b2 };
+
+// ---- NVS: texto por la consola serie
+log("NVS");
+await t((dir) => window.jwsimTest.openSketchDir(dir), join(examples, "JWPLC_LogicRuntime", "examples", "JWPLC_LogicRuntime_Storage_API_Rollback"));
+await win.waitForSelector(".tab.active:has-text('JWPLC_LogicRuntime_Storage_API_Rollback.ino')", { timeout: 10000 });
+await win.click("#tab-console");
+await win.click("#btn-run");
+await until(async () => (await status()) === "running", 600000);
+const asked = await until(async () => /Escribe ROLLBACK/.test(await consoleText()), 15000);
+await win.fill("#serial-text", "ROLLBACK");
+await win.press("#serial-text", "Enter");
+const done = await until(async () => (await consoleText()).match(/ROLLBACK PERSISTENTE: (PASS|FAIL)/)?.[1], 20000);
+await win.screenshot({ path: join(OUT, "04-consola-nvs.png") });
+const rec = await t(() => window.jwsimTest.saveRecording());
+const recText = rec ? readFileSync(rec.file, "utf8") : "";
+await win.click("#btn-stop");
+criteria.NVS_CONSOLE = {
+  pass: !!asked && done === "PASS" && /^\d+(\.\d+)? uart0 "ROLLBACK\\n"$/m.test(recText),
+  pregunta: !!asked,
+  resultado: done,
+  grabacion: recText.split("\n").filter((l) => /uart0/.test(l)),
+};
 
 await app.close();
 const pass = Object.values(criteria).every((c) => c.pass);

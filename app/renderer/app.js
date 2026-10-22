@@ -135,6 +135,7 @@ function setStatus(kind, text) {
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
   $("btn-dbg-pause").disabled = kind !== "running";
   $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
+  $("btn-serial-send").disabled = !(kind === "running" || kind === "paused");
 }
 
 function consoleWrite(text, cls) {
@@ -758,6 +759,17 @@ function requestHash() {
   });
 }
 
+// Consola: el texto entra por la UART0 del firmware (como el monitor serie
+// del IDE). El runner lo devuelve como entrada y queda en la grabación.
+const EOL = { lf: "\n", crlf: "\r\n", cr: "\r", none: "" };
+function sendSerial() {
+  const input = $("serial-text");
+  const bytes = new TextEncoder().encode(input.value + EOL[$("serial-eol").value]);
+  if (!bytes.length || !(state.sim === "running" || state.sim === "paused")) return;
+  api.command({ type: "uart", port: 0, hex: Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("") });
+  input.value = "";
+}
+
 async function saveRecording() {
   if (!state.sketch || !(state.sim === "running" || state.sim === "paused")) return null;
   try {
@@ -984,6 +996,10 @@ function wireUi() {
   $("btn-dbg-out").addEventListener("click", () => dbgCommand("stepOut"));
   $("btn-dbg-pause").addEventListener("click", () => dbgCommand("pause"));
   $("btn-rec-save").addEventListener("click", saveRecording);
+  $("serial-send").addEventListener("submit", (e) => {
+    e.preventDefault();
+    sendSerial();
+  });
   $("bus-filter").addEventListener("change", applyBusFilter);
   $("watch-add").addEventListener("submit", (e) => {
     e.preventDefault();
