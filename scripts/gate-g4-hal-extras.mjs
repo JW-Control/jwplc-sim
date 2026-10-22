@@ -121,9 +121,12 @@ for (const [key, dir, tag, until] of [
   // Sin --state: directorio temporal propio, borrado al terminar.
   const tmp = join(work, "tmp");
   mkdirSync(tmp, { recursive: true });
-  // Bajo wine la carpeta temporal se pasa como ruta de Windows (unidad Z:).
-  const winTmp = exe.endsWith(".exe") && process.platform !== "win32" ? `Z:${tmp.replaceAll("/", "\\")}` : tmp;
-  const env = { TMPDIR: tmp, TMP: winTmp, TEMP: winTmp };
+  // Bajo wine la carpeta temporal se pasa como ruta de Windows (unidad Z:)
+  // y sin TMPDIR: wine busca ahí el socket de wineserver y, si cambia,
+  // termina con "free(): invalid pointer" antes de arrancar el programa.
+  const underWine = exe.endsWith(".exe") && process.platform !== "win32";
+  const winTmp = underWine ? `Z:${tmp.replaceAll("/", "\\")}` : tmp;
+  const env = underWine ? { TMP: winTmp, TEMP: winTmp } : { TMPDIR: tmp, TMP: winTmp, TEMP: winTmp };
   const old = { ...process.env };
   Object.assign(process.env, env);
   const r = runExe(exe, ["--until", "6000", "--stim", stim]);
