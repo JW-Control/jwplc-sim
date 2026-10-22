@@ -4,13 +4,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Tiempo virtual del simulador en microsegundos.
+// Microsegundos desde el último arranque del ESP32 (tiempo virtual).
 int64_t esp_timer_get_time(void);
 
 typedef struct esp_timer *esp_timer_handle_t;
@@ -30,6 +31,14 @@ esp_err_t esp_timer_start_periodic(esp_timer_handle_t timer, uint64_t period_us)
 esp_err_t esp_timer_stop(esp_timer_handle_t timer);
 esp_err_t esp_timer_delete(esp_timer_handle_t timer);
 bool esp_timer_is_active(esp_timer_handle_t timer);
+esp_err_t esp_timer_restart(esp_timer_handle_t timer, uint64_t timeout_us);
+esp_err_t esp_timer_get_period(esp_timer_handle_t timer, uint64_t *period);
+esp_err_t esp_timer_get_expiry_time(esp_timer_handle_t timer, uint64_t *expiry);
+int64_t esp_timer_get_next_alarm(void);
+int64_t esp_timer_get_next_alarm_for_wake_up(void);
+esp_err_t esp_timer_dump(FILE *stream);
+esp_err_t esp_timer_init(void);
+esp_err_t esp_timer_deinit(void);
 
 #ifdef __cplusplus
 }
