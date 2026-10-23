@@ -3,12 +3,7 @@
   "$comment": "API persistente en modo lectura sobre la FRAM real (vacía en el simulador): detecta perfil de 8 KiB y layout de 5184 bytes y reporta la FRAM sin formato (UNFORMATTED, sin slot activo) sin escribirla. No usa E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_ReadOnly",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - API persistente en modo lectura$",
@@ -20,23 +15,9 @@
       "^Slot activo: NINGUNO$",
       "^Estado gestor: UNFORMATTED$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^API PERSISTENTE LECTURA: PASS$",
-        "count": 1
-      }
+      { "match": "^API PERSISTENTE LECTURA: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

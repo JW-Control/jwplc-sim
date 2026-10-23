@@ -3,12 +3,7 @@
   "$comment": "Almacenamiento A/B sobre backend RAM: formateo, guardado en Slot A y B, fallback a A si B está corrupto y prueba de cortes de energía en cada uno de los bytes de la actualización (todos conservan A, el presupuesto completo confirma B). No toca la FRAM física ni las E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_AB_Storage",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - PoC 4 almacenamiento A\\/B en RAM$",
@@ -20,23 +15,9 @@
       "^Bytes escritos por actualizacion completa: \\d+$",
       "^Puntos de corte probados: \\d+$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^ALMACENAMIENTO A\\/B SIMULADO: PASS$",
-        "count": 1
-      }
+      { "match": "^ALMACENAMIENTO A\\/B SIMULADO: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

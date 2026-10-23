@@ -3,12 +3,7 @@
   "$comment": "Store retentivo A/B simulado en RAM: snapshots A y B en copias 0/1 con secuencia, rechazo por identidad distinta, descarte de copia con CRC corrupto y cortes de energía en cada byte (todos conservan A). No toca FRAM física ni E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_Store_AB",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - store retentivo A\\/B simulado$",
@@ -19,23 +14,9 @@
       "^\\[PASS\\] todos los cortes parciales conservan snapshot A$",
       "^Puntos de corte probados: \\d+$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^STORE RETENTIVO A\\/B SIMULADO: PASS$",
-        "count": 1
-      }
+      { "match": "^STORE RETENTIVO A\\/B SIMULADO: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

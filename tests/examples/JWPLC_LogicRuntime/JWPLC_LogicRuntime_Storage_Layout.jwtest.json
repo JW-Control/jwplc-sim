@@ -3,12 +3,7 @@
   "$comment": "Mapa persistente de producción: direcciones de superblocks, Slots A/B, retentivos y reserva para FRAM de 8 KiB y 32 KiB, y sus verificaciones. Solo cálculo: no lee ni escribe la FRAM ni las E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_Layout",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - mapa persistente de produccion$",
@@ -21,23 +16,9 @@
       "^Retentivos: 0x1440\\.\\.0x1A3F \\(1536 bytes\\)$",
       "^Reserva: 0x7040\\.\\.0x7FFF \\(4032 bytes\\)$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^MAPA PERSISTENTE: PASS$",
-        "count": 1
-      }
+      { "match": "^MAPA PERSISTENTE: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

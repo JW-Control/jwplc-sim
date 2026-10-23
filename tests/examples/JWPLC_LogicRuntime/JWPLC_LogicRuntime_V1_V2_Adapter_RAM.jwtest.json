@@ -3,12 +3,7 @@
   "$comment": "Adaptador combinacional v1→v2: 14 bloques y 10 enlaces, el motor v2 coincide con la referencia v1 (todo FALSE, rama negada, todo TRUE) y se rechazan programas inválidos. DEFECTO DEL PACKAGE (no del simulador, igual en la placa): el ejemplo aún espera que el adaptador rechace TON, pero LogicV1ToV2Adapter.cpp ya convierte TON (ver ejemplo V1_V2_Ton_RAM), por eso termina con 1 FAIL. Se fija exactamente esa falla.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Adapter_RAM",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - adaptador combinacional v1 a v2$",
@@ -17,26 +12,11 @@
       "^\\[PASS\\] todo TRUE: salida final coincide$",
       "^\\[PASS\\] rama final negada: todos los bloques coinciden$",
       "^\\[PASS\\] SET\\/RESET no retentivo ya es aceptado$",
-      {
-        "match": "^\\[FAIL\\] TON queda pendiente de fase posterior$",
-        "count": 1
-      },
+      { "match": "^\\[FAIL\\] TON queda pendiente de fase posterior$", "count": 1 },
       "^Resultado: \\d+ PASS, 1 FAIL$",
-      {
-        "match": "^ADAPTADOR COMBINACIONAL V1 A V2: FAIL$",
-        "count": 1
-      }
+      { "match": "^ADAPTADOR COMBINACIONAL V1 A V2: FAIL$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\] (?!TON queda pendiente de fase posterior$)",
-      "^PRUEBA ABORTADA"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\] (?!TON queda pendiente de fase posterior$)", "^PRUEBA ABORTADA"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

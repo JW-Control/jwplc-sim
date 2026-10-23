@@ -3,12 +3,7 @@
   "$comment": "TON v1→v2 con tiempo explícito por scan: con preset de 1000 ms la salida sigue en 0 a los 499 y 999 ms y pasa a 1 a los 1000 ms (elapsed/remaining coinciden con la referencia v1), también a través del desborde de millis() (rollover). Q0 físicas apagadas.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Ton_RAM",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - TON v1 a v2 en RAM$",
@@ -18,23 +13,9 @@
       "^\\[PASS\\] alcanza 1000 ms: Q0 logica coincide$",
       "^\\[PASS\\] rollover alcanza 1000 ms: salida TON coincide$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^TON V1 A V2 EN RAM: PASS$",
-        "count": 1
-      }
+      { "match": "^TON V1 A V2 EN RAM: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }

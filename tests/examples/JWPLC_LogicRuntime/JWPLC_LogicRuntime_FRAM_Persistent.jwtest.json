@@ -5,46 +5,23 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "3000 uart0 \"GO\\n\"",
-        "6000 uart0 \"START\\n\""
-      ],
+      "stim": ["3000 uart0 \"GO\\n\"", "6000 uart0 \"START\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - PoC 6 persistencia entre reinicios$",
-          {
-            "match": "^Escribe START y pulsa Enviar para comenzar\\.$",
-            "before_ms": 3000,
-            "count": 1
-          },
+          { "match": "^Escribe START y pulsa Enviar para comenzar\\.$", "before_ms": 3000, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente START\\.$",
             "after_ms": 3000,
             "before_ms": 3100,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] Respaldo persistente guardado en NVS\\.$",
-            "after_ms": 6000
-          },
+          { "match": "^\\[PASS\\] Respaldo persistente guardado en NVS\\.$", "after_ms": 6000 },
           "^\\[PASS\\] Programa A persistido y validado\\.$",
-          {
-            "match": "^ETAPA 1 COMPLETA\\.$",
-            "after_ms": 6000,
-            "count": 1
-          }
+          { "match": "^ETAPA 1 COMPLETA\\.$", "after_ms": 6000, "count": 1 }
         ],
-        "console_absent": [
-          "^FAIL",
-          "^PRUEBA ABORTADA",
-          "ETAPA 2"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^FAIL", "^PRUEBA ABORTADA", "ETAPA 2"],
+        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
       }
     },
     {
@@ -56,11 +33,7 @@
           "^\\[PASS\\] Programa B persistido en el slot inactivo\\.$",
           "^ETAPA 2 COMPLETA\\.$"
         ],
-        "console_absent": [
-          "^FAIL",
-          "^Escribe START",
-          "ETAPA 1 COMPLETA"
-        ]
+        "console_absent": ["^FAIL", "^Escribe START", "ETAPA 1 COMPLETA"]
       }
     },
     {
@@ -71,28 +44,16 @@
           "^\\[PASS\\] Programa B cargado despues del reinicio\\.$",
           "^\\[PASS\\] Contenido original de FRAM restaurado exactamente\\.$",
           "^\\[PASS\\] Estado temporal NVS eliminado\\.$",
-          {
-            "match": "^PERSISTENCIA ENTRE REINICIOS: PASS$",
-            "count": 1
-          }
+          { "match": "^PERSISTENCIA ENTRE REINICIOS: PASS$", "count": 1 }
         ],
-        "console_absent": [
-          "^FAIL",
-          "^Escribe START"
-        ]
+        "console_absent": ["^FAIL", "^Escribe START"]
       }
     },
     {
       "until_ms": 3000,
       "expect": {
-        "console": [
-          "^Escribe START y pulsa Enviar para comenzar\\.$"
-        ],
-        "console_absent": [
-          "^Etapa",
-          "^Restauracion pendiente",
-          "^FAIL"
-        ]
+        "console": ["^Escribe START y pulsa Enviar para comenzar\\.$"],
+        "console_absent": ["^Etapa", "^Restauracion pendiente", "^FAIL"]
       }
     }
   ]

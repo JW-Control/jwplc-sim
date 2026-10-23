@@ -5,105 +5,40 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "2000 I0_0=1",
-        "2000 I0_1=1",
-        "2000 I0_2=1",
-        "6200 uart0 \"hola\\n\"",
-        "6500 uart0 \"RUNTIME\\n\""
-      ],
+      "stim": ["2000 I0_0=1", "2000 I0_1=1", "2000 I0_2=1", "6200 uart0 \"hola\\n\"", "6500 uart0 \"RUNTIME\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - integracion persistente de alto nivel$",
-          {
-            "match": "^\\[PASS\\] runtime\\.begin\\(\\) inicializa E\\/S$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^\\[PASS\\] start\\(\\) rechaza ausencia de programa$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^\\[PASS\\] runtime detecta almacenamiento sin formato$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^Escribe RUNTIME y pulsa Enviar para continuar\\.$",
-            "before_ms": 6200,
-            "count": 1
-          },
+          { "match": "^\\[PASS\\] runtime\\.begin\\(\\) inicializa E\\/S$", "before_ms": 6200 },
+          { "match": "^\\[PASS\\] start\\(\\) rechaza ausencia de programa$", "before_ms": 6200 },
+          { "match": "^\\[PASS\\] runtime detecta almacenamiento sin formato$", "before_ms": 6200 },
+          { "match": "^Escribe RUNTIME y pulsa Enviar para continuar\\.$", "before_ms": 6200, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente RUNTIME\\.$",
             "after_ms": 6200,
             "before_ms": 6300,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] Programa A preparado por API de alto nivel$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] motor conserva copia independiente de A$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] storage informa Slot B cargado$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] runtime prepara fallback A$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] runtime detecta ausencia total de programa valido$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] runtime recupera estado original sin formato$",
-            "after_ms": 6500
-          },
+          { "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] Programa A preparado por API de alto nivel$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] motor conserva copia independiente de A$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] storage informa Slot B cargado$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] runtime prepara fallback A$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] runtime detecta ausencia total de programa valido$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] runtime recupera estado original sin formato$", "after_ms": 6500 },
           "^Resultado: \\d+ PASS, 0 FAIL$",
-          {
-            "match": "^INTEGRACION RUNTIME PERSISTENTE: PASS$",
-            "count": 1
-          }
+          { "match": "^INTEGRACION RUNTIME PERSISTENTE: PASS$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^PRUEBA ABORTADA",
-          "^FAIL:",
-          "FALLO DE RUNTIME"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DI": "0b00000111",
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+        "signals": [{ "at_ms": 7900, "DI": "0b00000111", "DO": "0b00000000" }]
       }
     },
     {
       "until_ms": 6508,
-      "stim": [
-        "6500 uart0 \"RUNTIME\\n\""
-      ],
+      "stim": ["6500 uart0 \"RUNTIME\\n\""],
       "expect": {
-        "console": [
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500,
-            "count": 1
-          }
-        ],
-        "console_absent": [
-          "^Resultado:",
-          "^\\[FAIL\\]"
-        ]
+        "console": [{ "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500, "count": 1 }],
+        "console_absent": ["^Resultado:", "^\\[FAIL\\]"]
       }
     },
     {
@@ -111,15 +46,9 @@
       "expect": {
         "console": [
           "^Restauracion pendiente detectada tras reinicio\\.$",
-          {
-            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
-            "count": 1
-          }
+          { "match": "^\\[PASS\\] Recuperacion automatica completada\\.$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Escribe "
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^Escribe "]
       }
     },
     {
@@ -129,10 +58,7 @@
           "^\\[PASS\\] runtime detecta almacenamiento sin formato$",
           "^Escribe RUNTIME y pulsa Enviar para continuar\\.$"
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Restauracion pendiente"
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^Restauracion pendiente"]
       }
     }
   ]

@@ -5,79 +5,42 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "3000 uart0 \"hola\\n\"",
-        "6000 uart0 \"ERASE\\n\""
-      ],
+      "stim": ["3000 uart0 \"hola\\n\"", "6000 uart0 \"ERASE\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - PoC 5 backend FRAM fisica$",
           "^FRAM detectada: 8192 bytes$",
           "^Ventana de prueba: 0x1BC0\\.\\.0x1FFF$",
-          {
-            "match": "^\\[PASS\\] layout A\\/B reducido cabe en la ventana$",
-            "before_ms": 3000
-          },
-          {
-            "match": "^Escribe ERASE y pulsa Enviar para continuar\\.$",
-            "before_ms": 3000,
-            "count": 1
-          },
+          { "match": "^\\[PASS\\] layout A\\/B reducido cabe en la ventana$", "before_ms": 3000 },
+          { "match": "^Escribe ERASE y pulsa Enviar para continuar\\.$", "before_ms": 3000, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente ERASE\\.$",
             "after_ms": 3000,
             "before_ms": 3100,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] respaldo temporal de la ventana$",
-            "after_ms": 6000
-          },
+          { "match": "^\\[PASS\\] respaldo temporal de la ventana$", "after_ms": 6000 },
           "^\\[PASS\\] programa A cargado desde FRAM$",
           "^\\[PASS\\] Slot B activo tras segundo guardado$",
           "^\\[PASS\\] programa B conserva metadatos$",
           "^\\[PASS\\] contenido original restaurado exactamente$",
           "^Resultado: \\d+ PASS, 0 FAIL$",
-          {
-            "match": "^BACKEND FRAM FISICA: PASS$",
-            "count": 1
-          },
+          { "match": "^BACKEND FRAM FISICA: PASS$", "count": 1 },
           "^La ventana de prueba fue restaurada\\.$"
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^PRUEBA ABORTADA",
-          "^FAIL:",
-          "FALLO DE RUNTIME"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
       }
     },
     {
       "until_ms": 4000,
-      "stim": [
-        "2000 uart0 \"ERASE\\n\""
-      ],
+      "stim": ["2000 uart0 \"ERASE\\n\""],
       "expect": {
         "console": [
-          {
-            "match": "^BACKEND FRAM FISICA: PASS$",
-            "after_ms": 2000,
-            "count": 1
-          },
+          { "match": "^BACKEND FRAM FISICA: PASS$", "after_ms": 2000, "count": 1 },
           "^La ventana de prueba fue restaurada\\.$"
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^PRUEBA ABORTADA",
-          "^FAIL:",
-          "FALLO DE RUNTIME"
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"]
       }
     }
   ]

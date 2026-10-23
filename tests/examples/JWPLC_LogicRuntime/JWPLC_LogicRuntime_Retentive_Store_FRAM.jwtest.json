@@ -5,97 +5,39 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "6200 uart0 \"hola\\n\"",
-        "6500 uart0 \"RETENTIVE\\n\""
-      ],
+      "stim": ["6200 uart0 \"hola\\n\"", "6500 uart0 \"RETENTIVE\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - store retentivo en FRAM fisica$",
-          {
-            "match": "^\\[PASS\\] region retentiva inicia en 0x1440$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^\\[PASS\\] store puede inspeccionar la region original$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^Escribe RETENTIVE y pulsa Enviar para continuar\\.$",
-            "before_ms": 6200,
-            "count": 1
-          },
+          { "match": "^\\[PASS\\] region retentiva inicia en 0x1440$", "before_ms": 6200 },
+          { "match": "^\\[PASS\\] store puede inspeccionar la region original$", "before_ms": 6200 },
+          { "match": "^Escribe RETENTIVE y pulsa Enviar para continuar\\.$", "before_ms": 6200, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente RETENTIVE\\.$",
             "after_ms": 6200,
             "before_ms": 6300,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] snapshot A guardado en copia 0$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] reinicio fisico detecta snapshot B$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] reinicio descarta copia B corrupta$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] bitmap A sobrevive corrupcion de B$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] guarda posterior al limite permanece intacta$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] contenido retentivo original restaurado exactamente$",
-            "after_ms": 6500
-          },
+          { "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] snapshot A guardado en copia 0$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] reinicio fisico detecta snapshot B$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] reinicio descarta copia B corrupta$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] bitmap A sobrevive corrupcion de B$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] guarda posterior al limite permanece intacta$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] contenido retentivo original restaurado exactamente$", "after_ms": 6500 },
           "^Resultado: \\d+ PASS, 0 FAIL$",
-          {
-            "match": "^STORE RETENTIVO EN FRAM: PASS$",
-            "count": 1
-          }
+          { "match": "^STORE RETENTIVO EN FRAM: PASS$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^PRUEBA ABORTADA",
-          "^FAIL:",
-          "FALLO DE RUNTIME"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
       }
     },
     {
       "until_ms": 6514,
-      "stim": [
-        "6500 uart0 \"RETENTIVE\\n\""
-      ],
+      "stim": ["6500 uart0 \"RETENTIVE\\n\""],
       "expect": {
-        "console": [
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500,
-            "count": 1
-          }
-        ],
-        "console_absent": [
-          "^Resultado:",
-          "^\\[FAIL\\]"
-        ]
+        "console": [{ "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500, "count": 1 }],
+        "console_absent": ["^Resultado:", "^\\[FAIL\\]"]
       }
     },
     {
@@ -103,15 +45,9 @@
       "expect": {
         "console": [
           "^Restauracion pendiente detectada tras reinicio\\.$",
-          {
-            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
-            "count": 1
-          }
+          { "match": "^\\[PASS\\] Recuperacion automatica completada\\.$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Escribe "
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^Escribe "]
       }
     },
     {
@@ -121,10 +57,7 @@
           "^\\[PASS\\] store puede inspeccionar la region original$",
           "^Escribe RETENTIVE y pulsa Enviar para continuar\\.$"
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Restauracion pendiente"
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^Restauracion pendiente"]
       }
     }
   ]

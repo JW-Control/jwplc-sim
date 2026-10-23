@@ -5,48 +5,24 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "3000 uart0 \"INSTALL\\n\"",
-        "6000 uart0 \"START\\n\""
-      ],
+      "stim": ["3000 uart0 \"INSTALL\\n\"", "6000 uart0 \"START\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - PoC 7 arranque desde FRAM$",
           "^FRAM detectada: 8192 bytes$",
           "^Ventana persistente: 0x1BC0\\.\\.0x1FFF$",
-          {
-            "match": "^Escribe START y pulsa Enviar para instalar el programa\\.$",
-            "before_ms": 3000,
-            "count": 1
-          },
+          { "match": "^Escribe START y pulsa Enviar para instalar el programa\\.$", "before_ms": 3000, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente START\\.$",
             "after_ms": 3000,
             "before_ms": 3100,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] Programa persistido y verificado en FRAM\\.$",
-            "after_ms": 6000,
-            "count": 1
-          },
-          {
-            "match": "^INSTALACION COMPLETA\\.$",
-            "after_ms": 6000,
-            "count": 1
-          }
+          { "match": "^\\[PASS\\] Programa persistido y verificado en FRAM\\.$", "after_ms": 6000, "count": 1 },
+          { "match": "^INSTALACION COMPLETA\\.$", "after_ms": 6000, "count": 1 }
         ],
-        "console_absent": [
-          "^FAIL",
-          "^PRUEBA ABORTADA",
-          "Runtime iniciado"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^FAIL", "^PRUEBA ABORTADA", "Runtime iniciado"],
+        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
       }
     },
     {
@@ -62,88 +38,31 @@
       ],
       "expect": {
         "console": [
-          {
-            "match": "^\\[PASS\\] Programa cargado desde FRAM hacia RAM\\.$",
-            "before_ms": 2000,
-            "count": 1
-          },
-          {
-            "match": "^\\[PASS\\] Runtime iniciado con el programa persistente\\.$",
-            "before_ms": 2000,
-            "count": 1
-          },
+          { "match": "^\\[PASS\\] Programa cargado desde FRAM hacia RAM\\.$", "before_ms": 2000, "count": 1 },
+          { "match": "^\\[PASS\\] Runtime iniciado con el programa persistente\\.$", "before_ms": 2000, "count": 1 },
           "^Logica activa: I0_0 AND NOT I0_1 -> TON 2 s -> Q0_0$",
-          {
-            "match": "^I0_0=1 I0_1=1 AND=0 TON=0 Q0_0=0 \\|",
-            "after_ms": 3000,
-            "before_ms": 3500,
-            "count": 1
-          },
-          {
-            "match": "^I0_0=1 I0_1=0 AND=1 TON=1 Q0_0=1 \\|",
-            "after_ms": 5500,
-            "before_ms": 7000,
-            "min": 1
-          },
+          { "match": "^I0_0=1 I0_1=1 AND=0 TON=0 Q0_0=0 \\|", "after_ms": 3000, "before_ms": 3500, "count": 1 },
+          { "match": "^I0_0=1 I0_1=0 AND=1 TON=1 Q0_0=1 \\|", "after_ms": 5500, "before_ms": 7000, "min": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente RESTORE\\.$",
             "after_ms": 6000,
             "before_ms": 6100,
             "count": 1
           },
-          {
-            "match": "^Runtime detenido\\. Q0 apagadas\\.$",
-            "after_ms": 8000,
-            "before_ms": 8100,
-            "count": 1
-          },
+          { "match": "^Runtime detenido\\. Q0 apagadas\\.$", "after_ms": 8000, "before_ms": 8100, "count": 1 },
           "^\\[PASS\\] Contenido original de FRAM restaurado exactamente\\.$",
           "^\\[PASS\\] Estado temporal NVS eliminado\\.$",
-          {
-            "match": "^ARRANQUE Y EJECUCION DESDE FRAM: PASS$",
-            "after_ms": 8000,
-            "count": 1
-          },
-          {
-            "match": "^I0_0=",
-            "after_ms": 8100,
-            "count": 0
-          }
+          { "match": "^ARRANQUE Y EJECUCION DESDE FRAM: PASS$", "after_ms": 8000, "count": 1 },
+          { "match": "^I0_0=", "after_ms": 8100, "count": 0 }
         ],
-        "console_absent": [
-          "^FAIL",
-          "^FALLO DE RUNTIME",
-          "^Escribe START"
-        ],
+        "console_absent": ["^FAIL", "^FALLO DE RUNTIME", "^Escribe START"],
         "signals": [
-          {
-            "at_ms": 4900,
-            "I0_0": 1,
-            "Q0_0": 0
-          },
-          {
-            "at_ms": 5400,
-            "Q0_0": 0
-          },
-          {
-            "at_ms": 5600,
-            "Q0_0": 1,
-            "DO": "0b00000001"
-          },
-          {
-            "at_ms": 6900,
-            "Q0_0": 1
-          },
-          {
-            "at_ms": 7100,
-            "Q0_0": 0
-          },
-          {
-            "at_ms": 10900,
-            "I0_0": 1,
-            "Q0_0": 0,
-            "DO": "0b00000000"
-          }
+          { "at_ms": 4900, "I0_0": 1, "Q0_0": 0 },
+          { "at_ms": 5400, "Q0_0": 0 },
+          { "at_ms": 5600, "Q0_0": 1, "DO": "0b00000001" },
+          { "at_ms": 6900, "Q0_0": 1 },
+          { "at_ms": 7100, "Q0_0": 0 },
+          { "at_ms": 10900, "I0_0": 1, "Q0_0": 0, "DO": "0b00000000" }
         ]
       }
     },
@@ -154,11 +73,7 @@
           "^JWPLC Logic Runtime - PoC 7 arranque desde FRAM$",
           "^Escribe START y pulsa Enviar para instalar el programa\\.$"
         ],
-        "console_absent": [
-          "Programa cargado desde FRAM",
-          "^Restauracion pendiente",
-          "^FAIL"
-        ]
+        "console_absent": ["Programa cargado desde FRAM", "^Restauracion pendiente", "^FAIL"]
       }
     }
   ]

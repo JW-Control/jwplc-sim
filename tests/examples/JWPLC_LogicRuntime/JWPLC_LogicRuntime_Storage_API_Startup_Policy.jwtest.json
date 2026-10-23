@@ -5,97 +5,39 @@
   "runs": [
     {
       "until_ms": 8000,
-      "stim": [
-        "6200 uart0 \"hola\\n\"",
-        "6500 uart0 \"BOOT\\n\""
-      ],
+      "stim": ["6200 uart0 \"hola\\n\"", "6500 uart0 \"BOOT\\n\""],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - politica de arranque persistente$",
-          {
-            "match": "^\\[PASS\\] bootState informa UNFORMATTED$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^\\[PASS\\] politica detecta FRAM sin formato$",
-            "before_ms": 6200
-          },
-          {
-            "match": "^Escribe BOOT y pulsa Enviar para continuar\\.$",
-            "before_ms": 6200,
-            "count": 1
-          },
+          { "match": "^\\[PASS\\] bootState informa UNFORMATTED$", "before_ms": 6200 },
+          { "match": "^\\[PASS\\] politica detecta FRAM sin formato$", "before_ms": 6200 },
+          { "match": "^Escribe BOOT y pulsa Enviar para continuar\\.$", "before_ms": 6200, "count": 1 },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente BOOT\\.$",
             "after_ms": 6200,
             "before_ms": 6300,
             "count": 1
           },
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] bootState informa EMPTY$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] Slot B activo y cargado$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] bootState informa FALLBACK_PROGRAM_LOADED$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] slot cargado durante fallback es A$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] bootState informa NO_VALID_PROGRAM$",
-            "after_ms": 6500
-          },
-          {
-            "match": "^\\[PASS\\] contenido original restaurado exactamente$",
-            "after_ms": 6500
-          },
+          { "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] bootState informa EMPTY$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] Slot B activo y cargado$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] bootState informa FALLBACK_PROGRAM_LOADED$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] slot cargado durante fallback es A$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] bootState informa NO_VALID_PROGRAM$", "after_ms": 6500 },
+          { "match": "^\\[PASS\\] contenido original restaurado exactamente$", "after_ms": 6500 },
           "^Resultado: \\d+ PASS, 0 FAIL$",
-          {
-            "match": "^POLITICA DE ARRANQUE: PASS$",
-            "count": 1
-          }
+          { "match": "^POLITICA DE ARRANQUE: PASS$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^PRUEBA ABORTADA",
-          "^FAIL:",
-          "FALLO DE RUNTIME"
-        ],
-        "signals": [
-          {
-            "at_ms": 7900,
-            "DO": "0b00000000"
-          }
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
       }
     },
     {
       "until_ms": 6517,
-      "stim": [
-        "6500 uart0 \"BOOT\\n\""
-      ],
+      "stim": ["6500 uart0 \"BOOT\\n\""],
       "expect": {
-        "console": [
-          {
-            "match": "^\\[PASS\\] restauracion pendiente registrada$",
-            "after_ms": 6500,
-            "count": 1
-          }
-        ],
-        "console_absent": [
-          "^Resultado:",
-          "^\\[FAIL\\]"
-        ]
+        "console": [{ "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500, "count": 1 }],
+        "console_absent": ["^Resultado:", "^\\[FAIL\\]"]
       }
     },
     {
@@ -103,28 +45,16 @@
       "expect": {
         "console": [
           "^Restauracion pendiente detectada tras reinicio\\.$",
-          {
-            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
-            "count": 1
-          }
+          { "match": "^\\[PASS\\] Recuperacion automatica completada\\.$", "count": 1 }
         ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Escribe "
-        ]
+        "console_absent": ["^\\[FAIL\\]", "^Escribe "]
       }
     },
     {
       "until_ms": 3000,
       "expect": {
-        "console": [
-          "^\\[PASS\\] politica detecta FRAM sin formato$",
-          "^Escribe BOOT y pulsa Enviar para continuar\\.$"
-        ],
-        "console_absent": [
-          "^\\[FAIL\\]",
-          "^Restauracion pendiente"
-        ]
+        "console": ["^\\[PASS\\] politica detecta FRAM sin formato$", "^Escribe BOOT y pulsa Enviar para continuar\\.$"],
+        "console_absent": ["^\\[FAIL\\]", "^Restauracion pendiente"]
       }
     }
   ]

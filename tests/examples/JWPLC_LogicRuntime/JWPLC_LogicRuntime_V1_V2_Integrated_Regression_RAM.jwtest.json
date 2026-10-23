@@ -3,12 +3,7 @@
   "$comment": "Regresión integrada v1→v2 (SET/RESET + TON + salidas) con entradas simuladas: SET arranca memoria y TON, a los 999 ms no hay salida y a los 1000 ms las cuatro Q lógicas coinciden con v1; RESET apaga la cadena y el rollover de millis() se respeta. Q0 físicas apagadas.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Integrated_Regression_RAM",
   "until_ms": 3000,
-  "stim": [
-    "1500 I0_0=1",
-    "1500 I0_1=1",
-    "1500 I0_2=1",
-    "1500 I0_3=1"
-  ],
+  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - regresion integrada v1 a v2$",
@@ -18,23 +13,9 @@
       "^\\[PASS\\] RESET apaga SR y TON: motor v2 ejecuta scan$",
       "^\\[PASS\\] rollover alcanza 1000 ms: mascara de salidas esperada$",
       "^Resultado: \\d+ PASS, 0 FAIL$",
-      {
-        "match": "^REGRESION INTEGRADA V1 A V2: PASS$",
-        "count": 1
-      }
+      { "match": "^REGRESION INTEGRADA V1 A V2: PASS$", "count": 1 }
     ],
-    "console_absent": [
-      "^\\[FAIL\\]",
-      "^PRUEBA ABORTADA",
-      "^FAIL:",
-      "FALLO DE RUNTIME"
-    ],
-    "signals": [
-      {
-        "at_ms": 2900,
-        "DI": "0b00001111",
-        "DO": "0b00000000"
-      }
-    ]
+    "console_absent": ["^\\[FAIL\\]", "^PRUEBA ABORTADA", "^FAIL:", "FALLO DE RUNTIME"],
+    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
   }
 }
