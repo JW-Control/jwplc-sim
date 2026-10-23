@@ -1,0 +1,11 @@
+{
+  "type": "jwcontrol/pulse-generator",
+  "version": "1.0.0",
+  "kind": "native",
+  "name": "Generador de pulsos",
+  "description": "Tren de pulsos en una entrada de la placa (encoder, caudalímetro) mientras una salida lo habilita. Parámetros: enable (Q0_0), output (I0_7), hz (50).",
+  "license": "MIT",
+  "author": "JW Control",
+  "sources": ["pulse_generator.c"],
+  "sdk": 1
+}

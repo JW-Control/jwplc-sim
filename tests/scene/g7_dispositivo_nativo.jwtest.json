@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Gate G7 (SDK nativo): el generador de pulsos de sdk/native/examples se compila como biblioteca compartida, el runner lo carga con --device y mete 100 Hz en I0_7 mientras Q0_0 está en 1 (1 s): 100 flancos exactos. El sketch acorta el escaneo de entradas del core a 1 ms (por defecto 20 ms: 100 Hz se perdería por aliasing, como en la placa).",
+  "sketch": "../sketches/g7_pulsos",
+  "until_ms": 2400,
+  "devices": [{ "source": "../../sdk/native/examples/pulse-generator", "params": { "enable": "Q0_0", "output": "I0_7", "hz": 100 } }],
+  "expect": {
+    "console": ["^flancos=100$"],
+    "stderr": ["dispositivo nativo jwcontrol/pulse-generator@1\\.0\\.0"]
+  }
+}

@@ -65,6 +65,9 @@
     },
     "actions": {
       "$ref": "#/$defs/run/properties/actions"
+    },
+    "devices": {
+      "$ref": "#/$defs/run/properties/devices"
     }
   },
   "oneOf": [
@@ -153,6 +156,37 @@
               },
               "value": {}
             }
+          }
+        },
+        "devices": {
+          "type": "array",
+          "description": "Dispositivos nativos del SDK que carga el runner (--device): desde sus fuentes ('source', carpeta con jwsim-device.json relativa a este archivo) o instalados del índice ('type').",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "source"
+                ]
+              },
+              {
+                "required": [
+                  "type"
+                ]
+              }
+            ]
           }
         }
       }

@@ -9,6 +9,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { decodePng, encodePng, readScreenDump } from "../../scripts/lib/png.mjs";
 import { buildSketch, ROOT } from "./build.mjs";
 import { cosim } from "./cosim.mjs";
+import { buildNativeDevice, installedDevices } from "./device.mjs";
 import { parseResult, parseTimeline, runExeAsync } from "./runner.mjs";
 
 export const TEST_SUFFIX = ".jwtest.json";
@@ -36,7 +37,7 @@ export function resolveSketch(spec, testFile, pkg) {
   return resolve(dirname(testFile), spec);
 }
 
-const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s", "actions"]);
+const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s", "actions", "devices"]);
 const TEST_KEYS = new Set(["$schema", "$comment", "name", "sketch", "runs", "state", "scene", ...RUN_KEYS]);
 const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result", "screen", "scene"]);
 
@@ -301,6 +302,20 @@ export async function runTest(test, { pkg, target = "native", buildRoot, record 
       args.push("--stim", hostPath(exe, stim));
     }
     if (test.shared) args.push("--state", hostPath(exe, stateDir));
+    // Dispositivos nativos del SDK: desde sus fuentes o instalados del índice.
+    try {
+      for (const d of r.devices ?? []) {
+        let lib;
+        if (d.source) lib = buildNativeDevice(resolve(dirname(test.file), d.source), { target, outDir: join(buildRoot, target, "devices", d.source.replace(/[^\w.-]/g, "_")) }).lib;
+        else {
+          lib = installedDevices().filter((x) => x.type === d.type && x.kind === "native").pop()?.lib;
+          if (!lib) throw new Error(`dispositivo nativo ${d.type} no instalado (jwsim-cli device install ${d.type})`);
+        }
+        args.push("--device", hostPath(exe, lib), "--device-params", JSON.stringify(d.params ?? {}));
+      }
+    } catch (err) {
+      return { ...out, stage: "build", error: err.message, wall_ms: Date.now() - t0 };
+    }
     const shots = (r.expect?.screen ?? []).map((sc, k) => ({ ...sc, dump: join(work, `run${i}_screen${k}.fb`) }));
     for (const sc of shots) args.push("--screen-at", `${sc.at_ms}:${hostPath(exe, sc.dump)}`);
     let run;

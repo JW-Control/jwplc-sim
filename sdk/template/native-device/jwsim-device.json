@@ -1,0 +1,11 @@
+{
+  "type": "autor/mi-dispositivo-nativo",
+  "version": "0.1.0",
+  "kind": "native",
+  "name": "Mi dispositivo nativo",
+  "description": "Plantilla del SDK nativo: copia una salida de la placa a una entrada con un retardo fijo.",
+  "license": "MIT",
+  "author": "Autor",
+  "sources": ["device.c"],
+  "sdk": 1
+}

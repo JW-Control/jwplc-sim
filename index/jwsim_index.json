@@ -1,0 +1,57 @@
+{
+  "jwsim_index": 1,
+  "name": "JW Control — dispositivos y ejemplos de JWPLC Sim",
+  "packages": [
+    {
+      "type": "jwcontrol/marcha-cilindro",
+      "kind": "example",
+      "name": "Marcha, parada y cilindro",
+      "description": "Proyecto de ejemplo: JWPLC Basic con marcha/parada de un contactor confirmado por su auxiliar, motor de 230 VAC y ciclo de un cilindro con fin de carrera y sensor inductivo.",
+      "author": "JW Control",
+      "license": "GPL-3.0-or-later",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "url": "packages/jwcontrol-marcha-cilindro-1.0.0.tar.gz",
+          "checksum": "SHA-256:f03340f07432713a92018933bd05dd638503cfab000404c1057046b30d74feb1",
+          "size": 1903,
+          "sdk": 1
+        }
+      ]
+    },
+    {
+      "type": "jwcontrol/pulse-generator",
+      "kind": "native",
+      "name": "Generador de pulsos",
+      "description": "Tren de pulsos en una entrada de la placa (encoder, caudalímetro) mientras una salida lo habilita. Parámetros: enable (Q0_0), output (I0_7), hz (50).",
+      "author": "JW Control",
+      "license": "MIT",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "url": "packages/jwcontrol-pulse-generator-1.0.0.tar.gz",
+          "checksum": "SHA-256:75c19783be14dfd9c734bf26f60af09abc3f630ad2f4012be921912679b01180",
+          "size": 1505,
+          "sdk": 1
+        }
+      ]
+    },
+    {
+      "type": "jwcontrol/timer-relay",
+      "kind": "scene",
+      "name": "Relé temporizador",
+      "description": "Temporizador a la conexión o a la desconexión (IEC 61812) con contacto conmutado 15-16-18. Ejemplo del SDK escrito en TypeScript.",
+      "author": "JW Control",
+      "license": "MIT",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "url": "packages/jwcontrol-timer-relay-1.0.0.tar.gz",
+          "checksum": "SHA-256:15789396f2e3cea999bb3f86084102d4a51f046218d428fe465048424d629939",
+          "size": 2346,
+          "sdk": 1
+        }
+      ]
+    }
+  ]
+}

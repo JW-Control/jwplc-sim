@@ -1,0 +1,9 @@
+{
+  "$comment": "Paquetes del índice comunitario. scripts/index-build.mjs los empaqueta en index/packages y escribe index/jwsim_index.json; scripts/index-sign.mjs lo firma (jwsim_index.json.sig).",
+  "name": "JW Control — dispositivos y ejemplos de JWPLC Sim",
+  "packages": [
+    "../sdk/examples/timer-relay",
+    "../sdk/native/examples/pulse-generator",
+    "src/marcha-cilindro"
+  ]
+}

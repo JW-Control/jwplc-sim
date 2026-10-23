@@ -8,6 +8,9 @@
 //   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--report <archivo>]
 //   jwsim-cli parity [<ref>] [--package <dir>] [--update] [--report <archivo>]
 //   jwsim-cli matrix [--filter <texto>] [opciones de build] [--report <archivo>]
+//   jwsim-cli device build|test|pack <carpeta>     (SDK de dispositivos, G7)
+//   jwsim-cli device install <tipo>[@versión] [--index <url|archivo>]
+//   jwsim-cli device list [--index <url|archivo>]
 //
 // Opciones de build: --target native|windows, --out <dir> (build y run),
 // --cc gcc|clang, --board <id>, --package <dir> (checkout de platform-jwplc
@@ -20,10 +23,13 @@
 // fallas; 2 uso incorrecto; 3 el sketch no compila; 4 la simulación terminó
 // mal (FATAL, vigilante, caída); 5 entorno (toolchain o package).
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
+import { buildNativeDevice, installedDevices, loadSceneDevice, packDevice, readManifest } from "./lib/device.mjs";
+import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
 import { checkParity } from "./lib/parity.mjs";
 import { parseResult, parseTimeline, runExe } from "./lib/runner.mjs";
@@ -38,7 +44,10 @@ const USAGE = `uso:
   jwsim-cli run    <sketch_dir> [opciones de build] [--json] -- [opciones del runner]
   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
-  jwsim-cli matrix [--filter texto] [opciones de build] [--json] [--report archivo]`;
+  jwsim-cli matrix [--filter texto] [opciones de build] [--json] [--report archivo]
+  jwsim-cli device build|test|pack <carpeta> [--json]
+  jwsim-cli device install <tipo>[@versión] [--index url|archivo] [--json]
+  jwsim-cli device list [--index url|archivo] [--json]`;
 
 class CliError extends Error {
   constructor(code, message) {
@@ -65,6 +74,7 @@ function parse(argv) {
     else if (a === "--package") opts.packageDir = value(++i, a);
     else if (a === "--report") opts.report = value(++i, a);
     else if (a === "--filter") opts.filter = value(++i, a);
+    else if (a === "--index") opts.index = value(++i, a);
     else if (a === "--json") opts.json = true;
     else if (a === "--update") opts.update = true;
     else if (a === "--record") opts.record = true;
@@ -233,6 +243,82 @@ async function main() {
     code = m.ok ? EXIT.OK : EXIT.FAIL;
     emit({ package: pkgInfo(pkg), ...m });
     return code;
+  }
+
+  if (cmd === "device") {
+    const [sub, arg] = opts._;
+    const log = opts.json ? (m) => process.stderr.write(m + "\n") : (m) => console.error(m);
+    try {
+      if (sub === "build" || sub === "test" || sub === "pack") {
+        if (!arg) throw new CliError(EXIT.USAGE, `falta la carpeta del dispositivo`);
+        const dir = resolve(arg);
+        const m = readManifest(dir);
+        if (sub === "pack") {
+          const p = packDevice(dir);
+          const out = resolve(opts.outDir ?? join(ROOT, "build", "devices"), p.fileName);
+          mkdirSync(dirname(out), { recursive: true });
+          writeFileSync(out, p.archive);
+          if (!opts.json) console.log(`${out}\n${p.size} B ${p.checksum}`);
+          emit({ ok: true, type: m.type, version: m.version, kind: m.kind, archive: out, size: p.size, checksum: p.checksum });
+          return code;
+        }
+        if (m.kind === "native") {
+          const { lib } = buildNativeDevice(dir, { target: opts.target ?? "native", outDir: opts.outDir, log });
+          if (!opts.json) console.log(`[jwsim-cli] OK ${lib}`);
+          emit({ ok: true, type: m.type, version: m.version, kind: m.kind, library: lib });
+          return code;
+        }
+        if (m.kind === "example") {
+          emit({ ok: true, type: m.type, version: m.version, kind: m.kind });
+          return code;
+        }
+        const { defs } = await loadSceneDevice(dir);
+        let tests = { ran: 0, ok: true };
+        if (sub === "test") {
+          const files = readdirSync(dir).filter((f) => /\.test\.m?js$/.test(f)).map((f) => join(dir, f));
+          if (files.length) {
+            const r = spawnSync(process.execPath, ["--test", ...files], {
+              stdio: opts.json ? ["ignore", 2, 2] : "inherit",
+              env: { ...process.env, JWSIM_SDK: pathToFileURL(join(ROOT, "sdk", "testing.mjs")).href },
+            });
+            tests = { ran: files.length, ok: r.status === 0 };
+          }
+          if (!tests.ok) code = EXIT.FAIL;
+        }
+        if (!opts.json) console.log(`[jwsim-cli] ${m.type}@${m.version}: ${defs.length} definición(es) válidas${sub === "test" ? `, pruebas ${tests.ok ? "OK" : "con fallas"} (${tests.ran} archivos)` : ""}`);
+        emit({ ok: code === EXIT.OK, type: m.type, version: m.version, kind: m.kind, definitions: defs.map((d) => `${d.type}@${d.version}`), tests });
+        return code;
+      }
+      if (sub === "install") {
+        if (!arg) throw new CliError(EXIT.USAGE, "falta <tipo>[@versión]");
+        const r = await installPackage(arg, { index: opts.index, log });
+        if (!opts.json) console.log(`[jwsim-cli] instalado ${r.type}@${r.version} (${r.kind}) en ${r.dir}`);
+        emit({ ok: true, ...r });
+        return code;
+      }
+      if (sub === "list") {
+        const installed = installedDevices().map(({ type, version, kind, dir }) => ({ type, version, kind, dir }));
+        let available;
+        if (opts.index !== undefined || process.env.JWSIM_INDEX) {
+          const { index } = await loadIndex(opts.index);
+          available = index.packages.map((p) => ({ type: p.type, kind: p.kind, name: p.name, versions: p.versions.map((v) => v.version) }));
+        }
+        if (!opts.json) {
+          for (const d of installed) console.log(`instalado  ${d.type}@${d.version} (${d.kind})`);
+          for (const p of available ?? []) console.log(`índice     ${p.type} ${p.versions.join(", ")} (${p.kind}) — ${p.name}`);
+          if (!installed.length && !available) console.log("sin dispositivos instalados");
+        }
+        emit({ ok: true, installed, available });
+        return code;
+      }
+      throw new CliError(EXIT.USAGE, `device: subcomando desconocido '${sub ?? ""}' (build, test, pack, install, list)`);
+    } catch (err) {
+      if (err instanceof CliError) throw err;
+      code = EXIT.FAIL;
+      if (!opts.json) console.error(`[jwsim-cli] ERROR: ${err.message}`);
+      emit({ ok: false, error: err.message, security: err instanceof IndexError });
+      return code;
+    }
   }
 
   throw new CliError(EXIT.USAGE, `comando desconocido '${cmd}'`);

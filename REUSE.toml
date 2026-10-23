@@ -19,3 +19,19 @@ path = ["schema/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "MIT"
+
+# SDK de dispositivos (G7): MIT, para que los dispositivos de terceros
+# puedan tomar el contrato, las plantillas y los ejemplos.
+[[annotations]]
+path = ["sdk/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 JW Control"
+SPDX-License-Identifier = "MIT"
+
+# Índice comunitario (G7): cada paquete lleva su propia licencia en su
+# manifiesto; la clave pública de firma y los metadatos van con el proyecto.
+[[annotations]]
+path = ["index/**", "cli/keys/**", ".gitattributes"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 JW Control"
+SPDX-License-Identifier = "GPL-3.0-or-later"

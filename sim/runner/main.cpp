@@ -14,6 +14,8 @@
 //         [--no-eth]       (sin el W5500; por defecto está poblado como en la
 //                               placa. La red la dan las líneas "net" del .stim
 //                               o, con --port, app/lib/net-bridge.mjs)
+//         [--device <biblioteca> [--device-params <json>]]... (dispositivo
+//                               nativo del SDK, sdk/native/jwsim_device.h)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //   --resume <archivo>   (interno: proceso nuevo tras esp_restart; ver restart.h)
 //
@@ -39,6 +41,7 @@
 #include "jwsim/engine.h"
 #include "port.h"
 #include "restart.h"
+#include "native_device.h"
 #include "stimulus.h"
 
 extern "C" void app_main(void);
@@ -129,6 +132,7 @@ int main(int argc, char **argv) {
   std::string rtc_mode;
   std::vector<ScreenShot> shots;
   std::vector<jwsim::runner::InputEvent> stims;
+  std::vector<jwsim::runner::NativeDeviceSpec> devices;
   std::string resume_file;
   bool state_temp = false;
   bool seeded = false;
@@ -167,6 +171,11 @@ int main(int argc, char **argv) {
     else if (a == "--eth") eth = true;   // compatibilidad: ya es el valor por defecto
     else if (a == "--no-eth") eth = false;
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
+    else if (a == "--device") devices.push_back({next()});
+    else if (a == "--device-params") {
+      if (devices.empty()) usage("--device-params va después de --device");
+      devices.back().params = next();
+    }
     else if (a == "--state") state_dir = next();
     else if (a == "--screen") screen_file = next();
     else if (a == "--rtc") rtc_mode = next();
@@ -303,6 +312,9 @@ int main(int argc, char **argv) {
     const std::string file = jwsim::runner::prepare_restart(board, state_dir, temp, resume.restarts, applied);
     return std::make_pair(file, temp);
   };
+
+  // Dispositivos nativos (SDK): se conectan a las señales antes del arranque.
+  if (const std::string err = jwsim::runner::load_native_devices(board, devices); !err.empty()) usage(err.c_str());
 
   // Arranque idéntico al firmware real: app_main() del core del package crea
   // loopTask, loop1Task y jwplcSystemTask; el planificador las ejecuta.

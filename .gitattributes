@@ -1,0 +1,8 @@
+# El índice comunitario va firmado byte a byte y los paquetes llevan su
+# SHA-256: sin conversión de fin de línea en ningún sistema.
+index/jwsim_index.json -text
+index/jwsim_index.json.sig -text
+*.tar.gz binary
+sdk/examples/** text eol=lf
+sdk/native/** text eol=lf
+index/src/** text eol=lf

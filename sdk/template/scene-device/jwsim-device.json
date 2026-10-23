@@ -1,0 +1,11 @@
+{
+  "type": "autor/mi-dispositivo",
+  "version": "0.1.0",
+  "kind": "scene",
+  "name": "Mi dispositivo",
+  "description": "Plantilla del SDK: una baliza que parpadea mientras su bobina está energizada.",
+  "license": "MIT",
+  "author": "Autor",
+  "entry": "device.mjs",
+  "sdk": 1
+}
