@@ -1,12 +1,23 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Esclavo Modbus RTU con la configuración por defecto (ID 1, 19200 8E1, HR0..HR7 = 1000+i). Se ignoran un pedido al ID 2 y uno al ID 1 con CRC inválido; un FC03 válido (HR1..HR3) se contesta por RS-485 con 01 03 06 03 E9 03 EA 03 EB + CRC (la consola de UART2 muestra solo el comienzo legible: ID, función, cantidad de bytes y la parte alta de 1001).",
   "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Native",
-  "until_ms": 8000,
+  "until_ms": 4500,
+  "stim": [
+    "2500 uart2 \"\\x02\\x03\\x00\\x01\\x00\\x03\\x54\\x38\"",
+    "3000 uart2 \"\\x01\\x03\\x00\\x01\\x00\\x03\\x54\\x0C\"",
+    "3500 uart2 \"\\x01\\x03\\x00\\x01\\x00\\x03\\x54\\x0B\""
+  ],
   "expect": {
     "console": [
-      "^Modbus RTU ready: yes",
-      "^Slave ID: -?\\d+(?:\\.\\d+)?",
-      "^Baud: -?\\d+(?:\\.\\d+)?"
-    ]
+      "^Modbus RTU ready: yes$",
+      "^Slave ID: 1$",
+      "^Baud: 19200$",
+      "^Config: SERIAL_8E1$",
+      "^Holding registers: 8$",
+      { "match": "^\\u0001\\u0003\\u0006\\u0003", "port": 2, "count": 1 },
+      { "match": ".", "port": 2, "count": 1 }
+    ],
+    "console_absent": ["^Last error: (?!OK)"]
   }
 }

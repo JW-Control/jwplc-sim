@@ -1,10 +1,18 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Un equipo del bus envía 'HOLA RS485' y luego 'ABC123': cada texto aparece por USB y se devuelve tal cual por RS-485 (eco por UART2). Sin datos entrantes no se transmite nada.",
   "sketch": "package:libraries/JWPLC_RS485/examples/02.RS485_Echo",
-  "until_ms": 8000,
+  "until_ms": 4000,
+  "stim": ["2500 uart2 \"HOLA RS485\\n\"", "3200 uart2 \"ABC123\\n\""],
   "expect": {
     "console": [
-      "^JWPLC Basic - RS-?\\d+(?:\\.\\d+)? echo"
-    ]
+      "^JWPLC Basic - RS485 echo$",
+      { "match": "^HOLA RS485$", "port": 0, "count": 1, "after_ms": 2500, "before_ms": 2600 },
+      { "match": "^HOLA RS485$", "port": 2, "count": 1, "after_ms": 2500, "before_ms": 2600 },
+      { "match": "^ABC123$", "port": 0, "count": 1, "after_ms": 3200 },
+      { "match": "^ABC123$", "port": 2, "count": 1, "after_ms": 3200 },
+      { "match": ".", "port": 2, "count": 0, "before_ms": 2500 }
+    ],
+    "console_absent": ["begin failed"]
   }
 }

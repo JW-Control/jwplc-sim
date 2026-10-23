@@ -1,12 +1,17 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Puente con Serial2 directo: lo que llega por RS-485 sale por USB y lo que se escribe por USB sale por RS-485, en ambos sentidos y sin cruzarse.",
   "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Bridge",
-  "until_ms": 8000,
+  "until_ms": 4500,
+  "stim": ["2500 uart2 \"HOLA RS485\\n\"", "3500 uart0 \"USB->485\\n\""],
   "expect": {
     "console": [
-      "^JWPLC Basic v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? USB <-> RS-?\\d+(?:\\.\\d+)? Bridge",
-      "^----------------------------------------",
-      "^USB Serial baud: -?\\d+(?:\\.\\d+)?"
+      "^JWPLC Basic v1\\.4\\.1 USB <-> RS485 Bridge$",
+      "^RS485 RX pin: GPIO16$",
+      "^Bridge ready\\.$",
+      { "match": "^HOLA RS485$", "port": 0, "count": 1, "after_ms": 2500, "before_ms": 2600 },
+      { "match": "^HOLA RS485$", "port": 2, "count": 0 },
+      { "match": "^USB->485$", "port": 2, "count": 1, "after_ms": 3500, "before_ms": 3600 }
     ]
   }
 }

@@ -1,12 +1,17 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Tras el arranque (delay de 1,2 s) envía por RS-485 'JWPLC RS485 message #n' una vez por segundo y lo confirma por USB con 'Sent RS485 message #n'.",
   "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Basic_Send",
-  "until_ms": 8000,
+  "until_ms": 4500,
   "expect": {
     "console": [
-      "^JWPLC RS-?\\d+(?:\\.\\d+)? basic send test",
-      "^RS-?\\d+(?:\\.\\d+)? enabled: yes",
-      "^Ready: yes"
-    ]
+      "^JWPLC RS485 basic send test$",
+      "^Ready: yes$",
+      { "match": "^JWPLC RS485 message #1$", "port": 2, "count": 1, "before_ms": 2500 },
+      { "match": "^JWPLC RS485 message #\\d+$", "port": 2, "count": 3 },
+      { "match": "^Sent RS485 message #1$", "port": 0, "count": 1 },
+      { "match": "^Sent RS485 message #3$", "port": 0, "count": 1, "after_ms": 4000 }
+    ],
+    "console_absent": ["begin failed"]
   }
 }

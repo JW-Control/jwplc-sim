@@ -1,12 +1,19 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Tras begin() a 115200 8N1 imprime el estado del puerto; luego, cada segundo, sale por el bus RS-485 (UART2) 'JWPLC mensaje #n' con n consecutivo y se confirma por USB con 'TX #n'.",
   "sketch": "package:libraries/JWPLC_RS485/examples/01.RS485_Send",
-  "until_ms": 8000,
+  "until_ms": 4500,
   "expect": {
     "console": [
-      "^JWPLC Basic - RS-?\\d+(?:\\.\\d+)? send",
-      "^RS-?\\d+(?:\\.\\d+)? enabled: yes",
-      "^Ready: yes"
-    ]
+      "^JWPLC Basic - RS485 send$",
+      "^Ready: yes$",
+      "^Baud: 115200$",
+      "^Config: SERIAL_8N1$",
+      { "match": "^JWPLC mensaje #1$", "port": 2, "count": 1, "before_ms": 1500 },
+      { "match": "^JWPLC mensaje #2$", "port": 2, "count": 1, "after_ms": 2000, "before_ms": 2500 },
+      { "match": "^JWPLC mensaje #\\d+$", "port": 2, "count": 4 },
+      { "match": "^TX #4$", "port": 0, "count": 1, "after_ms": 4000 }
+    ],
+    "console_absent": ["begin failed"]
   }
 }

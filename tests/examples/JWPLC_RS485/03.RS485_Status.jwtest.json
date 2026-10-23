@@ -1,12 +1,18 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Cada 2 s envía 'PING' por RS-485 e imprime la telemetría: antes de recibir nada lastRX=0; un texto entrante a los 2,5 s se muestra por USB y el siguiente informe lleva lastRX≈2500 y lastTX≈4000.",
   "sketch": "package:libraries/JWPLC_RS485/examples/03.RS485_Status",
-  "until_ms": 8000,
+  "until_ms": 4500,
+  "stim": ["2500 uart2 \"HOLA RS485\\n\""],
   "expect": {
     "console": [
-      "^JWPLC Basic - RS-?\\d+(?:\\.\\d+)? status",
-      "^RS-?\\d+(?:\\.\\d+)? enabled: yes",
-      "^Ready: yes"
-    ]
+      "^JWPLC Basic - RS485 status$",
+      "^Ready: yes$",
+      { "match": "^PING$", "port": 2, "count": 2 },
+      { "match": "^ready=1 config=SERIAL_8N1 recent2s=1 lastRX=0 lastTX=20\\d\\d$", "count": 1, "before_ms": 2500 },
+      { "match": "^HOLA RS485$", "port": 0, "count": 1, "after_ms": 2500 },
+      { "match": "^ready=1 config=SERIAL_8N1 recent2s=1 lastRX=25\\d\\d lastTX=40\\d\\d$", "count": 1, "after_ms": 4000 }
+    ],
+    "console_absent": ["begin failed"]
   }
 }
