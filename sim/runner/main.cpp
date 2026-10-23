@@ -11,8 +11,9 @@
 //         [--rtc host|fijo:AAAA-MM-DDTHH:MM:SS] (hora del RTC al arrancar; sin
 //                               esta opción sigue la del estado o, sin estado,
 //                               un RTC sin hora válida)
-//         [--eth]          (W5500 poblado; la red la dan las líneas "net" del
-//                               .stim o, con --port, app/lib/net-bridge.mjs)
+//         [--no-eth]       (sin el W5500; por defecto está poblado como en la
+//                               placa. La red la dan las líneas "net" del .stim
+//                               o, con --port, app/lib/net-bridge.mjs)
 //   <exe> --port stdio   (modo interactivo para la interfaz; ver port.cpp)
 //   --resume <archivo>   (interno: proceso nuevo tras esp_restart; ver restart.h)
 //
@@ -132,7 +133,7 @@ int main(int argc, char **argv) {
   bool state_temp = false;
   bool seeded = false;
   uint64_t seed = 0;
-  bool eth = false;
+  bool eth = true;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -163,7 +164,8 @@ int main(int argc, char **argv) {
     }
     else if (a == "--resume") resume_file = next();
     else if (a == "--state-temp") state_temp = true;
-    else if (a == "--eth") eth = true;
+    else if (a == "--eth") eth = true;   // compatibilidad: ya es el valor por defecto
+    else if (a == "--no-eth") eth = false;
     else if (a == "--stim") load_stim_file(next().c_str(), stims);
     else if (a == "--state") state_dir = next();
     else if (a == "--screen") screen_file = next();

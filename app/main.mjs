@@ -314,19 +314,21 @@ function copyDir(from, to) {
   else mkdirSync(to, { recursive: true });
 }
 
-// W5500 de la placa: el proyecto lo puebla con
-// simulation.peripherals.ethernet.present (y opcionalmente "ip" para el DHCP
-// de la red virtual, "listenHost" "0.0.0.0" para publicar en la LAN y
-// "portOffset" para los puertos de escucha). Sin proyecto, no poblado.
+// W5500 de la placa: poblado, como viene el JWPLC Basic. El proyecto puede
+// quitarlo (simulation.peripherals.ethernet.present = false) o configurar
+// la red ("ip" para el DHCP de la red virtual, "listenHost" "0.0.0.0" para
+// publicar en la LAN y "portOffset" para los puertos de escucha).
 let bridge = null;
 function ethernetConfig(projectFile) {
-  if (!projectFile) return null;
-  try {
-    const eth = loadProject(projectFile).project.simulation?.peripherals?.ethernet;
-    return eth?.present ? eth : null;
-  } catch {
-    return null;
+  let eth = {};
+  if (projectFile) {
+    try {
+      eth = loadProject(projectFile).project.simulation?.peripherals?.ethernet ?? {};
+    } catch {
+      eth = {};
+    }
   }
+  return eth.present === false ? null : eth;
 }
 
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
@@ -373,7 +375,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
     if (hasBreakpoints()) await attachDebugger();
   };
   const eth = ethernetConfig(projectFile);
-  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg, ...(eth ? ["--eth"] : [])], { env: { JWSIM_DEBUG: "1" }, onRestart });
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg, ...(eth ? [] : ["--no-eth"])], { env: { JWSIM_DEBUG: "1" }, onRestart });
   // Red del host para el W5500 (al reproducir una grabación, la red sale
   // del .stim: sin puente).
   if (eth && !stim) {

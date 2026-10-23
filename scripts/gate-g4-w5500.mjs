@@ -4,7 +4,7 @@
 // Gate JWSIM_G4_W5500_MODEL: modelo del W5500 por registros y sus sockets
 // llevados a la red del host (app/lib/net-bridge.mjs).
 //   modelo        tests del modelo (tests/models/w5500_test.cpp)
-//   sin_chip      sin --eth la placa no tiene W5500: el runtime lo informa
+//   sin_chip      con --no-eth la placa no tiene W5500: el runtime lo informa
 //                 y el resto del firmware sigue igual
 //   dhcp          01.Ethernet_DHCP_Basic con el puente: el DHCP de la red
 //                 virtual entrega 192.168.250.10 y el runtime queda listo
@@ -84,7 +84,7 @@ const criteria = {};
 // ---- sin chip (placa por defecto)
 {
   const exe = await build(join(libs, "JWPLC_Ethernet", "examples", "01.Ethernet_DHCP_Basic"));
-  const r = runExe(exe, ["--until", "4000"]);
+  const r = runExe(exe, ["--until", "4000", "--no-eth"]);
   const status = r.stdout.split(/\r?\n/).map((l) => l.match(/UART0 (ready=.*)/)?.[1]).filter(Boolean).at(-1) ?? "";
   criteria.sin_chip = { pass: /ready=0 .*status=No Ethernet hardware/.test(status) && r.status === 0, ultima: status };
 }
