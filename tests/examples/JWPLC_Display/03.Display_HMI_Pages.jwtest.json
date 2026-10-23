@@ -1,11 +1,29 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Navegación de tests/tft/hmi_pages.stim ampliada: OK entra a USER, I0_0 en alto, RIGHT/LEFT/RIGHT informan PAGE 1/0/1 una vez por pulsación, ESC vuelve a IDLE; LEFT en IDLE también selecciona la página. El contenido de la pantalla lo cubre el gate G4 TFT con capturas.",
   "sketch": "package:libraries/JWPLC_Display/examples/03.Display_HMI_Pages",
-  "until_ms": 8000,
+  "until_ms": 6000,
+  "args": ["--rtc", "fijo:2026-01-15T08:30:00"],
+  "stim": [
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "2000 I0_0=1",
+    "2800 BTN_RIGHT=1", "2900 BTN_RIGHT=0",
+    "3200 BTN_LEFT=1", "3300 BTN_LEFT=0",
+    "3600 BTN_RIGHT=1", "3700 BTN_RIGHT=0",
+    "4000 BTN_ESC=1", "4100 BTN_ESC=0",
+    "4600 BTN_LEFT=1", "4700 BTN_LEFT=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - HMI pages",
-      "^OK=USER \\| LEFT=P-?\\d+(?:\\.\\d+)? \\| RIGHT=P-?\\d+(?:\\.\\d+)? \\| ESC=IDLE"
-    ]
+      { "match": "^JWPLC Basic - HMI pages$", "count": 1 },
+      "^OK=USER \\| LEFT=P0 \\| RIGHT=P1 \\| ESC=IDLE$",
+      { "match": "^PAGE 1$", "count": 1, "after_ms": 2800, "before_ms": 2900 },
+      { "match": "^PAGE 0$", "count": 1, "after_ms": 3200, "before_ms": 3300 },
+      { "match": "^PAGE 1$", "count": 1, "after_ms": 3600, "before_ms": 3700 },
+      { "match": "^PAGE 0$", "count": 1, "after_ms": 4600, "before_ms": 4700 },
+      { "match": "^PAGE \\d$", "count": 4 }
+    ],
+    "console_absent": ["^ERROR"],
+    "signals": [{ "at_ms": 5000, "DI": "0b00000001", "DO": "0b00000000" }]
   }
 }

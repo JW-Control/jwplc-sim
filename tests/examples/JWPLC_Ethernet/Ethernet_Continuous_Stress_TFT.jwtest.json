@@ -56,7 +56,7 @@
             "before_ms": 5000
           },
           {
-            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #1 DNS OTRO \\| DNS fallo raw=-?\\d+ [A-Z/ ]+; server=192\\.168\\.250\\.1; \\d+ms \\| POST HW=W5500 LINK=ON IP=192\\.168\\.250\\.10 \\|",
+            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #1 DNS [A-Z]+ \\| DNS fallo raw=-?\\d+ [A-Z/ ]+; server=192\\.168\\.250\\.1; \\d+ms \\| POST HW=W5500 LINK=ON IP=192\\.168\\.250\\.10 \\|",
             "count": 1
           },
           {

@@ -1,11 +1,32 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Los campos se registran sin error y la navegación completa (UP en IDLE sin despertar, OK a USER, RIGHT motor, UP/DOWN nivel hasta los topes, ESC a IDLE, OK de nuevo) corre sin FATAL ni salida espuria en la consola. El sketch no informa nada más por Serial y el runner no compara la pantalla: el contenido de los campos se verifica con capturas, no aquí.",
   "sketch": "package:libraries/JWPLC_Display/examples/02.Display_HMI_Fields",
-  "until_ms": 8000,
+  "until_ms": 9000,
+  "stim": [
+    "1500 BTN_UP=1", "1600 BTN_UP=0",
+    "1900 BTN_OK=1", "2000 BTN_OK=0",
+    "2300 BTN_RIGHT=1", "2400 BTN_RIGHT=0",
+    "2700 BTN_UP=1", "2800 BTN_UP=0",
+    "3000 BTN_UP=1", "3100 BTN_UP=0",
+    "3300 BTN_UP=1", "3400 BTN_UP=0",
+    "3600 BTN_UP=1", "3700 BTN_UP=0",
+    "3900 BTN_UP=1", "4000 BTN_UP=0",
+    "4200 BTN_UP=1", "4300 BTN_UP=0",
+    "4500 BTN_UP=1", "4600 BTN_UP=0",
+    "4800 BTN_DOWN=1", "4900 BTN_DOWN=0",
+    "5100 BTN_RIGHT=1", "5200 BTN_RIGHT=0",
+    "5500 BTN_ESC=1", "5600 BTN_ESC=0",
+    "6000 BTN_DOWN=1", "6100 BTN_DOWN=0",
+    "6500 BTN_OK=1", "6600 BTN_OK=0",
+    "7500 BTN_ESC=1", "7600 BTN_ESC=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - HMI fields",
-      "^OK=USER \\| RIGHT=MOTOR \\| UP\\/DOWN=NIVEL \\| ESC=IDLE"
-    ]
+      { "match": "^JWPLC Basic - HMI fields$", "count": 1 },
+      { "match": "^OK=USER \\| RIGHT=MOTOR \\| UP\\/DOWN=NIVEL \\| ESC=IDLE$", "count": 1 },
+      { "match": ".", "count": 0, "after_ms": 1200 }
+    ],
+    "console_absent": ["^ERROR"]
   }
 }

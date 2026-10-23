@@ -1,12 +1,48 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Corrida 1: OK en IDLE arranca el juego; sin aletear el pájaro cae, GAME OVER y tras la pausa vuelve solo a IDLE. Corrida 2: OK arranca, UP aletea manteniéndolo en vuelo (estado 1 = RUNNING con FPS medidos), ESC vuelve a IDLE sin GAME OVER; luego ESC y LEFT en IDLE no despiertan el juego.",
   "sketch": "package:libraries/JWPLC_Display/examples/Display_FlappyBird",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC TFT Flappy Bird - Optimized",
-      "^FPS objetivo: -?\\d+(?:\\.\\d+)?",
-      "^Velocidad juego: -?\\d+(?:\\.\\d+)?%"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 7000,
+      "stim": ["2500 BTN_OK=1", "2600 BTN_OK=0"],
+      "expect": {
+        "console": [
+          "^JWPLC TFT Flappy Bird - Optimized$",
+          "^FPS objetivo: 30$",
+          "^Velocidad juego: 75%$",
+          { "match": "^Display listo\\.$", "count": 1 },
+          "^Presiona OK en IDLE para iniciar Flappy\\.$",
+          { "match": "^Mode: IDLE \\| Game: 0 \\| Target FPS: 30 \\| Measured FPS: 0 \\| Speed: 75% \\| Best: 0$", "min": 1, "before_ms": 2500 },
+          { "match": "^Flappy: START$", "count": 1, "after_ms": 2500, "before_ms": 2700 },
+          { "match": "^Flappy: GAME OVER$", "count": 1, "after_ms": 2700 },
+          { "match": "^Mode: USER \\| Game: 2 \\| ", "min": 1 },
+          { "match": "^Flappy: retorno a IDLE$", "count": 1 },
+          { "match": "^Mode: IDLE \\| Game: 0 \\| .* \\| Best: \\d+$", "min": 1, "after_ms": 5000 }
+        ]
+      }
+    },
+    {
+      "until_ms": 9000,
+      "stim": [
+        "2500 BTN_OK=1", "2600 BTN_OK=0",
+        "3100 BTN_UP=1", "3200 BTN_UP=0",
+        "3900 BTN_UP=1", "4000 BTN_UP=0",
+        "4700 BTN_UP=1", "4800 BTN_UP=0",
+        "5000 BTN_ESC=1", "5100 BTN_ESC=0",
+        "6000 BTN_ESC=1", "6100 BTN_ESC=0",
+        "6500 BTN_LEFT=1", "6600 BTN_LEFT=0"
+      ],
+      "expect": {
+        "console": [
+          { "match": "^Flappy: START$", "count": 1, "after_ms": 2500, "before_ms": 2700 },
+          { "match": "^Mode: USER \\| Game: 1 \\| Target FPS: 30 \\| Measured FPS: [1-9]\\d* \\| Speed: 75% \\| Best: 0$", "min": 1, "after_ms": 2700, "before_ms": 5000 },
+          { "match": "^Flappy: retorno a IDLE$", "count": 1, "after_ms": 5000, "before_ms": 5200 },
+          { "match": "^Mode: IDLE \\| Game: 0 \\| ", "min": 2, "after_ms": 5200 },
+          { "match": "^Mode: USER", "count": 0, "after_ms": 5200 }
+        ],
+        "console_absent": ["^Flappy: GAME OVER$"]
+      }
+    }
+  ]
 }
