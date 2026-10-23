@@ -1,12 +1,75 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Server Modbus TCP (Unit 1, puerto 502). Sin red el estado a los 5 s es WAIT (Ethernet not ready). La red se simula con líneas net: OFFER y ACK del DHCP de la puerta de enlace 192.168.250.1 (xid 0x394 grabado con app/lib/net-bridge.mjs) → READY con IP 192.168.250.10; luego un cliente se conecta y envía FC03 HR0..HR3, FC06 HR0=1234, FC16 HR1..HR3=11,22,33, FC05 coil 2 ON y FC03 en la dirección 100 (fuera del mapa: excepción) y cierra. El estado a los 10 s muestra 5 pedidos (4 OK, 1 excepción), Holding[0]: 1234 y Coils raw: 0x4.",
   "sketch": "package:libraries/JWPLC_ModbusTCP/examples/01.ModbusTCP_Server",
-  "until_ms": 8000,
+  "until_ms": 10500,
+  "stim": [
+    "6100 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff0000000000000000000000000000000000000000000000000000",
+    "7100 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff0000000000000000000000000000000000000000000000000000",
+    "8500 net 0 connected 192.168.250.1:50123",
+    "8600 net 0 data 000100000006010300000004",
+    "8700 net 0 data 0002000000060106000004d2",
+    "8800 net 0 data 00030000000d01100001000306000b00160021",
+    "8900 net 0 data 00040000000601050002ff00",
+    "9000 net 0 data 000500000006010300640001",
+    "9100 net 0 peer_closed"
+  ],
   "expect": {
     "console": [
-      "^Modbus TCP: esperando Ethernet \\/ puerto -?\\d+(?:\\.\\d+)?\\.\\.\\.",
-      "^ModbusTCP server: WAIT",
-      "^Port: -?\\d+(?:\\.\\d+)?"
+      "^Modbus TCP: esperando Ethernet / puerto 502\\.\\.\\.$",
+      {
+        "match": "^ModbusTCP server: WAIT$",
+        "count": 1,
+        "before_ms": 6000
+      },
+      {
+        "match": "^Last error: Ethernet not ready$",
+        "count": 1,
+        "before_ms": 6000
+      },
+      {
+        "match": "^Modbus TCP READY \\| IP: 192\\.168\\.250\\.10 \\| port 502 \\| Unit ID 1$",
+        "count": 1,
+        "after_ms": 7100,
+        "before_ms": 8500
+      },
+      {
+        "match": "^ModbusTCP server: READY$",
+        "count": 1,
+        "after_ms": 10000
+      },
+      {
+        "match": "^RX/TX: 5/5$",
+        "count": 1,
+        "after_ms": 10000
+      },
+      {
+        "match": "^OK/EX: 4/1$",
+        "count": 1,
+        "after_ms": 10000
+      },
+      {
+        "match": "^Last error: Modbus exception$",
+        "count": 1,
+        "after_ms": 10000
+      },
+      {
+        "match": "^Client: NONE$",
+        "count": 2
+      },
+      {
+        "match": "^Holding\\[0\\]: 1234$",
+        "count": 1,
+        "after_ms": 10000
+      },
+      {
+        "match": "^Coils raw: 0x4$",
+        "count": 1,
+        "after_ms": 10000
+      }
+    ],
+    "console_absent": [
+      "no se pudo configurar el Server"
     ]
   }
 }

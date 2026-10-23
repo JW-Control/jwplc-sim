@@ -1,11 +1,56 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Cliente FC03 (HR0..HR1 de 192.168.0.100:502, Unit 1, sondeo 1 s, plazo 1 s). Sin Ethernet cada pedido vence (Timeout). La red se simula con líneas net: OFFER y ACK del DHCP (IP 192.168.250.10); luego el servidor acepta la conexión TCP del socket 0 y responde: TID 5 con 4321, 8765 (OK, TCP=CONNECTED); TID 6 con excepción 02; TID 7 con 7, 42 (los valores se actualizan); al TID 8 no responde (Timeout).",
   "sketch": "package:libraries/JWPLC_ModbusTCP/examples/02.ModbusTCP_Client",
-  "until_ms": 8000,
+  "until_ms": 13500,
+  "stim": [
+    "6100 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff0000000000000000000000000000000000000000000000000000",
+    "7100 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff0000000000000000000000000000000000000000000000000000",
+    "8850 net 0 connected 192.168.0.100:502",
+    "8870 net 0 data 00050000000701030410e1223d",
+    "9890 net 0 data 000600000003018302",
+    "10910 net 0 data 0007000000070103040007002a"
+  ],
   "expect": {
     "console": [
-      "^Modbus TCP Client configurado \\| Server: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?:-?\\d+(?:\\.\\d+)? \\| Unit ID -?\\d+(?:\\.\\d+)?",
-      "^FC-?\\d+(?:\\.\\d+)? ERROR \\| Timeout"
+      "^Modbus TCP Client configurado \\| Server: 192\\.168\\.0\\.100:502 \\| Unit ID 1$",
+      {
+        "match": "^FC03 ERROR \\| Timeout$",
+        "min": 3,
+        "before_ms": 8000
+      },
+      {
+        "match": "^FC03 OK \\| TID=5 \\| HR\\[0\\]=4321 \\| HR\\[1\\]=8765 \\| TCP=CONNECTED$",
+        "count": 1,
+        "after_ms": 8870,
+        "before_ms": 8970
+      },
+      {
+        "match": "^FC03 ERROR \\| Modbus exception \\| exception=0x2$",
+        "count": 1,
+        "after_ms": 9890,
+        "before_ms": 9990
+      },
+      {
+        "match": "^FC03 OK \\| TID=7 \\| HR\\[0\\]=7 \\| HR\\[1\\]=42 \\| TCP=CONNECTED$",
+        "count": 1,
+        "after_ms": 10910,
+        "before_ms": 11010
+      },
+      {
+        "match": "^FC03 ERROR \\| Timeout$",
+        "count": 1,
+        "after_ms": 12800,
+        "before_ms": 13000
+      },
+      {
+        "match": "^FC03 OK",
+        "count": 2
+      }
+    ],
+    "console_absent": [
+      "configuración inválida",
+      "No se pudo iniciar FC03"
     ]
   }
 }
