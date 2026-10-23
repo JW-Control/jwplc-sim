@@ -448,6 +448,25 @@ ipcMain.handle("scene:devices", async () =>
   })),
 );
 
+// Símbolos .svg (contrato en docs/SIMBOLOS.md): app/renderer/assets/devices/
+// <nombre>.svg para la biblioteca incluida (jwsim/<nombre>) o
+// <autor>__<nombre>.svg, y symbol.svg de cada dispositivo instalado.
+ipcMain.handle("scene:symbols", () => {
+  const out = {};
+  const dir = join(import.meta.dirname, "renderer", "assets", "devices");
+  if (existsSync(dir)) {
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".svg"))) {
+      const name = f.slice(0, -4);
+      out[name.includes("__") ? name.replace("__", "/") : `jwsim/${name}`] = readFileSync(join(dir, f), "utf8");
+    }
+  }
+  for (const d of installedDevices()) {
+    const f = join(d.dir, "symbol.svg");
+    if (existsSync(f)) out[d.type] = readFileSync(f, "utf8");
+  }
+  return out;
+});
+
 ipcMain.handle("scene:boardSvg", () => readFileSync(join(import.meta.dirname, "renderer", "assets", "jwplc-basic.svg"), "utf8"));
 
 // Análisis de la escena sin simular (al editar): estado en t = 0, avisos del

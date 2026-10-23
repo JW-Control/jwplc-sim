@@ -54,8 +54,100 @@
     "sensor-photoelectric": { BN: "+", BU: "0V", BK: "OUT" },
   };
 
+  // ------------------------------------------------------------ plantillas .svg
+  // Un símbolo puede venir de un archivo .svg (assets/devices/<nombre>.svg o
+  // symbol.svg de un dispositivo instalado) con el contrato de docs/SIMBOLOS.md:
+  // tamaño en múltiplos de 20, bornes marcados con .jw-term (data-term) y
+  // partes que dependen del estado con data-show, data-fill, data-text,
+  // data-translate, data-rotate y data-action. Si el archivo no cumple el
+  // contrato se usa el símbolo dibujado en código.
+  const templates = new Map();
+  const warnings = [];
+
+  function registerTemplate(type, text) {
+    const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+    const svg = doc.documentElement;
+    const bad = (m) => {
+      warnings.push(`${type}: ${m}`);
+      console.warn(`[símbolos] ${type}: ${m}`);
+    };
+    if (svg.nodeName !== "svg" || doc.querySelector("parsererror")) return bad("no es un SVG válido");
+    const vb = (svg.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+    if (vb.length !== 4 || vb[0] !== 0 || vb[1] !== 0) return bad('viewBox debe ser "0 0 ancho alto"');
+    const [, , w, h] = vb;
+    if (w % GRID || h % GRID) return bad(`ancho y alto deben ser múltiplos de ${GRID} (${w} × ${h})`);
+    // Sin scripts ni eventos en línea: el archivo solo dibuja.
+    for (const el of svg.querySelectorAll("script, foreignObject")) el.remove();
+    for (const el of svg.querySelectorAll("*")) {
+      for (const at of [...el.attributes]) if (/^on/i.test(at.name) || /javascript:/i.test(at.value)) el.removeAttribute(at.name);
+    }
+    const terms = {};
+    for (const t of svg.querySelectorAll(".jw-term")) {
+      const id = t.getAttribute("data-term");
+      const x = Number(t.getAttribute("cx"));
+      const y = Number(t.getAttribute("cy"));
+      if (!id || !Number.isFinite(x) || !Number.isFinite(y)) return bad("cada .jw-term necesita data-term, cx y cy");
+      if (x % GRID) return bad(`el borne ${id} debe tener cx múltiplo de ${GRID} (tiene ${x})`);
+      const side = (t.getAttribute("data-side") ?? (y < h / 2 ? "t" : "b")) === "b" ? "b" : "t";
+      terms[id] = { x, y: side === "t" ? 0 : h, side, screw: y };
+    }
+    if (!Object.keys(terms).length) return bad("no marca ningún borne (.jw-term)");
+    templates.set(type, { w, h, terms, svg });
+  }
+
+  // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
+  // contact.<contacto>, damaged, tripped; con "!" niega, "=v" compara.
+  function valueOf(expr, ctx) {
+    const [path, cmp] = expr.split("=");
+    const [ns, key] = path.replace(/^!/, "").split(".");
+    let v =
+      ns === "out" ? ctx.o[key] : ns === "param" ? ctx.p[key] : ns === "contact" ? ctx.st.contacts?.[key] :
+      ns === "damaged" ? !!ctx.st.damaged?.length : ns === "tripped" ? !!ctx.st.tripped : undefined;
+    if (cmp !== undefined) v = String(v) === cmp;
+    return path.startsWith("!") ? !v : v;
+  }
+
+  function drawTemplate(tpl, st, p) {
+    const ctx = { o: st.outputs ?? {}, p, st };
+    const root = tpl.svg.cloneNode(true);
+    for (const el of root.querySelectorAll(".jw-term")) el.setAttribute("opacity", "0");
+    for (const el of root.querySelectorAll("[data-show]")) {
+      if (!valueOf(el.getAttribute("data-show"), ctx)) el.setAttribute("display", "none");
+    }
+    for (const el of root.querySelectorAll("[data-fill]")) {
+      // data-fill="param.color" toma el color de la paleta de lentes.
+      const v = valueOf(el.getAttribute("data-fill"), ctx);
+      if (v !== undefined) el.setAttribute("fill", LENS[v] ?? v);
+    }
+    for (const el of root.querySelectorAll("[data-text]")) {
+      // data-text="out.speed:%" muestra 0..1 como porcentaje.
+      const [expr, fmt] = el.getAttribute("data-text").split(":");
+      const v = valueOf(expr, ctx);
+      el.textContent = fmt === "%" ? `${Math.round(Number(v ?? 0) * 100)} %` : String(v ?? "");
+    }
+    for (const el of root.querySelectorAll("[data-translate]")) {
+      // data-translate="out.position:0:1:x:60": valor de 0 a 1 → 0 a 60 px en x.
+      const [expr, v0, v1, axis, dist] = el.getAttribute("data-translate").split(":");
+      const v = Number(valueOf(expr, ctx) ?? 0);
+      const f = Math.max(0, Math.min(1, (v - Number(v0)) / (Number(v1) - Number(v0) || 1)));
+      el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} translate(${axis === "y" ? 0 : f * Number(dist)} ${axis === "y" ? f * Number(dist) : 0})`);
+    }
+    for (const el of root.querySelectorAll("[data-rotate]")) {
+      // data-rotate="out.position:-1:1:-45:45:40:50": valor → ángulo, centro (40, 50).
+      const [expr, v0, v1, a0, a1, cx, cy] = el.getAttribute("data-rotate").split(":");
+      const v = Number(valueOf(expr, ctx) ?? 0);
+      const f = Math.max(0, Math.min(1, (v - Number(v0)) / (Number(v1) - Number(v0) || 1)));
+      el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} rotate(${Number(a0) + f * (Number(a1) - Number(a0))} ${cx} ${cy})`);
+    }
+    for (const el of root.querySelectorAll("[data-action]")) el.classList.add("act");
+    const ser = new XMLSerializer();
+    return [...root.childNodes].map((n) => (n.nodeType === 1 ? ser.serializeToString(n) : "")).join("");
+  }
+
   /** Disposición de un tipo: tamaño y bornes { id: { x, y, side } } (y = borde: entrada del cable). */
   function layout(type, def) {
+    const tpl = templates.get(type);
+    if (tpl) return { w: tpl.w, h: tpl.h, terms: tpl.terms, template: true };
     const short = type.split("/")[1];
     let [w, h, top, bottom] = type.startsWith("jwsim/") && LAYOUT[short] ? LAYOUT[short] : [];
     if (!w) {
@@ -117,6 +209,8 @@
    * @param {object} def definición (para genéricos)
    */
   function draw(type, lay, st, p, def) {
+    const tpl = templates.get(type);
+    if (tpl) return drawTemplate(tpl, st, p);
     const o = st.outputs ?? {};
     const { w, h } = lay;
     const short = type.startsWith("jwsim/") ? type.split("/")[1] : "";
@@ -297,5 +391,5 @@
     }
   }
 
-  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw };
+  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, registerTemplate, templates, warnings };
 })();

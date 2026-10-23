@@ -12,6 +12,9 @@
 //                 dispositivo, quitar un cable (aviso de carga sin alimentación)
 //                 y guardar el proyecto con la escena
 //   SCENE_TFT     la pantalla de la placa en la escena muestra la TFT simulada
+//   SCENE_SYMBOL  una plantilla .svg (docs/simbolos/pushbutton-no.svg) reemplaza
+//                 el símbolo de S1 con sus bornes y su color; una que no cumple
+//                 el contrato (viewBox fuera de la grilla) se rechaza con aviso
 // Informe en build/gates/JWSIM_G7_E2E.json y capturas en build/gates/g7/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g7.mjs
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -191,8 +194,29 @@ try {
     saved: savedOk,
   };
   log(`SCENE_EDIT ${JSON.stringify(criteria.SCENE_EDIT)}`);
+
+  // ---- SCENE_SYMBOL
+  const tplText = readFileSync(join(ROOT, "docs", "simbolos", "pushbutton-no.svg"), "utf8");
+  const tplWarn = await t(([ty, tx]) => window.jwsimTest.scene.useSymbol(ty, tx), ["jwsim/pushbutton-no", tplText]);
+  const s1 = await t(() => {
+    const g = document.querySelector("#scene-devices > g[data-id='S1']");
+    const r = g?.getBBox();
+    const head = [...(g?.querySelectorAll("circle") ?? [])].map((c) => c.getAttribute("fill"));
+    return { w: r?.width, h: r?.height, act: !!g?.querySelector(".act"), fills: head };
+  });
+  const s1Term = await term("S1.13");
+  const badWarn = await t(([ty, tx]) => window.jwsimTest.scene.useSymbol(ty, tx), ["jwsim/lamp", tplText.replace('viewBox="0 0 80 120"', 'viewBox="0 0 75 120"')]);
+  await win.screenshot({ path: join(OUT, "escena-plantilla.png") });
+  criteria.SCENE_SYMBOL = {
+    ok: tplWarn.length === 0 && s1.act && s1.fills.length > 0 && !!s1Term && badWarn.length === 1,
+    template_warnings: tplWarn,
+    s1,
+    s1_term: !!s1Term,
+    rejected: badWarn,
+  };
+  log(`SCENE_SYMBOL ${JSON.stringify(criteria.SCENE_SYMBOL)}`);
 } finally {
-  const ok = Object.values(criteria).length === 4 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 5 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_G7_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_G7_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();

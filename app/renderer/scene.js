@@ -65,7 +65,7 @@
       const k = window.JwsimSymbols.SCREW_INSET;
       for (const [id, v] of Object.entries(lay.terms)) {
         terms[id] = [v.x, v.y];
-        screws[id] = [v.x, v.side === "t" ? v.y + k : v.y - k];
+        screws[id] = [v.x, v.screw ?? (v.side === "t" ? v.y + k : v.y - k)];
         sides[id] = v.side;
       }
       layouts.set(t, { w: lay.w, h: lay.h, terms, screws, sides, lay });
@@ -1020,6 +1020,14 @@
         const r = el?.getBoundingClientRect();
         return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
       },
+      // Plantilla .svg en caliente: la registra y redibuja la escena.
+      useSymbol: (type, text) => {
+        const n = window.JwsimSymbols.warnings.length;
+        window.JwsimSymbols.registerTemplate(type, text);
+        layouts.delete(type);
+        render(true);
+        return window.JwsimSymbols.warnings.slice(n);
+      },
       routes: () => (S.routes ?? []).map((r, i) => ({ wire: `${S.spec.wiring[i].from}-${S.spec.wiring[i].to}`, routed: r?.routed, mid: r?.mid })),
       wireColor: (i) => document.querySelector(`.wire[data-wire="${i}"]`)?.dataset.color ?? null,
       wireLive: (i) => !!document.querySelector(`.wire[data-wire="${i}"]`)?.classList.contains("live"),
@@ -1037,6 +1045,8 @@
   async function init() {
     const defs = await api.sceneDevices();
     for (const d of defs) S.defs.set(d.type, d);
+    // Símbolos en archivos .svg (assets/devices y dispositivos instalados).
+    for (const [type, text] of Object.entries((await api.sceneSymbols?.()) ?? {})) window.JwsimSymbols.registerTemplate(type, text);
     populatePalette();
     wirePointer();
     for (const b of document.querySelectorAll("#board-view .seg")) b.addEventListener("click", () => setView(b.dataset.view));

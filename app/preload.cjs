@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   // Escena (G7)
   sceneDevices: () => ipcRenderer.invoke("scene:devices"),
   sceneBoardSvg: () => ipcRenderer.invoke("scene:boardSvg"),
+  sceneSymbols: () => ipcRenderer.invoke("scene:symbols"),
   sceneAnalyze: (spec) => ipcRenderer.invoke("scene:analyze", spec),
   sceneAct: (device, action, value) => ipcRenderer.invoke("scene:act", { device, action, value }),
   sceneRearm: () => ipcRenderer.invoke("scene:rearm"),
