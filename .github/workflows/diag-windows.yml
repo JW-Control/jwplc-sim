@@ -1,11 +1,16 @@
 # SPDX-FileCopyrightText: 2026 JW Control
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Diagnóstico de caídas del runner en Windows (gdb del toolchain incluido).
-# Solo a pedido.
+# Diagnósticos en Windows con el toolchain incluido (caídas bajo gdb,
+# header precompilado...). Solo a pedido.
 name: Diagnóstico en Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      script:
+        description: "Script de diagnóstico (scripts/diag-*.mjs)"
+        type: string
+        default: diag-windows-crash.mjs
 
 jobs:
   diag:
@@ -29,5 +34,5 @@ jobs:
           node scripts/fetch-package.mjs
           node scripts/fetch-toolchain.mjs
 
-      - name: Caídas bajo gdb
-        run: node scripts/diag-windows-crash.mjs
+      - name: Diagnóstico
+        run: node scripts/${{ inputs.script }}
