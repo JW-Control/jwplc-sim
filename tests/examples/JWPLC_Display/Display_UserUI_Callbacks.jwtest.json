@@ -1,12 +1,25 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "OK entra a USER ('IDLE mode: no'); ESC no saca de USER en modo TIMEOUT; sin actividad jwplcUIExit avisa la salida una sola vez ~8 s después del último botón y vuelve 'IDLE mode: yes'; un nuevo OK vuelve a entrar.",
   "sketch": "package:libraries/JWPLC_Display/examples/Display_UserUI_Callbacks",
-  "until_ms": 8000,
+  "until_ms": 14500,
+  "stim": [
+    "2500 BTN_OK=1", "2600 BTN_OK=0",
+    "4000 BTN_ESC=1", "4100 BTN_ESC=0",
+    "13300 BTN_OK=1", "13400 BTN_OK=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC_Display dot API - USER test",
-      "^OK=USER \\| retorno automatico en -?\\d+(?:\\.\\d+)?s",
-      "^Display configurado usando API con punto"
+      "^JWPLC_Display dot API - USER test$",
+      "^OK=USER \\| retorno automatico en 8s$",
+      { "match": "^Display configurado usando API con punto$", "count": 1 },
+      { "match": "^IDLE mode: yes$", "min": 1, "before_ms": 2500 },
+      { "match": "^IDLE mode: no$", "min": 8, "after_ms": 2600, "before_ms": 12000 },
+      { "match": "^IDLE mode: yes$", "count": 0, "after_ms": 2600, "before_ms": 12000 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 0, "before_ms": 12000 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 1, "after_ms": 12000, "before_ms": 12300 },
+      { "match": "^IDLE mode: yes$", "count": 1, "after_ms": 12300, "before_ms": 13300 },
+      { "match": "^IDLE mode: no$", "count": 1, "after_ms": 13400 }
     ]
   }
 }

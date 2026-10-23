@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "El contador de arranques vive en la NVRAM del RTC (con batería): tres arranques seguidos con el mismo estado muestran 1, 2 y 3.",
+  "sketch": "package:libraries/JW_RTC/examples/NvramDemo",
+  "runs": [
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 1$", "count": 1 }], "console_absent": ["failed"] } },
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 2$", "count": 1 }], "console_absent": ["failed"] } },
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 3$", "count": 1 }], "console_absent": ["failed"] } }
+  ]
+}

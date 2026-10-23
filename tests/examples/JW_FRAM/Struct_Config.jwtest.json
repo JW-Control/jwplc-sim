@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Defecto del ejemplo (no del simulador): usa JW_FRAM fram(5), pero en el JWPLC Basic el GPIO5 es el CS del W5500 (JWPLC_ETH_CS) y la FRAM está en el GPIO13. put() va al W5500 y get() lee ceros: el struct recuperado sale vacío, igual que en la placa. Si el package corrige el pin, esperar 'Modo: 2', 'Enabled: true', 'Kp: 1.500' y 'Machine: JWPLC_Basic_V2'.",
+  "sketch": "package:libraries/JW_FRAM/examples/Struct_Config",
+  "until_ms": 1500,
+  "expect": {
+    "console": [
+      "^JW_FRAM::begin\\(\\) usando tamano de FRAM forzado$",
+      "^Size bytes: 8192$",
+      { "match": "^Struct recuperado:$", "count": 1 },
+      "^Modo: 0$",
+      "^Enabled: false$",
+      "^Kp: 0\\.000$",
+      "^Machine: $"
+    ],
+    "console_absent": ["^Fallo al inicializar la FRAM"]
+  }
+}

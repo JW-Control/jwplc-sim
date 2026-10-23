@@ -1,12 +1,168 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Dos arranques con FRAM y RTC compartidos. (1) Sin servidor DHCP ni hora válida: crea el bloque FRAM (arranque #1), UP/UP/DOWN guardan y verifican 1, 2, 1, RIGHT/LEFT cambian de página; la hora inválida no enciende ERR (ERR: NINGUNO); OK con Ethernet sin IP informa 'Ethernet no esta listo' y la causa pasa a ERR: HTTP sin contar un GET. (2) RTC fijo 2026-03-15 10:30 y el servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1: recupera el bloque (arranque #2), UP continúa desde el valor guardado (2), ETH queda OK con la IP ofrecida y OK lanza el GET a example.com; como nadie responde DNS en la red simulada el resultado es FALLO CONNECT/DNS, se cuenta 1 GET sin éxito y ERR: HTTP.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Basic - Ethernet HTTP TFT Diagnostics",
-      "^Host: http:\\/\\/example\\.com\\/",
-      "^OK=GET \\| LEFT\\/RIGHT=pagina \\| UP\\/DOWN=cambia\\+guarda FRAM \\| ESC=IDLE"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 11000,
+      "stim": [
+        "3000 BTN_UP=1",
+        "3100 BTN_UP=0",
+        "3400 BTN_UP=1",
+        "3500 BTN_UP=0",
+        "3800 BTN_DOWN=1",
+        "3900 BTN_DOWN=0",
+        "4200 BTN_RIGHT=1",
+        "4300 BTN_RIGHT=0",
+        "4600 BTN_LEFT=1",
+        "4700 BTN_LEFT=0",
+        "6000 BTN_OK=1",
+        "6100 BTN_OK=0"
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Basic - Ethernet HTTP TFT Diagnostics$",
+          "^Host: http://example\\.com/$",
+          {
+            "match": "^FRAM: creando bloque de diagnostico$",
+            "count": 1
+          },
+          {
+            "match": "^FRAM: OK \\| Boot #1$",
+            "count": 1
+          },
+          {
+            "match": "^Display: diagnostico USER activo$",
+            "count": 1
+          },
+          {
+            "match": "^Button: UP \\| Count: 1$",
+            "count": 1,
+            "after_ms": 3000,
+            "before_ms": 3400
+          },
+          {
+            "match": "^FRAM value: 1 \\| guardado y verificado$",
+            "count": 2
+          },
+          {
+            "match": "^FRAM value: 2 \\| guardado y verificado$",
+            "count": 1,
+            "after_ms": 3400,
+            "before_ms": 3800
+          },
+          {
+            "match": "^Button: DOWN \\| Count: 1$",
+            "count": 1
+          },
+          {
+            "match": "^Button: RIGHT \\| Count: 1$",
+            "count": 1,
+            "after_ms": 4200,
+            "before_ms": 4600
+          },
+          {
+            "match": "^Button: LEFT \\| Count: 1$",
+            "count": 1,
+            "after_ms": 4600,
+            "before_ms": 5000
+          },
+          {
+            "match": "^ETH: DHCP pending \\| IP: 0\\.0\\.0\\.0 \\| RTC: HORA INVALIDA \\| FRAM: GUARDADO OK \\| HTTP: LISTO - PULSE OK \\| GET OK: 0/0 \\| ERR: NINGUNO$",
+            "count": 1,
+            "before_ms": 6000
+          },
+          {
+            "match": "^Button: OK \\| Count: 1$",
+            "count": 1,
+            "after_ms": 6000
+          },
+          {
+            "match": "^HTTP: Ethernet no esta listo$",
+            "count": 1,
+            "after_ms": 6000
+          },
+          {
+            "match": "^ETH: DHCP failed \\| IP: 0\\.0\\.0\\.0 \\| RTC: HORA INVALIDA \\| FRAM: GUARDADO OK \\| HTTP: ETHERNET NO LISTO \\| GET OK: 0/0 \\| ERR: HTTP$",
+            "count": 1,
+            "after_ms": 6000
+          }
+        ],
+        "console_absent": [
+          "ERROR al guardar",
+          "fallo de escritura",
+          "^HTTP: GET"
+        ]
+      }
+    },
+    {
+      "until_ms": 11000,
+      "args": [
+        "--rtc",
+        "fijo:2026-03-15T10:30:00"
+      ],
+      "stim": [
+        "2800 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "4000 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "5500 BTN_UP=1",
+        "5600 BTN_UP=0",
+        "7000 BTN_OK=1",
+        "7100 BTN_OK=0"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^FRAM: bloque persistente recuperado$",
+            "count": 1
+          },
+          {
+            "match": "^FRAM: OK \\| Boot #2$",
+            "count": 1
+          },
+          {
+            "match": "^FRAM value: 2 \\| guardado y verificado$",
+            "count": 1,
+            "after_ms": 5500,
+            "before_ms": 7000
+          },
+          {
+            "match": "^HTTP: GET http://example\\.com/$",
+            "count": 1,
+            "after_ms": 7000
+          },
+          {
+            "match": "^=== Resultado HTTP ===$",
+            "count": 1,
+            "after_ms": 7000
+          },
+          {
+            "match": "^Estado: FALLO CONNECT/DNS$",
+            "count": 1,
+            "after_ms": 7000
+          },
+          {
+            "match": "^Bytes: 0$",
+            "count": 1,
+            "after_ms": 7000
+          },
+          {
+            "match": "^FRAM GET/OK: 1/0$",
+            "count": 1,
+            "after_ms": 7000
+          },
+          {
+            "match": "^ETH: OK \\| IP: 192\\.168\\.250\\.10 \\| RTC: 2026-03-15 10:30:\\d\\d \\| FRAM: GUARDADO OK \\| HTTP: FALLO CONNECT/DNS \\| GET OK: 0/1 \\| ERR: HTTP$",
+            "count": 1,
+            "after_ms": 9000
+          }
+        ],
+        "console_absent": [
+          "creando bloque",
+          "HORA INVALIDA",
+          "ERROR al guardar",
+          "Ethernet no esta listo"
+        ]
+      }
+    }
+  ]
 }

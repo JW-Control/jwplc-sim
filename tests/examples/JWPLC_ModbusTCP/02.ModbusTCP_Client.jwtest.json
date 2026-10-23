@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusTCP/examples/02.ModbusTCP_Client",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Modbus TCP Client configurado \\| Server: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?:-?\\d+(?:\\.\\d+)? \\| Unit ID -?\\d+(?:\\.\\d+)?",
+      "^FC-?\\d+(?:\\.\\d+)? ERROR \\| Timeout"
+    ]
+  }
+}

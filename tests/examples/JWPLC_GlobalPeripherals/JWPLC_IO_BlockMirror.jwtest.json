@@ -1,10 +1,26 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Espejo I0_k -> Q0_k con JWPLC_readInputs/JWPLC_writeOutputs: patrones 0x01, 0xA5, 0x5A, 0xFF y 0x00 cada 600 ms tras el arranque (delay de 1200 ms); 150 ms después de cada cambio las salidas iguales a las entradas.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/JWPLC_IO_BlockMirror",
-  "until_ms": 8000,
+  "until_ms": 5500,
+  "stim": [
+    "2500 I0_0=1",
+    "3100 I0_2=1", "3100 I0_5=1", "3100 I0_7=1",
+    "3700 I0_0=0", "3700 I0_1=1", "3700 I0_2=0", "3700 I0_3=1", "3700 I0_4=1", "3700 I0_5=0", "3700 I0_6=1", "3700 I0_7=0",
+    "4300 I0_0=1", "4300 I0_2=1", "4300 I0_5=1", "4300 I0_7=1",
+    "4900 I0_0=0", "4900 I0_1=0", "4900 I0_2=0", "4900 I0_3=0", "4900 I0_4=0", "4900 I0_5=0", "4900 I0_6=0", "4900 I0_7=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC IO block mirror"
+      { "match": "^JWPLC IO block mirror$", "count": 1 }
+    ],
+    "signals": [
+      { "at_ms": 2400, "DI": "0b00000000", "DO": "0b00000000" },
+      { "at_ms": 2650, "DI": "0b00000001", "DO": "0b00000001" },
+      { "at_ms": 3250, "DI": "0b10100101", "DO": "0b10100101" },
+      { "at_ms": 3850, "DI": "0b01011010", "DO": "0b01011010" },
+      { "at_ms": 4450, "DI": "0b11111111", "DO": "0b11111111" },
+      { "at_ms": 5050, "DI": "0b00000000", "DO": "0b00000000" }
     ]
   }
 }

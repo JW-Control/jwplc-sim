@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Defecto del ejemplo (no del simulador): usa JW_FRAM fram(5), pero en el JWPLC Basic el GPIO5 es el CS del W5500 (JWPLC_ETH_CS) y la FRAM está en el GPIO13 (JWPLC_FRAM_CS). writeBlock() no verifica y dice que escribió, pero readBlock() lee del W5500 y rechaza el magic, igual que en la placa. Si el package corrige el pin, esperar 'Bloque validado leido correctamente', 'Machine: JWPLC Coffee & Milk' y 'Starts: 42'.",
+  "sketch": "package:libraries/JW_FRAM/examples/Block_Config",
+  "until_ms": 1500,
+  "expect": {
+    "console": [
+      "^JW_FRAM::begin\\(\\) usando tamano de FRAM forzado$",
+      "^Size bytes: 8192$",
+      { "match": "^Bloque validado escrito correctamente$", "count": 1 },
+      "^JW_FRAM::readBlock\\(\\) magic invalido$",
+      { "match": "^Bloque invalido o incompatible$", "count": 1 }
+    ],
+    "console_absent": ["^Fallo al inicializar la FRAM", "^Bloque validado leido correctamente$"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_RS485/examples/01.RS485_Send",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - RS-?\\d+(?:\\.\\d+)? send",
+      "^RS-?\\d+(?:\\.\\d+)? enabled: yes",
+      "^Ready: yes"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "FRAM en CS 13 (la del JWPLC Basic): put() de int32/float/bool, update() del contador a 101 y relectura con get(). Dos arranques con la misma FRAM dan el mismo resultado.",
+  "sketch": "package:libraries/JW_FRAM/examples/Basic_RW",
+  "runs": [
+    {
+      "until_ms": 1500,
+      "expect": {
+        "console": [
+          "^JW_FRAM::begin\\(\\) usando tamano de FRAM forzado$",
+          "^Size bytes: 8192$",
+          { "match": "^Contador: 101$", "count": 1 },
+          { "match": "^Ganancia: 1\\.2345$", "count": 1 },
+          { "match": "^Habilitado: true$", "count": 1 }
+        ],
+        "console_absent": ["^Fallo al inicializar la FRAM"]
+      }
+    },
+    {
+      "until_ms": 1500,
+      "expect": {
+        "console": ["^Contador: 101$", "^Ganancia: 1\\.2345$", "^Habilitado: true$"]
+      }
+    }
+  ]
+}

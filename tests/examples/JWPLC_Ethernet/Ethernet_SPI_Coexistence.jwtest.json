@@ -1,12 +1,90 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "W5500, display, FRAM y microSD en el mismo bus SPI, dos arranques con memoria compartida. (1) El servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1. FRAM cuenta el arranque 1, la SD está lista y cada 5 s agrega una línea al CSV (log #1 y #2) mientras Ethernet pasa de DHCP pending a OK con la IP ofrecida. (2) Sin tarjeta (SD_CARD=0) y sin servidor DHCP: la FRAM conserva el contador (arranque 2), la SD informa No card y salta el log, y Ethernet sigue en DHCP pending.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_SPI_Coexistence",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Ethernet \\+ SD \\+ FRAM \\+ Display SPI coexistence test",
-      "^Runtime auto Ethernet\\. No begin\\(\\) called\\.",
-      "^FRAM bootCounter: -?\\d+(?:\\.\\d+)?"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 11000,
+      "stim": [
+        "2800 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "4000 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff"
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Ethernet \\+ SD \\+ FRAM \\+ Display SPI coexistence test$",
+          {
+            "match": "^FRAM bootCounter: 1$",
+            "count": 1
+          },
+          "^SD enabled: yes$",
+          "^SD present: yes$",
+          "^SD ready: yes$",
+          "^SD status: OK$",
+          {
+            "match": "^Display ready$",
+            "count": 1
+          },
+          {
+            "match": "^ETH: Not started \\| Link: DOWN \\| IP: 0\\.0\\.0\\.0 \\| SD: OK \\| FRAM: OK \\| Boot: 1 \\| Logs: 0$",
+            "count": 1
+          },
+          {
+            "match": "^ETH: DHCP pending \\| Link: DOWN \\| IP: 0\\.0\\.0\\.0 \\|",
+            "min": 1,
+            "before_ms": 4500
+          },
+          {
+            "match": "^SD log OK #1$",
+            "count": 1,
+            "after_ms": 4900,
+            "before_ms": 6000
+          },
+          {
+            "match": "^SD log OK #2$",
+            "count": 1,
+            "after_ms": 9900
+          },
+          {
+            "match": "^ETH: OK \\| Link: UP \\| IP: 192\\.168\\.250\\.10 \\| SD: OK \\| FRAM: OK \\| Boot: 1 \\| Logs: 2$",
+            "min": 1,
+            "after_ms": 10000
+          }
+        ],
+        "console_absent": [
+          "^ERROR",
+          "FRAM not available",
+          "SD log (skipped|failed)"
+        ]
+      }
+    },
+    {
+      "until_ms": 7000,
+      "stim": [
+        "0 SD_CARD=0"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^FRAM bootCounter: 2$",
+            "count": 1
+          },
+          "^SD present: no$",
+          "^SD ready: no$",
+          "^SD status: No card$",
+          {
+            "match": "^SD log skipped: No card$",
+            "count": 1
+          },
+          {
+            "match": "^ETH: DHCP pending \\| Link: DOWN \\| IP: 0\\.0\\.0\\.0 \\| SD: No card \\| FRAM: OK \\| Boot: 2 \\| Logs: 0$",
+            "min": 3
+          }
+        ],
+        "console_absent": [
+          "^SD log OK",
+          "ETH: OK"
+        ]
+      }
+    }
+  ]
 }

@@ -1,12 +1,39 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "IP fija configurada en setup() sin begin(): el runtime la aplica (IP 192.168.1.50, gateway 192.168.1.1, DNS 8.8.8.8) y queda OK. A los 6 s se desconecta el RJ45 (ETH_CABLE=0): Ready no, Link DOWN, Link OFF; se reconecta a los 10 s y, tras el reintento del runtime, vuelve a OK con la misma configuración.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Auto_StaticIP_Status",
-  "until_ms": 8000,
+  "until_ms": 20000,
+  "stim": [
+    "6000 ETH_CABLE=0",
+    "10000 ETH_CABLE=1"
+  ],
   "expect": {
     "console": [
-      "^Ethernet_Auto_StaticIP_Status",
-      "^Configuring static IP\\. No begin\\(\\) called\\.",
-      "^Mode: STATIC \\| Enabled: yes \\| Attempted: no \\| Ready: no \\| Link: UP \\| Status: Not started \\| IP: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? \\| Gateway: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? \\| DNS: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?"
+      "^Ethernet_Auto_StaticIP_Status$",
+      "^Configuring static IP\\. No begin\\(\\) called\\.$",
+      {
+        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: no \\| Ready: no \\| .*Status: Not started \\|",
+        "count": 1
+      },
+      {
+        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: yes \\| Ready: yes \\| Link: UP \\| Status: OK \\| IP: 192\\.168\\.1\\.50 \\| Gateway: 192\\.168\\.1\\.1 \\| DNS: 8\\.8\\.8\\.8$",
+        "min": 2,
+        "before_ms": 6000
+      },
+      {
+        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: yes \\| Ready: no \\| Link: DOWN \\| Status: Link OFF \\|",
+        "min": 2,
+        "after_ms": 6500,
+        "before_ms": 10000
+      },
+      {
+        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: yes \\| Ready: yes \\| Link: UP \\| Status: OK \\| IP: 192\\.168\\.1\\.50 \\| Gateway: 192\\.168\\.1\\.1 \\| DNS: 8\\.8\\.8\\.8$",
+        "min": 2,
+        "after_ms": 15000
+      }
+    ],
+    "console_absent": [
+      "DHCP"
     ]
   }
 }

@@ -1,12 +1,24 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "El proceso cuenta un ciclo por segundo en IDLE y en USER; OK entra a USER y sin actividad jwplcUIExit avisa la salida a IDLE una sola vez ~8 s después. Un segundo OK vuelve a entrar y a salir por timeout.",
   "sketch": "package:libraries/JWPLC_Display/examples/Display_Efficient_Redraw",
-  "until_ms": 8000,
+  "until_ms": 20500,
+  "stim": [
+    "2500 BTN_OK=1", "2600 BTN_OK=0",
+    "11500 BTN_OK=1", "11600 BTN_OK=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC_Display efficient redraw test",
-      "^OK=USER \\| retorno automatico en -?\\d+(?:\\.\\d+)?s",
-      "^Display configurado"
+      "^JWPLC_Display efficient redraw test$",
+      "^OK=USER \\| retorno automatico en 8s$",
+      { "match": "^Display configurado$", "count": 1 },
+      "^Counter: 1$",
+      "^Counter: 10$",
+      { "match": "^Counter: \\d+$", "min": 18, "max": 19 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 0, "before_ms": 10300 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 1, "after_ms": 10300, "before_ms": 11000 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 0, "after_ms": 11000, "before_ms": 19300 },
+      { "match": "^Saliendo de USER hacia IDLE$", "count": 1, "after_ms": 19300 }
     ]
   }
 }

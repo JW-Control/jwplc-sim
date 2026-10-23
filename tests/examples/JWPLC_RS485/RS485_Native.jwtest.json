@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Native",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Modbus RTU ready: yes",
+      "^Slave ID: -?\\d+(?:\\.\\d+)?",
+      "^Baud: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

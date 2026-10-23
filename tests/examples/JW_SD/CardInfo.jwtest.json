@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Con la tarjeta puesta: tipo SDHC (CARD_SDHC = 3) y 64 MB de la imagen por defecto. Sin tarjeta (SD_CARD=0 desde el arranque) begin() falla y no se informan tipo ni tamaño.",
+  "sketch": "package:libraries/JW_SD/examples/CardInfo",
+  "runs": [
+    {
+      "until_ms": 2500,
+      "expect": {
+        "console": ["^JW_SD CardInfo$", "^SD ready$", "^Card type: 3$", "^Card size MB: 64$"],
+        "console_absent": ["failed"]
+      }
+    },
+    {
+      "until_ms": 2500,
+      "stim": ["0 SD_CARD=0"],
+      "expect": {
+        "console": ["^JW_SD CardInfo$", "^SD begin failed: .+"],
+        "console_absent": ["^SD ready$", "^Card type:"]
+      }
+    }
+  ]
+}

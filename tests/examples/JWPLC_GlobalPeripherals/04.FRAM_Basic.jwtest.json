@@ -1,12 +1,35 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Tres arranques con la FRAM compartida: el primero crea el bloque (bootCount=1); los siguientes lo encuentran válido y cuentan 2 y 3; el setpoint y la cadena se leen de vuelta.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/04.FRAM_Basic",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Basic - FRAM",
-      "^FRAM size = -?\\d+(?:\\.\\d+)? bytes",
-      "^Primer uso: creando bloque FRAM\\."
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 2000,
+      "expect": {
+        "console": [
+          "^JWPLC Basic - FRAM$",
+          "^FRAM size = 8192 bytes$",
+          { "match": "^Primer uso: creando bloque FRAM\\.$", "count": 1 },
+          "^bootCount persistente = 1$",
+          "^setpoint = 25\\.0$",
+          "^Texto FRAM = JWPLC Taller Alpha8$"
+        ],
+        "console_absent": ["^Error escribiendo", "^FRAM no disponible"]
+      }
+    },
+    {
+      "until_ms": 2000,
+      "expect": {
+        "console": ["^bootCount persistente = 2$", "^setpoint = 25\\.0$", "^Texto FRAM = JWPLC Taller Alpha8$"],
+        "console_absent": ["^Primer uso"]
+      }
+    },
+    {
+      "until_ms": 2000,
+      "expect": {
+        "console": ["^bootCount persistente = 3$"],
+        "console_absent": ["^Primer uso"]
+      }
+    }
+  ]
 }

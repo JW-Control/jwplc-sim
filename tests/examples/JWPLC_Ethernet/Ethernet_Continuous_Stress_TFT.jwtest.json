@@ -1,12 +1,89 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba continua por capas. (1) Sin servidor DHCP: imprime la configuración (destino example.com:80, cualificación 20000/750 ms, sondeo 50 ms), espera el arranque cualificado (ESPERA, HW W5500, LINK ON, IP 0.0.0.0, sin pruebas) y al vencer los 20 s empieza a registrar errores DHCP/IP o ETH NO LISTO con estado ARRANQUE TIMEOUT. (2) El servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1: el arranque se cualifica, la prueba #1 hace DNS LIVE contra 192.168.250.1 y falla en la capa DNS (nadie responde en la red simulada) con IP 192.168.250.10 y LINK ON; UP sube el intervalo a 1000 ms y OK pausa: no hay más pruebas y el estado muestra PAUSA.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Basic - Ethernet Continuous Stress TFT v-?\\d+(?:\\.\\d+)?",
-      "^Destino: http:\\/\\/example\\.com:-?\\d+(?:\\.\\d+)?\\/",
-      "^Arranque: espera hasta -?\\d+(?:\\.\\d+)? ms y exige estabilidad de -?\\d+(?:\\.\\d+)? ms"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 26000,
+      "expect": {
+        "console": [
+          "^JWPLC Basic - Ethernet Continuous Stress TFT v3$",
+          "^Destino: http://example\\.com:80/$",
+          "^Arranque: espera hasta 20000 ms y exige estabilidad de 750 ms$",
+          "^Sondeo HW/LINK/IP: 50 ms$",
+          {
+            "match": "^\\[ETH-STRESS\\] RUN \\| ARRANQUE ESPERA \\| INT 500ms \\| HW W5500 \\| LINK ON \\| IP 0\\.0\\.0\\.0 \\| TEST 0 OK 0 ERR 0 \\|",
+            "min": 3,
+            "before_ms": 21000
+          },
+          {
+            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #1 (DHCP/IP|ETH NO LISTO) \\|",
+            "count": 1,
+            "after_ms": 21000
+          },
+          {
+            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #\\d+ (DHCP/IP|ETH NO LISTO) \\| .*POST HW=W5500 LINK=ON IP=0\\.0\\.0\\.0",
+            "min": 5,
+            "after_ms": 21000
+          },
+          {
+            "match": "^\\[ETH-STRESS\\] RUN \\| ARRANQUE TIMEOUT \\| INT 500ms \\| HW W5500 \\| LINK ON \\| IP 0\\.0\\.0\\.0 \\| TEST \\d+ OK 0 ERR \\d+ \\|",
+            "count": 1,
+            "after_ms": 24000
+          }
+        ],
+        "console_absent": [
+          "Arranque Ethernet cualificado",
+          "\\[ETH-STRESS\\]\\[OK\\]"
+        ]
+      }
+    },
+    {
+      "until_ms": 16000,
+      "stim": [
+        "2800 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "4000 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "5200 BTN_UP=1",
+        "5300 BTN_UP=0",
+        "7600 BTN_OK=1",
+        "7700 BTN_OK=0"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^\\[ETH-STRESS\\] Arranque Ethernet cualificado$",
+            "count": 1,
+            "before_ms": 5000
+          },
+          {
+            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #1 DNS OTRO \\| DNS fallo raw=-?\\d+ [A-Z/ ]+; server=192\\.168\\.250\\.1; \\d+ms \\| POST HW=W5500 LINK=ON IP=192\\.168\\.250\\.10 \\|",
+            "count": 1
+          },
+          {
+            "match": "^\\[ETH-STRESS\\]\\[CAPAS\\] DNS=LIVE .* server=192\\.168\\.250\\.1 resolved=0\\.0\\.0\\.0 \\| TCP=FAIL/NO",
+            "min": 1
+          },
+          {
+            "match": "^\\[ETH-STRESS\\] RUN \\| ARRANQUE OK \\| INT 500ms \\| HW W5500 \\| LINK ON \\| IP 192\\.168\\.250\\.10 \\| TEST 1 OK 0 ERR 1 \\|",
+            "count": 1,
+            "before_ms": 5200
+          },
+          {
+            "match": "^\\[ETH-STRESS\\]\\[ERROR\\] #",
+            "count": 0,
+            "after_ms": 7800
+          },
+          {
+            "match": "^\\[ETH-STRESS\\] PAUSA \\| ARRANQUE OK \\| INT 1000ms \\| HW W5500 \\| LINK ON \\| IP 192\\.168\\.250\\.10 \\|",
+            "min": 2,
+            "after_ms": 9000
+          }
+        ],
+        "console_absent": [
+          "\\[ETH-STRESS\\]\\[OK\\]",
+          "ARRANQUE TIMEOUT"
+        ]
+      }
+    }
+  ]
 }

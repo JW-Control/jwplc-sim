@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Tool_Test",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Iniciando PLC como Esclavo Modbus\\.\\.\\.",
+      "^Esclavo Modbus ID -?\\d+(?:\\.\\d+)? listo en -?\\d+(?:\\.\\d+)? baudios\\."
+    ]
+  }
+}

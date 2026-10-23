@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Dos arranques con la misma microSD: el ejemplo agrega una línea a /jw_sd_test.txt (FILE_APPEND) y la vuelve a leer; en el 1.º arranque el contenido tiene 1 línea y en el 2.º las 2 líneas acumuladas. Un 3.º arranque sin tarjeta (SD_CARD=0) informa el fallo de begin().",
+  "sketch": "package:libraries/JW_SD/examples/BasicReadWrite",
+  "runs": [
+    {
+      "until_ms": 2500,
+      "expect": {
+        "console": [
+          "^JW_SD BasicReadWrite$",
+          "^SD ready$",
+          "^Contenido:$",
+          { "match": "^Hola desde JW_SD\\r?$", "count": 1 }
+        ],
+        "console_absent": ["failed"]
+      }
+    },
+    {
+      "until_ms": 2500,
+      "expect": {
+        "console": [
+          "^SD ready$",
+          "^Contenido:$",
+          { "match": "^Hola desde JW_SD\\r?$", "count": 2 }
+        ],
+        "console_absent": ["failed"]
+      }
+    },
+    {
+      "until_ms": 2500,
+      "stim": ["0 SD_CARD=0"],
+      "expect": {
+        "console": ["^JW_SD BasicReadWrite$", "^SD begin failed: .+"],
+        "console_absent": ["^SD ready$", "^Contenido:$"]
+      }
+    }
+  ]
+}

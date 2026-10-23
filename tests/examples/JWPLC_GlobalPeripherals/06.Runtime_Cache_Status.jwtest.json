@@ -1,11 +1,25 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Con RTC en hora fija: cada segundo JWPLC_IO informa las entradas cacheadas (0x01, 0xA5, 0x5A, 0x00 aplicadas entre impresiones) con OUT=0x00 porque el sketch no escribe salidas, y JWPLC_Time present=1 valid=1.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/06.Runtime_Cache_Status",
-  "until_ms": 8000,
+  "until_ms": 5500,
+  "args": ["--rtc", "fijo:2026-01-15T08:30:00"],
+  "stim": [
+    "1500 I0_0=1",
+    "2500 I0_2=1", "2500 I0_5=1", "2500 I0_7=1",
+    "3500 I0_0=0", "3500 I0_1=1", "3500 I0_2=0", "3500 I0_3=1", "3500 I0_4=1", "3500 I0_5=0", "3500 I0_6=1", "3500 I0_7=0",
+    "4500 I0_1=0", "4500 I0_3=0", "4500 I0_4=0", "4500 I0_6=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Runtime cache views",
-      "^IO ready=-?\\d+(?:\\.\\d+)? IN=0x[0-9A-Fa-f]+ OUT=0x[0-9A-Fa-f]+ scanMs=-?\\d+(?:\\.\\d+)? \\| RTC present=-?\\d+(?:\\.\\d+)? valid=-?\\d+(?:\\.\\d+)? updateMs=-?\\d+(?:\\.\\d+)?"
-    ]
+      "^JWPLC Basic - Runtime cache views$",
+      { "match": "^IO ready=1 IN=0x00 OUT=0x00 scanMs=\\d+ \\| RTC present=1 valid=1 updateMs=\\d+$", "count": 1, "before_ms": 1500 },
+      { "match": "^IO ready=1 IN=0x01 OUT=0x00 scanMs=\\d+ \\| RTC present=1 valid=1 updateMs=\\d+$", "count": 1, "after_ms": 1500, "before_ms": 2500 },
+      { "match": "^IO ready=1 IN=0xA5 OUT=0x00 scanMs=\\d+ \\| RTC present=1 valid=1 updateMs=\\d+$", "count": 1, "after_ms": 2500, "before_ms": 3500 },
+      { "match": "^IO ready=1 IN=0x5A OUT=0x00 scanMs=\\d+ \\| RTC present=1 valid=1 updateMs=\\d+$", "count": 1, "after_ms": 3500, "before_ms": 4500 },
+      { "match": "^IO ready=1 IN=0x00 OUT=0x00 scanMs=\\d+ \\| RTC present=1 valid=1 updateMs=\\d+$", "count": 1, "after_ms": 4500 }
+    ],
+    "console_absent": ["valid=0", "ready=0"],
+    "signals": [{ "at_ms": 3900, "DI": "0b01011010", "DO": "0b00000000" }]
   }
 }

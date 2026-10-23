@@ -1,12 +1,46 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "IP fija 192.168.1.50 (gw 192.168.1.1) sin DHCP: Not started, Link OFF mientras el PHY negocia y OK con ip/gw al reintentar. A los 8,5 s se desconecta el cable (ETH_CABLE=0): ready=0 y diag=LNK; al reconectarlo a los 12,5 s el runtime reprograma la IP fija y vuelve a OK.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/02.Ethernet_StaticIP_Basic",
-  "until_ms": 8000,
+  "until_ms": 20000,
+  "stim": [
+    "8500 ETH_CABLE=0",
+    "12500 ETH_CABLE=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Ethernet Static IP",
-      "^IP solicitada: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?",
-      "^diag=INI status=Not started ready=-?\\d+(?:\\.\\d+)?"
+      "^JWPLC Basic - Ethernet Static IP$",
+      "^IP solicitada: 192\\.168\\.1\\.50$",
+      {
+        "match": "^diag=INI status=Not started ready=0$",
+        "count": 1,
+        "before_ms": 2000
+      },
+      {
+        "match": "^diag=LNK status=Link OFF ready=0$",
+        "min": 1,
+        "before_ms": 6500
+      },
+      {
+        "match": "^diag=--- status=OK ready=1 ip=192\\.168\\.1\\.50 gw=192\\.168\\.1\\.1$",
+        "min": 1,
+        "after_ms": 6500,
+        "before_ms": 8500
+      },
+      {
+        "match": "^diag=LNK status=Link OFF ready=0$",
+        "min": 3,
+        "after_ms": 9500,
+        "before_ms": 13000
+      },
+      {
+        "match": "^diag=--- status=OK ready=1 ip=192\\.168\\.1\\.50 gw=192\\.168\\.1\\.1$",
+        "min": 3,
+        "after_ms": 14000
+      }
+    ],
+    "console_absent": [
+      "DHCP"
     ]
   }
 }

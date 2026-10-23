@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Bridge",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? USB <-> RS-?\\d+(?:\\.\\d+)? Bridge",
+      "^----------------------------------------",
+      "^USB Serial baud: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

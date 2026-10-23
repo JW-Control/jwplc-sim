@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusTCP/examples/01.ModbusTCP_Server",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Modbus TCP: esperando Ethernet \\/ puerto -?\\d+(?:\\.\\d+)?\\.\\.\\.",
+      "^ModbusTCP server: WAIT",
+      "^Port: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

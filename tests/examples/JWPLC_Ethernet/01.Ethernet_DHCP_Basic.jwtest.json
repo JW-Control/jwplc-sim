@@ -1,12 +1,88 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Tres arranques. (1) Cable conectado y sin servidor DHCP: Not started, Link OFF mientras el PHY negocia (el runtime reintenta cada 5 s), DHCP pending con busy=1, DHCP failed tras el timeout de 5 s y nuevo intento. (2) El servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1. El runtime queda listo e imprime la IP. (3) Sin W5500 (--no-eth): 'No Ethernet hardware' con diag=HW.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/01.Ethernet_DHCP_Basic",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Basic - Ethernet DHCP",
-      "^ready=-?\\d+(?:\\.\\d+)? busy=-?\\d+(?:\\.\\d+)? diag=INI status=Not started",
-      "^ready=-?\\d+(?:\\.\\d+)? busy=-?\\d+(?:\\.\\d+)? diag=LNK status=Link OFF"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 18000,
+      "expect": {
+        "console": [
+          "^JWPLC Basic - Ethernet DHCP$",
+          {
+            "match": "^ready=0 busy=0 diag=INI status=Not started$",
+            "count": 1,
+            "before_ms": 2000
+          },
+          {
+            "match": "^ready=0 busy=0 diag=LNK status=Link OFF$",
+            "min": 1,
+            "before_ms": 6500
+          },
+          {
+            "match": "^ready=0 busy=1 diag=DHC status=DHCP pending$",
+            "min": 3,
+            "after_ms": 6500,
+            "before_ms": 12000
+          },
+          {
+            "match": "^ready=0 busy=0 diag=DHC status=DHCP failed$",
+            "min": 3,
+            "after_ms": 12000,
+            "before_ms": 17000
+          },
+          {
+            "match": "^ready=0 busy=1 diag=DHC status=DHCP pending$",
+            "min": 1,
+            "after_ms": 17000
+          }
+        ],
+        "console_absent": [
+          "ready=1",
+          " ip="
+        ]
+      }
+    },
+    {
+      "until_ms": 10000,
+      "stim": [
+        "6300 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "7400 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^ready=0 busy=1 diag=DHC status=DHCP pending$",
+            "min": 1,
+            "before_ms": 9000
+          },
+          {
+            "match": "^ready=1 busy=0 diag=--- status=OK ip=192\\.168\\.250\\.10$",
+            "min": 1,
+            "after_ms": 8000
+          }
+        ],
+        "console_absent": [
+          "DHCP failed"
+        ]
+      }
+    },
+    {
+      "until_ms": 4000,
+      "args": [
+        "--no-eth"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^ready=0 busy=0 diag=HW status=No Ethernet hardware$",
+            "min": 2
+          }
+        ],
+        "console_absent": [
+          "ready=1",
+          "Link OFF"
+        ]
+      }
+    }
+  ]
 }

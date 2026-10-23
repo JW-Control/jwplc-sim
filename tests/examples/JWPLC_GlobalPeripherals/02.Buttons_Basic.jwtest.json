@@ -1,10 +1,36 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Una pulsación durante el arranque se descarta (clearPendingInput); luego cada botón da un PRESS y un RELEASE; mantener UP ~900 ms repite 'UP sigue presionado' cada 250 ms (isDown).",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/02.Buttons_Basic",
-  "until_ms": 8000,
+  "until_ms": 5000,
+  "stim": [
+    "900 BTN_DOWN=1", "1000 BTN_DOWN=0",
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "1900 BTN_LEFT=1", "2000 BTN_LEFT=0",
+    "2300 BTN_UP=1", "3200 BTN_UP=0",
+    "3500 BTN_ESC=1", "3600 BTN_ESC=0",
+    "3800 BTN_DOWN=1", "3900 BTN_DOWN=0",
+    "4100 BTN_RIGHT=1", "4200 BTN_RIGHT=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Buttons"
+      "^JWPLC Basic - Buttons$",
+      { "match": "^PRESS   OK$", "count": 1, "after_ms": 1500, "before_ms": 1600 },
+      { "match": "^RELEASE OK$", "count": 1, "after_ms": 1600, "before_ms": 1900 },
+      { "match": "^PRESS   LEFT$", "count": 1, "after_ms": 1900, "before_ms": 2000 },
+      { "match": "^RELEASE LEFT$", "count": 1, "after_ms": 2000, "before_ms": 2300 },
+      { "match": "^PRESS   UP$", "count": 1, "after_ms": 2300, "before_ms": 2500 },
+      { "match": "^UP sigue presionado$", "min": 3, "max": 4, "after_ms": 2300, "before_ms": 3200 },
+      { "match": "^UP sigue presionado$", "count": 0, "after_ms": 3300 },
+      { "match": "^RELEASE UP$", "count": 1, "after_ms": 3200, "before_ms": 3500 },
+      { "match": "^PRESS   ESC$", "count": 1, "after_ms": 3500, "before_ms": 3600 },
+      { "match": "^RELEASE ESC$", "count": 1, "after_ms": 3600, "before_ms": 3800 },
+      { "match": "^PRESS   DOWN$", "count": 1 },
+      { "match": "^PRESS   DOWN$", "count": 1, "after_ms": 3800, "before_ms": 3900 },
+      { "match": "^RELEASE DOWN$", "count": 1 },
+      { "match": "^PRESS   RIGHT$", "count": 1, "after_ms": 4100, "before_ms": 4200 },
+      { "match": "^RELEASE RIGHT$", "count": 1, "after_ms": 4200 },
+      { "match": "^(PRESS  |RELEASE) ", "count": 12 }
     ]
   }
 }

@@ -1,11 +1,28 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "digitalReadBlock(I0_X) cada 500 ms impreso en binario (bit 7 a la izquierda): patrones 0x01, 0xA5, 0x5A, 0xFF y 0x00; las salidas no se tocan.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/DigitalIO_BlockRead",
-  "until_ms": 8000,
+  "until_ms": 5500,
+  "stim": [
+    "2300 I0_0=1",
+    "3100 I0_2=1", "3100 I0_5=1", "3100 I0_7=1",
+    "3700 I0_0=0", "3700 I0_1=1", "3700 I0_2=0", "3700 I0_3=1", "3700 I0_4=1", "3700 I0_5=0", "3700 I0_6=1", "3700 I0_7=0",
+    "4300 I0_0=1", "4300 I0_2=1", "4300 I0_5=1", "4300 I0_7=1",
+    "4900 I0_0=0", "4900 I0_1=0", "4900 I0_2=0", "4900 I0_3=0", "4900 I0_4=0", "4900 I0_5=0", "4900 I0_6=0", "4900 I0_7=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC DigitalIO block read",
-      "^IN: -?\\d+(?:\\.\\d+)?b-?\\d+(?:\\.\\d+)?"
+      "^JWPLC DigitalIO block read$",
+      { "match": "^IN: 0b00000000$", "min": 1, "before_ms": 2300 },
+      { "match": "^IN: 0b00000001$", "min": 1, "after_ms": 2300, "before_ms": 3100 },
+      { "match": "^IN: 0b10100101$", "min": 1, "after_ms": 3100, "before_ms": 3700 },
+      { "match": "^IN: 0b01011010$", "min": 1, "after_ms": 3700, "before_ms": 4300 },
+      { "match": "^IN: 0b11111111$", "min": 1, "after_ms": 4300, "before_ms": 4900 },
+      { "match": "^IN: 0b00000000$", "min": 1, "after_ms": 4900 },
+      { "match": "^IN: 0b[01]{8}$", "min": 6, "max": 8 }
+    ],
+    "signals": [
+      { "at_ms": 3900, "DI": "0b01011010", "DO": "0b00000000" }
     ]
   }
 }

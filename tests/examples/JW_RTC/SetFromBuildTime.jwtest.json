@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Partiendo de un RTC sin hora, el ejemplo escribe la fecha y hora de compilación (__DATE__/__TIME__) y lo informa una vez; ningún mensaje de fallo.",
+  "sketch": "package:libraries/JW_RTC/examples/SetFromBuildTime",
+  "until_ms": 2000,
+  "expect": {
+    "console": [{ "match": "^RTC updated from build time$", "count": 1 }],
+    "console_absent": ["failed"]
+  }
+}

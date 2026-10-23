@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Defecto del ejemplo (no del simulador): usa JW_FRAM fram(5), pero en el JWPLC Basic el GPIO5 es el CS del W5500 (JWPLC_ETH_CS) y la FRAM está en el GPIO13. Las escrituras no se verifican y se informan como correctas; las lecturas vienen del W5500 (ceros) y devuelven textos vacíos, igual que en la placa. Si el package corrige el pin, esperar 'readString(): JWPLC Basic' y 'readCString(): JW Control'.",
+  "sketch": "package:libraries/JW_FRAM/examples/Strings",
+  "until_ms": 1500,
+  "expect": {
+    "console": [
+      "^JW_FRAM::begin\\(\\) usando tamano de FRAM forzado$",
+      "^Size bytes: 8192$",
+      { "match": "^String almacenado correctamente$", "count": 1 },
+      { "match": "^readString\\(\\): $", "count": 1 },
+      { "match": "^CString almacenado correctamente$", "count": 1 },
+      { "match": "^readCString\\(\\): $", "count": 1 }
+    ],
+    "console_absent": ["^Fallo al inicializar la FRAM"]
+  }
+}

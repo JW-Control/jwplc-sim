@@ -1,11 +1,32 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Espejo I0_k -> Q0_k con JWPLC_readInputs/JWPLC_writeOutputs: patrones 0x01, 0xA5, 0x5A, 0xFF y 0x00 cada 600 ms; las salidas siguen a las entradas y la consola (cada 500 ms) informa IN/OUT y el bit 0 vía JWPLC_IO.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/01.DigitalIO_Basic",
-  "until_ms": 8000,
+  "until_ms": 5500,
+  "stim": [
+    "2000 I0_0=1",
+    "2600 I0_2=1", "2600 I0_5=1", "2600 I0_7=1",
+    "3200 I0_0=0", "3200 I0_1=1", "3200 I0_2=0", "3200 I0_3=1", "3200 I0_4=1", "3200 I0_5=0", "3200 I0_6=1", "3200 I0_7=0",
+    "3800 I0_0=1", "3800 I0_2=1", "3800 I0_5=1", "3800 I0_7=1",
+    "4400 I0_0=0", "4400 I0_1=0", "4400 I0_2=0", "4400 I0_3=0", "4400 I0_4=0", "4400 I0_5=0", "4400 I0_6=0", "4400 I0_7=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Digital I\\/O",
-      "^IN=0x[0-9A-Fa-f]+ OUT=0x[0-9A-Fa-f]+ I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?=-?\\d+(?:\\.\\d+)? Q-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?=-?\\d+(?:\\.\\d+)?"
+      "^JWPLC Basic - Digital I\\/O$",
+      { "match": "^IN=0x00 OUT=0x00 I0_0=0 Q0_0=0$", "min": 1, "before_ms": 2000 },
+      { "match": "^IN=0x01 OUT=0x01 I0_0=1 Q0_0=1$", "min": 1, "after_ms": 2000, "before_ms": 2600 },
+      { "match": "^IN=0xA5 OUT=0xA5 I0_0=1 Q0_0=1$", "min": 1, "after_ms": 2600, "before_ms": 3200 },
+      { "match": "^IN=0x5A OUT=0x5A I0_0=0 Q0_0=0$", "min": 1, "after_ms": 3200, "before_ms": 3800 },
+      { "match": "^IN=0xFF OUT=0xFF I0_0=1 Q0_0=1$", "min": 1, "after_ms": 3800, "before_ms": 4400 },
+      { "match": "^IN=0x00 OUT=0x00 I0_0=0 Q0_0=0$", "min": 1, "after_ms": 4400 }
+    ],
+    "signals": [
+      { "at_ms": 1900, "DI": "0b00000000", "DO": "0b00000000" },
+      { "at_ms": 2150, "DI": "0b00000001", "DO": "0b00000001" },
+      { "at_ms": 2750, "DI": "0b10100101", "DO": "0b10100101" },
+      { "at_ms": 3350, "DI": "0b01011010", "DO": "0b01011010" },
+      { "at_ms": 3950, "DI": "0b11111111", "DO": "0b11111111" },
+      { "at_ms": 4550, "DI": "0b00000000", "DO": "0b00000000" }
     ]
   }
 }

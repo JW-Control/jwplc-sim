@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_RS485/examples/RS485_Status",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC RS-?\\d+(?:\\.\\d+)? status test",
+      "^RS-?\\d+(?:\\.\\d+)? begin OK",
+      "^RS-?\\d+(?:\\.\\d+)? enabled: yes"
+    ]
+  }
+}

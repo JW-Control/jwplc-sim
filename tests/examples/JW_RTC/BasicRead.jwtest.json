@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "1.ª corrida: RTC nuevo sin hora (Valid: 0) y temperatura del modelo (25 °C). 2.ª corrida con hora fija 2026-01-15 08:30:00: la hora corre desde t = 0, así que las lecturas de t ≈ 1,1, 2,1 y 3,1 s muestran :01, :02 y :03.",
+  "sketch": "package:libraries/JW_RTC/examples/BasicRead",
+  "runs": [
+    {
+      "until_ms": 2000,
+      "expect": {
+        "console": ["^RTC found$", "^Valid: 0 \\| ", "^Temp C: 25\\.00$"],
+        "console_absent": ["failed"]
+      }
+    },
+    {
+      "until_ms": 3500,
+      "args": ["--rtc", "fijo:2026-01-15T08:30:00"],
+      "expect": {
+        "console": [
+          "^RTC found$",
+          { "match": "^Valid: 1 \\| 2026/01/15 08:30:01$", "count": 1 },
+          { "match": "^Valid: 1 \\| 2026/01/15 08:30:02$", "count": 1 },
+          { "match": "^Valid: 1 \\| 2026/01/15 08:30:03$", "count": 1 },
+          { "match": "^Temp C: 25\\.00$", "min": 3 }
+        ],
+        "console_absent": ["failed", "^Valid: 0"]
+      }
+    }
+  ]
+}

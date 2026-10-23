@@ -1,12 +1,62 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Ethernet automático + display. (1) El servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1. Se ve 'Display ready' una vez, DHCP pending y luego OK con la IP ofrecida y Link UP. (2) Sin W5500 (--no-eth): el display sigue funcionando y Ethernet informa No Ethernet hardware.",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Display_Status",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^Ethernet_Display_Status",
-      "^Runtime auto Ethernet \\+ Display test\\. No begin\\(\\) called\\.",
-      "^Display ready"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 7000,
+      "stim": [
+        "2800 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "4000 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff"
+      ],
+      "expect": {
+        "console": [
+          "^Ethernet_Display_Status$",
+          "^Runtime auto Ethernet \\+ Display test\\. No begin\\(\\) called\\.$",
+          {
+            "match": "^Display ready$",
+            "count": 1
+          },
+          {
+            "match": "^ETH: Not started \\| Enabled: yes \\| Attempted: no \\| Ready: no \\|",
+            "count": 1
+          },
+          {
+            "match": "^ETH: DHCP pending \\| Enabled: yes \\| Attempted: yes \\| Ready: no \\| Link: UP \\| IP: 0\\.0\\.0\\.0$",
+            "min": 1,
+            "before_ms": 4500
+          },
+          {
+            "match": "^ETH: OK \\| Enabled: yes \\| Attempted: yes \\| Ready: yes \\| Link: UP \\| IP: 192\\.168\\.250\\.10$",
+            "min": 2,
+            "after_ms": 4500
+          }
+        ],
+        "console_absent": [
+          "DHCP failed"
+        ]
+      }
+    },
+    {
+      "until_ms": 5000,
+      "args": [
+        "--no-eth"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^Display ready$",
+            "count": 1
+          },
+          {
+            "match": "^ETH: No Ethernet hardware \\| Enabled: yes \\| Attempted: yes \\| Ready: no \\| Link: DOWN \\|",
+            "min": 2
+          }
+        ],
+        "console_absent": [
+          "Ready: yes"
+        ]
+      }
+    }
+  ]
 }

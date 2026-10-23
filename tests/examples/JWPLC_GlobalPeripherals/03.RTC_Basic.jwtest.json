@@ -1,11 +1,39 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Tres arranques con el RTC compartido: (1) RTC nuevo sin hora válida (valid=0 lostPower=1, sin fecha); (2) hora fija 31/12/2026 23:59:58 que avanza un segundo por línea y cruza el año; (3) sin --rtc la batería conserva la hora y sigue en 2027.",
   "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/03.RTC_Basic",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Basic - RTC",
-      "^RTC present=-?\\d+(?:\\.\\d+)? valid=-?\\d+(?:\\.\\d+)? lostPower=-?\\d+(?:\\.\\d+)? \\| tempRTC=-?\\d+(?:\\.\\d+)? C"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 2500,
+      "expect": {
+        "console": [
+          "^JWPLC Basic - RTC$",
+          { "match": "^RTC present=1 valid=0 lostPower=1 \\| tempRTC=\\d+\\.\\d{2} C$", "min": 2 }
+        ],
+        "console_absent": ["valid=1", "\\d+/\\d+/\\d{4}"]
+      }
+    },
+    {
+      "until_ms": 4500,
+      "args": ["--rtc", "fijo:2026-12-31T23:59:58"],
+      "expect": {
+        "console": [
+          { "match": "^RTC present=1 valid=1 lostPower=0 \\| 31/12/2026 23:59:58 \\| tempRTC=\\d+\\.\\d{2} C$", "count": 1 },
+          { "match": "^RTC present=1 valid=1 lostPower=0 \\| 31/12/2026 23:59:59 \\| tempRTC=\\d+\\.\\d{2} C$", "count": 1 },
+          { "match": "^RTC present=1 valid=1 lostPower=0 \\| 1/1/2027 00:00:00 \\| tempRTC=\\d+\\.\\d{2} C$", "count": 1 },
+          { "match": "^RTC present=1 valid=1 lostPower=0 \\| 1/1/2027 00:00:01 \\| tempRTC=\\d+\\.\\d{2} C$", "count": 1 }
+        ],
+        "console_absent": ["valid=0"]
+      }
+    },
+    {
+      "until_ms": 2500,
+      "expect": {
+        "console": [
+          { "match": "^RTC present=1 valid=1 lostPower=0 \\| 1/1/2027 00:00:0\\d \\| tempRTC=", "min": 2 }
+        ],
+        "console_absent": ["valid=0", "/2026 "]
+      }
+    }
+  ]
 }

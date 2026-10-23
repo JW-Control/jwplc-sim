@@ -1,12 +1,23 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "DOWN en IDLE no despierta (solo OK está habilitado); OK entra a USER ('IDLE mode: no' cada segundo) y sin actividad vuelve solo a IDLE a los 8 s ('IDLE mode: yes').",
   "sketch": "package:libraries/JWPLC_Display/examples/Display_DotAPI_Minimal",
-  "until_ms": 8000,
+  "until_ms": 13500,
+  "stim": [
+    "2200 BTN_DOWN=1", "2300 BTN_DOWN=0",
+    "3300 BTN_OK=1", "3400 BTN_OK=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC_Display dot API - minimal test",
-      "^OK=USER \\| retorno automatico en -?\\d+(?:\\.\\d+)?s",
-      "^Display configurado usando API con punto"
+      "^JWPLC_Display dot API - minimal test$",
+      "^OK=USER \\| retorno automatico en 8s$",
+      { "match": "^Display configurado usando API con punto$", "count": 1 },
+      { "match": "^IDLE mode: yes$", "min": 2, "before_ms": 3300 },
+      { "match": "^IDLE mode: no$", "count": 0, "before_ms": 3300 },
+      { "match": "^IDLE mode: no$", "min": 7, "after_ms": 3400, "before_ms": 11300 },
+      { "match": "^IDLE mode: yes$", "count": 0, "after_ms": 3400, "before_ms": 11300 },
+      { "match": "^IDLE mode: yes$", "min": 1, "after_ms": 11600 },
+      { "match": "^IDLE mode: no$", "count": 0, "after_ms": 11600 }
     ]
   }
 }
