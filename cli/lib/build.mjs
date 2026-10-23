@@ -326,6 +326,14 @@ export async function buildSketch(sketchDir, options = {}) {
   const sketchRoots = [resolve(sketchDir), join(outDir, "sketch")].map((d) => d + sep);
   const isSketchUnit = (file) => sketchRoots.some((r) => resolve(file).startsWith(r));
   const isSimUnit = (file) => resolve(file).startsWith(join(ROOT, "sim") + sep);
+  // El sketch se compila en C++20; el package, en C++23 (gnu++2b, como en la
+  // placa). Con libstdc++ 14, <memory> trae <format> en C++23 y cada unidad
+  // instancia toda su maquinaria: el .ino tardaba 4 veces más (1,6 s en
+  // Windows, G2 EXTERNAL_EDIT_RELOAD). Si el sketch no compila en C++20 se
+  // repite en C++23; si así compila, queda marcado (sketch-std.txt) y los
+  // builds siguientes van directo en C++23.
+  const stdMark = join(outDir, "sketch-std.txt");
+  const sketchStd = options.sketchStd ?? (existsSync(stdMark) ? readFileSync(stdMark, "utf8").trim() : "-std=gnu++20");
   const flagsFor = (file) => {
     const norm = file.split(sep).join("/");
     const extra = [];
@@ -337,8 +345,9 @@ export async function buildSketch(sketchDir, options = {}) {
     const base = isC ? tc.cflags : tc.cxxflags;
     // El motor, el HAL y los modelos (sim/) con -O2: se llaman en cada
     // operación del firmware (semáforos, E/S) y no cambian la traza.
-    const opt = isSketchUnit(file) ? "-O0" : isSimUnit(file) ? "-O2" : "-O1";
-    return [...base.map((f) => (f === "-O1" ? opt : f)), ...defines, ...extra];
+    const sketch = isSketchUnit(file);
+    const opt = sketch ? "-O0" : isSimUnit(file) ? "-O2" : "-O1";
+    return [...base.map((f) => (f === "-O1" ? opt : sketch && f === "-std=gnu++2b" ? sketchStd : f)), ...defines, ...extra];
   };
 
   phase("package, terceros y placa");
@@ -556,7 +565,7 @@ export async function buildSketch(sketchDir, options = {}) {
       r = r2;
     }
     if (r.code !== 0) {
-      failures.push({ rel, out: r.out });
+      failures.push({ rel, out: r.out, sketch: u.group === "sketch" });
       return null;
     }
     if (fwLibc) {
@@ -580,6 +589,14 @@ export async function buildSketch(sketchDir, options = {}) {
     writeFileSync(obj + ".cmd", cmdHash);
     return { ...u, obj };
   });
+  if (failures.length && sketchStd !== "-std=gnu++2b" && failures.some((f) => f.sketch)) {
+    // ¿Necesita C++23? Se repite como el package; los errores que se informan
+    // son los de esa compilación.
+    log("[build] el sketch no compila en C++20; se repite en C++23 (gnu++2b)");
+    const r = await buildSketch(sketchDir, { ...options, sketchStd: "-std=gnu++2b" });
+    writeFileSync(stdMark, "-std=gnu++2b\n");
+    return r;
+  }
   if (failures.length) {
     for (const f of failures) log(`\n[build] ERROR compilando ${f.rel}\n${f.out}`);
     const diagnostics = failures.flatMap((f) => parseDiagnostics(f.out));

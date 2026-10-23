@@ -1,0 +1,7 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Un sketch que usa C++23 compila igual que en la placa (el sketch se intenta en C++20 y se repite en gnu++2b).",
+  "sketch": "../../sketches/g2_cpp23",
+  "until_ms": 2500,
+  "expect": { "console": ["^modo=2 n=3$"] }
+}

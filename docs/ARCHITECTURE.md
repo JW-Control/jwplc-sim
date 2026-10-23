@@ -173,6 +173,16 @@ a ~0,4 s en Linux, ~0,6 s en el destino Windows):
   seguridad se reintenta hasta 3 veces y, si persiste, esa compilación va
   sin PCH. Medido en Windows 11: `.ino` con PCH 0,77 s, sin PCH 2,34 s.
 - El `.ino.cpp` preprocesado y los `.a` solo se reescriben si cambian.
+- **[G5]** El sketch se compila en C++20 (`-std=gnu++20`); el core y las
+  librerías, en C++23 (`gnu++2b`, como `cpp_flags` del SDK). Con libstdc++ 14
+  (WinLibs GCC 14.3), en C++23 `<memory>` arrastra `<ostream>` y `<format>`,
+  y cada unidad instancia toda la maquinaria de `std::format` desde las
+  funciones inline de `<ostream>`: 43 MB de instanciación contra 11 MB, y el
+  `.ino` pasaba de ~0,4 s a 1,6 s en Windows (alpha.13 dejó la recarga de G2
+  en 2,3 s). Si el sketch no compila en C++20 se repite en C++23 (los errores
+  que se informan son los de esa compilación) y, si así compila, el build lo
+  recuerda (`sketch-std.txt`): un sketch que use C++23 compila igual que en
+  la placa (`tests/sketches/g2_cpp23`).
 
 Sin red **[G2]**: con el package y los terceros ya descargados, compilar no
 accede a la red (verificado en un namespace sin red). Toolchain incluido:
@@ -793,7 +803,7 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 
 | Área | Fiel | No fiel / pendiente |
 |---|---|---|
-| Lógica del sketch y librerías | Mismo código fuente y mismo compilador (GCC) que el firmware; `int` y `long` de 32 bits en Windows y `linux-x86` (§3.4) | Punteros de 64 bits (`sizeof` de estructuras con punteros); `long` de 64 bits en Linux/macOS x86_64; UB del sketch puede comportarse distinto |
+| Lógica del sketch y librerías | Mismo código fuente y mismo compilador (GCC) que el firmware; `int` y `long` de 32 bits en Windows y `linux-x86` (§3.4); package en C++23 como en la placa; sketch en C++20 con repetición en C++23 si lo necesita (§3.1) | Punteros de 64 bits (`sizeof` de estructuras con punteros); `long` de 64 bits en Linux/macOS x86_64; UB del sketch puede comportarse distinto |
 | Tiempo | Ticks, delays, periodos del runtime, duración de buses | Tiempo de cómputo puro (modelo de costos calibrable, no ciclo-exacto) |
 | Doble núcleo | Afinidad, prioridades, apropiación en puntos de sincronización | Carreras finas entre núcleos sin puntos de sincronización |
 | Interrupciones | GPIO por flanco/nivel en contexto ISR del núcleo dueño | Latencia de entrada a la ISR (0 en el modelo), anidamiento por niveles de prioridad |
