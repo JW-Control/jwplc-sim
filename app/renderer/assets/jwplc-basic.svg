@@ -3,8 +3,10 @@
   SPDX-FileCopyrightText: 2026 JW Control
   SPDX-License-Identifier: CC-BY-SA-4.0
 
-  JWPLC Basic, vista frontal (redibujado del render de JW Control).
-  Coordenadas del render original (1440 × 1080 px); el viewBox recorta la placa.
+  JWPLC Basic, vista frontal, redibujado sobre el render de JW Control
+  (2026-10-23): mismas coordenadas que la imagen del render (1549 × 1693 px),
+  colores planos con contorno como el render. El logo JW CONTROL, "BASIC" y
+  el símbolo del diodo están vectorizados del render.
 
   Partes con identificador, para usarlas desde la app o la escena:
     #tft            área de la pantalla ST7789 (320 × 170, apaisada): la app
@@ -23,184 +25,170 @@
                       med        RS485_GND, RS485_A, RS485_B, RS485_SHIELD
                       inf-1 … 8  Q0_0 … Q0_7         salidas a relé, cada una con
                                                      su bornera de 2 contactos
-                                                     (voltajes distintos por salida)
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="240 20 970 1065" width="970" height="1065" role="img" aria-label="JWPLC Basic">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 12 1446 1625" width="1446" height="1625" role="img" aria-label="JWPLC Basic">
   <defs>
-    <linearGradient id="caja" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#424245"/>
-      <stop offset="1" stop-color="#36363a"/>
-    </linearGradient>
-    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2c2c2f"/>
-      <stop offset="1" stop-color="#343437"/>
-    </linearGradient>
-    <linearGradient id="verde" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#5fd35f"/>
-      <stop offset="1" stop-color="#36b336"/>
-    </linearGradient>
-    <linearGradient id="tecla" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3a3a3d"/>
-      <stop offset="1" stop-color="#1f1f21"/>
-    </linearGradient>
-    <radialGradient id="tornillo" cx="0.4" cy="0.35" r="0.7">
-      <stop offset="0" stop-color="#e9ecef"/>
-      <stop offset="1" stop-color="#9aa0a6"/>
-    </radialGradient>
-    <!-- Tornillo de bornera (centro en 0,0). -->
+    <!-- Tornillo de bornera (centro en 0,0), como en el render. -->
     <g id="tornillo-borne">
-      <circle r="15" fill="#2f8f2f"/>
-      <circle r="12.5" fill="url(#tornillo)" stroke="#6b7076" stroke-width="1.5"/>
-      <line x1="-8" y1="6" x2="8" y2="-6" stroke="#5c6166" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="-1.5" cy="-1.5" r="26" fill="#2f6a35" stroke="#000" stroke-width="1.5"/>
+      <circle r="24" fill="#dbdbe5" stroke="#000" stroke-width="2"/>
+      <line x1="-17" y1="11" x2="11" y2="-17" stroke="#1d1d1d" stroke-width="2.4"/>
+      <line x1="-11" y1="17" x2="17" y2="-11" stroke="#1d1d1d" stroke-width="2.4"/>
     </g>
-    <!-- Agujero de montaje. -->
     <g id="agujero">
-      <circle r="21" fill="#2e2e31"/>
-      <circle r="13" fill="#111"/>
+      <circle r="36" fill="#2d2d2d" stroke="#000" stroke-width="2.5"/>
+      <circle r="21" fill="#151515" stroke="#000" stroke-width="2"/>
+      <path d="M -14 10 A 17 17 0 0 0 10 14" fill="none" stroke="#3a3a3a" stroke-width="3"/>
+    </g>
+    <g id="agujero-base">
+      <circle r="30" fill="#272727" stroke="#000" stroke-width="2.5"/>
+      <circle r="17" fill="#151515" stroke="#000" stroke-width="2"/>
+      <path d="M -11 8 A 13 13 0 0 0 8 11" fill="none" stroke="#3a3a3a" stroke-width="3"/>
     </g>
   </defs>
-
   <!-- Borneras superiores (detrás de la caja). -->
   <g id="bornera-sup">
-    <rect x="605" y="34" width="83" height="56" rx="3" fill="url(#verde)"/>
-    <rect x="710" y="34" width="375" height="56" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="sup-a" data-pos="1" data-senal="24VDC"><title>Alimentación +24 VDC</title><use href="#tornillo-borne" x="626" y="72"/></g>
-    <g class="borne" data-bloque="sup-a" data-pos="2" data-senal="M0"><title>Alimentación 0 V (M0)</title><use href="#tornillo-borne" x="667" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="1" data-senal="M1"><title>Común de las entradas (M1)</title><use href="#tornillo-borne" x="731" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="2" data-senal="I0_0"><title>Entrada I0.0 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="772" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="3" data-senal="I0_1"><title>Entrada I0.1 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="813" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="4" data-senal="I0_2"><title>Entrada I0.2 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="855" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="5" data-senal="I0_3"><title>Entrada I0.3 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="896" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="6" data-senal="I0_4"><title>Entrada I0.4 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="938" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="7" data-senal="I0_5"><title>Entrada I0.5 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="979" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="8" data-senal="I0_6"><title>Entrada I0.6 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1021" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="9" data-senal="I0_7"><title>Entrada I0.7 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1062" y="72"/></g>
+    <rect x="569" y="18" width="123" height="107" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="569" y1="24" x2="692" y2="24" stroke="#2f6a35" stroke-width="2"/>
+    <rect x="727" y="18" width="572" height="107" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="727" y1="24" x2="1299" y2="24" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="sup-a" data-pos="1" data-senal="24VDC"><title>Alimentación +24 VDC</title><use href="#tornillo-borne" x="600" y="78"/></g>
+    <g class="borne" data-bloque="sup-a" data-pos="2" data-senal="M0"><title>Alimentación 0 V (M0)</title><use href="#tornillo-borne" x="662" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="1" data-senal="M1"><title>Común de las entradas (M1)</title><use href="#tornillo-borne" x="758" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="2" data-senal="I0_0"><title>Entrada I0.0 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="822" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="3" data-senal="I0_1"><title>Entrada I0.1 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="886" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="4" data-senal="I0_2"><title>Entrada I0.2 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="950" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="5" data-senal="I0_3"><title>Entrada I0.3 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1014" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="6" data-senal="I0_4"><title>Entrada I0.4 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1078" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="7" data-senal="I0_5"><title>Entrada I0.5 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1142" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="8" data-senal="I0_6"><title>Entrada I0.6 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1206" y="78"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="9" data-senal="I0_7"><title>Entrada I0.7 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1270" y="78"/></g>
   </g>
 
-  <!-- Borneras inferiores: 8 bloques de 2. -->
-  <g id="bornera-inf">
-    <rect x="365" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="454" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="543" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="632" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="721" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="810" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="899" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
-    <rect x="988" y="972" width="94" height="76" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="inf-1" data-pos="1" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="386" y="1012"/></g>
-    <g class="borne" data-bloque="inf-1" data-pos="2" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="427" y="1012"/></g>
-    <g class="borne" data-bloque="inf-2" data-pos="1" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="475" y="1012"/></g>
-    <g class="borne" data-bloque="inf-2" data-pos="2" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="516" y="1012"/></g>
-    <g class="borne" data-bloque="inf-3" data-pos="1" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="564" y="1012"/></g>
-    <g class="borne" data-bloque="inf-3" data-pos="2" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="605" y="1012"/></g>
-    <g class="borne" data-bloque="inf-4" data-pos="1" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="653" y="1012"/></g>
-    <g class="borne" data-bloque="inf-4" data-pos="2" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="694" y="1012"/></g>
-    <g class="borne" data-bloque="inf-5" data-pos="1" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="742" y="1012"/></g>
-    <g class="borne" data-bloque="inf-5" data-pos="2" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="783" y="1012"/></g>
-    <g class="borne" data-bloque="inf-6" data-pos="1" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="831" y="1012"/></g>
-    <g class="borne" data-bloque="inf-6" data-pos="2" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="872" y="1012"/></g>
-    <g class="borne" data-bloque="inf-7" data-pos="1" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="920" y="1012"/></g>
-    <g class="borne" data-bloque="inf-7" data-pos="2" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="961" y="1012"/></g>
-    <g class="borne" data-bloque="inf-8" data-pos="1" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="1013" y="1012"/></g>
-    <g class="borne" data-bloque="inf-8" data-pos="2" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="1059" y="1012"/></g>
-  </g>
+  <!-- Base (detrás) y caja frontal. -->
+  <path id="base" d="M61 1100 H1439 V1488 Q1439 1513 1414 1513 H86 Q61 1513 61 1488 Z" fill="#333" stroke="#000" stroke-width="2.5"/>
+  <use href="#agujero-base" x="122" y="1452"/>
+  <use href="#agujero-base" x="1380" y="1452"/>
+  <rect id="caja" x="36" y="109" width="1433" height="1016" rx="20" fill="#333" stroke="#000" stroke-width="3"/>
+  <use href="#agujero" x="98" y="170"/>
+  <use href="#agujero" x="1408" y="170"/>
+  <use href="#agujero" x="98" y="1062"/>
+  <use href="#agujero" x="1408" y="1062"/>
+  <path id="basic" d="M331.4 257.2C330.8 256.8 330.0 255.1 329.7 253.4C329.4 251.6 328.8 249.1 328.4 247.6L327.8 245.0L333.6 245.6C345.1 246.8 353.0 242.1 353.0 234.1C353.0 228.9 350.5 226.0 341.2 220.7C329.5 213.9 327.0 210.4 327.0 200.7C327.1 183.5 343.2 175.0 363.2 181.6C369.3 183.6 369.5 183.9 366.8 189.7C365.6 192.3 364.5 194.6 364.4 194.8C364.4 194.9 361.7 194.1 358.5 193.0C346.7 188.9 340.0 191.5 340.0 200.0C340.0 205.1 341.9 207.2 352.1 212.8C360.6 217.5 362.3 219.0 364.5 224.3C368.6 234.2 364.4 246.5 354.9 252.6C348.4 256.7 334.6 259.4 331.4 257.2ZM432.5 257.1C407.7 252.4 395.8 221.8 408.6 196.2C415.3 182.9 424.6 177.4 440.0 177.6C450.7 177.7 456.1 179.5 462.4 185.0C466.7 188.8 466.7 189.1 463.2 194.6C460.0 199.8 459.3 199.9 455.4 195.9C449.5 189.6 438.4 187.1 430.7 190.4C415.5 196.7 411.4 224.5 423.6 238.9C431.4 248.2 445.8 248.3 456.2 239.1C460.7 235.1 461.2 235.2 464.5 240.0L467.3 244.1L463.5 248.0C456.5 255.2 443.2 259.1 432.5 257.1ZM180.4 217.7L180.4 178.8L200.0 179.3C219.9 179.7 223.8 180.4 229.3 184.2C237.8 190.2 238.3 204.6 230.3 213.1L227.9 215.8L231.0 218.0C239.5 224.1 240.5 240.1 232.9 249.3C227.5 255.8 225.0 256.4 201.5 256.5L180.5 256.6L180.4 217.7ZM245.9 249.3C254.8 225.3 257.8 217.7 265.2 199.3L273.5 179.0L279.8 179.0C283.2 179.0 286.3 179.0 286.7 178.9C287.1 178.9 293.2 194.1 300.2 212.7C307.2 231.3 313.8 248.9 314.9 251.8L316.9 257.0L310.0 257.0L303.2 257.0L301.0 250.2C297.5 239.6 298.2 240.0 279.8 240.0C261.8 240.0 264.3 238.7 259.8 250.5L257.5 256.5L250.3 256.8L243.0 257.1L245.9 249.3ZM380.0 217.9L380.0 179.0L386.5 179.0L393.0 179.0L393.0 217.9L393.0 256.8L386.5 256.8L380.0 256.8L380.0 217.9ZM220.7 243.4C224.8 240.4 226.6 234.0 224.8 229.2C222.6 223.3 218.7 221.9 205.5 222.2L194.5 222.5L194.2 233.4C194.0 241.5 194.3 244.6 195.2 245.2C195.9 245.7 201.3 245.9 207.2 245.8C216.1 245.5 218.3 245.1 220.7 243.4ZM291.0 228.0C292.9 227.0 292.8 226.7 290.1 219.2C283.0 200.2 280.7 194.9 280.0 195.7C279.6 196.1 276.7 203.2 273.6 211.4C269.2 222.9 268.2 226.6 269.1 227.6C270.5 229.3 288.1 229.6 291.0 228.0ZM218.7 208.7C223.8 206.0 224.9 198.6 220.8 194.3C217.7 191.0 212.7 189.8 203.0 190.2L194.5 190.5L194.2 200.2C193.9 211.6 193.2 211.0 206.5 210.6C212.6 210.5 216.5 209.8 218.7 208.7Z" fill="#d9d9d9" fill-rule="evenodd"/>
 
-  <!-- Base (cuerpo inferior). -->
-  <rect x="278" y="720" width="893" height="256" rx="12" fill="url(#base)" stroke="#232325" stroke-width="2"/>
-  <use href="#agujero" x="318" y="935"/>
-  <use href="#agujero" x="1130" y="935"/>
-
-  <!-- Bornera intermedia (4). -->
-  <g id="bornera-med">
-    <rect x="740" y="742" width="165" height="80" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="med" data-pos="1" data-senal="RS485_GND"><title>RS-485 GND</title><use href="#tornillo-borne" x="761" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="2" data-senal="RS485_A"><title>RS-485 A</title><use href="#tornillo-borne" x="802" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="3" data-senal="RS485_B"><title>RS-485 B</title><use href="#tornillo-borne" x="843" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="4" data-senal="RS485_SHIELD"><title>RS-485 SHIELD</title><use href="#tornillo-borne" x="884" y="784"/></g>
-  </g>
-
-  <!-- RJ45 con su cable. -->
-  <g id="rj45">
-    <rect x="408" y="742" width="102" height="58" fill="#d7d9ee" stroke="#a9acc8" stroke-width="2"/>
-    <rect x="420" y="742" width="78" height="10" fill="#b9bcd8"/>
-    <path d="M412 800 H506 L496 918 H422 Z" fill="#b7aea3" stroke="#958b80" stroke-width="2"/>
-  </g>
-
-  <!-- USB-C con su cable. -->
-  <g id="usb">
-    <rect x="985" y="742" width="80" height="120" rx="4" fill="#1b1b1d" stroke="#000" stroke-width="2"/>
-    <rect x="1010" y="862" width="30" height="40" fill="#141416"/>
-    <path d="M1018 902 V1072" stroke="#141416" stroke-width="22" stroke-linecap="round"/>
-  </g>
-
-  <!-- Caja principal. -->
-  <rect x="255" y="85" width="940" height="655" rx="14" fill="url(#caja)" stroke="#262628" stroke-width="2"/>
-  <use href="#agujero" x="295" y="125"/>
-  <use href="#agujero" x="1153" y="125"/>
-  <use href="#agujero" x="295" y="698"/>
-  <use href="#agujero" x="1153" y="698"/>
-
-  <text x="345" y="180" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="68" fill="#ececec" letter-spacing="1">BASIC</text>
-
-  <!-- Pantalla: marco y área de la TFT (la app la reemplaza por la imagen viva). -->
-  <rect x="350" y="236" width="404" height="227" rx="4" fill="#1a1a1c" stroke="#4a4a4d" stroke-width="3"/>
-  <rect id="tft" x="356" y="242" width="392" height="208.5" fill="#000"/>
+  <!-- Pantalla ST7789 (la app dibuja el framebuffer en #tft). -->
+  <rect x="198" y="355" width="591" height="324" fill="#000" stroke="#111" stroke-width="2"/>
+  <rect id="tft" x="198" y="360" width="591" height="314" fill="#000"/>
 
   <!-- Botonera. -->
-  <g id="botonera" font-family="'Arial Black', Arial, sans-serif">
+  <g id="botonera">
     <g id="btn-up" class="tecla" data-btn="BTN_UP">
-      <rect x="968" y="233" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
-      <path d="M1000 247 L1021 283 H979 Z" fill="#f2f2f2"/>
+      <rect x="1116" y="346" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="1120" y="342" width="100" height="100" rx="10" fill="#333" stroke="#000" stroke-width="2.5"/>
+      <path d="M1170 362 L1199 418 L1141 418 Z" fill="#d4d4d4" stroke="#d4d4d4" stroke-width="6" stroke-linejoin="round"/>
     </g>
     <g id="btn-left" class="tecla" data-btn="BTN_LEFT">
-      <rect x="863" y="314" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
-      <path d="M877 346 L913 325 V367 Z" fill="#f2f2f2"/>
+      <rect x="958" y="470" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="962" y="466" width="100" height="100" rx="10" fill="#333" stroke="#000" stroke-width="2.5"/>
+      <path d="M984 516 L1040 487 L1040 545 Z" fill="#d4d4d4" stroke="#d4d4d4" stroke-width="6" stroke-linejoin="round"/>
     </g>
     <g id="btn-right" class="tecla" data-btn="BTN_RIGHT">
-      <rect x="1072" y="314" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
-      <path d="M1123 346 L1087 325 V367 Z" fill="#f2f2f2"/>
+      <rect x="1275" y="470" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="1279" y="466" width="100" height="100" rx="10" fill="#333" stroke="#000" stroke-width="2.5"/>
+      <path d="M1357 516 L1301 487 L1301 545 Z" fill="#d4d4d4" stroke="#d4d4d4" stroke-width="6" stroke-linejoin="round"/>
     </g>
     <g id="btn-down" class="tecla" data-btn="BTN_DOWN">
-      <rect x="968" y="395" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
-      <path d="M1000 446 L1021 410 H979 Z" fill="#f2f2f2"/>
+      <rect x="1116" y="595" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="1120" y="591" width="100" height="100" rx="10" fill="#333" stroke="#000" stroke-width="2.5"/>
+      <path d="M1170 669 L1142 613 L1199 613 Z" fill="#d4d4d4" stroke="#d4d4d4" stroke-width="6" stroke-linejoin="round"/>
     </g>
     <g id="btn-esc" class="tecla" data-btn="BTN_ESC">
-      <rect x="863" y="476" width="65" height="65" rx="8" fill="#e8262d" stroke="#7a0f12" stroke-width="3"/>
-      <path d="M879 492 L912 525 M912 492 L879 525" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+      <rect x="957" y="720" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="961" y="716" width="100" height="100" rx="10" fill="#751212" stroke="#000" stroke-width="2.5"/>
+      <path d="M985 740 L1037 792 M1037 740 L985 792" stroke="#d4d4d4" stroke-width="19" stroke-linecap="round"/>
     </g>
     <g id="btn-ok" class="tecla" data-btn="BTN_OK">
-      <rect x="1072" y="476" width="65" height="65" rx="8" fill="#38c13b" stroke="#16661a" stroke-width="3"/>
-      <text x="1104.5" y="522" text-anchor="middle" font-size="31" font-weight="900" fill="#fff">OK</text>
+      <rect x="1275" y="720" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="1.5"/>
+      <rect x="1279" y="716" width="100" height="100" rx="10" fill="#317038" stroke="#000" stroke-width="2.5"/>
+      <path d="M1302.4 785.1C1290.3 777.5 1288.5 758.1 1299.0 748.6C1303.6 744.5 1306.4 743.6 1312.6 744.3C1328.9 746.1 1334.2 773.1 1320.3 783.7C1315.6 787.3 1306.9 788.0 1302.4 785.1ZM1336.0 765.0L1336.0 744.0L1341.5 744.0L1346.9 744.0L1347.2 752.2L1347.5 760.5L1351.4 752.2L1355.3 744.0L1360.6 744.0C1363.6 744.0 1366.0 744.2 1366.0 744.4C1366.0 744.6 1364.2 748.6 1362.0 753.4C1359.8 758.1 1358.0 762.7 1358.0 763.4C1358.0 764.2 1359.8 769.5 1362.0 775.1C1364.2 780.8 1366.0 785.5 1366.0 785.7C1366.0 785.9 1363.3 786.0 1360.1 786.0L1354.2 786.0L1350.8 776.2L1347.5 766.5L1347.2 776.2L1346.9 786.0L1341.5 786.0L1336.0 786.0L1336.0 765.0ZM1314.5 772.4C1319.3 767.2 1316.3 756.0 1310.2 756.0C1303.8 756.0 1301.0 768.0 1306.3 772.6C1309.9 775.7 1311.5 775.6 1314.5 772.4Z" fill="#d4d4d4" stroke="#1d1d1d" stroke-width="1.5" fill-rule="evenodd"/>
     </g>
   </g>
 
-  <!-- Rejilla del zumbador. -->
-  <g id="zumbador">
-    <circle cx="998" cy="535" r="47" fill="#2f2f32"/>
-    <g fill="#141416">
-      <rect x="968" y="509" width="11" height="11"/><rect x="985" y="505" width="11" height="11"/><rect x="1002" y="505" width="11" height="11"/><rect x="1019" y="509" width="11" height="11"/>
-      <rect x="960" y="526" width="11" height="11"/><rect x="977" y="526" width="11" height="11"/><rect x="994" y="526" width="11" height="11"/><rect x="1011" y="526" width="11" height="11"/><rect x="1028" y="526" width="11" height="11"/>
-      <rect x="968" y="543" width="11" height="11"/><rect x="985" y="547" width="11" height="11"/><rect x="1002" y="547" width="11" height="11"/><rect x="1019" y="543" width="11" height="11"/>
-      <rect x="985" y="564" width="11" height="9"/><rect x="1002" y="564" width="11" height="9"/>
-    </g>
+  <!-- Parlante (zumbador). -->
+  <g id="parlante">
+    <path d="M1153.5 877.0C1151.3 876.6 1147.2 875.4 1144.5 874.4L1139.5 872.4L1139.2 866.8C1139.0 862.5 1139.3 861.1 1140.5 860.6C1141.5 860.2 1141.9 860.4 1141.4 861.1C1141.0 861.9 1141.5 862.0 1143.1 861.5C1144.7 861.1 1145.0 861.2 1144.2 861.8C1143.3 862.4 1145.3 863.2 1150.5 864.5L1158.0 866.2L1158.0 872.1C1158.0 875.4 1157.9 877.9 1157.8 877.9C1157.6 877.8 1155.7 877.4 1153.5 877.0ZM1180.0 871.7L1180.0 866.1L1184.8 864.6C1187.4 863.8 1191.7 862.3 1194.3 861.1C1197.0 859.9 1199.4 859.0 1199.6 859.0C1199.8 859.0 1200.0 861.6 1200.0 864.8L1200.0 870.5L1193.2 873.2C1189.5 874.8 1185.0 876.3 1183.2 876.6L1180.0 877.2L1180.0 871.7ZM1102.3 831.8C1101.1 828.3 1099.8 823.8 1099.5 821.8L1098.8 818.0L1102.7 818.0C1106.5 818.0 1106.6 818.1 1107.8 822.6C1109.8 829.9 1113.1 837.0 1114.3 836.3C1114.9 836.0 1115.0 836.2 1114.6 836.8C1114.2 837.5 1111.8 838.0 1109.2 838.0L1104.5 838.0L1102.3 831.8ZM1221.0 837.1C1221.0 836.6 1222.1 833.8 1223.4 830.9C1224.8 827.9 1226.2 823.8 1226.5 821.8C1227.1 818.9 1227.7 818.0 1229.2 818.0C1231.0 818.0 1231.1 818.6 1230.8 827.0C1230.6 832.0 1230.9 836.0 1231.3 836.0C1231.8 836.0 1231.8 836.5 1231.5 837.0C1230.7 838.2 1221.0 838.3 1221.0 837.1ZM1099.0 795.0C1099.0 793.9 1100.2 789.3 1101.7 784.9L1104.4 776.9L1110.2 777.1C1113.3 777.2 1115.7 777.7 1115.4 778.2C1115.1 778.6 1114.5 778.8 1114.0 778.5C1113.1 777.9 1109.6 785.7 1107.8 792.4C1106.6 796.8 1106.5 797.0 1102.8 797.0C1099.6 797.0 1099.0 796.7 1099.0 795.0ZM1226.7 793.5C1226.4 791.6 1225.0 787.4 1223.5 784.2C1221.3 779.2 1221.0 777.3 1221.2 770.2L1221.5 761.9L1225.2 766.8C1230.4 773.8 1236.5 788.9 1235.1 791.2C1234.5 792.2 1234.0 793.9 1234.0 795.0C1234.0 796.6 1233.3 797.0 1230.6 797.0C1227.6 797.0 1227.2 796.7 1226.7 793.5ZM1195.0 754.0C1194.2 753.4 1190.5 752.0 1186.8 750.9L1180.0 748.8L1180.0 743.4C1180.0 736.8 1180.7 736.6 1192.0 741.2L1200.0 744.5L1200.0 749.7C1200.0 755.3 1198.6 756.4 1195.0 754.0ZM1139.0 748.2L1139.0 742.5L1144.2 740.6C1147.1 739.5 1151.4 738.4 1153.8 738.0L1158.0 737.3L1158.0 743.1L1158.0 748.9L1154.2 749.6C1152.2 750.0 1148.1 751.1 1145.1 752.1C1142.1 753.2 1139.5 754.0 1139.3 754.0C1139.2 754.0 1139.0 751.4 1139.0 748.2Z" fill="#317038" stroke="#000" stroke-width="1" fill-rule="evenodd"/>
+    <rect x="1138" y="777" width="21" height="21" fill="#333" stroke="#111" stroke-width="2"/>
+    <rect x="1180" y="777" width="21" height="21" fill="#333" stroke="#111" stroke-width="2"/>
+    <rect x="1138" y="817" width="21" height="21" fill="#333" stroke="#111" stroke-width="2"/>
+    <rect x="1180" y="817" width="21" height="21" fill="#333" stroke="#111" stroke-width="2"/>
   </g>
 
-  <!-- Logotipo JW CONTROL. -->
+  <!-- Logo JW CONTROL (vectorizado del render). -->
   <g id="logo">
-    <!-- J a toda altura; W más baja, con CONTROL debajo. -->
-    <path d="M435 531 H473 V632 Q473 672 432 672 H372 Q330 672 330 630 V609 H382 V625 Q382 631 389 631 H425 Q435 631 435 621 Z" fill="#ececec"/>
-    <path d="M470 531 H514 L533 600 L553 531 H585 L605 600 L624 531 H656 L624 634 H587 L569 571 L551 634 H514 Z" fill="#ececec"/>
-    <text x="473" y="673" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="38" fill="#ececec" textLength="335" lengthAdjust="spacing">CONTROL</text>
-    <!-- Diodo emisor estilizado. -->
-    <g stroke="#3ec83f" stroke-width="7" fill="none" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M668 597 H786"/>
-      <path d="M700 553 V634 L756 597 Z"/>
-      <path d="M756 556 V638"/>
-      <path d="M714 549 L734 528 M728 556 L748 535"/>
-    </g>
-    <g fill="#3ec83f">
-      <path d="M738 522 L742 534 L729 531 Z"/>
-      <path d="M752 529 L756 541 L743 538 Z"/>
-    </g>
+    <path d="M196.0 1018.9C178.4 1016.8 167.2 1011.1 161.5 1001.1C154.9 989.6 154.0 983.9 153.3 946.2L152.7 913.0L156.4 913.0C158.4 913.0 171.4 911.0 185.3 908.5C199.3 906.0 212.3 904.0 214.3 904.0L218.0 904.0L218.0 934.5L218.0 965.0L257.0 965.0L296.0 965.0L296.0 881.4L296.0 797.8L299.1 798.4C300.8 798.7 315.0 799.0 330.5 799.0L358.7 799.0L359.4 881.8C360.3 978.7 360.0 982.9 352.8 997.3C347.1 1008.9 340.7 1013.6 325.8 1017.3L315.1 1020.0L259.3 1019.9C228.6 1019.8 200.1 1019.4 196.0 1018.9ZM374.8 1016.3L371.0 1013.7L371.0 995.6L371.0 977.5L374.3 975.2C377.5 973.1 378.5 973.0 396.6 973.0C419.5 973.1 419.7 973.2 420.7 983.4L421.3 989.9L417.9 990.4C407.6 992.0 407.0 991.9 407.0 988.3L407.0 985.0L396.0 985.0L385.0 985.0L385.0 995.5L385.0 1006.0L396.0 1006.0L407.0 1006.0L407.0 1002.5L407.0 999.0L412.2 999.0C420.0 999.1 422.4 1001.2 421.5 1007.3C421.1 1009.9 419.8 1013.5 418.6 1015.3L416.4 1018.5L397.5 1018.7C378.5 1018.9 378.5 1018.9 374.8 1016.3ZM450.2 1015.7L447.0 1012.4L447.0 995.3L447.0 978.1L450.3 975.6L453.7 973.0L475.4 973.0C496.1 973.0 497.2 973.1 500.0 975.2L503.0 977.4L503.0 995.6L503.0 1013.7L499.2 1016.4L495.4 1019.0L474.4 1019.0L453.4 1019.0L450.2 1015.7ZM532.0 1016.4C531.4 1014.9 531.1 1005.3 531.2 993.6L531.5 973.5L536.0 972.9L540.5 972.3L556.0 985.3L571.5 998.3L571.8 985.6L572.1 973.0L575.4 973.0C577.2 973.0 580.2 972.7 581.9 972.4L585.0 971.8L585.0 995.5L585.0 1019.3L581.2 1018.6C579.2 1018.3 576.8 1018.0 575.8 1018.0C574.9 1018.0 567.7 1012.6 559.8 1005.9L545.5 993.9L544.8 997.7C544.4 999.8 544.1 1005.4 544.1 1010.2L544.0 1019.0L538.5 1019.0C533.4 1019.0 532.9 1018.8 532.0 1016.4ZM623.0 1002.1C623.0 982.6 623.9 984.0 611.8 984.0C604.4 984.0 605.0 984.6 603.6 976.2L603.0 973.0L630.0 973.0L657.0 973.0L656.4 976.2C655.0 984.6 655.6 984.0 648.2 984.0C636.1 984.0 637.0 982.6 637.0 1002.1L637.0 1019.0L630.0 1019.0L623.0 1019.0L623.0 1002.1ZM676.4 1015.8C675.8 1013.9 675.6 1003.7 675.8 992.8L676.2 973.1L697.9 972.8L719.5 972.5L722.2 974.9C724.9 977.3 725.0 977.7 725.0 987.5C725.0 997.2 724.9 997.7 722.2 1000.2C720.7 1001.7 718.4 1003.0 717.1 1003.2C714.9 1003.5 715.1 1003.8 719.4 1006.8C724.5 1010.5 725.2 1013.0 722.1 1016.8C718.4 1021.1 714.8 1019.9 704.7 1011.0C698.0 1005.1 694.8 1003.0 692.8 1003.0L690.0 1003.0L690.0 1011.0L690.0 1019.0L683.7 1019.0C677.4 1019.0 677.3 1019.0 676.4 1015.8ZM755.2 1015.7L752.0 1012.4L752.0 995.3L752.0 978.1L755.3 975.6L758.7 973.0L780.4 973.0C801.1 973.0 802.2 973.1 805.0 975.2L808.0 977.4L808.0 995.6L808.0 1013.7L804.2 1016.4L800.4 1019.0L779.4 1019.0L758.4 1019.0L755.2 1015.7ZM837.0 1016.4C836.4 1015.0 836.0 1004.7 836.0 993.4L836.0 973.0L839.9 973.0C842.0 973.0 845.2 972.7 846.9 972.4L850.0 971.8L850.0 988.9L850.0 1006.0L866.0 1006.0L882.0 1006.0L882.0 1012.5L882.0 1019.0L860.0 1019.0L838.0 1019.0L837.0 1016.4ZM492.0 995.4L492.0 980.7L484.3 981.4C480.1 981.7 472.5 982.0 467.5 982.0L458.2 982.0L457.8 993.8C457.2 1011.3 455.8 1010.0 475.5 1010.0L492.0 1010.0L492.0 995.4ZM797.0 995.4L797.0 980.7L789.3 981.4C785.1 981.7 777.5 982.0 772.5 982.0L763.3 982.0L762.8 993.8C762.1 1011.2 760.8 1010.0 780.5 1010.0L797.0 1010.0L797.0 995.4ZM713.2 993.3C714.5 992.2 715.0 990.3 715.0 986.8L715.0 982.0L707.1 982.0C702.8 982.0 696.5 981.7 693.1 981.4L687.0 980.7L687.0 987.2C687.0 990.8 687.3 994.0 687.7 994.3C688.0 994.7 693.5 995.0 699.8 995.0C709.1 995.0 711.7 994.7 713.2 993.3ZM452.8 950.8C452.0 948.4 439.3 914.7 424.6 875.9C406.9 829.0 398.0 804.0 398.0 801.5L398.0 797.7L402.6 798.4C405.2 798.7 415.4 799.0 425.4 799.0L443.5 799.0L450.9 819.8C468.5 869.4 474.3 885.0 474.9 884.5C475.3 884.3 482.8 865.0 491.6 841.6L507.5 799.2L522.5 798.8L537.5 798.4L540.0 801.1C541.6 802.9 547.9 818.2 557.9 844.5C566.4 866.8 573.7 884.7 574.1 884.3C574.5 883.9 581.0 865.5 588.4 843.6C595.9 821.6 602.7 802.6 603.5 801.3C605.0 799.0 605.3 799.0 624.5 799.0L644.0 799.0L644.0 803.2C644.0 806.3 636.4 827.4 616.1 881.0L588.3 954.5L572.4 954.8L556.5 955.0L553.7 947.8C552.1 943.8 544.5 923.9 536.8 903.5C529.1 883.1 522.5 866.1 522.1 865.7C521.7 865.3 514.7 882.4 506.5 903.7C498.3 925.0 490.4 945.3 488.9 948.8L486.1 955.0L470.3 955.0L454.4 955.0L452.8 950.8Z" fill="#d4d4d4" fill-rule="evenodd"/>
+    <path d="M796.2 959.1L793.0 956.4L792.8 934.2L792.5 912.0L754.5 935.1C708.0 963.3 710.6 962.0 706.3 957.8L703.0 954.6L703.0 930.3L703.0 906.0L681.5 906.0L660.0 906.0L660.0 899.0L660.0 892.0L681.5 892.0L703.0 892.0L703.0 867.7C703.0 843.5 703.0 843.3 705.3 841.2C709.8 837.0 711.4 837.7 752.5 862.5C773.9 875.4 791.7 886.0 792.1 886.0C792.5 886.0 793.1 875.6 793.5 863.0L794.2 840.0L800.1 840.0L806.0 840.0L806.1 845.8C806.2 848.9 806.5 860.5 806.9 871.5L807.5 891.5L827.0 892.0L846.5 892.5L846.8 899.2L847.1 906.0L827.3 906.2L807.5 906.5L806.9 926.5C806.5 937.5 806.2 949.0 806.1 952.0C806.0 957.0 805.7 957.7 802.7 959.6L799.4 961.7L796.2 959.1ZM755.2 921.3C774.9 909.4 790.7 899.3 790.3 898.9C789.8 898.5 774.4 889.1 756.0 878.0C737.6 866.9 721.0 856.9 719.2 855.8L716.0 853.8L716.0 899.0C716.0 940.6 716.1 944.2 717.6 943.6C718.5 943.2 735.4 933.2 755.2 921.3ZM758.1 848.2L756.1 844.5L766.7 833.9C776.2 824.3 777.1 823.1 776.1 821.1C773.5 816.4 775.5 814.2 788.5 807.8L800.7 801.7L803.9 803.9C808.3 807.0 807.9 809.2 801.1 822.9L795.1 834.8L790.8 833.9L786.5 833.1L777.0 842.6C768.4 851.1 767.1 852.0 763.8 852.0C760.5 852.0 759.8 851.6 758.1 848.2ZM732.0 840.4C730.1 835.5 731.5 831.8 737.4 826.1C740.2 823.4 740.8 822.2 740.3 820.0C739.4 815.4 741.6 813.2 753.1 807.5L764.0 802.0L768.0 804.0C773.4 806.7 773.2 808.2 765.9 821.8L759.9 833.0L755.7 833.0C751.9 833.0 750.9 833.6 746.5 838.0C742.1 842.5 741.1 843.0 737.3 843.0C733.6 843.0 732.8 842.6 732.0 840.4Z" fill="#349409" fill-rule="evenodd"/>
+  </g>
+
+  <!-- RJ45 (Ethernet) y USB. -->
+  <g id="rj45">
+    <rect x="265" y="1125" width="155" height="90" fill="#bbc1d8" stroke="#000" stroke-width="2"/>
+    <rect x="289" y="1125" width="105" height="9" fill="#e9ebf3" stroke="#000" stroke-width="1"/>
+    <path d="M265 1215 H420 L408 1264 H277 Z" fill="#a7adc3" stroke="#000" stroke-width="2"/>
+    <path d="M277 1264 H408 L392 1408 H290 Z" fill="#8b8682" stroke="#000" stroke-width="2"/>
+    <path d="M300 1264 L310 1408 M380 1264 L372 1408" stroke="#a49f9a" stroke-width="3"/>
+  </g>
+  <g id="usb">
+    <rect x="1152" y="1125" width="135" height="191" fill="#4892dc" stroke="#000" stroke-width="2"/>
+    <rect x="1152" y="1125" width="38" height="191" fill="#3f82c4" stroke="#000" stroke-width="1.5"/>
+    <rect x="1254" y="1125" width="33" height="191" fill="#55a2ea" stroke="#000" stroke-width="1.5"/>
+    <rect x="1192" y="1316" width="55" height="84" fill="#4b98e5" stroke="#000" stroke-width="2"/>
+    <rect x="1192" y="1316" width="20" height="84" fill="#3f82c4" stroke="#000" stroke-width="1.5"/>
+  </g>
+
+  <!-- Bornera RS-485 (centro de la base). -->
+  <g id="bornera-med">
+    <path d="M776 1126 H1034 V1140 H776 Z" fill="#6fcd6f" stroke="#000" stroke-width="1.5"/>
+    <rect x="776" y="1140" width="258" height="111" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="776" y1="1245" x2="1034" y2="1245" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="med" data-pos="1" data-senal="RS485_GND"><title>RS-485 GND</title><use href="#tornillo-borne" x="803" y="1188"/></g>
+    <g class="borne" data-bloque="med" data-pos="2" data-senal="RS485_A"><title>RS-485 A</title><use href="#tornillo-borne" x="871" y="1188"/></g>
+    <g class="borne" data-bloque="med" data-pos="3" data-senal="RS485_B"><title>RS-485 B</title><use href="#tornillo-borne" x="939" y="1188"/></g>
+    <g class="borne" data-bloque="med" data-pos="4" data-senal="RS485_SHIELD"><title>RS-485 SHIELD</title><use href="#tornillo-borne" x="1007" y="1188"/></g>
+  </g>
+
+  <!-- Borneras inferiores: una por salida a relé. -->
+  <g id="bornera-inf">
+    <rect x="198" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="198" y1="1520" x2="322" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-1" data-pos="1" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="229" y="1572"/></g>
+    <g class="borne" data-bloque="inf-1" data-pos="2" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="291" y="1572"/></g>
+    <rect x="338" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="338" y1="1520" x2="462" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-2" data-pos="1" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="369" y="1572"/></g>
+    <g class="borne" data-bloque="inf-2" data-pos="2" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="431" y="1572"/></g>
+    <rect x="477" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="477" y1="1520" x2="601" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-3" data-pos="1" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="508" y="1572"/></g>
+    <g class="borne" data-bloque="inf-3" data-pos="2" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="570" y="1572"/></g>
+    <rect x="616" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="616" y1="1520" x2="740" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-4" data-pos="1" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="647" y="1572"/></g>
+    <g class="borne" data-bloque="inf-4" data-pos="2" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="709" y="1572"/></g>
+    <rect x="756" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="756" y1="1520" x2="880" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-5" data-pos="1" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="787" y="1572"/></g>
+    <g class="borne" data-bloque="inf-5" data-pos="2" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="849" y="1572"/></g>
+    <rect x="895" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="895" y1="1520" x2="1019" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-6" data-pos="1" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="926" y="1572"/></g>
+    <g class="borne" data-bloque="inf-6" data-pos="2" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="988" y="1572"/></g>
+    <rect x="1035" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="1035" y1="1520" x2="1159" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-7" data-pos="1" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="1066" y="1572"/></g>
+    <g class="borne" data-bloque="inf-7" data-pos="2" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="1128" y="1572"/></g>
+    <rect x="1174" y="1514" width="124" height="116" fill="#80e580" stroke="#000" stroke-width="2"/>
+    <line x1="1174" y1="1520" x2="1298" y2="1520" stroke="#2f6a35" stroke-width="2"/>
+    <g class="borne" data-bloque="inf-8" data-pos="1" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="1205" y="1572"/></g>
+    <g class="borne" data-bloque="inf-8" data-pos="2" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="1267" y="1572"/></g>
   </g>
 </svg>

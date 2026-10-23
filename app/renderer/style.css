@@ -1137,3 +1137,12 @@ button.io.on {
 .io.scene-owned {
   outline: 1px dashed var(--accent);
 }
+.term.on-board circle {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+.term.on-board:hover circle {
+  stroke: var(--accent);
+  fill: rgba(47, 140, 255, 0.25);
+}

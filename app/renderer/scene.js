@@ -14,7 +14,9 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-  const BOARD_SCALE = 0.5;
+  // La placa ocupa 485 px de ancho en la escena (su SVG está en las
+  // coordenadas del render de JW Control).
+  const BOARD_WIDTH = 485;
   const COLORS = { verde: "#37d67a", rojo: "#ff5d5d", amarillo: "#ffc53d", azul: "#3e9bff", blanco: "#f2f4f7", negro: "#2b2f35" };
 
   const S = {
@@ -27,6 +29,7 @@
     zoom: 0.8,
     pan: { x: 20, y: 20 },
     boardSvg: null,
+    board: { w: 485, h: 545, k: 0.335 },
     boardTerms: {}, // borne -> [x, y] en la placa escalada
     drag: null,
     wiring: null, // { from, x, y }
@@ -42,7 +45,7 @@
   function symbolFor(dev) {
     const t = dev.type;
     const short = t.split("/")[1];
-    if (t === "jwsim/jwplc-basic") return { w: 970 * BOARD_SCALE, h: 1065 * BOARD_SCALE, terms: S.boardTerms, board: true };
+    if (t === "jwsim/jwplc-basic") return { w: S.board.w, h: S.board.h, terms: S.boardTerms, board: true };
     const sizes = {
       "pushbutton-no": [64, 96, ["13"], ["14"]],
       "pushbutton-nc": [64, 96, ["11"], ["12"]],
@@ -181,17 +184,19 @@
     text = text.replace(/\bid="([^"]+)"/g, 'id="plcsvg-$1"').replace(/href="#/g, 'href="#plcsvg-').replace(/url\(#/g, "url(#plcsvg-");
     const doc = new DOMParser().parseFromString(text, "image/svg+xml");
     const svg = doc.documentElement;
-    const [vx, vy] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    const k = BOARD_WIDTH / vw;
+    S.board = { w: BOARD_WIDTH, h: vh * k, k };
     const terms = {};
     for (const g of svg.querySelectorAll(".borne")) {
       const u = g.querySelector("use");
       const sig = g.dataset.senal;
       const id = /^Q0_/.test(sig) ? `${sig}.${g.dataset.pos}` : sig;
-      terms[id] = [(Number(u.getAttribute("x")) - vx) * BOARD_SCALE, (Number(u.getAttribute("y")) - vy) * BOARD_SCALE];
+      terms[id] = [(Number(u.getAttribute("x")) - vx) * k, (Number(u.getAttribute("y")) - vy) * k];
     }
     S.boardTerms = terms;
-    svg.setAttribute("width", String(970 * BOARD_SCALE));
-    svg.setAttribute("height", String(1065 * BOARD_SCALE));
+    svg.setAttribute("width", String(S.board.w));
+    svg.setAttribute("height", String(S.board.h));
     svg.removeAttribute("role");
     // Pantalla: un canvas que copia el de la app en cada cuadro.
     const tft = svg.querySelector("#plcsvg-tft");
@@ -302,11 +307,13 @@
       let html = "";
       for (let k = 0; k < 8; k++) {
         const [x, y] = sym.terms[`I0_${k}`] ?? [];
-        if (x !== undefined) html += `<circle cx="${x}" cy="${y - 16}" r="4" class="${st.outputs?.[`I0_${k}`] ? "led on" : "led"}"/>`;
+        if (x !== undefined) html += `<circle cx="${x}" cy="${y + 70 * S.board.k}" r="4" class="${st.outputs?.[`I0_${k}`] ? "led on" : "led"}"/>`;
         const [qx, qy] = sym.terms[`Q0_${k}.1`] ?? [];
-        if (qx !== undefined) html += `<circle cx="${qx + 10}" cy="${qy + 16}" r="4" class="${st.contacts?.[`Q0_${k}`] ? "led on" : "led"}"/>`;
+        const [qx2] = sym.terms[`Q0_${k}.2`] ?? [];
+        if (qx !== undefined) html += `<circle cx="${(qx + qx2) / 2}" cy="${qy - 80 * S.board.k}" r="4" class="${st.contacts?.[`Q0_${k}`] ? "led on" : "led"}"/>`;
       }
-      if (st.outputs && st.outputs.powered === false && S.snap) html += `<text class="dev-note bad" x="${sym.w / 2}" y="-8">sin 24 VDC en 24VDC/M0</text>`;
+      const plcWired = S.spec.wiring.some((w) => w.from.startsWith(`${dev.id}.`) || w.to.startsWith(`${dev.id}.`));
+      if (plcWired && st.outputs && st.outputs.powered === false && S.snap) html += `<text class="dev-note bad" x="${sym.w / 2}" y="-8">sin 24 VDC en 24VDC/M0</text>`;
       leds.innerHTML = html;
     } else {
       g.innerHTML = body(dev, sym);
@@ -325,7 +332,9 @@
     let th = "";
     for (const [id, [x, y]] of Object.entries(sym.terms)) {
       const up = y <= sym.h / 2;
-      th += `<g class="term" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 6 : 5}"/>`;
+      // En la placa el borne es el tornillo del SVG: el círculo es invisible
+      // (solo resalta al pasar el mouse).
+      th += `<g class="term${sym.board ? " on-board" : ""}" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 5}"/>`;
       if (!sym.board) th += `<text x="${x}" y="${up ? y - 8 : y + 15}">${esc(id)}</text>`;
       th += `<title>${esc(`${dev.id}.${id}`)}</title></g>`;
     }
