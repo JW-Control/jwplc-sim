@@ -54,8 +54,32 @@
           "description": "Nivel inicial de las entradas de bornera (I0_0..I0_7).",
           "patternProperties": { "^I0_[0-7]$": { "enum": [0, 1] } }
         },
-        "devices": { "type": "array", "items": { "type": "object", "required": ["id", "type"] } },
-        "wiring": { "type": "array", "items": { "type": "object", "required": ["from", "to"] } }
+        "devices": {
+          "type": "array",
+          "description": "Dispositivos de la escena (G7, schema/jwsim-scene-1.json).",
+          "items": {
+            "type": "object",
+            "required": ["id", "type"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" },
+              "type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$" },
+              "version": { "type": "string" },
+              "params": { "type": "object" },
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "rotation": { "enum": [0, 90, 180, 270] }
+            }
+          }
+        },
+        "wiring": {
+          "type": "array",
+          "description": "Cables borne a borne: '<dispositivo>.<borne>'.",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "color": { "type": "string" }, "points": { "type": "array" } }
+          }
+        }
       }
     },
     "exercise": { "type": "object" },

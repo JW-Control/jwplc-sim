@@ -8,6 +8,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 
 import { decodePng, encodePng, readScreenDump } from "../../scripts/lib/png.mjs";
 import { buildSketch, ROOT } from "./build.mjs";
+import { cosim } from "./cosim.mjs";
 import { parseResult, parseTimeline, runExeAsync } from "./runner.mjs";
 
 export const TEST_SUFFIX = ".jwtest.json";
@@ -35,9 +36,9 @@ export function resolveSketch(spec, testFile, pkg) {
   return resolve(dirname(testFile), spec);
 }
 
-const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s"]);
-const TEST_KEYS = new Set(["$schema", "$comment", "name", "sketch", "runs", "state", ...RUN_KEYS]);
-const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result", "screen"]);
+const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s", "actions"]);
+const TEST_KEYS = new Set(["$schema", "$comment", "name", "sketch", "runs", "state", "scene", ...RUN_KEYS]);
+const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result", "screen", "scene"]);
 
 export function loadTest(file) {
   let t;
@@ -55,13 +56,93 @@ export function loadTest(file) {
     for (const k of Object.keys(r)) if (!RUN_KEYS.has(k)) throw bad(`runs[${i}]: campo desconocido '${k}'`);
     if (!(Number(r.until_ms) > 0)) throw bad(`runs[${i}]: 'until_ms' debe ser > 0`);
     for (const k of Object.keys(r.expect ?? {})) if (!EXPECT_KEYS.has(k)) throw bad(`runs[${i}].expect: campo desconocido '${k}'`);
+    if ((r.actions || r.expect?.scene) && !t.scene) throw bad(`runs[${i}]: 'actions' y 'expect.scene' requieren 'scene'`);
+    if (t.scene && r.expect?.screen) throw bad(`runs[${i}]: 'expect.screen' no está disponible con 'scene'`);
   });
   const rel = relative(process.cwd(), file);
   const name = t.name ?? (rel.startsWith("..") ? file : rel).split(sep).join("/").replace(TEST_SUFFIX, "");
   // Estado no volátil compartido entre corridas (FRAM, NVS, SD, RTC) si hay
   // varias o se pide; si no, cada corrida arranca con la placa de fábrica.
   const shared = t.state === "shared" || runs.length > 1;
-  return { file, name, sketch: t.sketch, runs, shared };
+  return { file, name, sketch: t.sketch, runs, shared, scene: t.scene === undefined ? undefined : loadScene(t.scene, file) };
+}
+
+// Escena de una prueba: objeto en línea, archivo de escena (.json) o
+// proyecto .jwsim (su campo "scene"), relativos al archivo de prueba.
+export function loadScene(spec, testFile) {
+  if (typeof spec !== "string") return spec;
+  const p = resolve(dirname(testFile), spec);
+  const j = JSON.parse(readFileSync(p, "utf8"));
+  const sc = p.endsWith(".jwsim") ? j.scene : j;
+  if (!sc?.devices) throw new Error(`${p}: no tiene una escena (devices/wiring)`);
+  return sc;
+}
+
+// Corrida co-simulada con la escena (cli/lib/cosim.mjs): se arma una salida
+// con el mismo formato que la del runner (consola, DI/DO y JWSIM_RESULT)
+// para evaluar las mismas expectativas, más las de la escena.
+async function runWithScene(exe, args, test, r) {
+  const t0 = Date.now();
+  const lines = [];
+  const partial = ["", "", ""];
+  let stderr = "";
+  const fmt = (ns) => `[${(Number(ns) / 1e6).toFixed(3).padStart(10)} ms]`;
+  const probes = (r.expect?.scene?.state ?? []).map((s) => BigInt(Math.round(s.at_ms * 1e6)));
+  const res = await cosim({
+    exe,
+    args,
+    launcher: exe.endsWith(".exe") && process.platform !== "win32" ? "wine" : undefined,
+    scene: test.scene,
+    untilNs: BigInt(Math.round(r.until_ms * 1e6)),
+    actions: (r.actions ?? []).map((a) => ({ ...a, at_ns: BigInt(Math.round(a.at_ms * 1e6)) })),
+    // Consola fechada con precisión de 5 ms (la escena despierta al runner al menos así).
+    maxStepNs: 5_000_000n,
+    probes,
+    onSerial: (port, text, t) => {
+      const parts = (partial[port] + text).split(/\r?\n/);
+      partial[port] = parts.pop();
+      for (const l of parts) lines.push([BigInt(t), `UART${port} ${l}`]);
+    },
+    onStderr: (d) => (stderr += d),
+  });
+  for (const e of res.scene.events) if (e.kind === "signal") lines.push([e.t, `DO ${e.key} = ${e.value}`]);
+  for (const e of res.inputs) lines.push([e.t, `DI ${e.name} = ${e.v}`]);
+  lines.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  let stdout = lines.map(([t, l]) => `${fmt(t)} ${l}`).join("\n") + "\n";
+  if (!res.exit) stdout += `JWSIM_RESULT mode=scene t_ms=${Number(res.t_ns) / 1e6} trace_hash=${res.hash} horizons=${res.stats.horizons}\n`;
+  return {
+    run: { stdout, stderr, status: res.exit ? res.exit.code : 0, signal: res.exit?.signal ?? null, timedOut: false, wallMs: Date.now() - t0 },
+    res,
+  };
+}
+
+const near = (a, b) => (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) < 1e-6 : a === b);
+
+// Expectativas de la escena: estado de salidas en instantes, fallas y
+// avisos del análisis estático.
+export function evaluateScene(res, want = {}) {
+  const failures = [];
+  for (const st of want.state ?? []) {
+    const snap = res.snapshots.get(BigInt(Math.round(st.at_ms * 1e6)));
+    for (const [k, v] of Object.entries(st)) {
+      if (k === "at_ms") continue;
+      const [dev, key] = [k.slice(0, k.indexOf(".")), k.slice(k.indexOf(".") + 1)];
+      const d = snap?.devices.find((x) => x.id === dev);
+      const got = d ? (key in d.outputs ? d.outputs[key] : d.contacts[key]) : undefined;
+      if (!near(got, v)) failures.push(`escena ${k} en ${st.at_ms} ms = ${JSON.stringify(got)}, se esperaba ${JSON.stringify(v)}`);
+    }
+  }
+  const faults = res.scene.events.filter((e) => e.kind === "fault").map((e) => `${e.type}:${e.device ?? ""}`);
+  if (want.faults && JSON.stringify(faults) !== JSON.stringify(want.faults)) {
+    failures.push(`fallas de la escena ${JSON.stringify(faults)}, se esperaban ${JSON.stringify(want.faults)}`);
+  }
+  if (want.findings) {
+    const got = res.scene.findings.map((f) => f.load).sort();
+    if (JSON.stringify(got) !== JSON.stringify([...want.findings].sort())) {
+      failures.push(`avisos del cableado ${JSON.stringify(got)}, se esperaban ${JSON.stringify(want.findings)}`);
+    }
+  }
+  return failures;
 }
 
 // Ruta como la ve el runner: bajo wine, unidad Z: con barras invertidas.
@@ -222,9 +303,18 @@ export async function runTest(test, { pkg, target = "native", buildRoot, record 
     if (test.shared) args.push("--state", hostPath(exe, stateDir));
     const shots = (r.expect?.screen ?? []).map((sc, k) => ({ ...sc, dump: join(work, `run${i}_screen${k}.fb`) }));
     for (const sc of shots) args.push("--screen-at", `${sc.at_ms}:${hostPath(exe, sc.dump)}`);
-    const run = await runExeAsync(exe, args, { timeoutMs: (r.timeout_s ?? 300) * 1000 });
+    let run;
+    let sceneRes;
+    if (test.scene) {
+      // En modo puerto el runner corre hasta que lo detiene la escena.
+      const portArgs = args.filter((a, k) => a !== "--until" && args[k - 1] !== "--until");
+      ({ run, res: sceneRes } = await runWithScene(exe, portArgs, test, r));
+    } else {
+      run = await runExeAsync(exe, args, { timeoutMs: (r.timeout_s ?? 300) * 1000 });
+    }
     const ev = evaluate(run, r.expect);
     ev.failures.push(...compareScreens(shots, test.file, { record, work, prefix: `run${i}` }));
+    if (sceneRes) ev.failures.push(...evaluateScene(sceneRes, r.expect?.scene));
     out.runs.push({
       args,
       exit: run.timedOut ? "timeout" : run.signal ? `signal:${run.signal}` : run.status,

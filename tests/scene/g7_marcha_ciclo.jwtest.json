@@ -1,0 +1,36 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Gate G7 (co-simulación): el firmware manda KM1 por Q0_0 (relé de la placa, 10 ms), KM1 atrae en 20 ms y su 13-14 confirma por I0_2; el cilindro Y1 cicla con el fin de carrera B1 (afuera) y el inductivo B0 (adentro). La parada (NC) corta todo.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 3000,
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1100, "device": "S1", "action": "press", "value": false },
+    { "at_ms": 2500, "device": "S0", "action": "press", "value": true },
+    { "at_ms": 2600, "device": "S0", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": [
+      "ms listo",
+      "ms marcha",
+      { "match": "cilindro afuera, ciclo \\d+", "count": 3 },
+      "ms parada"
+    ],
+    "console_absent": ["FALLA"],
+    "signals": [
+      { "at_ms": 1050, "Q0_0": 1, "I0_2": 1 },
+      { "at_ms": 2550, "Q0_0": 0, "I0_2": 0 }
+    ],
+    "scene": {
+      "state": [
+        { "at_ms": 900, "KM1.closed": false, "M1.running": false, "Y1.retracted": true },
+        { "at_ms": 1100, "KM1.closed": true, "M1.running": true },
+        { "at_ms": 1400, "M1.speed": 1 },
+        { "at_ms": 2800, "KM1.closed": false, "Y1.retracted": true, "H1.lit": false }
+      ],
+      "faults": [],
+      "findings": []
+    }
+  }
+}

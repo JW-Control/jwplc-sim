@@ -1,0 +1,37 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Gate G7 (co-simulación, cortocircuito): la salida Q0_0 alimenta la lámpara H1, pero un error de cableado une también Q0_0.2 con M. Al cerrar el relé de la placa la fuente PS1 dispara: la placa queda sin 24 V (powered=false) y sus entradas sin tensión.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": {
+    "devices": [
+      { "id": "plc", "type": "jwsim/jwplc-basic" },
+      { "id": "PS1", "type": "jwsim/power-24vdc" },
+      { "id": "S1", "type": "jwsim/pushbutton-no" },
+      { "id": "S0", "type": "jwsim/pushbutton-nc" },
+      { "id": "H1", "type": "jwsim/lamp" }
+    ],
+    "wiring": [
+      { "from": "PS1.L+", "to": "plc.24VDC" }, { "from": "PS1.M", "to": "plc.M0" }, { "from": "PS1.M", "to": "plc.M1" },
+      { "from": "PS1.L+", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
+      { "from": "PS1.L+", "to": "S0.11" }, { "from": "S0.12", "to": "plc.I0_1" },
+      { "from": "PS1.L+", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "H1.X1" }, { "from": "H1.X2", "to": "PS1.M" },
+      { "from": "plc.Q0_0.2", "to": "PS1.M" }
+    ]
+  },
+  "until_ms": 1300,
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1050, "device": "S1", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": ["ms marcha"],
+    "scene": {
+      "state": [
+        { "at_ms": 990, "PS1.on": true, "plc.powered": true },
+        { "at_ms": 1200, "PS1.on": false, "plc.powered": false, "H1.lit": false }
+      ],
+      "faults": ["short:PS1"],
+      "findings": []
+    }
+  }
+}

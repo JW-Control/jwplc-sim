@@ -212,15 +212,17 @@ export function solve(net, tripped = new Set()) {
  * @param {{ wires: [string, string][], sources: Source[], switches: Switch[], loads: Load[] }} net
  *        `switches` son todos los contactos posibles, abiertos o cerrados
  * @param {Set<string>} [wired]  bornes con algún cable (los dispositivos sin cablear no avisan)
+ * @param {(load: Load) => boolean} [skip]  cargas que no se analizan (p. ej. entradas sin usar)
  * @returns {Finding[]}
  */
-export function analyze(net, wired) {
+export function analyze(net, wired, skip) {
   const g = group(net, new Set());
   /** @type {Finding[]} */
   const out = [];
   const has = (t, suffix) => [...(g.marks.get(g.uf.find(t)) ?? [])].some((m) => m.endsWith(suffix));
   for (const l of net.loads) {
     if (wired && !wired.has(l.a) && !wired.has(l.b)) continue;
+    if (skip?.(l)) continue;
     const ok = net.sources.some((s) => {
       const ma = g.marks.get(g.uf.find(l.a)) ?? new Set();
       const mb = g.marks.get(g.uf.find(l.b)) ?? new Set();

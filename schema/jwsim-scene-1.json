@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jw-control.github.io/jwplc-sim/schema/jwsim-scene-1.json",
+  "title": "Escena de JWPLC Sim v1",
+  "description": "Dispositivos y cableado borne a borne (campo 'scene' de un proyecto .jwsim o archivo de escena). Ver docs/ARCHITECTURE.md §4.1.",
+  "type": "object",
+  "required": ["devices"],
+  "properties": {
+    "$comment": { "type": "string" },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$", "description": "Identificador en la escena (KM1, S0, plc)." },
+          "type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$", "description": "autor/nombre del dispositivo (jwsim/contactor)." },
+          "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Versión mínima requerida (misma versión mayor)." },
+          "params": { "type": "object" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "rotation": { "enum": [0, 90, 180, 270] }
+        }
+      }
+    },
+    "wiring": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*\\..+$", "description": "Borne '<dispositivo>.<borne>' (PS1.L+, plc.Q0_0.1)." },
+          "to": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*\\..+$" },
+          "color": { "type": "string" },
+          "points": { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } }
+        }
+      }
+    }
+  }
+}

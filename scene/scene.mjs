@@ -132,7 +132,18 @@ export class Scene {
         if (i < 0 || !this.devices.has(l.source.slice(0, i))) throw new Error(`${dev.id}: enlace a "${l.source}" inexistente`);
       }
     }
-    this.findings = analyze(this.#netlist(true), this.wired);
+    // Una carga se analiza si tiene cableado algún borne propio: un común
+    // compartido (M1 de las entradas) no cuenta, así las entradas sin usar
+    // no avisan.
+    const own = new Set();
+    for (const dev of this.devices.values()) {
+      const uses = new Map();
+      for (const l of dev.el.loads ?? []) for (const x of [l.a, l.b]) uses.set(x, (uses.get(x) ?? 0) + 1);
+      for (const l of dev.el.loads ?? []) {
+        if ([l.a, l.b].some((x) => uses.get(x) === 1 && dev.wired.has(x))) own.add(`${dev.id}.${l.id}`);
+      }
+    }
+    this.findings = analyze(this.#netlist(true), this.wired, (l) => !own.has(l.id));
     this.evaluate(0n);
   }
 
@@ -272,6 +283,7 @@ export class Scene {
 
   /** Salidas de la placa (Q0_x) informadas por el runner en t. */
   setSignals(changes, t) {
+    if (t < this.t) t = this.t;  // nunca hacia atrás
     this.advanceTo(t);
     for (const [k, v] of Object.entries(changes)) {
       if (!!this.signals[k] !== !!v) this.#log({ t, kind: "signal", key: k, value: v ? 1 : 0 });
@@ -282,6 +294,7 @@ export class Scene {
 
   /** Acción del usuario sobre un dispositivo (pulsar, girar un selector). */
   act(id, action, value, t) {
+    if (t < this.t) t = this.t;  // nunca hacia atrás
     const dev = this.devices.get(id);
     if (!dev) throw new Error(`dispositivo inexistente: ${id}`);
     if (!(dev.def.actions ?? []).some((a) => a.id === action)) throw new Error(`${id} no tiene la acción "${action}"`);
@@ -293,6 +306,7 @@ export class Scene {
 
   /** Rearma las fuentes disparadas y repone las cargas quemadas. */
   rearm(t) {
+    if (t < this.t) t = this.t;  // nunca hacia atrás
     this.advanceTo(t);
     this.tripped = new Set();
     this.damaged = new Set();

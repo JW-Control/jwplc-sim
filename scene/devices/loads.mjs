@@ -126,7 +126,7 @@ export const solenoidValve = {
         pos.step(t, on ? 1 : 0, 1000 / Number(on ? ctx.params.strokeMs : ctx.params.returnMs));
         const seg = pos.segment(t);
         return {
-          outputs: { energized: on, position: seg, extended: seg.value >= 1, retracted: seg.value <= 0 },
+          outputs: { energized: on, position: seg, extended: seg.value >= 1 && seg.rate === 0, retracted: seg.value <= 0 && seg.rate === 0 },
           nextEventNs: earliest(pos.next),
         };
       },

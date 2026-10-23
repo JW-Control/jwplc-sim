@@ -21,6 +21,14 @@
 //                 {"type":"hash"} → {"type":"hash","t_ns","trace_hash","trace_events"}
 //                 "run" con "until_ns": corre hasta ese instante, pausa y
 //                 responde {"type":"reached",...} con el hash (reproducción)
+//                 {"type":"scene","on":1,"watch":"Q0_0,Q0_1"} activa la
+//                   co-simulación con el motor de escena (§6.6): el runner
+//                   solo avanza hasta el horizonte que le da la escena,
+//                   {"type":"horizon","until_ns":H}, y se detiene antes si
+//                   cambia una señal vigilada, en ese instante. Responde
+//                   {"type":"horizon","t_ns","reason":"output"|"until",
+//                   "changes":[[señal,nivel]...]} y espera el próximo
+//                   horizonte; la escena responde con "set" y "at_ns".
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
@@ -292,8 +300,25 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   std::map<std::string, bool> changed;
   std::string serial[3];
   const auto names = board.signal_names();
+  // Co-simulación con la escena: señales vigiladas, cambios desde el último
+  // horizonte y el instante del último cambio.
+  bool scene_on = false;
+  bool scene_wait = true;
+  jwsim_ns_t scene_until = 0;
+  jwsim_ns_t scene_t = 0;
+  std::map<std::string, bool> scene_watch;  // señal → vigilada
+  std::map<std::string, bool> scene_changes;
   for (const auto &name : names) {
-    board.signal(name)->on_change([&changed, name](jwsim::Net &, bool level) { changed[name] = level; });
+    board.signal(name)->on_change([&, name](jwsim::Net &, bool level) {
+      changed[name] = level;
+      if (scene_on && scene_watch.count(name)) {
+        scene_changes[name] = level;
+        scene_t = jwsim_now();
+        // La tarea que escribió la salida se detiene en su próximo punto de
+        // sincronización: la escena responde en este mismo instante.
+        jwsim_request_stop();
+      }
+    });
   }
   // Monitor de buses (pestaña Buses): solo mientras la interfaz lo pide.
   bool bus_on = false;
@@ -505,6 +530,8 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       const auto v = f.count("value") ? f.at("value") : std::string("0");
       ev.level = v == "1" || v == "true";
       ev.when = jwsim_now();
+      // La escena fecha su respuesta en el instante del cambio que la causó.
+      if (f.count("at_ns")) ev.when = std::max(ev.when, static_cast<jwsim_ns_t>(std::strtoull(f.at("at_ns").c_str(), nullptr, 10)));
       const std::string err = validate_input(board, ev);
       if (!err.empty()) {
         std::fprintf(stderr, "[jwsim] %s: %s\n", type.c_str(), err.c_str());
@@ -554,6 +581,27 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       inputs.push_back(ev);
       schedule_input(board, &inputs.back());
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
+    } else if (type == "scene") {
+      scene_on = f.count("on") && f.at("on") == "1";
+      scene_wait = true;
+      scene_until = 0;
+      scene_watch.clear();
+      scene_changes.clear();
+      const std::string w = f.count("watch") ? f.at("watch") : std::string();
+      for (size_t i = 0; i < w.size();) {
+        const size_t c = std::min(w.find(',', i), w.size());
+        if (c > i) {
+          const std::string name = w.substr(i, c - i);
+          if (!board.signal(name)) std::fprintf(stderr, "[jwsim] scene: señal desconocida %s\n", name.c_str());
+          else scene_watch[name] = true;
+        }
+        i = c + 1;
+      }
+    } else if (type == "horizon") {
+      scene_until = f.count("until_ns") ? static_cast<jwsim_ns_t>(std::strtoull(f.at("until_ns").c_str(), nullptr, 10)) : 0;
+      scene_wait = false;
+      base_t = jwsim_now();
+      base_wall = Clock::now();
     } else if (type == "rs485") {
       link_port = f.count("on") && f.at("on") == "1" ? (f.count("port") ? std::atoi(f.at("port").c_str()) : 2) : -1;
     } else if (type == "uart_rx") {
@@ -591,7 +639,9 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   while (!quit) {
     {
       std::unique_lock<std::mutex> lk(inbox.mu);
-      if (!running) inbox.cv.wait_for(lk, kFlushPeriod, [&] { return !inbox.queue.empty() || inbox.closed; });
+      if (!running || (scene_on && scene_wait)) {
+        inbox.cv.wait_for(lk, kFlushPeriod, [&] { return !inbox.queue.empty() || inbox.closed; });
+      }
       if (inbox.closed && inbox.queue.empty()) break;
       std::deque<Fields> batch;
       batch.swap(inbox.queue);
@@ -599,7 +649,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       for (const auto &f : batch) handle(f);
     }
     if (quit) break;
-    if (!running) {
+    if (!running || (scene_on && scene_wait)) {
       flush(false);
       continue;
     }
@@ -608,6 +658,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
     const jwsim_ns_t step = speed > 0.0 ? JWSIM_NS_PER_MS : 10 * JWSIM_NS_PER_MS;
     jwsim_run_limits lim{jwsim_now() + step};
     if (until && lim.until_ns > until) lim.until_ns = until;
+    if (scene_on && lim.until_ns > scene_until) lim.until_ns = scene_until;
     jwsim_run(&lim);
     if (jwsim_restart_pending()) {
       // Lo que la interfaz envíe desde ahora llega con el ESP32 en reinicio:
@@ -624,6 +675,23 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       running = false;
       flush(true);
       send_json(hash_json("reached") + "}");
+      continue;
+    }
+    if (scene_on && (!scene_changes.empty() || jwsim_now() >= scene_until)) {
+      // Horizonte alcanzado o salida vigilada cambiada: la escena decide.
+      // Antes, la consola y las señales hasta este instante.
+      flush(true);
+      const bool out = !scene_changes.empty();
+      std::string m = "{\"type\":\"horizon\",\"t_ns\":" + std::to_string(out ? scene_t : jwsim_now()) +
+                      ",\"reason\":\"" + (out ? "output" : "until") + "\",\"changes\":[";
+      bool first = true;
+      for (const auto &[name, level] : scene_changes) {
+        m += (first ? "[" : ",[") + quoted(name) + "," + (level ? "1" : "0") + "]";
+        first = false;
+      }
+      send_json(m + "]}");
+      scene_changes.clear();
+      scene_wait = true;
       continue;
     }
     if (speed > 0.0) {

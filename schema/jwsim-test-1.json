@@ -51,6 +51,20 @@
     },
     "expect": {
       "$ref": "#/$defs/expect"
+    },
+    "scene": {
+      "description": "Escena co-simulada (G7): archivo de escena (.json), proyecto .jwsim (su campo 'scene') relativo a este archivo, o la escena en línea. El runner corre en modo puerto sincronizado con la escena por horizontes.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "jwsim-scene-1.json"
+        }
+      ]
+    },
+    "actions": {
+      "$ref": "#/$defs/run/properties/actions"
     }
   },
   "oneOf": [
@@ -112,6 +126,34 @@
         },
         "expect": {
           "$ref": "#/$defs/expect"
+        },
+        "actions": {
+          "type": "array",
+          "description": "Acciones sobre dispositivos de la escena en instantes dados (requiere 'scene').",
+          "items": {
+            "type": "object",
+            "required": [
+              "at_ms",
+              "device",
+              "action",
+              "value"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "device": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "description": "press, position, actuate, target…"
+              },
+              "value": {}
+            }
+          }
         }
       }
     },
@@ -254,6 +296,46 @@
                 "default": 0,
                 "description": "Píxeles distintos tolerados."
               }
+            }
+          }
+        },
+        "scene": {
+          "type": "object",
+          "description": "Expectativas sobre la escena (requiere 'scene').",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "at_ms"
+                ],
+                "properties": {
+                  "at_ms": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": {
+                  "description": "'<dispositivo>.<salida o contacto>': valor esperado (números con tolerancia 1e-6)."
+                }
+              }
+            },
+            "faults": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(short|cross|overvoltage|oscillation):"
+              },
+              "description": "Fallas en orden, como 'tipo:dispositivo' (short:PS1, overvoltage:KM1, cross:)."
+            },
+            "findings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Cargas con aviso de 'sin alimentación' del análisis estático (KM1.coil)."
             }
           }
         }

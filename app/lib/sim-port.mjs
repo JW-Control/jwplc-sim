@@ -135,7 +135,10 @@ export class RunnerProcess extends EventEmitter {
     if (msg.type === "run" || msg.type === "pause") this.lastRun = msg;
     // Configuración de la sesión que el proceso nuevo tras un reinicio debe
     // recibir otra vez (analizador, red del W5500, bus RS-485).
-    if (msg.type === "subscribe" || msg.type === "rs485" || (msg.type === "net" && "on" in msg)) this.sticky.set(msg.type, msg);
+    // La co-simulación con la escena también: el proceso nuevo sigue hasta el
+    // mismo horizonte (cli/lib/cosim.mjs).
+    if (msg.type === "subscribe" || msg.type === "rs485" || msg.type === "scene" || msg.type === "horizon" ||
+        (msg.type === "net" && "on" in msg)) this.sticky.set(msg.type, msg);
     if (msg.type === "quit") this.lastRun = null;
     if (this.queue && msg.type !== "quit") {
       this.queue.push(msg);
