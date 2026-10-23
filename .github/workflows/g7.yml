@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# G7 en Linux y Windows: biblioteca de dispositivos, netlist y co-simulación
+# con el firmware, SDK (TypeScript y nativo con el toolchain del SO: .so o
+# .dll), índice comunitario firmado (instalación con firma válida e
+# inválida) y la escena en la app (E2E en Electron). Solo a pedido.
+name: G7 escena, SDK e índice
+
+on:
+  workflow_dispatch:
+
+jobs:
+  g7:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ runner.os }}-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package fijado
+        run: node scripts/fetch-package.mjs
+
+      - name: Toolchain incluido (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: node scripts/fetch-toolchain.mjs
+
+      - name: TypeScript (contrato del SDK)
+        run: npm install -g typescript@5.9.3
+
+      - name: Gates G7 (DEVICE_LIBRARY, NETLIST, DEVICE_SDK, COMMUNITY_INDEX)
+        timeout-minutes: 40
+        run: node scripts/gate-g7.mjs
+
+      - name: Dependencias de la app
+        if: ${{ !cancelled() }}
+        working-directory: app
+        run: npm ci
+
+      - name: E2E de la escena (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        timeout-minutes: 20
+        run: xvfb-run -a node app/tests/e2e-g7.mjs
+
+      - name: E2E de la escena (Windows)
+        if: ${{ !cancelled() && runner.os == 'Windows' }}
+        timeout-minutes: 20
+        run: node app/tests/e2e-g7.mjs
+
+      - name: Resultados
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-g7-${{ runner.os }}
+          path: build/gates
