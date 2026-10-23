@@ -16,27 +16,34 @@ Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
 
 ## Abrir la interfaz
 
-Requisitos:
-
-- Node.js ≥ 22 y Git.
-- GCC en el `PATH` (`gcc`, `g++`, `ar`, `nm`, `objcopy`):
-  - Windows: MinGW-w64 GCC ≥ 13 con hilos POSIX, por ejemplo
-    [WinLibs](https://winlibs.com/) (descomprimir y agregar `mingw64\bin`
-    al `PATH`).
-  - Linux: `gcc`/`g++` del sistema.
+Requisitos: Node.js ≥ 22 y Git. En Linux, además, `gcc`/`g++` del sistema;
+en Windows el compilador se descarga solo (WinLibs GCC 14.3.0, ~245 MB, con
+su SHA-256 verificado, en `.jwsim/toolchain/`).
 
 ```sh
 git clone https://github.com/JW-Control/jwplc-sim.git
 cd jwplc-sim
-node scripts/fetch-package.mjs        # descarga platform-jwplc en el tag fijado
-cd app
-npm install
-npm start
+node scripts/app.mjs
 ```
 
-Con el toolchain incluido no hace falta GCC en el `PATH`:
-`node scripts/fetch-toolchain.mjs` descarga WinLibs GCC 14.3.0 (~245 MB) a
-`.jwsim/toolchain/` y verifica su SHA-256.
+`scripts/app.mjs` descarga el package fijado y el toolchain (Windows) si
+faltan, instala las dependencias de la app y la abre. Solo usa `node`: no
+depende de cómo la terminal resuelve `npm` (ver abajo). `--setup` prepara
+sin abrir.
+
+**Windows: "¿Cómo desea abrir este archivo?" al escribir `npm`.** Pasa
+cuando la variable `PATHEXT` tiene una entrada vacía (un `;` de más, que
+dejan algunos instaladores): PowerShell toma el archivo `npm` sin extensión
+de la carpeta de Node (un script de bash) en lugar de `npm.cmd`.
+`node scripts/app.mjs` lo evita y avisa si lo detecta. Para corregirlo en la
+PC, ver qué tiene la variable con `$env:PATHEXT` y quitar el `;` sobrante en
+*Configuración avanzada del sistema → Variables de entorno* (de usuario y de
+sistema); luego abrir una terminal nueva. Mientras tanto, `npm.cmd install`
+y `npm.cmd start` funcionan igual.
+
+Con GCC propio en el `PATH` (MinGW-w64 ≥ 13 con hilos POSIX) también se
+puede usar en Windows: el toolchain incluido tiene prioridad si está
+descargado.
 
 La primera compilación de un sketch tarda ~10–15 s (core + 16 librerías del
 package); un cambio posterior, menos de 1 s. Los ejemplos del package se
