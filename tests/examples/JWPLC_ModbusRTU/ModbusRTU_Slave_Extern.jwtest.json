@@ -17,12 +17,12 @@
       "^Modbus baud: 19200$",
       "^Modbus config: SERIAL_8E1$",
       {
-        "match": "^HR0: 2 \\| HR1: 2001 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 0 \\| TX: 0 \\| CRC errors: 0 \\| Exceptions: 0$",
+        "match": "^HR0: 1 \\| HR1: 2001 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 0 \\| TX: 0 \\| CRC errors: 0 \\| Exceptions: 0$",
         "count": 1,
         "before_ms": 2500
       },
       {
-        "match": "^HR0: 3 \\| HR1: 2001 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 1 \\| TX: 1 \\| CRC errors: 0 \\| Exceptions: 0$",
+        "match": "^HR0: 2 \\| HR1: 2001 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 1 \\| TX: 1 \\| CRC errors: 0 \\| Exceptions: 0$",
         "count": 1,
         "after_ms": 2500,
         "before_ms": 3200
@@ -34,13 +34,13 @@
         "before_ms": 3800
       },
       {
-        "match": "^HR0: 4 \\| HR1: 4242 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 3 \\| TX: 2 \\| CRC errors: 1 \\| Exceptions: 0$",
+        "match": "^HR0: 3 \\| HR1: 4242 \\| HR2: 2002 \\| HR3: 2003 \\| RX: 3 \\| TX: 2 \\| CRC errors: 1 \\| Exceptions: 0$",
         "count": 1,
         "after_ms": 3700,
         "before_ms": 4200
       },
       {
-        "match": "^HR0: 5 \\| HR1: 4242 \\| HR2: 7 \\| HR3: 8 \\| RX: 5 \\| TX: 4 \\| CRC errors: 1 \\| Exceptions: 1$",
+        "match": "^HR0: 4 \\| HR1: 4242 \\| HR2: 7 \\| HR3: 8 \\| RX: 5 \\| TX: 4 \\| CRC errors: 1 \\| Exceptions: 1$",
         "count": 1,
         "after_ms": 4700
       },

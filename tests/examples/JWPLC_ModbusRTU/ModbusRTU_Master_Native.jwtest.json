@@ -4,7 +4,7 @@
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native",
   "until_ms": 4500,
   "stim": [
-    "2100 uart2 \"\\x01\\x03\\x08\\x00\\x0B\\x00\\x16\\x00\\x21\\x00\\x2C\\x37\\x03\""
+    "1980 uart2 \"\\x01\\x03\\x08\\x00\\x0B\\x00\\x16\\x00\\x21\\x00\\x2C\\x37\\x03\""
   ],
   "expect": {
     "console": [
@@ -21,12 +21,12 @@
       {
         "match": "^Read OK \\| HR0: 0 HR1: 0 HR2: 0 HR3: 0$",
         "count": 1,
-        "before_ms": 2100
+        "before_ms": 1980
       },
       {
         "match": "^Read failed: Master busy$",
         "count": 2,
-        "after_ms": 3000
+        "after_ms": 2880
       }
     ],
     "console_absent": [

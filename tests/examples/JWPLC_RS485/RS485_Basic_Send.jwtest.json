@@ -7,10 +7,10 @@
     "console": [
       "^JWPLC RS485 basic send test$",
       "^Ready: yes$",
-      { "match": "^JWPLC RS485 message #1$", "port": 2, "count": 1, "before_ms": 2500 },
+      { "match": "^JWPLC RS485 message #1$", "port": 2, "count": 1, "before_ms": 2380 },
       { "match": "^JWPLC RS485 message #\\d+$", "port": 2, "count": 3 },
       { "match": "^Sent RS485 message #1$", "port": 0, "count": 1 },
-      { "match": "^Sent RS485 message #3$", "port": 0, "count": 1, "after_ms": 4000 }
+      { "match": "^Sent RS485 message #3$", "port": 0, "count": 1, "after_ms": 3880 }
     ],
     "console_absent": ["begin failed"]
   }

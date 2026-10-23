@@ -4,38 +4,38 @@
   "sketch": "package:libraries/JWPLC_Display/examples/02.Display_HMI_Fields",
   "until_ms": 9000,
   "stim": [
-    "1500 BTN_UP=1",
-    "1600 BTN_UP=0",
-    "1900 BTN_OK=1",
-    "2000 BTN_OK=0",
-    "2300 BTN_RIGHT=1",
-    "2400 BTN_RIGHT=0",
-    "2700 BTN_UP=1",
-    "2800 BTN_UP=0",
-    "3000 BTN_UP=1",
-    "3100 BTN_UP=0",
-    "3300 BTN_UP=1",
-    "3400 BTN_UP=0",
-    "3600 BTN_UP=1",
-    "3700 BTN_UP=0",
-    "3900 BTN_UP=1",
-    "4000 BTN_UP=0",
-    "4200 BTN_UP=1",
-    "4300 BTN_UP=0",
-    "4500 BTN_UP=1",
-    "4600 BTN_UP=0",
-    "4800 BTN_DOWN=1",
-    "4900 BTN_DOWN=0",
-    "5100 BTN_RIGHT=1",
-    "5200 BTN_RIGHT=0",
-    "5500 BTN_ESC=1",
-    "5600 BTN_ESC=0",
-    "6000 BTN_DOWN=1",
-    "6100 BTN_DOWN=0",
-    "6500 BTN_OK=1",
-    "6600 BTN_OK=0",
-    "7500 BTN_ESC=1",
-    "7600 BTN_ESC=0"
+    "1380 BTN_UP=1",
+    "1480 BTN_UP=0",
+    "1780 BTN_OK=1",
+    "1880 BTN_OK=0",
+    "2180 BTN_RIGHT=1",
+    "2280 BTN_RIGHT=0",
+    "2580 BTN_UP=1",
+    "2680 BTN_UP=0",
+    "2880 BTN_UP=1",
+    "2980 BTN_UP=0",
+    "3180 BTN_UP=1",
+    "3280 BTN_UP=0",
+    "3480 BTN_UP=1",
+    "3580 BTN_UP=0",
+    "3780 BTN_UP=1",
+    "3880 BTN_UP=0",
+    "4080 BTN_UP=1",
+    "4180 BTN_UP=0",
+    "4380 BTN_UP=1",
+    "4480 BTN_UP=0",
+    "4680 BTN_DOWN=1",
+    "4780 BTN_DOWN=0",
+    "4980 BTN_RIGHT=1",
+    "5080 BTN_RIGHT=0",
+    "5380 BTN_ESC=1",
+    "5480 BTN_ESC=0",
+    "5880 BTN_DOWN=1",
+    "5980 BTN_DOWN=0",
+    "6380 BTN_OK=1",
+    "6480 BTN_OK=0",
+    "7380 BTN_ESC=1",
+    "7480 BTN_ESC=0"
   ],
   "expect": {
     "console": [
@@ -50,7 +50,7 @@
       {
         "match": ".",
         "count": 0,
-        "after_ms": 1200
+        "after_ms": 1080
       }
     ],
     "console_absent": [
@@ -58,19 +58,19 @@
     ],
     "screen": [
       {
-        "at_ms": 1800,
+        "at_ms": 1680,
         "ref": "screens/02.Display_HMI_Fields_idle.png"
       },
       {
-        "at_ms": 2200,
+        "at_ms": 2080,
         "ref": "screens/02.Display_HMI_Fields_user.png"
       },
       {
-        "at_ms": 4700,
+        "at_ms": 4580,
         "ref": "screens/02.Display_HMI_Fields_nivel_max.png"
       },
       {
-        "at_ms": 5400,
+        "at_ms": 5280,
         "ref": "screens/02.Display_HMI_Fields_motor.png"
       }
     ]

@@ -17,24 +17,24 @@
       "^Holding registers: 16$",
       "^Slave ready\\.$",
       {
-        "match": "^HR0: 2 \\| HR1: 1001 \\| RX: 0 \\| TX: 0 \\| CRC errors: 0 \\| Last: OK$",
+        "match": "^HR0: 1 \\| HR1: 1001 \\| RX: 0 \\| TX: 0 \\| CRC errors: 0 \\| Last: OK$",
         "count": 1,
         "before_ms": 2500
       },
       {
-        "match": "^HR0: 3 \\| HR1: 1001 \\| RX: 1 \\| TX: 1 \\| CRC errors: 0 \\| Last: OK$",
+        "match": "^HR0: 2 \\| HR1: 1001 \\| RX: 1 \\| TX: 1 \\| CRC errors: 0 \\| Last: OK$",
         "count": 1,
         "after_ms": 2500,
         "before_ms": 3500
       },
       {
-        "match": "^HR0: 4 \\| HR1: 5555 \\| RX: 2 \\| TX: 2 \\| CRC errors: 0 \\| Last: OK$",
+        "match": "^HR0: 3 \\| HR1: 5555 \\| RX: 2 \\| TX: 2 \\| CRC errors: 0 \\| Last: OK$",
         "count": 1,
         "after_ms": 3500,
         "before_ms": 4500
       },
       {
-        "match": "^HR0: 5 \\| HR1: 5555 \\| RX: 3 \\| TX: 3 \\| CRC errors: 0 \\| Last: Modbus exception$",
+        "match": "^HR0: 4 \\| HR1: 5555 \\| RX: 3 \\| TX: 3 \\| CRC errors: 0 \\| Last: Modbus exception$",
         "count": 1,
         "after_ms": 4500
       },
