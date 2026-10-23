@@ -776,15 +776,24 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
   verifica que el tag apunte al commit fijado. `JWPLC_PACKAGE_DIR` permite un
   checkout local solo si su árbol coincide con el tag.
 - **Paridad estructural**: el build falla si `cores/jwcontrol` trae una
-  fuente sin clasificar en `sim/core-manifest.json`.
+  fuente sin clasificar en `sim/core-manifest.json`. **[G5]**
+  `jwsim-cli parity <ref>` lo informa antes de compilar, junto con los
+  headers que no se encuentran y los cambios del autoload y de la lista de
+  librerías contra `sim/package-parity.json` ([CLI.md](CLI.md)).
 - **Procedimiento por alpha** (13, 14, 15…):
-  1. Subir `JWPLC_PACKAGE_REF` y `JWPLC_PACKAGE_COMMIT`.
-  2. `node scripts/fetch-package.mjs` y compilar los ejemplos (G5
-     EXAMPLES_MATRIX).
+  1. `node cli/jwsim-cli.mjs parity <tag>`: lista de lo que cambió.
+  2. Subir `JWPLC_PACKAGE_REF` y `JWPLC_PACKAGE_COMMIT`;
+     `node scripts/fetch-package.mjs`.
   3. Resolver headers/APIs nuevos **en `sim/hal`**, nunca en el package. Si
      algo impide simular, documentarlo como punto de extensión para una
-     alpha futura (§11).
-  4. Correr todos los gates ⇒ `JWSIM_PACKAGE_SYNC_ALPHAxx=PASS`.
+     alpha futura (§11). Registrar el autoload con `parity --update`.
+  4. `node cli/jwsim-cli.mjs matrix`: cada ejemplo compila, corre y pasa su
+     prueba; un ejemplo nuevo recibe la suya (`scripts/gen-example-tests.mjs`
+     y estímulos a mano).
+  5. Correr todos los gates ⇒ `JWSIM_PACKAGE_SYNC_ALPHAxx=PASS`.
+- **En el CI del package** (G5): `sim-regression.yml` corre la paridad, la
+  matriz y las pruebas de la CLI sobre el árbol de un PR o de una release
+  (propuesta en [integration/SIM_REGRESSION.md](integration/SIM_REGRESSION.md)).
 - **W5500**: alpha.13 (publicado el 2026-10-22) cambia el acceso al
   W5500 (dueño del bus por tarea, sockets con "lease"), el inicio sin la
   espera de 560 ms y Modbus TCP; alpha.14 usará INTn y reutilización de
