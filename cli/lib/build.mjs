@@ -378,6 +378,7 @@ export async function buildSketch(sketchDir, options = {}) {
   }
   if (cached?.includes(undefined)) queue.push(...sketchSources);
   const seen = new Set();
+  const discoveryMissing = [];
   while (queue.length) {
     const file = queue.shift();
     if (seen.has(file)) continue;
@@ -394,6 +395,11 @@ export async function buildSketch(sketchDir, options = {}) {
       const header = basename(m[1]);
       const candidates = index.get(header);
       if (!candidates) {
+        // En el sondeo de paridad se informa y se sigue con el resto.
+        if (options.headerProbe) {
+          discoveryMissing.push({ header: m[1], file });
+          break;
+        }
         throw new Error(`${relative(ROOT, file)}: falta '${m[1]}' y ninguna librería del package lo provee.`);
       }
       const lib = pickLibrary(header, candidates);
@@ -435,6 +441,7 @@ export async function buildSketch(sketchDir, options = {}) {
       const deps = parseDepFile(readFileSync(dep, "utf8")).slice(1);
       return { owner, file, missing: deps.filter((d) => !existsSync(resolve(d))) };
     });
+    for (const d of discoveryMissing) results.push({ owner: "descubrimiento", file: d.file, missing: [d.header] });
     return { probe: results, libraries: libs.filter((l) => l.origin === "package").map((l) => l.name), outDir };
   }
 

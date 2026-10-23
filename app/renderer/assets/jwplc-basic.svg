@@ -12,9 +12,18 @@
     #btn-up …       teclas BTN_UP, BTN_LEFT, BTN_RIGHT, BTN_DOWN, BTN_ESC, BTN_OK
     #rj45, #usb     conectores
     .borne          cada tornillo de bornera: data-bloque (sup-a, sup-b, med,
-                    inf-1 … inf-8) y data-pos (1 = izquierda). La asignación de
-                    señales (alimentación, I0.x, Q0.x, RS-485) la confirma
-                    JW Control.
+                    inf-1 … inf-8), data-pos (1 = izquierda) y data-senal,
+                    según el pinout de JW Control (2026-10-23). La vista es la
+                    del render: con la placa girada 90° en sentido horario
+                    queda como en el pinout (entradas a la derecha, salidas a
+                    la izquierda).
+                      sup-a      24VDC, M0           alimentación
+                      sup-b      M1, I0_0 … I0_7     entradas digitales sink
+                                                     (la corriente entra al JWPLC)
+                      med        RS485_GND, RS485_A, RS485_B, RS485_SHIELD
+                      inf-1 … 8  Q0_0 … Q0_7         salidas a relé, cada una con
+                                                     su bornera de 2 contactos
+                                                     (voltajes distintos por salida)
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="240 20 970 1065" width="970" height="1065" role="img" aria-label="JWPLC Basic">
   <defs>
@@ -55,17 +64,17 @@
   <g id="bornera-sup">
     <rect x="605" y="34" width="83" height="56" rx="3" fill="url(#verde)"/>
     <rect x="710" y="34" width="375" height="56" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="sup-a" data-pos="1"><use href="#tornillo-borne" x="626" y="72"/></g>
-    <g class="borne" data-bloque="sup-a" data-pos="2"><use href="#tornillo-borne" x="667" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="1"><use href="#tornillo-borne" x="731" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="2"><use href="#tornillo-borne" x="772" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="3"><use href="#tornillo-borne" x="813" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="4"><use href="#tornillo-borne" x="855" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="5"><use href="#tornillo-borne" x="896" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="6"><use href="#tornillo-borne" x="938" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="7"><use href="#tornillo-borne" x="979" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="8"><use href="#tornillo-borne" x="1021" y="72"/></g>
-    <g class="borne" data-bloque="sup-b" data-pos="9"><use href="#tornillo-borne" x="1062" y="72"/></g>
+    <g class="borne" data-bloque="sup-a" data-pos="1" data-senal="24VDC"><title>Alimentación +24 VDC</title><use href="#tornillo-borne" x="626" y="72"/></g>
+    <g class="borne" data-bloque="sup-a" data-pos="2" data-senal="M0"><title>Alimentación 0 V (M0)</title><use href="#tornillo-borne" x="667" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="1" data-senal="M1"><title>Común de las entradas (M1)</title><use href="#tornillo-borne" x="731" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="2" data-senal="I0_0"><title>Entrada I0.0 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="772" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="3" data-senal="I0_1"><title>Entrada I0.1 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="813" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="4" data-senal="I0_2"><title>Entrada I0.2 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="855" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="5" data-senal="I0_3"><title>Entrada I0.3 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="896" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="6" data-senal="I0_4"><title>Entrada I0.4 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="938" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="7" data-senal="I0_5"><title>Entrada I0.5 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="979" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="8" data-senal="I0_6"><title>Entrada I0.6 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1021" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="9" data-senal="I0_7"><title>Entrada I0.7 (sink: la corriente entra al JWPLC)</title><use href="#tornillo-borne" x="1062" y="72"/></g>
   </g>
 
   <!-- Borneras inferiores: 8 bloques de 2. -->
@@ -78,22 +87,22 @@
     <rect x="810" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
     <rect x="899" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
     <rect x="988" y="972" width="94" height="76" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="inf-1" data-pos="1"><use href="#tornillo-borne" x="386" y="1012"/></g>
-    <g class="borne" data-bloque="inf-1" data-pos="2"><use href="#tornillo-borne" x="427" y="1012"/></g>
-    <g class="borne" data-bloque="inf-2" data-pos="1"><use href="#tornillo-borne" x="475" y="1012"/></g>
-    <g class="borne" data-bloque="inf-2" data-pos="2"><use href="#tornillo-borne" x="516" y="1012"/></g>
-    <g class="borne" data-bloque="inf-3" data-pos="1"><use href="#tornillo-borne" x="564" y="1012"/></g>
-    <g class="borne" data-bloque="inf-3" data-pos="2"><use href="#tornillo-borne" x="605" y="1012"/></g>
-    <g class="borne" data-bloque="inf-4" data-pos="1"><use href="#tornillo-borne" x="653" y="1012"/></g>
-    <g class="borne" data-bloque="inf-4" data-pos="2"><use href="#tornillo-borne" x="694" y="1012"/></g>
-    <g class="borne" data-bloque="inf-5" data-pos="1"><use href="#tornillo-borne" x="742" y="1012"/></g>
-    <g class="borne" data-bloque="inf-5" data-pos="2"><use href="#tornillo-borne" x="783" y="1012"/></g>
-    <g class="borne" data-bloque="inf-6" data-pos="1"><use href="#tornillo-borne" x="831" y="1012"/></g>
-    <g class="borne" data-bloque="inf-6" data-pos="2"><use href="#tornillo-borne" x="872" y="1012"/></g>
-    <g class="borne" data-bloque="inf-7" data-pos="1"><use href="#tornillo-borne" x="920" y="1012"/></g>
-    <g class="borne" data-bloque="inf-7" data-pos="2"><use href="#tornillo-borne" x="961" y="1012"/></g>
-    <g class="borne" data-bloque="inf-8" data-pos="1"><use href="#tornillo-borne" x="1013" y="1012"/></g>
-    <g class="borne" data-bloque="inf-8" data-pos="2"><use href="#tornillo-borne" x="1059" y="1012"/></g>
+    <g class="borne" data-bloque="inf-1" data-pos="1" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="386" y="1012"/></g>
+    <g class="borne" data-bloque="inf-1" data-pos="2" data-senal="Q0_0"><title>Salida QX0.0: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="427" y="1012"/></g>
+    <g class="borne" data-bloque="inf-2" data-pos="1" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="475" y="1012"/></g>
+    <g class="borne" data-bloque="inf-2" data-pos="2" data-senal="Q0_1"><title>Salida QX0.1: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="516" y="1012"/></g>
+    <g class="borne" data-bloque="inf-3" data-pos="1" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="564" y="1012"/></g>
+    <g class="borne" data-bloque="inf-3" data-pos="2" data-senal="Q0_2"><title>Salida QX0.2: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="605" y="1012"/></g>
+    <g class="borne" data-bloque="inf-4" data-pos="1" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="653" y="1012"/></g>
+    <g class="borne" data-bloque="inf-4" data-pos="2" data-senal="Q0_3"><title>Salida QX0.3: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="694" y="1012"/></g>
+    <g class="borne" data-bloque="inf-5" data-pos="1" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="742" y="1012"/></g>
+    <g class="borne" data-bloque="inf-5" data-pos="2" data-senal="Q0_4"><title>Salida QX0.4: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="783" y="1012"/></g>
+    <g class="borne" data-bloque="inf-6" data-pos="1" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="831" y="1012"/></g>
+    <g class="borne" data-bloque="inf-6" data-pos="2" data-senal="Q0_5"><title>Salida QX0.5: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="872" y="1012"/></g>
+    <g class="borne" data-bloque="inf-7" data-pos="1" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="920" y="1012"/></g>
+    <g class="borne" data-bloque="inf-7" data-pos="2" data-senal="Q0_6"><title>Salida QX0.6: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="961" y="1012"/></g>
+    <g class="borne" data-bloque="inf-8" data-pos="1" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 1</title><use href="#tornillo-borne" x="1013" y="1012"/></g>
+    <g class="borne" data-bloque="inf-8" data-pos="2" data-senal="Q0_7"><title>Salida QX0.7: relé con bornera propia, contacto 2</title><use href="#tornillo-borne" x="1059" y="1012"/></g>
   </g>
 
   <!-- Base (cuerpo inferior). -->
@@ -104,10 +113,10 @@
   <!-- Bornera intermedia (4). -->
   <g id="bornera-med">
     <rect x="740" y="742" width="165" height="80" rx="3" fill="url(#verde)"/>
-    <g class="borne" data-bloque="med" data-pos="1"><use href="#tornillo-borne" x="761" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="2"><use href="#tornillo-borne" x="802" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="3"><use href="#tornillo-borne" x="843" y="784"/></g>
-    <g class="borne" data-bloque="med" data-pos="4"><use href="#tornillo-borne" x="884" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="1" data-senal="RS485_GND"><title>RS-485 GND</title><use href="#tornillo-borne" x="761" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="2" data-senal="RS485_A"><title>RS-485 A</title><use href="#tornillo-borne" x="802" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="3" data-senal="RS485_B"><title>RS-485 B</title><use href="#tornillo-borne" x="843" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="4" data-senal="RS485_SHIELD"><title>RS-485 SHIELD</title><use href="#tornillo-borne" x="884" y="784"/></g>
   </g>
 
   <!-- RJ45 con su cable. -->
