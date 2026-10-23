@@ -96,7 +96,9 @@ pantalla, `xvfb-run -a npm run test:e2e`).
   límites de fidelidad, sincronización con el package y hallazgos.
 - [Gates](docs/GATES.md): G0 a G10 con criterios medibles.
 - [Licencias](docs/LICENSES.md): matriz de dependencias y recomendación.
-- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md).
+- [CLI](docs/CLI.md): `jwsim-cli` sin interfaz (JSON, códigos de salida,
+  pruebas `*.jwtest.json`, paridad con el package, matriz de ejemplos).
+- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md), [G5](docs/reports/G5.md), [sincronización con alpha.13](docs/reports/SYNC_ALPHA13.md).
 
 ## Prueba rápida (headless)
 
@@ -111,6 +113,9 @@ node cli/jwsim-cli.mjs run \
   .jwsim/package/v2.1.0-alpha.13/tools/build-speed-benchmark/sketches/02_io_basic \
   -- --until 3000 --set I0_0=1@1000 --set I0_0=0@2000
 node scripts/gate-g0-poc.mjs          # gate JWSIM_G0_POC_IO_BASIC
+node cli/jwsim-cli.mjs test tests/examples/JWPLC_Display   # pruebas de los ejemplos de una librería
+node cli/jwsim-cli.mjs matrix         # todos los ejemplos del package × (compila, corre, pasa su prueba)
+node cli/jwsim-cli.mjs parity v2.1.0-alpha.14              # qué cambia un tag nuevo del package
 ```
 
 Opciones del runner: `--until <ms>`, `--set SEÑAL=V@ms`, `--stim archivo`,
