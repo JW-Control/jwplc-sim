@@ -136,6 +136,7 @@ function setStatus(kind, text) {
   $("btn-dbg-pause").disabled = kind !== "running";
   $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
   $("btn-serial-send").disabled = !(kind === "running" || kind === "paused");
+  window.JwsimScene?.onStatus(kind);
 }
 
 function consoleWrite(text, cls) {
@@ -245,6 +246,8 @@ function wireKeypad() {
 }
 
 function setInput(signal, value) {
+  // Las entradas cableadas en la escena las maneja la escena (G7).
+  if (window.JwsimScene?.owns(signal)) return;
   state.levels.set(signal, value);
   renderSignal(signal, value);
   api.command({ type: "set", signal, value: value ? 1 : 0 });
@@ -406,7 +409,14 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
   state.replay = replay;
   if (replay) consoleWrite(`[jwsim] reproduciendo ${replay.file}${replay.t_ns ? ` hasta t=${fmtTime(replay.t_ns)}` : ""}\n`, "sys");
-  const started = await api.start(r.exe, replay?.file, state.project?.file ?? null, replay?.rtc ?? null);
+  const sceneSpec = replay ? null : (window.JwsimScene?.specForRun() ?? null);
+  const started = await api.start(r.exe, replay?.file, state.project?.file ?? null, replay?.rtc ?? null, sceneSpec);
+  window.JwsimScene?.onStart(started);
+  if (started?.error) {
+    setStatus("error", "Escena inválida");
+    consoleWrite(`[jwsim] ${started.error}\n`, "fatal");
+    return false;
+  }
   state.sessionRtc = started?.rtc ?? null;
   if (state.view === "buses") api.command({ type: "subscribe", buses: 1 });
   // La escena se aplica en t = 0, antes de que corra el firmware.
@@ -907,6 +917,7 @@ function applyProject(res) {
   if (scene.inputMode) setInputMode(scene.inputMode);
   state.pendingInputs = scene.inputs ?? null;
   for (const [signal, v] of Object.entries(state.pendingInputs ?? {})) renderSignal(signal, !!v);
+  window.JwsimScene?.load(scene);
   showProjectStatus();
   if (res.migratedFrom !== null) {
     consoleWrite(`[jwsim] proyecto migrado de la versión ${res.migratedFrom} a la 1; se guardará como v1\n`, "sys");
@@ -929,7 +940,7 @@ async function saveProjectFile() {
     project: state.project?.project ?? null,
     sketchDir: state.sketch.dir,
     simulation: { realtimeFactor: state.speed },
-    scene: { inputMode: state.inputMode, inputs: currentInputs() },
+    scene: { inputMode: state.inputMode, inputs: currentInputs(), ...(window.JwsimScene?.specForSave() ?? {}) },
   });
   if (!res) return;
   state.project = { links: {}, missing: [], ...state.project, file: res.file, project: res.project };

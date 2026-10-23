@@ -86,6 +86,8 @@ export class Scene {
   findings = [];
   t = 0n;
   #sent = {};
+  /** @type {ReturnType<typeof solve> | null} */
+  #sol = null;
 
   /**
    * @param {SceneSpec} spec
@@ -236,6 +238,7 @@ export class Scene {
       if (!changed) break;
     }
     this.warnings = sol.warnings;
+    this.#sol = sol;
     // Cambios de salidas (booleanas y numéricas, no los segmentos en movimiento).
     for (const dev of this.devices.values()) {
       for (const [k, v] of Object.entries(dev.step.outputs ?? {})) {
@@ -355,9 +358,15 @@ export class Scene {
         tripped: (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id)),
       };
     });
+    // Polos de alimentación de cada borne cableado ("PS1+", "L1-"): la
+    // interfaz colorea los cables con tensión.
+    /** @type {Record<string, string[]>} */
+    const poles = {};
+    if (this.#sol) for (const term of this.wired) poles[term] = this.#sol.poles(term);
     return {
       t: this.t,
       devices,
+      poles,
       inputs: this.boardInputs(),
       warnings: this.warnings,
       findings: this.findings,

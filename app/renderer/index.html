@@ -71,7 +71,10 @@
       <section class="pane sim-pane">
         <div class="board-card">
           <div class="panel-head">
-            <span>Placa</span>
+            <div class="mode" id="board-view" role="radiogroup" aria-label="Vista">
+              <button class="seg active" data-view="board" role="radio" aria-checked="true" title="Placa con entradas y salidas manuales">Placa</button>
+              <button class="seg" data-view="scene" role="radio" aria-checked="false" title="Escena: la placa cableada a dispositivos industriales">Escena</button>
+            </div>
             <span class="muted" id="board-name">JWPLC Basic</span>
             <div class="mode" role="radiogroup" aria-label="Modo de las entradas">
               <button class="seg active" data-mode="toggle" role="radio" aria-checked="true" title="Clic alterna la entrada">Interruptor</button>
@@ -109,6 +112,29 @@
             <div class="terminal-strip bottom">
               <div class="io-row" id="outputs"></div>
               <div class="strip-title">SALIDAS RELÉ</div>
+            </div>
+          </div>
+          <div id="scene-view" class="scene-view" hidden>
+            <div class="scene-tools">
+              <select id="scene-add" title="Agregar un dispositivo a la escena" aria-label="Agregar dispositivo"></select>
+              <button id="scene-fit" class="small" title="Ver toda la escena">Ajustar</button>
+              <button id="scene-rearm" class="small" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" disabled>Rearmar</button>
+            </div>
+            <div class="scene-main">
+              <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
+                <g id="scene-root">
+                  <g id="scene-board"></g>
+                  <g id="scene-wires"></g>
+                  <g id="scene-devices"></g>
+                  <g id="scene-terms"></g>
+                  <path id="scene-rubber" d=""></path>
+                </g>
+              </svg>
+              <aside class="scene-side">
+                <div id="scene-inspector" class="scene-inspector"></div>
+                <div class="insp-sub">Diagnóstico</div>
+                <ul id="scene-diag" class="scene-diag"></ul>
+              </aside>
             </div>
           </div>
         </div>
@@ -191,5 +217,6 @@
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
     <script src="app.js"></script>
+    <script src="scene.js"></script>
   </body>
 </html>

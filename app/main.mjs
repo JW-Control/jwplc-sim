@@ -9,12 +9,16 @@ import { Worker } from "node:worker_threads";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
+import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
+import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
+import { Registry } from "../scene/devices/index.mjs";
+import { Scene } from "../scene/scene.mjs";
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
 const TEMPLATE = `// Sketch nuevo para JWPLC Basic.
@@ -36,6 +40,8 @@ void loop()
 
 let win = null;
 let runner = null;
+let sceneSession = null; // co-simulación con la escena (G7)
+let registryPromise = null; // biblioteca incluida + dispositivos de escena instalados
 let runnerExe = null;
 let debug = null; // DebugSession adjunta al runner actual
 let debugAttaching = null;
@@ -96,6 +102,8 @@ function forward(channel, payload) {
 async function stopRunner() {
   const r = runner;
   runner = null;
+  sceneSession?.stop();
+  sceneSession = null;
   bridge?.close();
   bridge = null;
   r?.removeAllListeners();
@@ -342,12 +350,28 @@ function localRtcNow() {
 // rtc: hora de arranque del RTC ("fijo:…"); sin ella, la hora local de la PC
 // (como sincronizar el reloj al encender). Se devuelve para guardarla en la
 // grabación: la reproducción arranca con la misma hora.
-ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
+ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) => {
   await stopRunner();
+  // Escena (G7): se valida antes de lanzar el runner. Al reproducir una
+  // grabación no hay escena: las entradas salen del .stim.
+  let sceneObj = null;
+  if (scene?.devices?.length && !stim) {
+    try {
+      sceneObj = new Scene(scene, { registry: await registry() });
+    } catch (err) {
+      return { error: `escena: ${err.message}` };
+    }
+  }
   const r = new RunnerProcess();
   runner = r;
   runnerExe = exe;
-  r.on("message", (m) => forward("sim:message", m));
+  // Los horizontes de la escena no van a la interfaz (cientos por segundo).
+  r.on("message", (m) => m.type !== "horizon" && forward("sim:message", m));
+  if (sceneObj) {
+    sceneSession = new SceneSession(r, sceneObj);
+    sceneSession.on("snapshot", (snap) => forward("scene:snapshot", snap));
+    sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
+  }
   r.on("display", (buf) => forward("sim:display", buf));
   r.on("stderr", (t) => forward("sim:stderr", t));
   r.on("exit", (info) => {
@@ -397,6 +421,53 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc }) => {
     }
   }
   return { rtc: rtcArg };
+});
+
+// ---------------------------------------------------------------- escena (G7)
+function registry() {
+  // Un dispositivo instalado roto no deja a la app sin la biblioteca incluida.
+  registryPromise ??= registryWithInstalled().catch((err) => {
+    forward("sim:stderr", `[jwsim] dispositivos instalados: ${err.message}\n`);
+    return new Registry();
+  });
+  return registryPromise;
+}
+
+// Definiciones para la paleta y el inspector (sin funciones).
+ipcMain.handle("scene:devices", async () =>
+  (await registry()).list().map((d) => ({
+    type: d.type,
+    version: d.version,
+    name: d.name,
+    category: d.category ?? "Otros",
+    description: d.description ?? "",
+    parameters: d.parameters ?? [],
+    terminals: d.terminals,
+    actions: d.actions ?? [],
+    installed: installedDevices().some((x) => x.type === d.type),
+  })),
+);
+
+ipcMain.handle("scene:boardSvg", () => readFileSync(join(import.meta.dirname, "renderer", "assets", "jwplc-basic.svg"), "utf8"));
+
+// Análisis de la escena sin simular (al editar): estado en t = 0, avisos del
+// cableado y fallas inmediatas (p. ej. un cortocircuito directo).
+ipcMain.handle("scene:analyze", async (_e, spec) => {
+  try {
+    return { snapshot: wireSnapshot(new Scene(spec, { registry: await registry() }).snapshot()) };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle("scene:act", (_e, { device, action, value }) => {
+  sceneSession?.act(device, action, value);
+  return !!sceneSession;
+});
+
+ipcMain.handle("scene:rearm", () => {
+  sceneSession?.rearm();
+  return !!sceneSession;
 });
 
 ipcMain.handle("sim:command", (_e, msg) => {

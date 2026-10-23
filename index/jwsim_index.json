@@ -13,8 +13,8 @@
         {
           "version": "1.0.0",
           "url": "packages/jwcontrol-marcha-cilindro-1.0.0.tar.gz",
-          "checksum": "SHA-256:f03340f07432713a92018933bd05dd638503cfab000404c1057046b30d74feb1",
-          "size": 1903,
+          "checksum": "SHA-256:e1ad907aa410fbb506cdf3371b985426d2bde0ac00d4e1fbc9391cd76039411c",
+          "size": 1868,
           "sdk": 1
         }
       ]

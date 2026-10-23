@@ -922,3 +922,218 @@ button.io.on {
 .tabbar #btn-view-clear {
   flex: none;
 }
+
+/* ------------------------------------------------------------ escena (G7) */
+.panel-head > #board-view {
+  margin-left: 0;
+}
+.board-card.scene-mode {
+  flex: 3;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+.board-card.scene-mode .panel-head > .mode:not(#board-view) {
+  display: none;
+}
+.scene-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.scene-view[hidden] {
+  display: none;
+}
+.scene-tools {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.scene-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+}
+#scene-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  background-color: #101317;
+  background-image: radial-gradient(#252b33 1px, transparent 1px);
+  background-size: 20px 20px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.scene-side {
+  border-left: 1px solid var(--border);
+  overflow: auto;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.insp-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.insp-desc {
+  margin: 4px 0 8px;
+  color: var(--muted);
+}
+.insp-row {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0;
+}
+.insp-row input,
+.insp-row select {
+  width: 100%;
+  font: inherit;
+  padding: 2px 4px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.insp-row input[type="checkbox"] {
+  width: auto;
+}
+.insp-sub {
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.insp-vals {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.insp-vals td:last-child {
+  text-align: right;
+}
+.scene-diag {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.scene-diag li {
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  cursor: default;
+}
+.scene-diag li.bad {
+  border-left: 3px solid var(--err);
+}
+.scene-diag li.warn {
+  border-left: 3px solid var(--warn);
+}
+.scene-diag li.ok {
+  color: var(--ok);
+}
+.dev {
+  cursor: move;
+}
+.dev .dev-box {
+  fill: #1d2228;
+  stroke: #3b4450;
+  stroke-width: 1.5;
+}
+.dev.selected .dev-box,
+.dev.selected > svg {
+  stroke: var(--accent);
+  outline: 2px solid var(--accent);
+}
+.dev .dev-box.tripped,
+.dev .dev-box.damaged {
+  stroke: var(--err);
+  stroke-dasharray: 5 3;
+}
+.dev text {
+  fill: var(--text);
+  text-anchor: middle;
+  pointer-events: none;
+}
+.dev .dev-id {
+  font-weight: 700;
+  font-size: 12px;
+}
+.dev .dev-label {
+  font-size: 10px;
+  fill: var(--muted);
+}
+.dev .dev-note {
+  font-size: 9.5px;
+  fill: var(--muted);
+}
+.dev .dev-note.bad {
+  fill: var(--err);
+  font-weight: 700;
+}
+.dev .dev-big {
+  font-size: 15px;
+  font-weight: 700;
+}
+.dev .act {
+  cursor: pointer;
+}
+.dev .tecla {
+  cursor: pointer;
+}
+.term {
+  cursor: crosshair;
+}
+.term circle {
+  fill: #c9a227;
+  stroke: #14171b;
+  stroke-width: 1.5;
+}
+.term:hover circle {
+  fill: var(--accent);
+}
+.term text {
+  font-size: 9px;
+  fill: #c9d1da;
+}
+.board-leds .led {
+  fill: #2a2f36;
+  stroke: #14171b;
+}
+.board-leds .led.on {
+  fill: #37d67a;
+}
+.wire {
+  cursor: pointer;
+}
+.wire .wire-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+}
+.wire .wire-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.wire.selected .wire-line {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+#scene-rubber {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+.io.scene-owned {
+  outline: 1px dashed var(--accent);
+}

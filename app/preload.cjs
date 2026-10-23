@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   openDialog: () => ipcRenderer.invoke("sketch:openDialog"),
   save: (sketch) => ipcRenderer.invoke("sketch:save", sketch),
   build: (dir) => ipcRenderer.invoke("sketch:build", dir),
-  start: (exe, stim, projectFile, rtc) => ipcRenderer.invoke("sim:start", { exe, stim, projectFile, rtc }),
+  start: (exe, stim, projectFile, rtc, scene) => ipcRenderer.invoke("sim:start", { exe, stim, projectFile, rtc, scene }),
   command: (msg) => ipcRenderer.invoke("sim:command", msg),
   stop: () => ipcRenderer.invoke("sim:stop"),
   openProject: () => ipcRenderer.invoke("project:open"),
@@ -45,4 +45,11 @@ contextBridge.exposeInMainWorld("jwsim", {
   onStderr: on("sim:stderr"),
   onExit: on("sim:exit"),
   onMenu: on("menu"),
+  // Escena (G7)
+  sceneDevices: () => ipcRenderer.invoke("scene:devices"),
+  sceneBoardSvg: () => ipcRenderer.invoke("scene:boardSvg"),
+  sceneAnalyze: (spec) => ipcRenderer.invoke("scene:analyze", spec),
+  sceneAct: (device, action, value) => ipcRenderer.invoke("scene:act", { device, action, value }),
+  sceneRearm: () => ipcRenderer.invoke("scene:rearm"),
+  onSceneSnapshot: on("scene:snapshot"),
 });
