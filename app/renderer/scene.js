@@ -37,6 +37,8 @@
     zoom: 0.8,
     pan: { x: 20, y: 20 },
     boardSvg: null,
+    boardEntries: {},
+    boardSides: {},
     board: { w: 452, h: 500, k: BOARD_K },
     staticPoles: {}, // polos del último análisis sin simular (color automático de cables)
     boardTerms: {}, // borne -> [x, y] en la placa escalada
@@ -49,142 +51,29 @@
   // ------------------------------------------------------------ símbolos
   // Cada símbolo: tamaño, posición de los bornes y cuerpo según el estado.
   // Bornes "t" (arriba) o "b" (abajo) para orientar el cable al salir.
-  // Bornes repartidos sobre la grilla.
-  const row = (ids, y, w) => {
-    const n = ids.length;
-    const step = n > 1 ? Math.max(GRID, Math.floor((w - 2 * GRID) / (n - 1) / GRID) * GRID) : 0;
-    const x0 = snap((w - step * (n - 1)) / 2);
-    return Object.fromEntries(ids.map((id, i) => [id, [x0 + i * step, y]]));
-  };
-
+  // Disposición de cada dispositivo (scene-symbols.js); la placa sale de su SVG.
+  // terms: { id: [x, y] } con el punto de entrada del cable (en la grilla).
+  const layouts = new Map();
   function symbolFor(dev) {
     const t = dev.type;
-    const short = t.split("/")[1];
-    if (t === "jwsim/jwplc-basic") return { w: S.board.w, h: S.board.h, terms: S.boardTerms, board: true };
-    const sizes = {
-      "pushbutton-no": [60, 100, ["13"], ["14"]],
-      "pushbutton-nc": [60, 100, ["11"], ["12"]],
-      "selector-2": [80, 100, ["13", "21"], ["14", "22"]],
-      "selector-3": [80, 100, ["13", "23"], ["14", "24"]],
-      "limit-switch": [80, 100, ["13", "21"], ["14", "22"]],
-      "sensor-inductive": [80, 100, ["BN", "BU"], ["BK"]],
-      "sensor-photoelectric": [80, 100, ["BN", "BU"], ["BK"]],
-      lamp: [60, 80, ["X1"], ["X2"]],
-      buzzer: [60, 80, ["+"], ["-"]],
-      relay: [140, 100, ["A1", "11", "21"], ["A2", "12", "14", "22", "24"]],
-      contactor: [160, 100, ["A1", "1", "3", "5", "13", "21"], ["A2", "2", "4", "6", "14", "22"]],
-      "solenoid-valve": [180, 80, ["A1"], ["A2"]],
-      motor: [100, 100, ["U1", "U2"], []],
-      "power-24vdc": [100, 60, [], ["L+", "M"]],
-      "power-230vac": [100, 60, [], ["L", "N"]],
-    };
-    let [w, h, top, bottom] = t.startsWith("jwsim/") && sizes[short] ? sizes[short] : [];
-    if (!w) {
-      // Dispositivo de terceros: caja genérica con los bornes repartidos.
-      const ids = (S.defs.get(t)?.terminals ?? []).map((x) => x.id);
-      top = ids.slice(0, Math.ceil(ids.length / 2));
-      bottom = ids.slice(top.length);
-      w = Math.max(120, (Math.max(top.length, bottom.length) + 1) * 2 * GRID);
-      h = 100;
+    if (t === "jwsim/jwplc-basic") return { w: S.board.w, h: S.board.h, terms: S.boardEntries, screws: S.boardTerms, sides: S.boardSides, board: true };
+    if (!layouts.has(t)) {
+      const lay = window.JwsimSymbols.layout(t, S.defs.get(t));
+      const terms = {};
+      const screws = {};
+      const sides = {};
+      const k = window.JwsimSymbols.SCREW_INSET;
+      for (const [id, v] of Object.entries(lay.terms)) {
+        terms[id] = [v.x, v.y];
+        screws[id] = [v.x, v.side === "t" ? v.y + k : v.y - k];
+        sides[id] = v.side;
+      }
+      layouts.set(t, { w: lay.w, h: lay.h, terms, screws, sides, lay });
     }
-    if (short === "solenoid-valve") return { w, h, terms: { A1: [GRID, 0], A2: [GRID, h] } };
-    return { w, h, terms: { ...row(top, 0, w), ...row(bottom, h, w) } };
+    return layouts.get(t);
   }
 
   const out = (id) => S.snap?.devices.find((d) => d.id === id) ?? { outputs: {}, contacts: {}, actions: {}, damaged: [] };
-
-  function body(dev, sym) {
-    const st = out(dev.id);
-    const o = st.outputs ?? {};
-    const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
-    const short = dev.type.split("/")[1];
-    const { w, h } = sym;
-    const box = (extra = "") => `<rect class="dev-box${st.damaged?.length ? " damaged" : ""}${st.tripped ? " tripped" : ""}" x="0" y="0" width="${w}" height="${h}" rx="6" ${extra}/>`;
-    const title = `<text class="dev-id" x="${w / 2}" y="${h + 16}">${esc(dev.id)}</text>`;
-    const label = (txt, y = 14) => (txt ? `<text class="dev-label" x="${w / 2}" y="${y}">${esc(txt)}</text>` : "");
-    switch (dev.type.startsWith("jwsim/") ? short : "") {
-      case "pushbutton-no":
-      case "pushbutton-nc": {
-        const c = COLORS[p.color] ?? COLORS.verde;
-        const pr = !!o.pressed;
-        return `${box()}${label(p.label)}<g class="act" data-action="press" data-kind="momentary">
-          <circle cx="${w / 2}" cy="${h / 2 + 6}" r="20" fill="#14171b" stroke="#596270"/>
-          <circle cx="${w / 2}" cy="${h / 2 + 6}" r="${pr ? 13 : 15}" fill="${c}" opacity="${pr ? 0.7 : 1}"/></g>
-          <text class="dev-note" x="${w / 2}" y="${h - 6}">${short.endsWith("no") ? "NA" : "NC"}</text>${title}`;
-      }
-      case "selector-2":
-      case "selector-3": {
-        const pos = Number(o.position ?? 0);
-        const ang = short === "selector-2" ? (pos ? 45 : -45) : pos * 45;
-        const labels = short === "selector-2" ? ["0", "I"] : ["I", "0", "II"];
-        return `${box()}${label(p.label)}<g class="act" data-action="position" data-kind="cycle" data-options="${short === "selector-2" ? "0,1" : "-1,0,1"}">
-          <circle cx="${w / 2}" cy="${h / 2 + 6}" r="20" fill="#2b2f35" stroke="#596270"/>
-          <rect x="${w / 2 - 4}" y="${h / 2 - 12}" width="8" height="36" rx="3" fill="#d7dee7" transform="rotate(${ang} ${w / 2} ${h / 2 + 6})"/></g>
-          <text class="dev-note" x="${w / 2}" y="${h - 6}">${labels.join(" · ")}</text>${title}`;
-      }
-      case "limit-switch": {
-        const on = !!o.actuated;
-        return `${box()}${label(p.source ? `← ${p.source}` : "Fin de carrera")}<g class="act" data-action="actuate" data-kind="momentary">
-          <line x1="${w / 2 - 18}" y1="${h / 2 + 18}" x2="${w / 2 + 14}" y2="${h / 2 + (on ? 14 : -4)}" stroke="#d7dee7" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="${w / 2 + 16}" cy="${h / 2 + (on ? 14 : -6)}" r="7" fill="${on ? COLORS.amarillo : "#596270"}"/></g>${title}`;
-      }
-      case "sensor-inductive":
-      case "sensor-photoelectric": {
-        const det = !!o.detecting;
-        const led = o.output ? COLORS.amarillo : o.powered ? "#3b4450" : "#22262b";
-        return `${box()}${label(String(p.output).toUpperCase() + " " + String(p.contact).toUpperCase(), 30)}
-          <g class="act" data-action="target" data-kind="toggle"><rect x="${w / 2 - 22}" y="${h / 2 - 6}" width="44" height="22" rx="4" fill="${det ? "#596270" : "#2b2f35"}" stroke="#596270"/>
-          <text class="dev-note" x="${w / 2}" y="${h / 2 + 9}">${short === "sensor-inductive" ? "metal" : "objeto"}</text></g>
-          <circle cx="${w - 12}" cy="12" r="6" fill="${led}"/>${label(short === "sensor-inductive" ? "Inductivo" : "Fotoeléctrico")}${title}`;
-      }
-      case "lamp": {
-        const c = COLORS[p.color] ?? COLORS.verde;
-        return `${box()}<circle cx="${w / 2}" cy="${h / 2}" r="20" fill="${o.lit ? c : "#22262b"}" stroke="${c}" stroke-width="2"/>
-          ${o.lit ? `<circle cx="${w / 2}" cy="${h / 2}" r="27" fill="none" stroke="${c}" opacity="0.4" stroke-width="3"/>` : ""}
-          <path d="M${w / 2 - 13} ${h / 2 - 13} L${w / 2 + 13} ${h / 2 + 13} M${w / 2 + 13} ${h / 2 - 13} L${w / 2 - 13} ${h / 2 + 13}" stroke="#596270" stroke-width="2"/>
-          <text class="dev-note" x="${w / 2}" y="${h - 4}">${esc(p.rating)}</text>${title}`;
-      }
-      case "buzzer":
-        return `${box()}<path d="M${w / 2 - 16} ${h / 2 + 10} A16 16 0 0 1 ${w / 2 + 16} ${h / 2 + 10} Z" fill="${o.sounding ? COLORS.amarillo : "#2b2f35"}" stroke="#596270"/>
-          ${o.sounding ? `<path class="waves" d="M${w / 2 - 22} ${h / 2 - 14} q22 -14 44 0 M${w / 2 - 28} ${h / 2 - 22} q28 -18 56 0" fill="none" stroke="${COLORS.amarillo}" stroke-width="2"/>` : ""}${title}`;
-      case "relay":
-      case "contactor": {
-        const on = !!o.closed;
-        const coil = o.energized ? COLORS.amarillo : "#2b2f35";
-        return `${box()}<rect x="6" y="${h / 2 - 14}" width="22" height="28" fill="${coil}" stroke="#596270"/>
-          <text class="dev-note" x="17" y="${h / 2 + 30}">A1–A2</text>
-          <rect x="40" y="${h / 2 - 9}" width="${w - 50}" height="18" rx="3" fill="${on ? "#2f6d4a" : "#2b2f35"}" stroke="#596270"/>
-          <text class="dev-note" x="${w / 2 + 15}" y="${h / 2 + 4}">${on ? "cerrado" : "abierto"}</text>
-          ${label(short === "relay" ? "Relé" : "Contactor")}${title}`;
-      }
-      case "solenoid-valve": {
-        const pos = Math.max(0, Math.min(1, Number(o.position ?? 0)));
-        const cx = 60;
-        return `${box()}<rect x="6" y="${h / 2 - 14}" width="22" height="28" fill="${o.energized ? COLORS.amarillo : "#2b2f35"}" stroke="#596270"/>
-          <rect x="${cx}" y="${h / 2 - 16}" width="80" height="32" rx="3" fill="#2b2f35" stroke="#8794a2"/>
-          <rect x="${cx + 6 + pos * 50}" y="${h / 2 - 13}" width="10" height="26" fill="#d7dee7"/>
-          <rect x="${cx + 16 + pos * 50}" y="${h / 2 - 3}" width="${64}" height="6" fill="#b8bec6"/>
-          <text class="dev-note" x="${cx + 40}" y="${h - 6}">${o.extended ? "afuera" : o.retracted ? "adentro" : `${Math.round(pos * 100)} %`}</text>${label("Electroválvula 5/2")}${title}`;
-      }
-      case "motor": {
-        const sp = Number(o.speed ?? 0);
-        return `${box()}<circle cx="${w / 2}" cy="${h / 2 + 4}" r="26" fill="${o.running ? "#2f6d4a" : "#2b2f35"}" stroke="#8794a2" stroke-width="2"/>
-          <text class="dev-big" x="${w / 2}" y="${h / 2 + 12}">M</text>
-          <text class="dev-note" x="${w / 2}" y="${h - 6}">${Math.round(sp * 100)} %</text>${title}`;
-      }
-      case "power-24vdc":
-      case "power-230vac":
-        return `${box()}<text class="dev-big" x="${w / 2}" y="${h / 2 - 2}">${short === "power-24vdc" ? "24 VDC" : "230 VAC"}</text>
-          <text class="dev-note${st.tripped ? " bad" : ""}" x="${w / 2}" y="${h / 2 + 16}">${st.tripped ? "DISPARADA" : "en servicio"}</text>${title}`;
-      default: {
-        // Genérico: nombre, salidas y acciones declaradas.
-        const def = S.defs.get(dev.type);
-        const vals = Object.entries(o).slice(0, 3).map(([k, v], i) => `<text class="dev-note" x="8" y="${44 + i * 13}" text-anchor="start">${esc(k)}: ${esc(typeof v === "number" ? Math.round(v * 100) / 100 : v)}</text>`).join("");
-        const acts = (def?.actions ?? []).slice(0, 2).map((a, i) => `<g class="act" data-action="${esc(a.id)}" data-kind="${a.kind === "select" ? "cycle" : a.kind}" data-options="${esc((a.options ?? []).join(","))}"><rect x="${w - 60}" y="${36 + i * 24}" width="52" height="20" rx="4" fill="#2b2f35" stroke="#596270"/><text class="dev-note" x="${w - 34}" y="${50 + i * 24}">${esc(a.label ?? a.id)}</text></g>`).join("");
-        return `${box()}${label(def?.name ?? dev.type, 16)}${vals}${acts}${title}`;
-      }
-    }
-  }
 
   function defaultsOf(type) {
     return Object.fromEntries((S.defs.get(type)?.parameters ?? []).map((p) => [p.id, p.default]));
@@ -202,14 +91,26 @@
     const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
     const k = BOARD_K;
     S.board = { w: vw * k, h: vh * k, k };
+    // Tornillos (clic para cablear) y entrada del cable: el borde de la
+    // bornera hacia afuera de la placa (arriba, abajo o el borde superior de
+    // la bornera RS-485).
+    const ENTRY_Y = { sup: 18, med: 1126, inf: 1600 };
     const terms = {};
+    const entries = {};
+    const sides = {};
     for (const g of svg.querySelectorAll(".borne")) {
       const u = g.querySelector("use");
       const sig = g.dataset.senal;
       const id = /^Q0_/.test(sig) ? `${sig}.${g.dataset.pos}` : sig;
-      terms[id] = [(Number(u.getAttribute("x")) - vx) * k, (Number(u.getAttribute("y")) - vy) * k];
+      const x = (Number(u.getAttribute("x")) - vx) * k;
+      const block = g.dataset.bloque.split("-")[0];
+      terms[id] = [x, (Number(u.getAttribute("y")) - vy) * k];
+      entries[id] = [x, (ENTRY_Y[block] - vy) * k];
+      sides[id] = block === "inf" ? "b" : "t";
     }
     S.boardTerms = terms;
+    S.boardEntries = entries;
+    S.boardSides = sides;
     svg.setAttribute("width", String(S.board.w));
     svg.setAttribute("height", String(S.board.h));
     svg.removeAttribute("role");
@@ -238,18 +139,24 @@
   // ------------------------------------------------------------ dibujo
   const devById = (id) => S.spec.devices.find((d) => d.id === id);
 
+  // Borne: entrada del cable (x, y), tornillo (sx, sy) y lado (arriba/abajo).
   function termPos(end) {
     const i = end.indexOf(".");
     const dev = devById(end.slice(0, i));
     if (!dev) return null;
     const sym = symbolFor(dev);
-    const p = sym.terms[end.slice(i + 1)];
+    const id = end.slice(i + 1);
+    const p = sym.terms[id];
     if (!p) return null;
+    const x0 = dev.x ?? 0;
+    const y0 = dev.y ?? 0;
     return {
-      x: (dev.x ?? 0) + p[0],
-      y: (dev.y ?? 0) + p[1],
-      up: p[1] <= sym.h / 2,
-      box: { x1: dev.x ?? 0, y1: dev.y ?? 0, x2: (dev.x ?? 0) + sym.w, y2: (dev.y ?? 0) + sym.h },
+      x: x0 + p[0],
+      y: y0 + p[1],
+      sx: x0 + sym.screws[id][0],
+      sy: y0 + sym.screws[id][1],
+      up: sym.sides[id] === "t",
+      box: { x1: x0, y1: y0, x2: x0 + sym.w, y2: y0 + sym.h },
     };
   }
 
@@ -284,6 +191,7 @@
   // usuario movió el tramo horizontal de un cable (points), se respeta.
   const BEND = 4; // costo de una curva, en pasos de grilla
   const SHARED = 8; // costo por paso sobre un tramo de otro cable
+  const THROUGH = 60; // costo por paso dentro de la caja de un dispositivo
 
   // Cajas que los cables no atraviesan (en celdas de grilla, bordes incluidos).
   function obstacles() {
@@ -337,7 +245,7 @@
     push({ x: from.x, y: from.y, d: dir0, g: 0, f: h(from.x, from.y), prev: null });
     best.set(k(from.x, from.y, dir0), 0);
     let n = 0;
-    while (heap.length && n++ < 60000) {
+    while (heap.length && n++ < 400000) {
       const c = pop();
       if (c.x === to.x && c.y === to.y) {
         const pts = [];
@@ -351,10 +259,12 @@
         const y = c.y + D[d][1];
         if (x < bounds.x1 || x > bounds.x2 || y < bounds.y1 || y > bounds.y2) continue;
         const goal = x === to.x && y === to.y;
-        if (!goal && blocked(x, y)) continue;
+        // Atravesar un dispositivo se permite, muy caro: solo si no hay otro
+        // camino (p. ej. dos equipos pegados).
+        const through = !goal && blocked(x, y) ? THROUGH : 0;
         const seg = d < 2 ? `h${Math.min(x, c.x)},${y}` : `v${x},${Math.min(y, c.y)}`;
         const others = occ.get(seg);
-        let g = c.g + 1 + (d !== c.d ? BEND : 0) + (others && !others.some((e) => ends.has(e)) ? SHARED : 0);
+        let g = c.g + 1 + through + (d !== c.d ? BEND : 0) + (others && !others.some((e) => ends.has(e)) ? SHARED : 0);
         if (goal && d !== dirEnd) g += BEND;
         const key = k(x, y, d);
         if (g < (best.get(key) ?? Infinity)) {
@@ -368,31 +278,33 @@
 
   const dirOf = (p, q) => (q.x > p.x ? 0 : q.x < p.x ? 1 : q.y > p.y ? 2 : 3);
 
+  // Primer punto de la grilla hacia afuera de la entrada (a 10 px o más).
+  const stubOf = (a) => ({ x: a.x, y: a.up ? Math.floor((a.y - 10) / GRID) * GRID : Math.ceil((a.y + 10) / GRID) * GRID });
+
   function route(w, ctx) {
     const a = termPos(w.from);
     const b = termPos(w.to);
     if (!a || !b) return null;
-    const s1 = { x: a.x, y: a.y + (a.up ? -GRID : GRID) };
-    const s2 = { x: b.x, y: b.y + (b.up ? -GRID : GRID) };
+    const s1 = stubOf(a);
+    const s2 = stubOf(b);
     let mid = null;
-    let ym;
     if (w.points?.length) {
-      ym = w.points[0][1];
-      mid = [s1, { x: s1.x, y: ym }, { x: s2.x, y: ym }, s2];
+      // Recorrido del usuario: sus puntos de doblez, en orden.
+      mid = [s1, ...w.points.map(([x, y]) => ({ x, y })), s2];
     } else if (ctx) {
       const g = (p) => ({ x: Math.round(p.x / GRID), y: Math.round(p.y / GRID) });
       mid = astar(g(s1), g(s2), dirOf(a, s1), dirOf(s2, b), ctx.boxes, ctx.occ, new Set([w.from, w.to]), ctx.bounds);
     }
+    const routed = !!mid;
     if (!mid) {
-      ym = a.up && b.up ? Math.min(s1.y, s2.y) : !a.up && !b.up ? Math.max(s1.y, s2.y) : snap((s1.y + s2.y) / 2);
+      const ym = a.up && b.up ? Math.min(s1.y, s2.y) : !a.up && !b.up ? Math.max(s1.y, s2.y) : snap((s1.y + s2.y) / 2);
       mid = [s1, { x: s1.x, y: ym }, { x: s2.x, y: ym }, s2];
     }
-    const pts = [a, ...mid, b];
-    // Sin puntos repetidos ni intermedios alineados.
+    // Sin puntos repetidos ni intermedios alineados (el recorrido automático).
     const out = [];
-    for (const p of pts) {
+    for (const p of mid) {
       if (out.length && out.at(-1).x === p.x && out.at(-1).y === p.y) continue;
-      if (out.length >= 2) {
+      if (!w.points?.length && out.length >= 2) {
         const [q, r] = out.slice(-2);
         if ((q.x === r.x && r.x === p.x) || (q.y === r.y && r.y === p.y)) out.pop();
       }
@@ -402,18 +314,19 @@
     if (ctx) {
       for (let i = 1; i < out.length; i++) {
         const [p, q] = [out[i - 1], out[i]];
+        if (p.x !== q.x && p.y !== q.y) continue;
         const steps = Math.round(Math.hypot(q.x - p.x, q.y - p.y) / GRID);
         for (let j = 0; j < steps; j++) {
-          const x = Math.round(p.x / GRID) + (j * Math.sign(q.x - p.x));
-          const y = Math.round(p.y / GRID) + (j * Math.sign(q.y - p.y));
+          const x = Math.round(p.x / GRID) + j * Math.sign(q.x - p.x);
+          const y = Math.round(p.y / GRID) + j * Math.sign(q.y - p.y);
           const seg = p.y === q.y ? `h${Math.min(x, x + Math.sign(q.x - p.x))},${y}` : `v${x},${Math.min(y, y + Math.sign(q.y - p.y))}`;
           if (!ctx.occ.has(seg)) ctx.occ.set(seg, []);
           ctx.occ.get(seg).push(w.from, w.to);
         }
       }
     }
-    if (ym === undefined) ym = out.length > 3 ? out[2].y : s1.y;
-    return { pts: out, a, b, s1, s2, ym };
+    // Puntos de doblez editables: los interiores entre las dos salidas.
+    return { mid: out, vertices: out.slice(1, -1), a, b, s1, s2, routed };
   }
 
   function routeContext() {
@@ -463,27 +376,67 @@
       S.routes = S.spec.wiring.map((w) => route(w, ctx));
       S.routeKey = dragging ? null : layout;
     }
+    // Puentes: los cables de un mismo borne entran juntos, uno al lado del
+    // otro, en un casquillo doble.
+    const byTerm = new Map();
+    S.spec.wiring.forEach((w, i) => {
+      for (const t of [w.from, w.to]) {
+        if (!byTerm.has(t)) byTerm.set(t, []);
+        byTerm.get(t).push(i);
+      }
+    });
+    const offset = (t, i) => {
+      const list = byTerm.get(t);
+      return (list.indexOf(i) - (list.length - 1) / 2) * 5;
+    };
+    let html = "";
     S.spec.wiring.forEach((w, i) => {
       const r = S.routes[i];
       if (!r) return;
-      const d = roundedPath(r.pts);
+      const da = offset(w.from, i);
+      const db = offset(w.to, i);
+      const pts = [
+        { x: r.a.x + da, y: r.a.y },
+        { x: r.s1.x + da, y: r.s1.y },
+        ...r.mid,
+        { x: r.s2.x + db, y: r.s2.y },
+        { x: r.b.x + db, y: r.b.y },
+      ].filter((p, k, all) => !k || p.x !== all[k - 1].x || p.y !== all[k - 1].y);
+      const d = roundedPath(pts);
       const sel = S.sel?.kind === "wire" && S.sel.id === i;
       const c = WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
       const live = wireLive(w);
-      // Casquillo en cada punta (un tramo corto sobre la salida del borne).
-      const ferrule = (p, s) => `<line class="wire-ferrule" x1="${p.x}" y1="${p.y}" x2="${p.x}" y2="${p.y + Math.sign(s.y - p.y) * 9}"/>`;
-      g.insertAdjacentHTML(
-        "beforeend",
+      html +=
         `<g class="wire${sel ? " selected" : ""}${live ? " live" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
-          `<path class="wire-hit" d="${d}"/>` +
-          (live ? `<path class="wire-glow" d="${d}"/>` : "") +
-          `<path class="wire-outline" d="${d}" stroke="${shade(c, 0.45)}"/>` +
-          `<path class="wire-core" d="${d}" stroke="${c}"/>` +
-          `<path class="wire-shine" d="${d}"/>` +
-          ferrule(r.a, r.s1) + ferrule(r.b, r.s2) +
-          `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`,
-      );
+        `<path class="wire-hit" d="${d}"/>` +
+        (live ? `<path class="wire-glow" d="${d}"/>` : "") +
+        `<path class="wire-outline" d="${d}" stroke="${shade(c, 0.45)}"/>` +
+        `<path class="wire-core" d="${d}" stroke="${c}"/>` +
+        `<path class="wire-shine" d="${d}"/>` +
+        `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`;
     });
+    // Casquillos: la parte plástica del terminal asoma de la entrada de la
+    // bornera (uno por borne; más ancho si es un puente).
+    for (const [t, list] of byTerm) {
+      const p = termPos(t);
+      if (!p) continue;
+      const wd = 6 + 5 * list.length;
+      const len = 11;
+      const y = p.up ? p.y - len : p.y;
+      const c = WIRE_COLORS[wireColorName(S.spec.wiring[list[0]])] ?? WIRE_COLORS.negro;
+      html += `<rect class="ferrule" x="${p.x - wd / 2}" y="${y}" width="${wd}" height="${len}" rx="2" fill="${shade(c, 0.8)}"/>`;
+      html += `<rect class="ferrule-tip" x="${p.x - wd / 2 + 1}" y="${p.up ? p.y - 3 : p.y}" width="${wd - 2}" height="3" fill="#c9ced5"/>`;
+    }
+    // Puntos de doblez del cable seleccionado (arrastrables; ✕ los quita).
+    if (S.sel?.kind === "wire" && S.routes[S.sel.id] && !S.running) {
+      const r = S.routes[S.sel.id];
+      const own = !!S.spec.wiring[S.sel.id].points?.length;
+      r.vertices.forEach((v, k) => {
+        html += `<circle class="wire-handle" data-v="${k}" cx="${v.x}" cy="${v.y}" r="5"/>`;
+        if (own) html += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
+      });
+    }
+    g.innerHTML = html;
   }
 
   function renderDevice(dev, force = false) {
@@ -525,17 +478,20 @@
       const leds = g.querySelector(".board-leds");
       let html = "";
       for (let k = 0; k < 8; k++) {
-        const [x, y] = sym.terms[`I0_${k}`] ?? [];
+        const [x, y] = sym.screws[`I0_${k}`] ?? [];
         if (x !== undefined) html += `<circle cx="${x}" cy="${y + 70 * S.board.k}" r="4" class="${st.outputs?.[`I0_${k}`] ? "led on" : "led"}"/>`;
-        const [qx, qy] = sym.terms[`Q0_${k}.1`] ?? [];
-        const [qx2] = sym.terms[`Q0_${k}.2`] ?? [];
+        const [qx, qy] = sym.screws[`Q0_${k}.1`] ?? [];
+        const [qx2] = sym.screws[`Q0_${k}.2`] ?? [];
         if (qx !== undefined) html += `<circle cx="${(qx + qx2) / 2}" cy="${qy - 80 * S.board.k}" r="4" class="${st.contacts?.[`Q0_${k}`] ? "led on" : "led"}"/>`;
       }
       const plcWired = S.spec.wiring.some((w) => w.from.startsWith(`${dev.id}.`) || w.to.startsWith(`${dev.id}.`));
       if (plcWired && st.outputs && st.outputs.powered === false && S.snap) html += `<text class="dev-note bad" x="${sym.w / 2}" y="-8">sin 24 VDC en 24VDC/M0</text>`;
       leds.innerHTML = html;
     } else {
-      g.innerHTML = body(dev, sym);
+      const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
+      g.innerHTML =
+        window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
+        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`;
     }
     // Bornes en su propia capa, encima de los cables (un clic en un borne ya
     // cableado empieza otro cable en vez de seleccionar el existente).
@@ -549,12 +505,10 @@
     t.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (t.childElementCount && !force) return;
     let th = "";
-    for (const [id, [x, y]] of Object.entries(sym.terms)) {
-      const up = y <= sym.h / 2;
-      // En la placa el borne es el tornillo del SVG: el círculo es invisible
-      // (solo resalta al pasar el mouse).
-      th += `<g class="term${sym.board ? " on-board" : ""}" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 5}"/>`;
-      if (!sym.board) th += `<text x="${x}" y="${up ? y - 8 : y + 15}">${esc(id)}</text>`;
+    for (const [id, [x, y]] of Object.entries(sym.screws)) {
+      // El borne es el tornillo dibujado: el círculo es invisible (resalta
+      // al pasar el mouse).
+      th += `<g class="term" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 10}"/>`;
       th += `<title>${esc(`${dev.id}.${id}`)}</title></g>`;
     }
     t.innerHTML = th;
@@ -609,7 +563,8 @@
         for (const [name, hex] of Object.entries(WIRE_COLORS)) {
           html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
         }
-        html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Arrastre el cable para mover su tramo horizontal.</p>`;
+        html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita.</p>`;
+        if (w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
         html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar cable</button>`;
       }
     } else {
@@ -673,6 +628,36 @@
     changed();
   }
 
+  // El cable pasa a tener recorrido propio: sus puntos de doblez son los del
+  // recorrido automático actual.
+  function ownPoints(i) {
+    const wire = S.spec.wiring[i];
+    if (!wire.points?.length) wire.points = (S.routes?.[i]?.vertices ?? []).map((v) => [v.x, v.y]);
+  }
+
+  // Inserta un punto de doblez en el tramo más cercano a p; devuelve su índice.
+  function insertVertex(i, p) {
+    ownPoints(i);
+    const wire = S.spec.wiring[i];
+    const r = S.routes[i];
+    const full = [r.s1, ...wire.points.map(([x, y]) => ({ x, y })), r.s2];
+    let best = 0;
+    let bd = Infinity;
+    for (let j = 0; j < full.length - 1; j++) {
+      const [a, b] = [full[j], full[j + 1]];
+      const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2 || 1;
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2));
+      const d = Math.hypot(p.x - (a.x + t * (b.x - a.x)), p.y - (a.y + t * (b.y - a.y)));
+      if (d < bd) {
+        bd = d;
+        best = j;
+      }
+    }
+    wire.points.splice(best, 0, [p.x, p.y]);
+    S.dirty = true;
+    return best;
+  }
+
   // La escena cambió (edición): se vuelve a analizar en t = 0.
   function changed() {
     S.dirty = true;
@@ -710,7 +695,27 @@
       const devEl = e.target.closest(".dev");
       // (los bornes están en #scene-terms, fuera del grupo del dispositivo)
       const wireEl = e.target.closest(".wire");
+      const handle = e.target.closest(".wire-handle");
+      const delV = e.target.closest(".wire-del");
       const w = toWorld(e);
+      // Puntos de doblez del cable seleccionado: quitar o arrastrar.
+      if ((handle || delV) && S.sel?.kind === "wire" && !S.running) {
+        e.preventDefault();
+        const wire = S.spec.wiring[S.sel.id];
+        ownPoints(S.sel.id);
+        const k = Number((handle ?? delV).dataset.v);
+        if (delV) {
+          wire.points.splice(k, 1);
+          if (!wire.points.length) delete wire.points;
+          S.dirty = true;
+          renderWires();
+          renderSide();
+        } else {
+          S.drag = { kind: "vertex", i: S.sel.id, k, moved: false };
+          svg.setPointerCapture(e.pointerId);
+        }
+        return;
+      }
       if (term) {
         e.preventDefault();
         if (S.running) return;
@@ -758,11 +763,16 @@
       }
       if (wireEl) {
         const i = Number(wireEl.dataset.wire);
-        S.sel = { kind: "wire", id: i };
-        if (!S.running) {
-          S.drag = { kind: "wire", i, moved: false };
+        // Clic sobre el cable ya seleccionado: agrega un punto de doblez ahí
+        // (en la grilla) y empieza a arrastrarlo.
+        if (S.sel?.kind === "wire" && S.sel.id === i && !S.running) {
+          const k = insertVertex(i, { x: snap(w.x), y: snap(w.y) });
+          S.drag = { kind: "vertex", i, k, moved: false };
           svg.setPointerCapture(e.pointerId);
+          renderWires();
+          return;
         }
+        S.sel = { kind: "wire", id: i };
         render();
         return;
       }
@@ -781,13 +791,12 @@
       if (S.drag.kind === "pan") {
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
         $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
-      } else if (S.drag.kind === "wire") {
-        // Mueve el tramo horizontal del cable (queda en la grilla).
+      } else if (S.drag.kind === "vertex") {
         const wire = S.spec.wiring[S.drag.i];
-        const r = route(wire);
-        const ym = snap(w.y);
-        if (r && ym !== r.ym) {
-          wire.points = [[r.s1.x, ym], [r.s2.x, ym]];
+        const p = [snap(w.x), snap(w.y)];
+        const cur = wire.points[S.drag.k];
+        if (cur[0] !== p[0] || cur[1] !== p[1]) {
+          wire.points[S.drag.k] = p;
           S.drag.moved = true;
           renderWires();
         }
@@ -838,6 +847,11 @@
     });
     $("scene-inspector").addEventListener("click", (e) => {
       if (e.target.id === "scene-del") removeSelected();
+      if (e.target.id === "scene-wire-auto" && S.sel?.kind === "wire") {
+        delete S.spec.wiring[S.sel.id].points;
+        S.dirty = true;
+        render();
+      }
       const sw = e.target.closest(".swatch");
       if (sw && S.sel?.kind === "wire") {
         const w = S.spec.wiring[S.sel.id];
@@ -978,6 +992,7 @@
         const r = el?.getBoundingClientRect();
         return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
       },
+      routes: () => (S.routes ?? []).map((r, i) => ({ wire: `${S.spec.wiring[i].from}-${S.spec.wiring[i].to}`, routed: r?.routed, mid: r?.mid })),
       wireColor: (i) => document.querySelector(`.wire[data-wire="${i}"]`)?.dataset.color ?? null,
       wireLive: (i) => !!document.querySelector(`.wire[data-wire="${i}"]`)?.classList.contains("live"),
       // Punto medio del cable en pantalla (para hacer clic sobre él).

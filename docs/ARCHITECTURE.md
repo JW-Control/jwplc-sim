@@ -396,10 +396,20 @@ botones de la interfaz.
   de 64 unidades. En la escena se dibuja a escala 20/64, así cada borne cae
   en la grilla de 20 px. Los bornes de los dispositivos y sus posiciones
   también van sobre la grilla.
-- **Cables:** recorrido ortogonal con A* sobre la grilla. Esquivan las cajas
-  de los dispositivos, penalizan las curvas y no comparten tramos con otros
-  cables salvo con los del mismo borne. Si el usuario mueve un tramo
-  horizontal, su altura se guarda en `points`.
+- **Símbolos** (`app/renderer/scene-symbols.js`): módulos con aspecto de
+  equipo de tablero, con tornillos Phillips rotulados (número y función:
+  1/L1, 13 NO, COM) y la cara frontal del equipo con su estado. El cable
+  entra por el borde del módulo, a la altura del borne; el tornillo queda
+  adentro.
+- **Cables:** recorrido ortogonal con A* sobre la grilla. Esquivan las
+  cajas de los dispositivos (atravesarlas solo si no hay otro camino),
+  penalizan las curvas y no comparten tramos con otros cables salvo con
+  los del mismo borne.
+- **Puntos de doblez:** con un clic sobre el cable seleccionado se agrega
+  uno; se arrastra en la grilla y la ✕ lo quita. Quedan en `points`, y
+  «Recorrido automático» los borra.
+- **Remate:** en cada borne asoma el casquillo del terminal. Si dos o más
+  cables comparten borne (puente), entran juntos en un casquillo doble.
 - **Color:** cada cable tiene el suyo (`color`, de la paleta IEC). Al
   crearlo se elige según el polo del borne: L+ rojo, M azul, L marrón,
   N celeste; el mando en negro. Con la simulación en marcha, los cables en

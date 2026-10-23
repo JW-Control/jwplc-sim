@@ -1040,11 +1040,7 @@ button.io.on {
 .dev {
   cursor: move;
 }
-.dev .dev-box {
-  fill: #1d2228;
-  stroke: #3b4450;
-  stroke-width: 1.5;
-}
+/* El relleno y el contorno los da cada símbolo (scene-symbols.js). */
 .dev.selected .dev-box,
 .dev.selected > svg {
   stroke: var(--accent);
@@ -1090,16 +1086,13 @@ button.io.on {
   cursor: crosshair;
 }
 .term circle {
-  fill: #c9a227;
-  stroke: #14171b;
-  stroke-width: 1.5;
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
 }
 .term:hover circle {
-  fill: var(--accent);
-}
-.term text {
-  font-size: 9px;
-  fill: #c9d1da;
+  stroke: var(--accent);
+  fill: rgba(47, 140, 255, 0.25);
 }
 .board-leds .led {
   fill: #2a2f36;
@@ -1132,10 +1125,32 @@ button.io.on {
   transform: translate(-0.8px, -0.8px);
   pointer-events: none;
 }
-.wire .wire-ferrule {
-  stroke: #c2372b;
-  stroke-width: 7;
-  stroke-linecap: butt;
+.ferrule {
+  stroke: #15171a;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.ferrule-tip {
+  pointer-events: none;
+}
+.wire-handle {
+  fill: #2f8cff;
+  stroke: #fff;
+  stroke-width: 1.5;
+  cursor: move;
+}
+.wire-del {
+  cursor: pointer;
+}
+.wire-del circle {
+  fill: #fff;
+  stroke: #d63031;
+  stroke-width: 1.5;
+}
+.wire-del path {
+  stroke: #d63031;
+  stroke-width: 1.6;
+  stroke-linecap: round;
 }
 /* Cable con tensión (L+ o L de una fuente en servicio): brilla. */
 .wire .wire-glow {
@@ -1188,4 +1203,56 @@ button.io.on {
 .term.on-board:hover circle {
   stroke: var(--accent);
   fill: rgba(47, 140, 255, 0.25);
+}
+
+/* Símbolos de los dispositivos (scene-symbols.js). */
+.dev text.sym-term {
+  fill: #1b1e22;
+  font-size: 8.5px;
+  font-weight: 700;
+}
+.dev text.sym-term.light,
+.dev text.sym-tag.light,
+.dev text.sym-big.light {
+  fill: #e6e8eb;
+}
+.dev text.sym-tag {
+  fill: #2b2f35;
+  font-size: 8.5px;
+  font-weight: 600;
+}
+.dev text.sym-big {
+  fill: #1b1e22;
+  font-size: 13px;
+  font-weight: 800;
+}
+.dev text.sym-brand {
+  fill: #2f62d6;
+  font-size: 8px;
+  font-weight: 800;
+  text-anchor: start;
+}
+.dev text.sym-dial {
+  fill: #e6e8eb;
+  font-size: 8px;
+  font-weight: 700;
+}
+.dev text.sym-bad {
+  fill: #ff3b30;
+  font-size: 10px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 2px;
+}
+.dev .spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.dev text.sym-sub {
+  fill: #59606a;
+  font-size: 6px;
+  font-weight: 700;
 }

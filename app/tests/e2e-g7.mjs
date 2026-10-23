@@ -155,13 +155,34 @@ try {
   await clickAt(await t((i) => window.jwsimTest.scene.wirePoint(i), idx));
   await win.keyboard.press("Delete");
   const warned = await until(async () => (await snap())?.findings.some((f) => f.load === `${h}.lamp`), 3000);
+  // Puntos de doblez: clic en el cable seleccionado agrega uno y se arrastra;
+  // la ✕ lo quita y vuelve el recorrido automático.
+  const wi = await t((id) => window.jwsimTest.scene.spec().wiring.findIndex((w) => w.from === `${id}.X1`), h);
+  const mp = await t((i) => window.jwsimTest.scene.wirePoint(i), wi);
+  await clickAt(mp);
+  await win.mouse.move(mp.x, mp.y);
+  await win.mouse.down();
+  await win.mouse.move(mp.x - 30, mp.y + 30, { steps: 6 });
+  await win.mouse.up();
+  const bent = await t((i) => window.jwsimTest.scene.spec().wiring[i].points ?? [], wi);
+  const del = await win.$$(".wire-del");
+  for (let k = 0; k < bent.length && del.length; k++) {
+    const d = (await win.$$(".wire-del"))[0];
+    if (!d) break;
+    const bb = await d.boundingBox();
+    await clickAt({ x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 });
+  }
+  const cleared = await t((i) => !window.jwsimTest.scene.spec().wiring[i].points, wi);
+  log(`doblez: ${JSON.stringify(bent)}; quitado: ${cleared}`);
   await win.screenshot({ path: join(OUT, "escena-edicion.png") });
   await t(() => window.jwsimTest.saveProject());
   await win.waitForTimeout(500);
   const saved = JSON.parse(readFileSync(projFile, "utf8")).scene;
   const savedOk = saved.devices.some((d) => d.id === h) && saved.wiring.some((w) => w.from === `${h}.X1` && w.to === "PS1.L+") && saved.devices.find((d) => d.id === "KM1").x === after;
   criteria.SCENE_EDIT = {
-    ok: wired === 28 && !!lit && after - before >= 50 && !!warned && savedOk,
+    ok: wired === 28 && !!lit && after - before >= 50 && !!warned && savedOk && bent.length > 0 && cleared,
+    bend_points: bent.length,
+    bend_cleared: cleared,
     lamp: h,
     wires_after_two_clicks_pairs: wired,
     lit: !!lit,

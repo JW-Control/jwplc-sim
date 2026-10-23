@@ -1,5 +1,5 @@
 {
   "key": "jwcontrol-index-2026",
   "algorithm": "ed25519",
-  "signature": "iI+lNVWHkx51mJtbZhZ8a/OOpocc8Ug5tEcY7hlF48A1F09RVCDK0P6sKj0w5alR0Wc/0ihO/AW6pBM3t5GWAQ=="
+  "signature": "8+UqLfOe4UN5uM3NP3UwX8Z622dbCAKIguXCQD+9e3soqu4MZfGI2DyeX3lYOgBbV46PahL58sobHRnWTpTYCQ=="
 }
