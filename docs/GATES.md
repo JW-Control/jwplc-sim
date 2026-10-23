@@ -60,7 +60,7 @@ JWSIM_G7_DEVICE_LIBRARY=PASS        (16 dispositivos, 19 pruebas de comportamien
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)
 JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)
 JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
-                                    (G7: Linux; Windows con .github/workflows/g7.yml; escena en la app: E2E PASS)
+                                    (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
 JWSIM_G8_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
