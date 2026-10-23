@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 JW Control
+  SPDX-License-Identifier: CC-BY-SA-4.0
+
+  JWPLC Basic, vista frontal (redibujado del render de JW Control).
+  Coordenadas del render original (1440 × 1080 px); el viewBox recorta la placa.
+
+  Partes con identificador, para usarlas desde la app o la escena:
+    #tft            área de la pantalla ST7789 (320 × 170, apaisada): la app
+                    dibuja encima el framebuffer simulado
+    #btn-up …       teclas BTN_UP, BTN_LEFT, BTN_RIGHT, BTN_DOWN, BTN_ESC, BTN_OK
+    #rj45, #usb     conectores
+    .borne          cada tornillo de bornera: data-bloque (sup-a, sup-b, med,
+                    inf-1 … inf-8) y data-pos (1 = izquierda). La asignación de
+                    señales (alimentación, I0.x, Q0.x, RS-485) la confirma
+                    JW Control.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="240 20 970 1065" width="970" height="1065" role="img" aria-label="JWPLC Basic">
+  <defs>
+    <linearGradient id="caja" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#424245"/>
+      <stop offset="1" stop-color="#36363a"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2c2f"/>
+      <stop offset="1" stop-color="#343437"/>
+    </linearGradient>
+    <linearGradient id="verde" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fd35f"/>
+      <stop offset="1" stop-color="#36b336"/>
+    </linearGradient>
+    <linearGradient id="tecla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3a3d"/>
+      <stop offset="1" stop-color="#1f1f21"/>
+    </linearGradient>
+    <radialGradient id="tornillo" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#e9ecef"/>
+      <stop offset="1" stop-color="#9aa0a6"/>
+    </radialGradient>
+    <!-- Tornillo de bornera (centro en 0,0). -->
+    <g id="tornillo-borne">
+      <circle r="15" fill="#2f8f2f"/>
+      <circle r="12.5" fill="url(#tornillo)" stroke="#6b7076" stroke-width="1.5"/>
+      <line x1="-8" y1="6" x2="8" y2="-6" stroke="#5c6166" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <!-- Agujero de montaje. -->
+    <g id="agujero">
+      <circle r="21" fill="#2e2e31"/>
+      <circle r="13" fill="#111"/>
+    </g>
+  </defs>
+
+  <!-- Borneras superiores (detrás de la caja). -->
+  <g id="bornera-sup">
+    <rect x="605" y="34" width="83" height="56" rx="3" fill="url(#verde)"/>
+    <rect x="710" y="34" width="375" height="56" rx="3" fill="url(#verde)"/>
+    <g class="borne" data-bloque="sup-a" data-pos="1"><use href="#tornillo-borne" x="626" y="72"/></g>
+    <g class="borne" data-bloque="sup-a" data-pos="2"><use href="#tornillo-borne" x="667" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="1"><use href="#tornillo-borne" x="731" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="2"><use href="#tornillo-borne" x="772" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="3"><use href="#tornillo-borne" x="813" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="4"><use href="#tornillo-borne" x="855" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="5"><use href="#tornillo-borne" x="896" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="6"><use href="#tornillo-borne" x="938" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="7"><use href="#tornillo-borne" x="979" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="8"><use href="#tornillo-borne" x="1021" y="72"/></g>
+    <g class="borne" data-bloque="sup-b" data-pos="9"><use href="#tornillo-borne" x="1062" y="72"/></g>
+  </g>
+
+  <!-- Borneras inferiores: 8 bloques de 2. -->
+  <g id="bornera-inf">
+    <rect x="365" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="454" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="543" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="632" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="721" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="810" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="899" y="972" width="85" height="76" rx="3" fill="url(#verde)"/>
+    <rect x="988" y="972" width="94" height="76" rx="3" fill="url(#verde)"/>
+    <g class="borne" data-bloque="inf-1" data-pos="1"><use href="#tornillo-borne" x="386" y="1012"/></g>
+    <g class="borne" data-bloque="inf-1" data-pos="2"><use href="#tornillo-borne" x="427" y="1012"/></g>
+    <g class="borne" data-bloque="inf-2" data-pos="1"><use href="#tornillo-borne" x="475" y="1012"/></g>
+    <g class="borne" data-bloque="inf-2" data-pos="2"><use href="#tornillo-borne" x="516" y="1012"/></g>
+    <g class="borne" data-bloque="inf-3" data-pos="1"><use href="#tornillo-borne" x="564" y="1012"/></g>
+    <g class="borne" data-bloque="inf-3" data-pos="2"><use href="#tornillo-borne" x="605" y="1012"/></g>
+    <g class="borne" data-bloque="inf-4" data-pos="1"><use href="#tornillo-borne" x="653" y="1012"/></g>
+    <g class="borne" data-bloque="inf-4" data-pos="2"><use href="#tornillo-borne" x="694" y="1012"/></g>
+    <g class="borne" data-bloque="inf-5" data-pos="1"><use href="#tornillo-borne" x="742" y="1012"/></g>
+    <g class="borne" data-bloque="inf-5" data-pos="2"><use href="#tornillo-borne" x="783" y="1012"/></g>
+    <g class="borne" data-bloque="inf-6" data-pos="1"><use href="#tornillo-borne" x="831" y="1012"/></g>
+    <g class="borne" data-bloque="inf-6" data-pos="2"><use href="#tornillo-borne" x="872" y="1012"/></g>
+    <g class="borne" data-bloque="inf-7" data-pos="1"><use href="#tornillo-borne" x="920" y="1012"/></g>
+    <g class="borne" data-bloque="inf-7" data-pos="2"><use href="#tornillo-borne" x="961" y="1012"/></g>
+    <g class="borne" data-bloque="inf-8" data-pos="1"><use href="#tornillo-borne" x="1013" y="1012"/></g>
+    <g class="borne" data-bloque="inf-8" data-pos="2"><use href="#tornillo-borne" x="1059" y="1012"/></g>
+  </g>
+
+  <!-- Base (cuerpo inferior). -->
+  <rect x="278" y="720" width="893" height="256" rx="12" fill="url(#base)" stroke="#232325" stroke-width="2"/>
+  <use href="#agujero" x="318" y="935"/>
+  <use href="#agujero" x="1130" y="935"/>
+
+  <!-- Bornera intermedia (4). -->
+  <g id="bornera-med">
+    <rect x="740" y="742" width="165" height="80" rx="3" fill="url(#verde)"/>
+    <g class="borne" data-bloque="med" data-pos="1"><use href="#tornillo-borne" x="761" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="2"><use href="#tornillo-borne" x="802" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="3"><use href="#tornillo-borne" x="843" y="784"/></g>
+    <g class="borne" data-bloque="med" data-pos="4"><use href="#tornillo-borne" x="884" y="784"/></g>
+  </g>
+
+  <!-- RJ45 con su cable. -->
+  <g id="rj45">
+    <rect x="408" y="742" width="102" height="58" fill="#d7d9ee" stroke="#a9acc8" stroke-width="2"/>
+    <rect x="420" y="742" width="78" height="10" fill="#b9bcd8"/>
+    <path d="M412 800 H506 L496 918 H422 Z" fill="#b7aea3" stroke="#958b80" stroke-width="2"/>
+  </g>
+
+  <!-- USB-C con su cable. -->
+  <g id="usb">
+    <rect x="985" y="742" width="80" height="120" rx="4" fill="#1b1b1d" stroke="#000" stroke-width="2"/>
+    <rect x="1010" y="862" width="30" height="40" fill="#141416"/>
+    <path d="M1018 902 V1072" stroke="#141416" stroke-width="22" stroke-linecap="round"/>
+  </g>
+
+  <!-- Caja principal. -->
+  <rect x="255" y="85" width="940" height="655" rx="14" fill="url(#caja)" stroke="#262628" stroke-width="2"/>
+  <use href="#agujero" x="295" y="125"/>
+  <use href="#agujero" x="1153" y="125"/>
+  <use href="#agujero" x="295" y="698"/>
+  <use href="#agujero" x="1153" y="698"/>
+
+  <text x="345" y="180" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="68" fill="#ececec" letter-spacing="1">BASIC</text>
+
+  <!-- Pantalla: marco y área de la TFT (la app la reemplaza por la imagen viva). -->
+  <rect x="350" y="236" width="404" height="227" rx="4" fill="#1a1a1c" stroke="#4a4a4d" stroke-width="3"/>
+  <rect id="tft" x="356" y="242" width="392" height="208.5" fill="#000"/>
+
+  <!-- Botonera. -->
+  <g id="botonera" font-family="'Arial Black', Arial, sans-serif">
+    <g id="btn-up" class="tecla" data-btn="BTN_UP">
+      <rect x="968" y="233" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
+      <path d="M1000 247 L1021 283 H979 Z" fill="#f2f2f2"/>
+    </g>
+    <g id="btn-left" class="tecla" data-btn="BTN_LEFT">
+      <rect x="863" y="314" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
+      <path d="M877 346 L913 325 V367 Z" fill="#f2f2f2"/>
+    </g>
+    <g id="btn-right" class="tecla" data-btn="BTN_RIGHT">
+      <rect x="1072" y="314" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
+      <path d="M1123 346 L1087 325 V367 Z" fill="#f2f2f2"/>
+    </g>
+    <g id="btn-down" class="tecla" data-btn="BTN_DOWN">
+      <rect x="968" y="395" width="65" height="65" rx="8" fill="url(#tecla)" stroke="#0e0e0f" stroke-width="3"/>
+      <path d="M1000 446 L1021 410 H979 Z" fill="#f2f2f2"/>
+    </g>
+    <g id="btn-esc" class="tecla" data-btn="BTN_ESC">
+      <rect x="863" y="476" width="65" height="65" rx="8" fill="#e8262d" stroke="#7a0f12" stroke-width="3"/>
+      <path d="M879 492 L912 525 M912 492 L879 525" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <g id="btn-ok" class="tecla" data-btn="BTN_OK">
+      <rect x="1072" y="476" width="65" height="65" rx="8" fill="#38c13b" stroke="#16661a" stroke-width="3"/>
+      <text x="1104.5" y="522" text-anchor="middle" font-size="31" font-weight="900" fill="#fff">OK</text>
+    </g>
+  </g>
+
+  <!-- Rejilla del zumbador. -->
+  <g id="zumbador">
+    <circle cx="998" cy="535" r="47" fill="#2f2f32"/>
+    <g fill="#141416">
+      <rect x="968" y="509" width="11" height="11"/><rect x="985" y="505" width="11" height="11"/><rect x="1002" y="505" width="11" height="11"/><rect x="1019" y="509" width="11" height="11"/>
+      <rect x="960" y="526" width="11" height="11"/><rect x="977" y="526" width="11" height="11"/><rect x="994" y="526" width="11" height="11"/><rect x="1011" y="526" width="11" height="11"/><rect x="1028" y="526" width="11" height="11"/>
+      <rect x="968" y="543" width="11" height="11"/><rect x="985" y="547" width="11" height="11"/><rect x="1002" y="547" width="11" height="11"/><rect x="1019" y="543" width="11" height="11"/>
+      <rect x="985" y="564" width="11" height="9"/><rect x="1002" y="564" width="11" height="9"/>
+    </g>
+  </g>
+
+  <!-- Logotipo JW CONTROL. -->
+  <g id="logo">
+    <!-- J a toda altura; W más baja, con CONTROL debajo. -->
+    <path d="M435 531 H473 V632 Q473 672 432 672 H372 Q330 672 330 630 V609 H382 V625 Q382 631 389 631 H425 Q435 631 435 621 Z" fill="#ececec"/>
+    <path d="M470 531 H514 L533 600 L553 531 H585 L605 600 L624 531 H656 L624 634 H587 L569 571 L551 634 H514 Z" fill="#ececec"/>
+    <text x="473" y="673" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="38" fill="#ececec" textLength="335" lengthAdjust="spacing">CONTROL</text>
+    <!-- Diodo emisor estilizado. -->
+    <g stroke="#3ec83f" stroke-width="7" fill="none" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M668 597 H786"/>
+      <path d="M700 553 V634 L756 597 Z"/>
+      <path d="M756 556 V638"/>
+      <path d="M714 549 L734 528 M728 556 L748 535"/>
+    </g>
+    <g fill="#3ec83f">
+      <path d="M738 522 L742 534 L729 531 Z"/>
+      <path d="M752 529 L756 541 L743 538 Z"/>
+    </g>
+  </g>
+</svg>
