@@ -1,11 +1,27 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Esclavo ID 1 a 9600 8N1 con HR0 = entradas I0_x y HR1 = salidas Q0_x (actualizadas cada 50 ms). Con I0_0 e I0_2 activas se lee HR0 (FC03, la respuesta empieza con 01 03 02); escribir HR1 = 0xA5 (FC06) enciende Q0_0, Q0_2, Q0_5 y Q0_7 en menos de 50 ms y escribir HR1 = 0 las apaga.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Tool_Test",
-  "until_ms": 8000,
+  "until_ms": 5000,
+  "stim": [
+    "2000 I0_0=1",
+    "2000 I0_2=1",
+    "2500 uart2 \"\\x01\\x03\\x00\\x00\\x00\\x01\\x84\\x0A\"",
+    "3000 uart2 \"\\x01\\x06\\x00\\x01\\x00\\xA5\\x18\\x71\"",
+    "4000 uart2 \"\\x01\\x06\\x00\\x01\\x00\\x00\\xD8\\x0A\""
+  ],
   "expect": {
     "console": [
-      "^Iniciando PLC como Esclavo Modbus\\.\\.\\.",
-      "^Esclavo Modbus ID -?\\d+(?:\\.\\d+)? listo en -?\\d+(?:\\.\\d+)? baudios\\."
+      "^Iniciando PLC como Esclavo Modbus\\.\\.\\.$",
+      "^Esclavo Modbus ID 1 listo en 9600 baudios\\.$",
+      { "match": "^\\u0001\\u0003\\u0002", "port": 2, "count": 1 }
+    ],
+    "console_absent": ["^Error al iniciar Modbus RTU"],
+    "signals": [
+      { "at_ms": 2900, "DI": "0b00000101", "DO": "0b00000000" },
+      { "at_ms": 3100, "DO": "0b10100101", "Q0_0": 1, "Q0_7": 1 },
+      { "at_ms": 3900, "DO": "0b10100101" },
+      { "at_ms": 4100, "DO": "0b00000000" }
     ]
   }
 }

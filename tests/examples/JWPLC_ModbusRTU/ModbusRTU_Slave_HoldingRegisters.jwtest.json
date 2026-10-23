@@ -1,12 +1,27 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Esclavo por defecto (ID 1, 19200 8E1, HR0..HR15 = 1000+i, HR0 = segundos). Un maestro simulado por UART2 lee HR1..HR3 (FC03: la respuesta 01 03 06 03 E9 03 EA 03 EB 1D 9E sale por RS-485; RX=1 TX=1), escribe HR1..HR2 = 5555, 6666 (FC16: el sketch muestra HR1: 5555) y lee la dirección 0x20 fuera del mapa (responde excepción: TX=3, Last: Modbus exception). La consola decodifica UART2 como UTF-8 y corta en el primer byte 00.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Slave_HoldingRegisters",
-  "until_ms": 8000,
+  "until_ms": 5600,
+  "stim": [
+    "2500 uart2 \"\\x01\\x03\\x00\\x01\\x00\\x03\\x54\\x0B\"",
+    "3500 uart2 \"\\x01\\x10\\x00\\x01\\x00\\x02\\x04\\x15\\xB3\\x1A\\x0A\\x4C\\xEF\"",
+    "4500 uart2 \"\\x01\\x03\\x00\\x20\\x00\\x01\\x85\\xC0\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Modbus RTU slave holding registers",
-      "^Modbus RTU ready: yes",
-      "^Slave ID: -?\\d+(?:\\.\\d+)?"
-    ]
+      "^JWPLC Modbus RTU slave holding registers$",
+      "^Slave ID: 1$",
+      "^Baud: 19200$",
+      "^Config: SERIAL_8E1$",
+      "^Holding registers: 16$",
+      "^Slave ready\\.$",
+      { "match": "^HR0: 2 \\| HR1: 1001 \\| RX: 0 \\| TX: 0 \\| CRC errors: 0 \\| Last: OK$", "count": 1, "before_ms": 2500 },
+      { "match": "^HR0: 3 \\| HR1: 1001 \\| RX: 1 \\| TX: 1 \\| CRC errors: 0 \\| Last: OK$", "count": 1, "after_ms": 2500, "before_ms": 3500 },
+      { "match": "^HR0: 4 \\| HR1: 5555 \\| RX: 2 \\| TX: 2 \\| CRC errors: 0 \\| Last: OK$", "count": 1, "after_ms": 3500, "before_ms": 4500 },
+      { "match": "^HR0: 5 \\| HR1: 5555 \\| RX: 3 \\| TX: 3 \\| CRC errors: 0 \\| Last: Modbus exception$", "count": 1, "after_ms": 4500 },
+      { "match": "^\\u0001\\u0003\\u0006\\u0003\\uFFFD\\u0003\\uFFFD\\u0003\\uFFFD\\u001D\\uFFFD\\u0001\\u0010", "port": 2, "count": 1 }
+    ],
+    "console_absent": ["begin failed"]
   }
 }
