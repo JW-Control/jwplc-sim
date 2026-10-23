@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Buzzer integrado (GPIO26, LEDC): OK pitido, UP melodía, DOWN melodía en bucle, ESC detener; RIGHT/RIGHT/LEFT cambian el volumen 32 → 48 → 64 → 48 (lo único que el ejemplo informa por consola). El simulador aún no expone el sonido como señal: se verifica que todas las teclas corren sin falla y el volumen informado.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/07.Buzzer_Basic",
+  "until_ms": 6000,
+  "stim": [
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "1900 BTN_UP=1", "2000 BTN_UP=0",
+    "2600 BTN_DOWN=1", "2700 BTN_DOWN=0",
+    "3600 BTN_ESC=1", "3700 BTN_ESC=0",
+    "4000 BTN_RIGHT=1", "4100 BTN_RIGHT=0",
+    "4400 BTN_RIGHT=1", "4500 BTN_RIGHT=0",
+    "4800 BTN_LEFT=1", "4900 BTN_LEFT=0"
+  ],
+  "expect": {
+    "console": [
+      { "match": "^Volumen: 48$", "count": 2 },
+      { "match": "^Volumen: 64$", "count": 1, "after_ms": 4400, "before_ms": 4800 },
+      { "match": "^Volumen: \\d+$", "count": 3 }
+    ],
+    "result": { "stop": "time" }
+  }
+}

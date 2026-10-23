@@ -1,0 +1,314 @@
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT/Ethernet_Continuous_Stress_TFT.ino b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT/Ethernet_Continuous_Stress_TFT.ino
+index 9162a5ef..97e0546f 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT/Ethernet_Continuous_Stress_TFT.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT/Ethernet_Continuous_Stress_TFT.ino
+@@ -465,6 +465,11 @@ void incrementError(StressError error)
+ // -----------------------------------------------------------------------------
+ // SPI, alarma y fecha.
+ // -----------------------------------------------------------------------------
++// Solo para leer el estado (hardware, enlace, IP) sin que la TFT se
++// intercale. Las operaciones de socket (DNS, connect, envio y recepcion) NO
++// se envuelven: EthernetClient y DNSClient toman el bus en cada operacion y no
++// heredan un jwplcSPI_acquire() hecho fuera de la libreria (no es recursivo),
++// asi que fallarian siempre.
+ bool lockEthernet(uint32_t timeoutMs)
+ {
+   if (!jwplcSPI_acquire(timeoutMs))
+@@ -837,8 +842,6 @@ bool probeTcp(IPAddress ip, uint16_t port, uint32_t &latency)
+   latency = 0;
+   if (!isValidIP(ip))
+     return false;
+-  if (!lockEthernet(1000))
+-    return false;
+ 
+   probeClient.stop();
+   probeClient.setConnectionTimeout(TCP_CONNECT_TIMEOUT_MS);
+@@ -846,7 +849,6 @@ bool probeTcp(IPAddress ip, uint16_t port, uint32_t &latency)
+   bool connected = probeClient.connect(ip, port) == 1;
+   latency = millis() - started;
+   probeClient.stop();
+-  unlockEthernet();
+   return connected;
+ }
+ 
+@@ -1021,12 +1023,6 @@ StressError resolveTarget(IPAddress &remoteIp, char *detail, size_t detailSize)
+     return STRESS_OK;
+   }
+ 
+-  if (!lockEthernet(1000))
+-  {
+-    copyText(detail, detailSize, "Timeout SPI antes de DNS");
+-    return STRESS_ERR_SPI_LOCK;
+-  }
+-
+   IPAddress dnsServer = Ethernet.dnsServerIP();
+   formatIP(dnsServer, dnsServerText, sizeof(dnsServerText));
+   dnsClient.begin(dnsServer);
+@@ -1036,7 +1032,6 @@ StressError resolveTarget(IPAddress &remoteIp, char *detail, size_t detailSize)
+       STRESS_HOST, remoteIp, DNS_STEP_TIMEOUT_MS);
+   lastDnsResult = normalizeDnsResult(rawDnsResult);
+   lastDnsMs = millis() - started;
+-  unlockEthernet();
+ 
+   if (lastDnsResult != 1 || !isValidIP(remoteIp))
+   {
+@@ -1079,12 +1074,6 @@ StressError executeHttpTransaction(
+   lastFirstByteMs = 0;
+   lastHttpMs = 0;
+ 
+-  if (!lockEthernet(1000))
+-  {
+-    copyText(detail, detailSize, "Timeout SPI antes de TCP connect");
+-    return STRESS_ERR_SPI_LOCK;
+-  }
+-
+   stressClient.stop();
+   stressClient.setConnectionTimeout(TCP_CONNECT_TIMEOUT_MS);
+ 
+@@ -1096,7 +1085,6 @@ StressError executeHttpTransaction(
+   if (!connected)
+   {
+     stressClient.stop();
+-    unlockEthernet();
+     lastHttpMs = millis() - totalStarted;
+     snprintf(detail, detailSize,
+              "TCP connect fallo a %s:%u en %lums",
+@@ -1138,7 +1126,6 @@ StressError executeHttpTransaction(
+ 
+   timedOut = stressClient.connected() || stressClient.available() > 0;
+   stressClient.stop();
+-  unlockEthernet();
+ 
+   lastHttpMs = millis() - totalStarted;
+   response[stored] = '\0';
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/Ethernet_HTTP_TFT_Diagnostics.ino b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/Ethernet_HTTP_TFT_Diagnostics.ino
+index 4ff5aaea..b2759e64 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/Ethernet_HTTP_TFT_Diagnostics.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/Ethernet_HTTP_TFT_Diagnostics.ino
+@@ -133,19 +133,6 @@ const char *buttonName(uint8_t id)
+   }
+ }
+ 
+-bool lockEthernet(uint32_t timeoutMs)
+-{
+-  if (!jwplcSPI_acquire(timeoutMs))
+-    return false;
+-  jwplcSPI_deselectAll();
+-  return true;
+-}
+-
+-void unlockEthernet()
+-{
+-  jwplcSPI_release();
+-}
+-
+ bool saveData()
+ {
+   const size_t total = sizeof(JW_FRAM::BlockHeader) + sizeof(DiagnosticData);
+@@ -406,9 +393,10 @@ void runHttpTest()
+   size_t stored = 0;
+   bool connected = false;
+   bool received = false;
+-  bool busLocked = lockEthernet(1000);
+-
+-  if (busLocked)
++  // EthernetClient toma el bus SPI en cada operacion (acceso seguro al W5500).
++  // No se envuelve la transaccion con jwplcSPI_acquire(): ese mutex no es
++  // recursivo y la libreria no hereda un bloqueo tomado fuera de ella, asi
++  // que DNS y connect fallarian siempre.
+   {
+     connected = httpClient.connect(HTTP_HOST, HTTP_PORT) == 1;
+     if (connected)
+@@ -440,14 +428,11 @@ void runHttpTest()
+       }
+       httpClient.stop();
+     }
+-    unlockEthernet();
+   }
+ 
+   response[stored] = '\0';
+ 
+-  if (!busLocked)
+-    copyText(httpState, sizeof(httpState), "SPI LOCK TIMEOUT");
+-  else if (!connected)
++  if (!connected)
+     copyText(httpState, sizeof(httpState), "FALLO CONNECT/DNS");
+   else if (!received)
+     copyText(httpState, sizeof(httpState), "SIN RESPUESTA HTTP");
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/README.md b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/README.md
+index ee098d9b..d3e8b515 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/README.md
++++ b/JWPLC/2.1.0/libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics/README.md
+@@ -113,7 +113,7 @@ Por tanto, un resultado `HTTP 200 OK` no apaga una falla independiente de FRAM o
+ 
+ ## Consideraciones SPI
+ 
+-El W5500 comparte SPI con TFT, FRAM y microSD. La consulta realizada con `EthernetClient` toma el mutex SPI global del JWPLC durante la transacción. Por ello, la TFT puede dejar de refrescar brevemente mientras se espera la respuesta HTTP; al terminar solo se actualizan las filas relacionadas con el resultado.
++El W5500 comparte SPI con TFT, FRAM y microSD. `EthernetClient` y `DNSClient` toman el bus SPI en cada operación (acceso seguro al W5500 de `JWPLC_Ethernet`), así que el sketch **no** envuelve la consulta con `jwplcSPI_acquire()`: ese mutex no es recursivo y la librería no hereda un bloqueo tomado fuera de ella, por lo que DNS y `connect()` fallarían siempre ("FALLO CONNECT/DNS"). Entre operaciones la TFT puede seguir refrescando; al terminar solo se actualizan las filas relacionadas con el resultado.
+ 
+ Los callbacks gráficos no consultan Ethernet, RTC ni FRAM directamente: solo dibujan valores cacheados por `loop()`.
+ 
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy.ino b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy.ino
+index 0436134a..f271a244 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy.ino
+@@ -548,8 +548,10 @@ void setup()
+ 
+   const JWPLCLogicStorageBootState bothInvalidState =
+       runtime.storage().prepareBoot();
+-  expect("politica mantiene estado seguro UNFORMATTED",
+-         bothInvalidState == JWPLCLogicStorageBootState::Unformatted);
++  // Las copias conservan la firma JWPLC: prepareBoot() informa metadata
++  // corrupta (no "sin formato"), igual que Storage_Metadata_Diagnostic.
++  expect("politica mantiene estado seguro CORRUPT_METADATA",
++         bothInvalidState == JWPLCLogicStorageBootState::CorruptMetadata);
+   expect("ambas copias invalidas descargan el programa",
+          !runtime.storage().hasLoadedProgram());
+   expect("ambas copias invalidas no ofrecen programa arrancable",
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Adapter_RAM/JWPLC_LogicRuntime_V1_V2_Adapter_RAM.ino b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Adapter_RAM/JWPLC_LogicRuntime_V1_V2_Adapter_RAM.ino
+index 7a012b91..bb13ddc0 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Adapter_RAM/JWPLC_LogicRuntime_V1_V2_Adapter_RAM.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Adapter_RAM/JWPLC_LogicRuntime_V1_V2_Adapter_RAM.ino
+@@ -257,11 +257,14 @@ void setup()
+                            JWPLC_LOGIC_NO_SOURCE,
+                            0,
+                            1000);
+-  expect("TON queda pendiente de fase posterior",
+-         !LogicV1ToV2Adapter::requiredLinkCount(
++  // El adaptador ya convierte TON (fase TON integrada, ver V1_V2_Ton_RAM).
++  expect("TON ya es aceptado con un enlace",
++         LogicV1ToV2Adapter::requiredLinkCount(
+              outputProgram,
+              requiredLinks,
+-             adapterError));
++             adapterError) &&
++             requiredLinks == 1 &&
++             adapterError == LogicV1ToV2AdapterError::None);
+ 
+   outputBlocks[0] =
+       LogicBlockDefinition(LogicBlockType::DigitalInput,
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM/JWPLC_LogicRuntime_V2_Engine_RAM.ino b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM/JWPLC_LogicRuntime_V2_Engine_RAM.ino
+index f5293e32..fc5f52aa 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM/JWPLC_LogicRuntime_V2_Engine_RAM.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM/JWPLC_LogicRuntime_V2_Engine_RAM.ino
+@@ -4,10 +4,14 @@
+ 
+ static constexpr uint16_t DEMO_BLOCK_COUNT = 16;
+ static constexpr uint16_t DEMO_LINK_COUNT = 33;
++// Arreglos del motor: bloques, enlaces, valores y, para TON, el estado de
++// temporizacion y el instante de inicio de cada bloque.
+ static constexpr size_t MIN_ENGINE_STORAGE_BYTES =
+     (JWPLC_LOGIC_V2_COMPILED_MAX_BLOCKS * sizeof(LogicV2BlockRecord)) +
+     (JWPLC_LOGIC_V2_COMPILED_MAX_LINKS * sizeof(LogicV2InputLink)) +
+-    (JWPLC_LOGIC_V2_COMPILED_MAX_BLOCKS * sizeof(bool));
++    (JWPLC_LOGIC_V2_COMPILED_MAX_BLOCKS * sizeof(bool)) +
++    (JWPLC_LOGIC_V2_COMPILED_MAX_BLOCKS * sizeof(bool)) +
++    (JWPLC_LOGIC_V2_COMPILED_MAX_BLOCKS * sizeof(uint32_t));
+ 
+ static LogicV2EnginePrototype engine;
+ static uint16_t passedTests = 0;
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Blocks/JWPLC_LogicRuntime_UI_Blocks.ino b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Blocks/JWPLC_LogicRuntime_UI_Blocks.ino
+index 0aa78f62..6d0eec1e 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Blocks/JWPLC_LogicRuntime_UI_Blocks.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Blocks/JWPLC_LogicRuntime_UI_Blocks.ino
+@@ -75,6 +75,8 @@ void setup()
+       runtime.begin(JWPLCLogicStorageProfiles::FRAM_8K.framBytes);
+   const bool programOk = runtimeOk && runtime.loadProgram(DEMO_PROGRAM);
+   const bool startOk = programOk && runtime.start();
++  // Desde Alpha8 la IDLE no despierta con botones salvo que se pida.
++  JWPLC_Display.setIdleWakeMode(IDLE_WAKE_ANY_BUTTON);
+   const bool uiOk = JWPLC_LogicRuntime_UI.begin(runtime);
+ 
+   Serial.print("Storage: ");
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Home/JWPLC_LogicRuntime_UI_Home.ino b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Home/JWPLC_LogicRuntime_UI_Home.ino
+index 70ca868b..af248912 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Home/JWPLC_LogicRuntime_UI_Home.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Home/JWPLC_LogicRuntime_UI_Home.ino
+@@ -17,6 +17,8 @@ void setup()
+   const bool storageOk = runtime.storage().begin(JWPLC_FRAM);
+   const bool runtimeOk =
+       runtime.begin(JWPLCLogicStorageProfiles::FRAM_8K.framBytes);
++  // Desde Alpha8 la IDLE no despierta con botones salvo que se pida.
++  JWPLC_Display.setIdleWakeMode(IDLE_WAKE_ANY_BUTTON);
+   const bool uiOk = JWPLC_LogicRuntime_UI.begin(runtime);
+ 
+   Serial.print("Storage: ");
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native/ModbusRTU_Master_Native.ino b/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native/ModbusRTU_Master_Native.ino
+index bd5a168b..82b339f2 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native/ModbusRTU_Master_Native.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native/ModbusRTU_Master_Native.ino
+@@ -7,6 +7,10 @@ void setup()
+ 
+     // ID local 247 solo para iniciar el stack en modo master.
+     JWPLC_ModbusRTU.begin(247, 19200, SERIAL_8E1);
++    // Este ejemplo usa la lectura bloqueante: con el motor ASYNC (default del
++    // package) readHoldingRegisters() solo inicia la transaccion y la respuesta
++    // nunca se procesaria sin task().
++    JWPLC_ModbusRTU.motor(SYNC);
+     JWPLC_ModbusRTU.printStatus(Serial);
+ }
+ 
+diff --git a/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Native/ModbusRTU_Native.ino b/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Native/ModbusRTU_Native.ino
+index bd5a168b..82b339f2 100644
+--- a/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Native/ModbusRTU_Native.ino
++++ b/JWPLC/2.1.0/libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Native/ModbusRTU_Native.ino
+@@ -7,6 +7,10 @@ void setup()
+ 
+     // ID local 247 solo para iniciar el stack en modo master.
+     JWPLC_ModbusRTU.begin(247, 19200, SERIAL_8E1);
++    // Este ejemplo usa la lectura bloqueante: con el motor ASYNC (default del
++    // package) readHoldingRegisters() solo inicia la transaccion y la respuesta
++    // nunca se procesaria sin task().
++    JWPLC_ModbusRTU.motor(SYNC);
+     JWPLC_ModbusRTU.printStatus(Serial);
+ }
+ 
+diff --git a/JWPLC/2.1.0/libraries/JW_FRAM/README.md b/JWPLC/2.1.0/libraries/JW_FRAM/README.md
+index 9e376a3c..cfcf7f41 100644
+--- a/JWPLC/2.1.0/libraries/JW_FRAM/README.md
++++ b/JWPLC/2.1.0/libraries/JW_FRAM/README.md
+@@ -55,7 +55,7 @@ depends=Adafruit BusIO
+ ```cpp
+ #include <JW_FRAM.h>
+ 
+-JW_FRAM fram(5);  // Pin CS
++JW_FRAM fram(13);  // Pin CS de la FRAM en el JWPLC Basic (GPIO5 es el CS del W5500)
+ 
+ void setup() {
+   Serial.begin(115200);
+diff --git a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Block_Config/Block_Config.ino b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Block_Config/Block_Config.ino
+index 4c047039..c859a69d 100644
+--- a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Block_Config/Block_Config.ino
++++ b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Block_Config/Block_Config.ino
+@@ -1,6 +1,6 @@
+ #include <JW_FRAM.h>
+ 
+-JW_FRAM fram(5);  // Pin CS
++JW_FRAM fram(13);  // Pin CS de la FRAM en el JWPLC Basic (GPIO5 es el CS del W5500)
+ 
+ struct SystemConfig {
+   uint8_t configVersion;
+diff --git a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Strings/Strings.ino b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Strings/Strings.ino
+index 8cc74177..42f60220 100644
+--- a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Strings/Strings.ino
++++ b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Strings/Strings.ino
+@@ -1,6 +1,6 @@
+ #include <JW_FRAM.h>
+ 
+-JW_FRAM fram(5);  // Pin CS
++JW_FRAM fram(13);  // Pin CS de la FRAM en el JWPLC Basic (GPIO5 es el CS del W5500)
+ 
+ void setup() {
+   Serial.begin(115200);
+diff --git a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Struct_Config/Struct_Config.ino b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Struct_Config/Struct_Config.ino
+index 4c23a614..96aa37ba 100644
+--- a/JWPLC/2.1.0/libraries/JW_FRAM/examples/Struct_Config/Struct_Config.ino
++++ b/JWPLC/2.1.0/libraries/JW_FRAM/examples/Struct_Config/Struct_Config.ino
+@@ -1,6 +1,6 @@
+ #include <JW_FRAM.h>
+ 
+-JW_FRAM fram(5);  // Pin CS
++JW_FRAM fram(13);  // Pin CS de la FRAM en el JWPLC Basic (GPIO5 es el CS del W5500)
+ 
+ struct PlcConfig {
+   uint8_t mode;
