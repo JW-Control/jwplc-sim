@@ -5,7 +5,7 @@
 //
 //   jwsim-cli build  <sketch_dir> [opciones de build]
 //   jwsim-cli run    <sketch_dir> [opciones de build] -- [opciones del runner]
-//   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--report <archivo>]
+//   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--report <archivo>]
 //   jwsim-cli parity [<ref>] [--package <dir>] [--update] [--report <archivo>]
 //   jwsim-cli matrix [--filter <texto>] [opciones de build] [--report <archivo>]
 //
@@ -36,7 +36,7 @@ export const EXIT = { OK: 0, FAIL: 1, USAGE: 2, BUILD: 3, SIM: 4, ENV: 5 };
 const USAGE = `uso:
   jwsim-cli build  <sketch_dir> [--target native|windows] [--out dir] [--package dir] [--json]
   jwsim-cli run    <sketch_dir> [opciones de build] [--json] -- [opciones del runner]
-  jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--json] [--report archivo]
+  jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
   jwsim-cli matrix [--filter texto] [opciones de build] [--json] [--report archivo]`;
 
@@ -67,6 +67,7 @@ function parse(argv) {
     else if (a === "--filter") opts.filter = value(++i, a);
     else if (a === "--json") opts.json = true;
     else if (a === "--update") opts.update = true;
+    else if (a === "--record") opts.record = true;
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -192,7 +193,7 @@ async function main() {
     if (!tests.length) throw new CliError(EXIT.USAGE, "no se encontraron archivos .jwtest.json");
     const results = [];
     for (const t of tests) {
-      const r = await runTest(t, { pkg, target: opts.target ?? "native", buildRoot: resolve(opts.outDir ?? join(ROOT, "build", "tests")) });
+      const r = await runTest(t, { pkg, target: opts.target ?? "native", buildRoot: resolve(opts.outDir ?? join(ROOT, "build", "tests")), record: opts.record });
       results.push(r);
       if (!opts.json) {
         const why = r.ok ? "" : ` [${r.stage}] ${r.error ?? r.runs.flatMap((x) => x.failures).join("; ")}`;

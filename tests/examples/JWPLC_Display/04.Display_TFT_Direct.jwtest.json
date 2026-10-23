@@ -1,21 +1,53 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Con RTC en hora fija: OK entra a USER (dibujo directo con la hora), ESC vuelve a IDLE, otro OK y ESC; todo sin FATAL ni salida espuria en la consola. El sketch solo imprime el banner y el runner no compara la pantalla, que se revisa con capturas.",
+  "$comment": "Con RTC en hora fija: OK entra a USER (dibujo directo con la hora), ESC vuelve a IDLE, otro OK y ESC; todo sin FATAL ni salida espuria en la consola. El sketch solo imprime el banner: la pantalla se verifica con capturas (IDLE, dibujo directo en USER con la hora, IDLE de nuevo).",
   "sketch": "package:libraries/JWPLC_Display/examples/04.Display_TFT_Direct",
   "until_ms": 7000,
-  "args": ["--rtc", "fijo:2026-01-15T08:30:00"],
+  "args": [
+    "--rtc",
+    "fijo:2026-01-15T08:30:00"
+  ],
   "stim": [
-    "1500 BTN_DOWN=1", "1600 BTN_DOWN=0",
-    "2000 BTN_OK=1", "2100 BTN_OK=0",
-    "4500 BTN_ESC=1", "4600 BTN_ESC=0",
-    "5000 BTN_OK=1", "5100 BTN_OK=0",
-    "6500 BTN_ESC=1", "6600 BTN_ESC=0"
+    "1500 BTN_DOWN=1",
+    "1600 BTN_DOWN=0",
+    "2000 BTN_OK=1",
+    "2100 BTN_OK=0",
+    "4500 BTN_ESC=1",
+    "4600 BTN_ESC=0",
+    "5000 BTN_OK=1",
+    "5100 BTN_OK=0",
+    "6500 BTN_ESC=1",
+    "6600 BTN_ESC=0"
   ],
   "expect": {
     "console": [
-      { "match": "^JWPLC Basic - TFT direct$", "count": 1 },
-      { "match": "^OK=USER \\| ESC=IDLE$", "count": 1 },
-      { "match": ".", "count": 0, "after_ms": 1200 }
+      {
+        "match": "^JWPLC Basic - TFT direct$",
+        "count": 1
+      },
+      {
+        "match": "^OK=USER \\| ESC=IDLE$",
+        "count": 1
+      },
+      {
+        "match": ".",
+        "count": 0,
+        "after_ms": 1200
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 1800,
+        "ref": "screens/04.Display_TFT_Direct_idle.png"
+      },
+      {
+        "at_ms": 3000,
+        "ref": "screens/04.Display_TFT_Direct_user.png"
+      },
+      {
+        "at_ms": 4900,
+        "ref": "screens/04.Display_TFT_Direct_idle_again.png"
+      }
     ]
   }
 }

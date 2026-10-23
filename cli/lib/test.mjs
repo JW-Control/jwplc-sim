@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
+import { decodePng, encodePng, readScreenDump } from "../../scripts/lib/png.mjs";
 import { buildSketch, ROOT } from "./build.mjs";
 import { parseResult, parseTimeline, runExeAsync } from "./runner.mjs";
 
@@ -36,7 +37,7 @@ export function resolveSketch(spec, testFile, pkg) {
 
 const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s"]);
 const TEST_KEYS = new Set(["$schema", "$comment", "name", "sketch", "runs", "state", ...RUN_KEYS]);
-const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result"]);
+const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result", "screen"]);
 
 export function loadTest(file) {
   let t;
@@ -149,9 +150,41 @@ export function evaluate(run, expect = {}) {
   return { failures, result, consoleLines: lines.length };
 }
 
+// Pantalla (ST7789) en un instante contra un PNG de referencia, píxel a
+// píxel (expect.screen: [{ at_ms, ref, max_diff }]). Con record, una
+// referencia que falta se graba con la captura.
+function compareScreens(shots, testFile, { record, work, prefix }) {
+  const failures = [];
+  shots.forEach((sc, k) => {
+    if (!existsSync(sc.dump)) {
+      failures.push(`pantalla en ${sc.at_ms} ms: el runner no la volcó`);
+      return;
+    }
+    const img = readScreenDump(readFileSync(sc.dump));
+    const ref = resolve(dirname(testFile), sc.ref);
+    if (!existsSync(ref)) {
+      if (record) {
+        mkdirSync(dirname(ref), { recursive: true });
+        writeFileSync(ref, encodePng(img));
+      } else failures.push(`pantalla en ${sc.at_ms} ms: falta la referencia ${sc.ref} (jwsim-cli test --record la graba)`);
+      return;
+    }
+    const want = decodePng(readFileSync(ref));
+    let diff = 0;
+    if (want.width !== img.width || want.height !== img.height) diff = Infinity;
+    else for (let p = 0; p < want.rgb.length; p += 3) if (want.rgb[p] !== img.rgb[p] || want.rgb[p + 1] !== img.rgb[p + 1] || want.rgb[p + 2] !== img.rgb[p + 2]) diff++;
+    if (diff > (sc.max_diff ?? 0)) {
+      const got = join(work, `${prefix}_screen${k}.png`);
+      writeFileSync(got, encodePng(img));
+      failures.push(`pantalla en ${sc.at_ms} ms: ${diff === Infinity ? "otro tamaño" : `${diff} píxeles distintos`} de ${sc.ref} (captura: ${got})`);
+    }
+  });
+  return failures;
+}
+
 // Ejecuta una prueba: compila (o reutiliza la caché) y corre cada corrida.
 // Nunca lanza por fallas del sketch: el resultado dice en qué etapa falló.
-export async function runTest(test, { pkg, target = "native", buildRoot, log = () => {} }) {
+export async function runTest(test, { pkg, target = "native", buildRoot, record = false, log = () => {} }) {
   const t0 = Date.now();
   const out = { name: test.name, file: test.file, sketch: test.sketch, ok: false, stage: "build", runs: [] };
   let sketchDir;
@@ -187,8 +220,11 @@ export async function runTest(test, { pkg, target = "native", buildRoot, log = (
       args.push("--stim", hostPath(exe, stim));
     }
     if (test.shared) args.push("--state", hostPath(exe, stateDir));
+    const shots = (r.expect?.screen ?? []).map((sc, k) => ({ ...sc, dump: join(work, `run${i}_screen${k}.fb`) }));
+    for (const sc of shots) args.push("--screen-at", `${sc.at_ms}:${hostPath(exe, sc.dump)}`);
     const run = await runExeAsync(exe, args, { timeoutMs: (r.timeout_s ?? 300) * 1000 });
     const ev = evaluate(run, r.expect);
+    ev.failures.push(...compareScreens(shots, test.file, { record, work, prefix: `run${i}` }));
     out.runs.push({
       args,
       exit: run.timedOut ? "timeout" : run.signal ? `signal:${run.signal}` : run.status,

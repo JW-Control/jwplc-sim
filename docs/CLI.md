@@ -7,7 +7,7 @@ Corre en Linux (GCC del sistema) y en Windows (toolchain incluido:
 ```text
 node cli/jwsim-cli.mjs build  <sketch_dir> [opciones de build]
 node cli/jwsim-cli.mjs run    <sketch_dir> [opciones de build] -- [opciones del runner]
-node cli/jwsim-cli.mjs test   <archivo.jwtest.json|carpeta>... [opciones de build]
+node cli/jwsim-cli.mjs test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record]
 node cli/jwsim-cli.mjs parity [<ref>] [--package <dir>] [--update]
 node cli/jwsim-cli.mjs matrix [--filter <texto>] [opciones de build]
 ```
@@ -100,6 +100,10 @@ que se espera de una o varias corridas:
     o `0x…`; o señales sueltas como `Q0_3`).
   - `stderr` y `stderr_absent`: expresiones sobre stderr.
   - `result`: campos de `JWSIM_RESULT` (`stop`, `DI`, `DO`, `trace_hash`).
+  - `screen`: la pantalla (ST7789) en `at_ms` contra un PNG de referencia
+    relativo al archivo de prueba, píxel a píxel (`max_diff` píxeles
+    tolerados). `jwsim-cli test --record` graba las referencias que faltan; si
+    no coincide, la captura queda en `build/tests/work/<prueba>/`.
 
 El JSON lista cada prueba con `ok`, la etapa (`build`, `expect`, `pass`) y,
 por corrida, el código de salida, `JWSIM_RESULT` y las fallas. La salida
