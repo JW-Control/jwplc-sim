@@ -324,6 +324,7 @@ export async function buildSketch(sketchDir, options = {}) {
   // simulado: el modelo de costos no depende del código generado.
   const sketchRoots = [resolve(sketchDir), join(outDir, "sketch")].map((d) => d + sep);
   const isSketchUnit = (file) => sketchRoots.some((r) => resolve(file).startsWith(r));
+  const isSimUnit = (file) => resolve(file).startsWith(join(ROOT, "sim") + sep);
   const flagsFor = (file) => {
     const norm = file.split(sep).join("/");
     const extra = [];
@@ -333,7 +334,10 @@ export async function buildSketch(sketchDir, options = {}) {
     }
     const isC = file.endsWith(".c");
     const base = isC ? tc.cflags : tc.cxxflags;
-    return [...(isSketchUnit(file) ? base.map((f) => (f === "-O1" ? "-O0" : f)) : base), ...defines, ...extra];
+    // El motor, el HAL y los modelos (sim/) con -O2: se llaman en cada
+    // operación del firmware (semáforos, E/S) y no cambian la traza.
+    const opt = isSketchUnit(file) ? "-O0" : isSimUnit(file) ? "-O2" : "-O1";
+    return [...base.map((f) => (f === "-O1" ? opt : f)), ...defines, ...extra];
   };
 
   phase("package, terceros y placa");

@@ -124,14 +124,21 @@ constexpr jwsim_cost_model DEFAULT_COSTS = {
     /*sem_op*/ 200,
 };
 
-Sched &S() {
+// S() se llama en cada operación del firmware: tras la primera vez es una
+// lectura de puntero que el compilador integra.
+Sched *g_sched = nullptr;
+
+__attribute__((noinline)) Sched &S_init() {
   static Sched s = [] {
     Sched init;
     init.costs = DEFAULT_COSTS;
     return init;
   }();
+  g_sched = &s;
   return s;
 }
+
+inline Sched &S() { return __builtin_expect(g_sched != nullptr, 1) ? *g_sched : S_init(); }
 
 bool event_after(const Event &a, const Event &b) {
   if (a.when != b.when) return a.when > b.when;
@@ -302,6 +309,9 @@ void run_pending_isrs() {
 // sincronización (p. ej. while(1){} sin llamadas al HAL): en el ESP32 el
 // tick lo apropiaría, aquí el tiempo virtual quedaría detenido.
 std::atomic<uint64_t> g_progress{0};
+// Solo el hilo del motor lo incrementa (el vigilante solo lo lee): sin
+// instrucción atómica de lectura-modificación-escritura.
+inline void progress() { g_progress.store(g_progress.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed); }
 std::atomic<const char *> g_running_name{nullptr};
 std::atomic<bool> g_in_run{false};
 std::atomic<bool> g_watchdog_hold{false};
@@ -413,7 +423,7 @@ void jwsim_cpu(jwsim_ns_t ns) {
   Core &core = s.cores[s.running_core];
   core.t += ns;
   s.running->cpu_ns += ns;
-  g_progress.fetch_add(1, std::memory_order_relaxed);
+  progress();
   if (core.t >= core.horizon && s.lock_depth == 0) to_scheduler();
 }
 
@@ -515,7 +525,7 @@ void jwsim_task_yield(void) {
   Core &core = s.cores[s.running_core];
   core.t += s.costs.task_yield;
   s.running->cpu_ns += s.costs.task_yield;
-  g_progress.fetch_add(1, std::memory_order_relaxed);
+  progress();
   if (s.lock_depth) return;
   // Atajo: si ninguna otra tarea del núcleo con prioridad >= puede correr
   // ahora y no se alcanzó el horizonte, ceder no cambia nada.
@@ -720,7 +730,7 @@ jwsim_stop_reason jwsim_run(const jwsim_run_limits *limits) {
     s.running = t;
     s.running_core = best;
     g_running_name.store(t->name.c_str());
-    g_progress.fetch_add(1, std::memory_order_relaxed);
+    progress();
     jwsim::fiber_switch(s.main_fiber, t->fiber);
     s.running = nullptr;
     s.running_core = -1;
