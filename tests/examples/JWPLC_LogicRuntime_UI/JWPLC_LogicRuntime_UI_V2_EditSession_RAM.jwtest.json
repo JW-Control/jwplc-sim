@@ -1,12 +1,55 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Autoprueba del EditSession v2 en RAM (AND con entrada negada, quitar negación, fuente constante HI y aplicar con reinicio del motor): las 18 verificaciones pasan una sola vez y no hay FAIL; el motor v2 en RAM no toca la bornera.",
   "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_V2_EditSession_RAM",
-  "until_ms": 8000,
+  "until_ms": 3000,
   "expect": {
     "console": [
-      "^PASS: carga programa base",
-      "^PASS: arranca programa base",
-      "^PASS: scan inicial"
+      {
+        "match": "^PASS: carga programa base$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: AND true con segunda entrada negada$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: quita negacion de IN2 en borrador$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: aplica borrador y reinicia motor$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: AND false sin negacion$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: cambia IN2 a constante HI$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: AND true con I0\\.0 y HI$",
+        "count": 1
+      },
+      {
+        "match": "^PASS: ",
+        "count": 18
+      },
+      {
+        "match": "^PASS=18 FAIL=0$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^FAIL: "
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

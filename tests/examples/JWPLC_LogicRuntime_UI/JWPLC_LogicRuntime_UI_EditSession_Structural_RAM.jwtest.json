@@ -1,12 +1,61 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Autoprueba estructural del EditSession v2 (eliminar bloques sin consumidores, compactar índices y enlaces, agregar TON/NOT/OR2, rechazar appends inválidos de forma atómica y aplicar al motor): las 34 verificaciones dan [OK], el resumen es 34 OK / 0 FAIL y PRUEBA APROBADA. La Q0.0 del programa es lógica: la bornera no cambia.",
   "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_EditSession_Structural_RAM",
-  "until_ms": 8000,
+  "until_ms": 3000,
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime UI - EditSession estructural RAM v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?",
-      "^Prueba append\\/remove\\/compactacion\\/aplicacion sin TFT ni FRAM\\.",
-      "^\\[OK\\]   Programa base valida"
+      "^JWPLC Logic Runtime UI - EditSession estructural RAM v\\d+\\.\\d+\\.\\d+$",
+      {
+        "match": "^\\[OK\\]   No elimina bloque con consumidores$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   Compacta a 4 bloques / 2 enlaces$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   Bloquea eliminacion de TON utilizado$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   Append invalido no altera borrador$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   Motor activo recibe 5 bloques / 4 enlaces$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   OR2 agregado evalua TRUE con I0\\.0=1 e I0\\.1=0$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   Q0\\.0 conserva NOT\\(I0\\.0\\) y evalua FALSE$",
+        "count": 1
+      },
+      {
+        "match": "^\\[OK\\]   ",
+        "count": 34
+      },
+      {
+        "match": "^RESULTADO: 34 OK, 0 FAIL$",
+        "count": 1
+      },
+      {
+        "match": "^PRUEBA APROBADA$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "PRUEBA FALLIDA"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

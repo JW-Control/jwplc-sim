@@ -1,12 +1,90 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Motor v2 en RAM con el mapa FBD v0.6.0. El sketch genera un ciclo de 9 s de entradas virtuales (SET, memoria y TON 2 s, RESET, espera) y lo imprime al cambiar de fase: SR se activa con el AND4 (pin negado), el TON empieza a temporizar y el RESET apaga SR. Mientras tanto se navega la UI (DOWN despierta USER y mueve la selección, RIGHT, ESC jerárquico hasta IDLE y otro botón vuelve a USER) sin frenar el scan: cada fase aparece a tiempo y el ciclo se repite. Las Q0 del programa son lógicas: la bornera queda en 0 incluso con el TON cumplido (5 s).",
   "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_FBD_Map_V2_RAM",
-  "until_ms": 8000,
+  "until_ms": 12000,
+  "stim": [
+    "1500 BTN_DOWN=1",
+    "1600 BTN_DOWN=0",
+    "2500 BTN_DOWN=1",
+    "2600 BTN_DOWN=0",
+    "3500 BTN_RIGHT=1",
+    "3600 BTN_RIGHT=0",
+    "4500 BTN_ESC=1",
+    "4600 BTN_ESC=0",
+    "5500 BTN_ESC=1",
+    "5600 BTN_ESC=0",
+    "6500 BTN_ESC=1",
+    "6600 BTN_ESC=0",
+    "8000 BTN_UP=1",
+    "8100 BTN_UP=0",
+    "10000 BTN_LEFT=1",
+    "10100 BTN_LEFT=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime UI - mapa FBD v-?\\d+(?:\\.\\d+)? en RAM",
-      "^-?\\d+(?:\\.\\d+)? bloques, -?\\d+(?:\\.\\d+)? enlaces, AND-?\\d+(?:\\.\\d+)? con pin negado y TON -?\\d+(?:\\.\\d+)? s\\.",
-      "^Editor v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? candidato: TON con base tipo LOGO!\\."
+      "^JWPLC Logic Runtime UI - mapa FBD v2 en RAM$",
+      "^No escribe FRAM ni conmuta salidas Q0 fisicas\\.$",
+      {
+        "match": "^Motor v2: RUNNING$",
+        "count": 1
+      },
+      "^Pulse cualquier boton para entrar a USER\\.$",
+      {
+        "match": "^Fase: INICIAL \\| bloques=11 enlaces=12 SR=0 TON=0 timing=0 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "before_ms": 2000
+      },
+      {
+        "match": "^Fase: SET \\| bloques=11 enlaces=12 SR=1 TON=0 timing=1 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 2000,
+        "before_ms": 2100
+      },
+      {
+        "match": "^Fase: MEMORIA_Y_TON \\| bloques=11 enlaces=12 SR=1 TON=0 timing=1 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 3000,
+        "before_ms": 3100
+      },
+      {
+        "match": "^Fase: RESET \\| bloques=11 enlaces=12 SR=0 TON=0 timing=0 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 6000,
+        "before_ms": 6100
+      },
+      {
+        "match": "^Fase: ESPERA \\| bloques=11 enlaces=12 SR=0 TON=0 timing=0 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 7000,
+        "before_ms": 7100
+      },
+      {
+        "match": "^Fase: INICIAL \\| bloques=11 enlaces=12 SR=0 TON=0 timing=0 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 9000,
+        "before_ms": 9100
+      },
+      {
+        "match": "^Fase: SET \\| bloques=11 enlaces=12 SR=1 TON=0 timing=1 Q0\\.0\\(logica\\)=0 Q0\\.1\\(logica\\)=1$",
+        "count": 1,
+        "after_ms": 11000,
+        "before_ms": 11100
+      }
+    ],
+    "console_absent": [
+      "ERROR"
+    ],
+    "signals": [
+      {
+        "at_ms": 5000,
+        "DI": "0b00000000",
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 11900,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

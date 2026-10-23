@@ -1,12 +1,93 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Preview unificado MAPA/DETALLE sobre el motor v2 en RAM. El ciclo de 9 s de entradas virtuales imprime cada fase a tiempo (SET activa SR y el TON temporiza, RESET lo apaga, el ciclo se repite) mientras se navega la UI: DOWN despierta USER, RIGHT mueve la selección, OK abre DETALLE, ESC vuelve al MAPA y luego a IDLE, y otro botón regresa a USER. No hay salidas físicas: la bornera queda en 0.",
   "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_FBD_Unified_Map_Detail_RAM",
-  "until_ms": 8000,
+  "until_ms": 12000,
+  "stim": [
+    "1500 BTN_DOWN=1",
+    "1600 BTN_DOWN=0",
+    "2500 BTN_RIGHT=1",
+    "2600 BTN_RIGHT=0",
+    "3500 BTN_OK=1",
+    "3600 BTN_OK=0",
+    "4500 BTN_ESC=1",
+    "4600 BTN_ESC=0",
+    "5500 BTN_ESC=1",
+    "5600 BTN_ESC=0",
+    "6500 BTN_ESC=1",
+    "6600 BTN_ESC=0",
+    "8000 BTN_DOWN=1",
+    "8100 BTN_DOWN=0",
+    "10000 BTN_OK=1",
+    "10100 BTN_OK=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime UI - Unified MAPA\\/DETALLE preview",
-      "^Implementacion independiente: no hereda V-?\\d+(?:\\.\\d+)?\\.\\.\\.V-?\\d+(?:\\.\\d+)?\\.",
-      "^Alcance: MAPA, DETALLE, navegacion, T\\/Ta y transiciones\\."
+      "^JWPLC Logic Runtime UI - Unified MAPA/DETALLE preview$",
+      "^No escribe FRAM ni conmuta salidas Q fisicas\\.$",
+      {
+        "match": "^Motor v2: RUNNING$",
+        "count": 1
+      },
+      {
+        "match": "^Unified preview: ACTIVO$",
+        "count": 1
+      },
+      {
+        "match": "^Fase: INICIAL \\| SR=0 TON=0 timing=0$",
+        "count": 1,
+        "before_ms": 2000
+      },
+      {
+        "match": "^Fase: SET \\| SR=1 TON=0 timing=1$",
+        "count": 1,
+        "after_ms": 2000,
+        "before_ms": 2100
+      },
+      {
+        "match": "^Fase: MEMORIA_Y_TON \\| SR=1 TON=0 timing=1$",
+        "count": 1,
+        "after_ms": 3000,
+        "before_ms": 3100
+      },
+      {
+        "match": "^Fase: RESET \\| SR=0 TON=0 timing=0$",
+        "count": 1,
+        "after_ms": 6000,
+        "before_ms": 6100
+      },
+      {
+        "match": "^Fase: ESPERA \\| SR=0 TON=0 timing=0$",
+        "count": 1,
+        "after_ms": 7000,
+        "before_ms": 7100
+      },
+      {
+        "match": "^Fase: INICIAL \\| SR=0 TON=0 timing=0$",
+        "count": 1,
+        "after_ms": 9000,
+        "before_ms": 9100
+      },
+      {
+        "match": "^Fase: SET \\| SR=1 TON=0 timing=1$",
+        "count": 1,
+        "after_ms": 11000,
+        "before_ms": 11100
+      }
+    ],
+    "console_absent": [
+      "ERROR"
+    ],
+    "signals": [
+      {
+        "at_ms": 5000,
+        "DI": "0b00000000",
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 11900,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

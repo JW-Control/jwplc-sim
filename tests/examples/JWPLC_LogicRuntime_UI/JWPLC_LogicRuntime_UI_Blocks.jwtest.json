@@ -1,12 +1,65 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Programa RAM de 7 bloques (DI, NOT, AND, OR, SR retentivo, TON 2 s) cargado y en RUN con la UI de bloques; storage, runtime, programa, RUN y UI informan OK. Como el programa no tiene salidas digitales, al activar I0.0 e I0.1 en distintas combinaciones (SET y RESET del SR, TON cumplido) ninguna salida física Q0 conmuta; los botones no sacan la pantalla de IDLE (wake deshabilitado por defecto).",
   "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_Blocks",
-  "until_ms": 8000,
+  "until_ms": 9000,
+  "stim": [
+    "2000 I0_0=1",
+    "2500 I0_1=1",
+    "3000 I0_1=0",
+    "5500 I0_0=0",
+    "6000 I0_1=1",
+    "6500 BTN_OK=1",
+    "6600 BTN_OK=0",
+    "7000 BTN_DOWN=1",
+    "7100 BTN_DOWN=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime UI - diagrama grafico de bloques",
-      "^Carga un programa RAM de -?\\d+(?:\\.\\d+)? bloques sin salidas digitales\\.",
-      "^No formatea ni escribe la FRAM\\."
+      "^JWPLC Logic Runtime UI - diagrama grafico de bloques$",
+      "^Carga un programa RAM de 7 bloques sin salidas digitales\\.$",
+      "^No formatea ni escribe la FRAM\\.$",
+      {
+        "match": "^Storage: OK$",
+        "count": 1
+      },
+      {
+        "match": "^Runtime: OK$",
+        "count": 1
+      },
+      {
+        "match": "^Programa RAM: OK$",
+        "count": 1
+      },
+      {
+        "match": "^RUN: OK$",
+        "count": 1
+      },
+      {
+        "match": "^Runtime UI: OK$",
+        "count": 1
+      },
+      "^UP/DOWN cambian el bloque central\\.$"
+    ],
+    "console_absent": [
+      "FAIL"
+    ],
+    "signals": [
+      {
+        "at_ms": 2700,
+        "DI": "0b00000011",
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 5000,
+        "DI": "0b00000001",
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 8900,
+        "DI": "0b00000010",
+        "DO": "0b00000000"
+      }
     ]
   }
 }
