@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "02_io_basic del benchmark del package: Q0_0 sigue a I0_0 (gate JWSIM_G5_HEADLESS_CLI).",
+  "sketch": "package-repo:tools/build-speed-benchmark/sketches/02_io_basic",
+  "until_ms": 3000,
+  "stim": ["1000 I0_0=1", "2000 I0_0=0"],
+  "expect": {
+    "signals": [{ "at_ms": 1100, "Q0_0": 1, "DI": "0b00000001" }, { "at_ms": 2100, "DO": 0 }],
+    "result": { "stop": "time" }
+  }
+}

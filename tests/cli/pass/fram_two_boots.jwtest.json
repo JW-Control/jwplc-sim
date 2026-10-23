@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Dos arranques con estado compartido: 04.FRAM_Basic cuenta los arranques en la FRAM.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/04.FRAM_Basic",
+  "runs": [
+    { "until_ms": 3000, "expect": { "console": ["^Primer uso: creando bloque FRAM", "^bootCount persistente = 1$"] } },
+    { "until_ms": 3000, "expect": { "console": ["^bootCount persistente = 2$"], "console_absent": ["^Primer uso"] } }
+  ]
+}

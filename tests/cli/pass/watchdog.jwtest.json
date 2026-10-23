@@ -1,0 +1,7 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Un bucle sin puntos de sincronización termina con el vigilante (código 70) y su mensaje.",
+  "sketch": "../../sketches/watchdog_loop",
+  "until_ms": 3000,
+  "expect": { "exit": 70, "stderr": ["FATAL: la tarea '.+' lleva \\d+ ms"] }
+}

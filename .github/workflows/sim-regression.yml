@@ -1,0 +1,131 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Gate SIM_REGRESSION para el flujo de release de platform-jwplc (G5
+# RELEASE_WORKFLOW). Compila y simula el árbol del package indicado con
+# jwsim-cli: paridad (core, headers, autoload) y matriz de ejemplos con sus
+# pruebas. Falla si hay una regresión simulada. Va ANTES de los gates físicos
+# y no los reemplaza.
+#
+# Desde platform-jwplc (el árbol es el del commit que dispara el workflow):
+#   jobs:
+#     sim-regression:
+#       uses: JW-Control/jwplc-sim/.github/workflows/sim-regression.yml@<ref de jwplc-sim>
+#     release:
+#       needs: sim-regression
+#
+# Desde jwplc-sim, a pedido, contra un tag o commit del package (package_ref).
+name: SIM_REGRESSION
+
+on:
+  workflow_call:
+    inputs:
+      package_ref:
+        description: "Tag o commit de platform-jwplc. Vacío = el commit que llama (github.sha)."
+        type: string
+        default: ""
+      sim_ref:
+        description: "Versión de jwplc-sim que se usa (rama, tag o commit)."
+        type: string
+        default: "claude/jwplc-basic-simulator-8dgcen"
+    outputs:
+      result:
+        description: "PASS o FAIL"
+        value: ${{ jobs.sim-regression.outputs.result }}
+  workflow_dispatch:
+    inputs:
+      package_ref:
+        description: "Tag o commit de platform-jwplc (p. ej. v2.1.0-alpha.13)"
+        required: true
+        type: string
+      sim_ref:
+        description: "Versión de jwplc-sim que se usa"
+        type: string
+        default: "claude/jwplc-basic-simulator-8dgcen"
+
+permissions:
+  contents: read
+
+jobs:
+  sim-regression:
+    name: SIM_REGRESSION (JWPLC Sim)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      result: ${{ steps.verdict.outputs.result }}
+    steps:
+      - name: JWPLC Sim
+        uses: actions/checkout@v4
+        with:
+          repository: JW-Control/jwplc-sim
+          ref: ${{ inputs.sim_ref }}
+          path: jwplc-sim
+
+      - name: Árbol del package
+        uses: actions/checkout@v4
+        with:
+          repository: JW-Control/platform-jwplc
+          ref: ${{ inputs.package_ref != '' && inputs.package_ref || github.sha }}
+          path: platform
+          sparse-checkout: |
+            JWPLC/2.1.0
+            tools/build-speed-benchmark/sketches
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché de dependencias del simulador
+        uses: actions/cache@v4
+        with:
+          path: jwplc-sim/.jwsim/third_party
+          key: jwsim-tp-${{ hashFiles('jwplc-sim/third_party/sources.json') }}
+
+      - name: Paridad del árbol (core, headers, autoload)
+        id: parity
+        continue-on-error: true
+        run: node jwplc-sim/cli/jwsim-cli.mjs parity --package platform --report jwplc-sim/build/gates/sim-regression-parity.json
+
+      - name: Matriz de ejemplos (compila, corre, pasa su prueba)
+        id: matrix
+        continue-on-error: true
+        run: node jwplc-sim/cli/jwsim-cli.mjs matrix --package platform --report jwplc-sim/build/gates/sim-regression-matrix.json
+
+      - name: Pruebas de la CLI contra el árbol
+        id: cli
+        continue-on-error: true
+        run: node jwplc-sim/cli/jwsim-cli.mjs test jwplc-sim/tests/cli/pass --package platform
+
+      - name: Resumen
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## SIM_REGRESSION"
+            echo
+            echo "| Paso | Resultado |"
+            echo "|---|---|"
+            echo "| Paridad | ${{ steps.parity.outcome }} |"
+            echo "| Matriz de ejemplos | ${{ steps.matrix.outcome }} |"
+            echo "| Pruebas de la CLI | ${{ steps.cli.outcome }} |"
+            echo
+            cat jwplc-sim/build/gates/examples-matrix-native.md 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Informes
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-regression
+          path: jwplc-sim/build/gates
+
+      - name: Veredicto
+        id: verdict
+        if: ${{ always() }}
+        run: |
+          if [ "${{ steps.parity.outcome }}" = success ] && [ "${{ steps.matrix.outcome }}" = success ] && [ "${{ steps.cli.outcome }}" = success ]; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+            echo "SIM_REGRESSION=PASS"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "SIM_REGRESSION=FAIL"
+            exit 1
+          fi

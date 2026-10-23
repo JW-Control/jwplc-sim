@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# G5 en Linux y Windows: jwsim-cli sin Electron (JWSIM_G5_HEADLESS_CLI),
+# paridad con el package fijado (RELEASE_TREE_PARITY) y matriz de ejemplos
+# (EXAMPLES_MATRIX), publicada como artefacto "examples-matrix-<so>".
+# Solo a pedido.
+name: G5 CLI headless
+
+on:
+  workflow_dispatch:
+
+jobs:
+  g5:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ runner.os }}-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Package fijado
+        run: node scripts/fetch-package.mjs
+
+      - name: Toolchain incluido (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: node scripts/fetch-toolchain.mjs
+
+      - name: JWSIM_G5_HEADLESS_CLI
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: node scripts/gate-g5-headless-cli.mjs
+
+      - name: JWSIM_G5_RELEASE_TREE_PARITY
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        run: node scripts/gate-g5-parity.mjs
+
+      - name: JWSIM_G5_EXAMPLES_MATRIX
+        if: ${{ !cancelled() }}
+        timeout-minutes: 120
+        run: node cli/jwsim-cli.mjs matrix --report build/gates/JWSIM_G5_EXAMPLES_MATRIX.json
+
+      - name: Matriz en el resumen
+        if: ${{ always() }}
+        shell: bash
+        run: cat build/gates/examples-matrix-native.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Matriz de ejemplos
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-matrix-${{ runner.os }}
+          path: |
+            build/gates/examples-matrix-*.json
+            build/gates/examples-matrix-*.md
+
+      - name: Resultados
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-g5-${{ runner.os }}
+          path: build/gates

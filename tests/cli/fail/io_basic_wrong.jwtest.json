@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba que DEBE fallar (el gate verifica el código 1 y el detalle en JSON).",
+  "sketch": "package-repo:tools/build-speed-benchmark/sketches/02_io_basic",
+  "until_ms": 2000,
+  "stim": ["1000 I0_0=1"],
+  "expect": { "signals": [{ "at_ms": 1500, "Q0_0": 0 }] }
+}
