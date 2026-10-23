@@ -155,7 +155,8 @@
     "SD_MMC": "el JWPLC Basic usa la microSD por SPI: use SD / JW_SD (JWSIM_G4_SD_DATALOG).",
     "LittleFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "SPIFFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
-    "FFat": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG)."
+    "FFat": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
+    "Console": "usa la consola de ESP-IDF (esp_console, linenoise, argtable3), que no se simula. No está en el plan de gates G0–G10. Use Serial: la consola del simulador es el monitor serie."
   },
   "unsupportedApis": {
     "$comment": "APIs del core ESP32 que el JWPLC Basic simulado no ofrece: si el compilador no las encuentra ('X' was not declared / does not name a type), el error lleva esta explicación. Una clave terminada en * cubre el prefijo.",

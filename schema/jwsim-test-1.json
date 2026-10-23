@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jw-control.github.io/jwplc-sim/schema/jwsim-test-1.json",
+  "title": "Prueba headless de JWPLC Sim (*.jwtest.json) v1",
+  "description": "Sketch, estímulos y resultados esperados de una o varias corridas del runner (jwsim-cli test). Con varias corridas (o state = shared) la memoria no volátil (FRAM, NVS, SD, RTC) se conserva entre ellas.",
+  "type": "object",
+  "required": ["sketch"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "$comment": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "sketch": {
+      "type": "string",
+      "description": "Carpeta del sketch: 'package:<ruta>' relativa al árbol del package (JWPLC/2.1.0), 'package-repo:<ruta>' relativa a la raíz de platform-jwplc, o ruta relativa a este archivo."
+    },
+    "state": { "enum": ["fresh", "shared"], "default": "fresh" },
+    "runs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/run" } },
+    "until_ms": { "$ref": "#/$defs/run/properties/until_ms" },
+    "stim": { "$ref": "#/$defs/run/properties/stim" },
+    "args": { "$ref": "#/$defs/run/properties/args" },
+    "timeout_s": { "$ref": "#/$defs/run/properties/timeout_s" },
+    "expect": { "$ref": "#/$defs/expect" }
+  },
+  "oneOf": [{ "required": ["runs"] }, { "required": ["until_ms"] }],
+  "$defs": {
+    "regex": { "type": "string", "description": "Expresión regular de JavaScript." },
+    "run": {
+      "type": "object",
+      "required": ["until_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "until_ms": { "type": "number", "exclusiveMinimum": 0, "description": "Tiempo virtual simulado." },
+        "stim": {
+          "oneOf": [
+            { "type": "string", "description": "Archivo .stim relativo a este archivo." },
+            { "type": "array", "items": { "type": "string" }, "description": "Líneas .stim ('<ms> I0_0=1', '<ms> uart0 \"texto\\n\"', ...)." }
+          ]
+        },
+        "args": { "type": "array", "items": { "type": "string" }, "description": "Opciones extra del runner (--rtc, --no-eth, --set...)." },
+        "timeout_s": { "type": "number", "exclusiveMinimum": 0, "default": 300, "description": "Límite de reloj de pared." },
+        "expect": { "$ref": "#/$defs/expect" }
+      }
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exit": {
+          "description": "Código de salida del runner (0 por defecto; 70 = vigilante de bucles). Con 0 además se exige JWSIM_RESULT y ninguna línea FATAL.",
+          "oneOf": [{ "type": "integer" }, { "type": "string" }]
+        },
+        "console": {
+          "type": "array",
+          "description": "Líneas de consola (UART) que deben aparecer.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/regex" },
+              {
+                "type": "object",
+                "required": ["match"],
+                "additionalProperties": false,
+                "properties": {
+                  "match": { "$ref": "#/$defs/regex" },
+                  "port": { "type": "integer", "minimum": 0, "maximum": 2 },
+                  "count": { "type": "integer", "minimum": 0 },
+                  "min": { "type": "integer", "minimum": 0 },
+                  "max": { "type": "integer", "minimum": 0 },
+                  "after_ms": { "type": "number" },
+                  "before_ms": { "type": "number" }
+                }
+              }
+            ]
+          }
+        },
+        "console_absent": { "type": "array", "items": { "$ref": "#/$defs/regex" } },
+        "signals": {
+          "type": "array",
+          "description": "Estado de la bornera en un instante: DI/DO como número, '0b…' o '0x…'; o señales sueltas (I0_3, Q0_1) con 0/1.",
+          "items": {
+            "type": "object",
+            "required": ["at_ms"],
+            "properties": { "at_ms": { "type": "number" } },
+            "additionalProperties": { "oneOf": [{ "type": "integer" }, { "type": "string" }] }
+          }
+        },
+        "stderr": { "type": "array", "items": { "$ref": "#/$defs/regex" } },
+        "stderr_absent": { "type": "array", "items": { "$ref": "#/$defs/regex" } },
+        "result": {
+          "type": "object",
+          "description": "Campos de la línea JWSIM_RESULT (stop, DI, DO, trace_hash...) comparados como texto.",
+          "additionalProperties": { "type": ["string", "number"] }
+        }
+      }
+    }
+  }
+}

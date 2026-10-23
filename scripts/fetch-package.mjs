@@ -117,6 +117,49 @@ export function resolvePackageRoot({ fetch = true } = {}) {
   return { root: dest, lock, source: "clone" };
 }
 
+// Package sin fijar (G5): un checkout cualquiera de platform-jwplc, p. ej. el
+// del PR o de la release en su propio CI. No se verifica contra package.lock;
+// la versión informada es la del commit del checkout (si es un repo git).
+export function packageFromDir(dir) {
+  const lock = readLock();
+  const root = resolve(dir);
+  if (!existsSync(join(root, lock.JWPLC_PACKAGE_TREE))) {
+    throw new Error(`${root} no contiene ${lock.JWPLC_PACKAGE_TREE}`);
+  }
+  const head = revParse(root, "HEAD");
+  let ref = "checkout";
+  try {
+    ref = git(["describe", "--tags", "--always", "--dirty"], root);
+  } catch {}
+  return {
+    root,
+    lock: { ...lock, JWPLC_PACKAGE_REF: ref, JWPLC_PACKAGE_COMMIT: head ?? `dir:${root}` },
+    source: "dir",
+  };
+}
+
+// Package en un tag o commit arbitrario (jwsim-cli parity <ref>): se clona
+// en .jwsim/package/<ref>/ con el mismo sparse checkout. Sin verificación de
+// commit fijado: es justamente lo que se quiere comparar.
+export function fetchPackageRef(ref) {
+  const lock = readLock();
+  if (!/^[\w.\-/]+$/.test(ref)) throw new Error(`ref inválida: ${ref}`);
+  const dest = join(ROOT, ".jwsim", "package", ref.replaceAll("/", "_"));
+  if (!existsSync(join(dest, ".git"))) {
+    rmSync(dest, { recursive: true, force: true });
+    mkdirSync(dirname(dest), { recursive: true });
+    console.error(`[fetch-package] clonando ${lock.JWPLC_PACKAGE_REPO} @ ${ref}`);
+    execFileSync("git", ["-c", "init.defaultBranch=main", "init", "--quiet", dest], { stdio: "inherit" });
+    execFileSync("git", ["remote", "add", "origin", lock.JWPLC_PACKAGE_REPO], { cwd: dest });
+    execFileSync("git", ["config", "core.sparseCheckout", "true"], { cwd: dest });
+    execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...SPARSE_PATHS.map((p) => `/${p}`)], { cwd: dest, stdio: "inherit" });
+    execFileSync("git", ["fetch", "--quiet", "--depth", "1", "--filter=blob:none", "origin", ref], { cwd: dest, stdio: "inherit" });
+    execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", "FETCH_HEAD"], { cwd: dest, stdio: "inherit" });
+  }
+  const head = revParse(dest, "HEAD");
+  return { root: dest, lock: { ...lock, JWPLC_PACKAGE_REF: ref, JWPLC_PACKAGE_COMMIT: head }, source: "ref" };
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const { root, lock, source } = resolvePackageRoot({ fetch: !process.argv.includes("--print") });

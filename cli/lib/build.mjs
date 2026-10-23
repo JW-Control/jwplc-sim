@@ -244,7 +244,8 @@ export async function buildSketch(sketchDir, options = {}) {
     );
   }
 
-  const { root: pkgRoot, lock } = resolvePackageRoot();
+  // options.package: package sin fijar (packageFromDir/fetchPackageRef, G5).
+  const { root: pkgRoot, lock } = options.package ?? resolvePackageRoot();
   // Tiempos por fase (JWSIM_BUILD_TIMING=1 u options.timing): duración de
   // cada fase, para diagnosticar recompilaciones lentas.
   const phase = (() => {
@@ -274,7 +275,7 @@ export async function buildSketch(sketchDir, options = {}) {
   const coreFiles = listSources(coreDir, true).map((p) => relative(coreDir, p).split(sep).join("/"));
   const classified = new Set([...manifest.compile, ...Object.keys(manifest.replaced), ...Object.keys(manifest.excluded)]);
   const unclassified = coreFiles.filter((f) => !classified.has(f));
-  if (unclassified.length) {
+  if (unclassified.length && !options.headerProbe) {
     throw new Error(`fuentes del core sin clasificar en sim/core-manifest.json: ${unclassified.join(", ")}`);
   }
 
@@ -401,6 +402,32 @@ export async function buildSketch(sketchDir, options = {}) {
 
   writeFileSync(discoveryFile, JSON.stringify({ key: discoveryKey, libraries: usedLibs.map((l) => l.name) }) + "\n");
   phase(cached && !cached.includes(undefined) ? "descubrimiento (caché)" : "descubrimiento");
+
+  // Sondeo de headers (jwsim-cli parity, G5): preprocesa con -M -MG las
+  // fuentes del core que se compilan y las de todas las librerías del package
+  // (salvo las no soportadas), con los flags reales, y devuelve los headers
+  // que no se encuentran en ningún lado. No compila.
+  if (options.headerProbe) {
+    const probeIncludes = [...includeDirs];
+    for (const lib of libs) for (const d of lib.includeDirs) if (!probeIncludes.includes(d)) probeIncludes.push(d);
+    const files = [
+      ...[...manifest.compile, ...unclassified].map((f) => ({ owner: "core", file: join(coreDir, f) })),
+      ...libs
+        .filter((l) => l.origin === "package" && !manifest.unsupportedLibraries?.[l.name])
+        .flatMap((l) => l.sources.map((f) => ({ owner: l.name, file: f }))),
+    ];
+    const probeDir = join(outDir, "probe");
+    mkdirSync(probeDir, { recursive: true });
+    const results = await pool(files, availableParallelism(), async ({ owner, file }, i) => {
+      const cc = file.endsWith(".c") ? tc.cc : tc.cxx;
+      const dep = join(probeDir, `${i}.d`);
+      const r = await run(cc[0], [...cc.slice(1), "-M", "-MG", "-MF", dep, ...flagsFor(file), ...probeIncludes.map((d) => `-I${d}`), file]);
+      if (!existsSync(dep)) return { owner, file, error: r.out.split(/\r?\n/).filter(Boolean).slice(0, 3).join(" | ") };
+      const deps = parseDepFile(readFileSync(dep, "utf8")).slice(1);
+      return { owner, file, missing: deps.filter((d) => !existsSync(resolve(d))) };
+    });
+    return { probe: results, libraries: libs.filter((l) => l.origin === "package").map((l) => l.name), outDir };
+  }
 
   // Unidades de compilación agrupadas en archivos .a (como el build real).
   const units = [];
