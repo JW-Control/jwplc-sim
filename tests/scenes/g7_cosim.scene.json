@@ -3,15 +3,15 @@
   "devices": [
     {"id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0},
     {"id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 200},
-    {"id": "L1", "type": "jwsim/power-230vac", "x": 40, "y": 820},
-    {"id": "S1", "type": "jwsim/pushbutton-no", "params": {"label": "Marcha"}, "x": 420, "y": -190},
-    {"id": "S0", "type": "jwsim/pushbutton-nc", "params": {"label": "Parada"}, "x": 500, "y": -190},
-    {"id": "KM1", "type": "jwsim/contactor", "x": 240, "y": 640},
-    {"id": "M1", "type": "jwsim/motor", "x": 280, "y": 820},
-    {"id": "Y1", "type": "jwsim/solenoid-valve", "params": {"strokeMs": 300, "returnMs": 200}, "x": 450, "y": 640},
-    {"id": "B1", "type": "jwsim/limit-switch", "params": {"source": "Y1.position", "min": 1, "max": 1}, "x": 600, "y": -190},
-    {"id": "B0", "type": "jwsim/sensor-inductive", "params": {"source": "Y1.position", "min": 0, "max": 0.05}, "x": 700, "y": -190},
-    {"id": "H1", "type": "jwsim/lamp", "params": {"color": "rojo", "label": "Falla"}, "x": 680, "y": 640}
+    {"id": "L1", "type": "jwsim/power-230vac", "x": 40, "y": 800},
+    {"id": "S1", "type": "jwsim/pushbutton-no", "params": {"label": "Marcha"}, "x": 380, "y": -180},
+    {"id": "S0", "type": "jwsim/pushbutton-nc", "params": {"label": "Parada"}, "x": 460, "y": -180},
+    {"id": "KM1", "type": "jwsim/contactor", "x": 240, "y": 620},
+    {"id": "M1", "type": "jwsim/motor", "x": 280, "y": 800},
+    {"id": "Y1", "type": "jwsim/solenoid-valve", "params": {"strokeMs": 300, "returnMs": 200}, "x": 440, "y": 620},
+    {"id": "B1", "type": "jwsim/limit-switch", "params": {"source": "Y1.position", "min": 1, "max": 1}, "x": 560, "y": -180},
+    {"id": "B0", "type": "jwsim/sensor-inductive", "params": {"source": "Y1.position", "min": 0, "max": 0.05}, "x": 660, "y": -180},
+    {"id": "H1", "type": "jwsim/lamp", "params": {"color": "rojo", "label": "Falla"}, "x": 660, "y": 620}
   ],
   "wiring": [
     {"from": "PS1.L+", "to": "plc.24VDC"}, {"from": "PS1.M", "to": "plc.M0"}, {"from": "PS1.M", "to": "plc.M1"},

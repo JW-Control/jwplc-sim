@@ -390,6 +390,21 @@ declara como evento.
 La escena solo maneja las entradas que tienen cable; el resto queda para los
 botones de la interfaz.
 
+**Vista en la app** (`app/renderer/scene.js`):
+
+- **Placa:** el SVG del render de JW Control con sus tornillos en una grilla
+  de 64 unidades. En la escena se dibuja a escala 20/64, así cada borne cae
+  en la grilla de 20 px. Los bornes de los dispositivos y sus posiciones
+  también van sobre la grilla.
+- **Cables:** recorrido ortogonal con A* sobre la grilla. Esquivan las cajas
+  de los dispositivos, penalizan las curvas y no comparten tramos con otros
+  cables salvo con los del mismo borne. Si el usuario mueve un tramo
+  horizontal, su altura se guarda en `points`.
+- **Color:** cada cable tiene el suyo (`color`, de la paleta IEC). Al
+  crearlo se elige según el polo del borne: L+ rojo, M azul, L marrón,
+  N celeste; el mando en negro. Con la simulación en marcha, los cables en
+  el positivo de una fuente en servicio brillan.
+
 **Biblioteca v0.1** (16 definiciones):
 
 | Tipo | Bornes | Comportamiento |

@@ -14,9 +14,17 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-  // La placa ocupa 485 px de ancho en la escena (su SVG está en las
-  // coordenadas del render de JW Control).
-  const BOARD_WIDTH = 485;
+  // Grilla de la escena: bornes, dispositivos y tramos de cable caen en
+  // múltiplos de GRID. El SVG de la placa tiene sus tornillos cada 64
+  // unidades desde el origen del viewBox: con esta escala, cada 20 px.
+  const GRID = 20;
+  const BOARD_K = GRID / 64;
+  const snap = (v) => Math.round(v / GRID) * GRID;
+  // Colores de cable (IEC 60445 y usuales en tablero).
+  const WIRE_COLORS = {
+    rojo: "#e0392b", azul: "#2f62d6", celeste: "#55aef0", "marrón": "#8a5a2b", negro: "#2a2e35",
+    gris: "#8b929b", blanco: "#eef1f4", naranja: "#f08a24", violeta: "#8e5bd0", "verde-amarillo": "#3fae49",
+  };
   const COLORS = { verde: "#37d67a", rojo: "#ff5d5d", amarillo: "#ffc53d", azul: "#3e9bff", blanco: "#f2f4f7", negro: "#2b2f35" };
 
   const S = {
@@ -29,7 +37,8 @@
     zoom: 0.8,
     pan: { x: 20, y: 20 },
     boardSvg: null,
-    board: { w: 485, h: 545, k: 0.335 },
+    board: { w: 452, h: 500, k: BOARD_K },
+    staticPoles: {}, // polos del último análisis sin simular (color automático de cables)
     boardTerms: {}, // borne -> [x, y] en la placa escalada
     drag: null,
     wiring: null, // { from, x, y }
@@ -40,28 +49,34 @@
   // ------------------------------------------------------------ símbolos
   // Cada símbolo: tamaño, posición de los bornes y cuerpo según el estado.
   // Bornes "t" (arriba) o "b" (abajo) para orientar el cable al salir.
-  const row = (ids, y, w) => Object.fromEntries(ids.map((id, i) => [id, [Math.round(((i + 1) * w) / (ids.length + 1)), y]]));
+  // Bornes repartidos sobre la grilla.
+  const row = (ids, y, w) => {
+    const n = ids.length;
+    const step = n > 1 ? Math.max(GRID, Math.floor((w - 2 * GRID) / (n - 1) / GRID) * GRID) : 0;
+    const x0 = snap((w - step * (n - 1)) / 2);
+    return Object.fromEntries(ids.map((id, i) => [id, [x0 + i * step, y]]));
+  };
 
   function symbolFor(dev) {
     const t = dev.type;
     const short = t.split("/")[1];
     if (t === "jwsim/jwplc-basic") return { w: S.board.w, h: S.board.h, terms: S.boardTerms, board: true };
     const sizes = {
-      "pushbutton-no": [64, 96, ["13"], ["14"]],
-      "pushbutton-nc": [64, 96, ["11"], ["12"]],
-      "selector-2": [80, 96, ["13", "21"], ["14", "22"]],
-      "selector-3": [80, 96, ["13", "23"], ["14", "24"]],
-      "limit-switch": [80, 96, ["13", "21"], ["14", "22"]],
-      "sensor-inductive": [84, 96, ["BN", "BU"], ["BK"]],
-      "sensor-photoelectric": [84, 96, ["BN", "BU"], ["BK"]],
-      lamp: [64, 90, ["X1"], ["X2"]],
-      buzzer: [64, 90, ["+"], ["-"]],
-      relay: [140, 104, ["A1", "11", "21"], ["A2", "12", "14", "22", "24"]],
-      contactor: [170, 104, ["A1", "1", "3", "5", "13", "21"], ["A2", "2", "4", "6", "14", "22"]],
-      "solenoid-valve": [190, 90, ["A1"], ["A2"]],
-      motor: [96, 100, ["U1", "U2"], []],
-      "power-24vdc": [110, 70, [], ["L+", "M"]],
-      "power-230vac": [110, 70, [], ["L", "N"]],
+      "pushbutton-no": [60, 100, ["13"], ["14"]],
+      "pushbutton-nc": [60, 100, ["11"], ["12"]],
+      "selector-2": [80, 100, ["13", "21"], ["14", "22"]],
+      "selector-3": [80, 100, ["13", "23"], ["14", "24"]],
+      "limit-switch": [80, 100, ["13", "21"], ["14", "22"]],
+      "sensor-inductive": [80, 100, ["BN", "BU"], ["BK"]],
+      "sensor-photoelectric": [80, 100, ["BN", "BU"], ["BK"]],
+      lamp: [60, 80, ["X1"], ["X2"]],
+      buzzer: [60, 80, ["+"], ["-"]],
+      relay: [140, 100, ["A1", "11", "21"], ["A2", "12", "14", "22", "24"]],
+      contactor: [160, 100, ["A1", "1", "3", "5", "13", "21"], ["A2", "2", "4", "6", "14", "22"]],
+      "solenoid-valve": [180, 80, ["A1"], ["A2"]],
+      motor: [100, 100, ["U1", "U2"], []],
+      "power-24vdc": [100, 60, [], ["L+", "M"]],
+      "power-230vac": [100, 60, [], ["L", "N"]],
     };
     let [w, h, top, bottom] = t.startsWith("jwsim/") && sizes[short] ? sizes[short] : [];
     if (!w) {
@@ -69,10 +84,10 @@
       const ids = (S.defs.get(t)?.terminals ?? []).map((x) => x.id);
       top = ids.slice(0, Math.ceil(ids.length / 2));
       bottom = ids.slice(top.length);
-      w = Math.max(110, Math.max(top.length, bottom.length) * 30 + 20);
-      h = 96;
+      w = Math.max(120, (Math.max(top.length, bottom.length) + 1) * 2 * GRID);
+      h = 100;
     }
-    if (short === "solenoid-valve") return { w, h, terms: { A1: [16, 0], A2: [16, h] } };
+    if (short === "solenoid-valve") return { w, h, terms: { A1: [GRID, 0], A2: [GRID, h] } };
     return { w, h, terms: { ...row(top, 0, w), ...row(bottom, h, w) } };
   }
 
@@ -185,8 +200,8 @@
     const doc = new DOMParser().parseFromString(text, "image/svg+xml");
     const svg = doc.documentElement;
     const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
-    const k = BOARD_WIDTH / vw;
-    S.board = { w: BOARD_WIDTH, h: vh * k, k };
+    const k = BOARD_K;
+    S.board = { w: vw * k, h: vh * k, k };
     const terms = {};
     for (const g of svg.querySelectorAll(".borne")) {
       const u = g.querySelector("use");
@@ -230,39 +245,243 @@
     const sym = symbolFor(dev);
     const p = sym.terms[end.slice(i + 1)];
     if (!p) return null;
-    return { x: (dev.x ?? 0) + p[0], y: (dev.y ?? 0) + p[1], up: p[1] <= sym.h / 2 };
+    return {
+      x: (dev.x ?? 0) + p[0],
+      y: (dev.y ?? 0) + p[1],
+      up: p[1] <= sym.h / 2,
+      box: { x1: dev.x ?? 0, y1: dev.y ?? 0, x2: (dev.x ?? 0) + sym.w, y2: (dev.y ?? 0) + sym.h },
+    };
   }
 
-  function wireColor(w) {
-    const poles = S.snap?.poles?.[w.from] ?? [];
-    for (const m of poles) {
-      const src = devById(m.replace(/[+-]$/, "").split(".")[0]);
-      const ac = src?.type === "jwsim/power-230vac";
-      if (m.endsWith("+")) return ac ? "#c0703a" : "#ff5d5d";
-      if (m.endsWith("-")) return ac ? "#6cb6ff" : "#3e7bfa";
+  // Color de un borne según su polo: L+ rojo, M azul, L marrón, N celeste.
+  function poleColor(term, poles) {
+    const i = term.indexOf(".");
+    const dev = devById(term.slice(0, i));
+    const t = term.slice(i + 1);
+    if (dev?.type === "jwsim/power-24vdc") return t === "L+" ? "rojo" : "azul";
+    if (dev?.type === "jwsim/power-230vac") return t === "L" ? "marrón" : "celeste";
+    for (const m of poles?.[term] ?? []) {
+      const ac = devById(m.replace(/[+-]$/, "").split(".")[0])?.type === "jwsim/power-230vac";
+      if (m.endsWith("+")) return ac ? "marrón" : "rojo";
+      if (m.endsWith("-")) return ac ? "celeste" : "azul";
     }
-    return "#6b7480";
+    return null;
   }
 
-  function wirePath(a, b) {
-    const s1 = { x: a.x, y: a.y + (a.up ? -14 : 14) };
-    const s2 = { x: b.x, y: b.y + (b.up ? -14 : 14) };
-    return `M${a.x} ${a.y} L${s1.x} ${s1.y} L${s2.x} ${s1.y} L${s2.x} ${s2.y} L${b.x} ${b.y}`;
+  // Color propio del cable o, si no tiene, según el polo de sus bornes en el
+  // análisis sin simular (negro para el mando).
+  function wireColorName(w) {
+    return w.color ?? poleColor(w.from, S.staticPoles) ?? poleColor(w.to, S.staticPoles) ?? "negro";
+  }
+
+  const shade = (hex, f) =>
+    "#" + [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * f))).toString(16).padStart(2, "0")).join("");
+
+  // ------------------------------------------------------------ ruteo
+  // A* sobre la grilla (pasos de GRID): los cables esquivan las cajas de los
+  // dispositivos, prefieren pocas curvas y no comparten tramos con otros
+  // cables (salvo los que comparten un borne: son el mismo puente). Si el
+  // usuario movió el tramo horizontal de un cable (points), se respeta.
+  const BEND = 4; // costo de una curva, en pasos de grilla
+  const SHARED = 8; // costo por paso sobre un tramo de otro cable
+
+  // Cajas que los cables no atraviesan (en celdas de grilla, bordes incluidos).
+  function obstacles() {
+    return S.spec.devices.map((dev) => {
+      const sym = symbolFor(dev);
+      const x = dev.x ?? 0;
+      const y = dev.y ?? 0;
+      if (sym.board) {
+        // La placa: entre la fila de bornes de arriba y la de abajo.
+        const ys = Object.values(sym.terms).map((t) => t[1]);
+        return { x1: x / GRID, y1: (y + Math.min(...ys)) / GRID, x2: (x + sym.w) / GRID, y2: (y + Math.max(...ys)) / GRID };
+      }
+      return { x1: x / GRID, y1: y / GRID, x2: (x + sym.w) / GRID, y2: (y + sym.h) / GRID };
+    });
+  }
+
+  function astar(from, to, dir0, dirEnd, boxes, occ, ends, bounds) {
+    const blocked = (x, y) => boxes.some((b) => x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2);
+    const D = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const k = (x, y, d) => `${x},${y},${d}`;
+    const h = (x, y) => Math.abs(x - to.x) + Math.abs(y - to.y);
+    const heap = [];
+    const push = (n) => {
+      heap.push(n);
+      for (let i = heap.length - 1; i > 0; ) {
+        const p = (i - 1) >> 1;
+        if (heap[p].f <= heap[i].f) break;
+        [heap[p], heap[i]] = [heap[i], heap[p]];
+        i = p;
+      }
+    };
+    const pop = () => {
+      const top = heap[0];
+      const last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        for (let i = 0; ; ) {
+          const l = 2 * i + 1;
+          const r = l + 1;
+          let m = i;
+          if (l < heap.length && heap[l].f < heap[m].f) m = l;
+          if (r < heap.length && heap[r].f < heap[m].f) m = r;
+          if (m === i) break;
+          [heap[m], heap[i]] = [heap[i], heap[m]];
+          i = m;
+        }
+      }
+      return top;
+    };
+    const best = new Map();
+    push({ x: from.x, y: from.y, d: dir0, g: 0, f: h(from.x, from.y), prev: null });
+    best.set(k(from.x, from.y, dir0), 0);
+    let n = 0;
+    while (heap.length && n++ < 60000) {
+      const c = pop();
+      if (c.x === to.x && c.y === to.y) {
+        const pts = [];
+        for (let p = c; p; p = p.prev) pts.push({ x: p.x * GRID, y: p.y * GRID });
+        return pts.reverse();
+      }
+      if (c.g > (best.get(k(c.x, c.y, c.d)) ?? Infinity)) continue;
+      for (let d = 0; d < 4; d++) {
+        if ((d ^ 1) === c.d) continue; // sin volver atrás
+        const x = c.x + D[d][0];
+        const y = c.y + D[d][1];
+        if (x < bounds.x1 || x > bounds.x2 || y < bounds.y1 || y > bounds.y2) continue;
+        const goal = x === to.x && y === to.y;
+        if (!goal && blocked(x, y)) continue;
+        const seg = d < 2 ? `h${Math.min(x, c.x)},${y}` : `v${x},${Math.min(y, c.y)}`;
+        const others = occ.get(seg);
+        let g = c.g + 1 + (d !== c.d ? BEND : 0) + (others && !others.some((e) => ends.has(e)) ? SHARED : 0);
+        if (goal && d !== dirEnd) g += BEND;
+        const key = k(x, y, d);
+        if (g < (best.get(key) ?? Infinity)) {
+          best.set(key, g);
+          push({ x, y, d, g, f: g + h(x, y), prev: c });
+        }
+      }
+    }
+    return null;
+  }
+
+  const dirOf = (p, q) => (q.x > p.x ? 0 : q.x < p.x ? 1 : q.y > p.y ? 2 : 3);
+
+  function route(w, ctx) {
+    const a = termPos(w.from);
+    const b = termPos(w.to);
+    if (!a || !b) return null;
+    const s1 = { x: a.x, y: a.y + (a.up ? -GRID : GRID) };
+    const s2 = { x: b.x, y: b.y + (b.up ? -GRID : GRID) };
+    let mid = null;
+    let ym;
+    if (w.points?.length) {
+      ym = w.points[0][1];
+      mid = [s1, { x: s1.x, y: ym }, { x: s2.x, y: ym }, s2];
+    } else if (ctx) {
+      const g = (p) => ({ x: Math.round(p.x / GRID), y: Math.round(p.y / GRID) });
+      mid = astar(g(s1), g(s2), dirOf(a, s1), dirOf(s2, b), ctx.boxes, ctx.occ, new Set([w.from, w.to]), ctx.bounds);
+    }
+    if (!mid) {
+      ym = a.up && b.up ? Math.min(s1.y, s2.y) : !a.up && !b.up ? Math.max(s1.y, s2.y) : snap((s1.y + s2.y) / 2);
+      mid = [s1, { x: s1.x, y: ym }, { x: s2.x, y: ym }, s2];
+    }
+    const pts = [a, ...mid, b];
+    // Sin puntos repetidos ni intermedios alineados.
+    const out = [];
+    for (const p of pts) {
+      if (out.length && out.at(-1).x === p.x && out.at(-1).y === p.y) continue;
+      if (out.length >= 2) {
+        const [q, r] = out.slice(-2);
+        if ((q.x === r.x && r.x === p.x) || (q.y === r.y && r.y === p.y)) out.pop();
+      }
+      out.push(p);
+    }
+    // Registra los tramos (para los cables siguientes) con los bornes del cable.
+    if (ctx) {
+      for (let i = 1; i < out.length; i++) {
+        const [p, q] = [out[i - 1], out[i]];
+        const steps = Math.round(Math.hypot(q.x - p.x, q.y - p.y) / GRID);
+        for (let j = 0; j < steps; j++) {
+          const x = Math.round(p.x / GRID) + (j * Math.sign(q.x - p.x));
+          const y = Math.round(p.y / GRID) + (j * Math.sign(q.y - p.y));
+          const seg = p.y === q.y ? `h${Math.min(x, x + Math.sign(q.x - p.x))},${y}` : `v${x},${Math.min(y, y + Math.sign(q.y - p.y))}`;
+          if (!ctx.occ.has(seg)) ctx.occ.set(seg, []);
+          ctx.occ.get(seg).push(w.from, w.to);
+        }
+      }
+    }
+    if (ym === undefined) ym = out.length > 3 ? out[2].y : s1.y;
+    return { pts: out, a, b, s1, s2, ym };
+  }
+
+  function routeContext() {
+    const boxes = obstacles();
+    const xs = boxes.flatMap((b) => [b.x1, b.x2]);
+    const ys = boxes.flatMap((b) => [b.y1, b.y2]);
+    const m = 12;
+    return {
+      boxes,
+      occ: new Map(),
+      bounds: { x1: Math.min(...xs) - m, x2: Math.max(...xs) + m, y1: Math.min(...ys) - m, y2: Math.max(...ys) + m },
+    };
+  }
+
+  // Trazo con esquinas redondeadas.
+  function roundedPath(pts, r = 9) {
+    let d = `M${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [p, q, n] = [pts[i - 1], pts[i], pts[i + 1]];
+      const l1 = Math.hypot(q.x - p.x, q.y - p.y);
+      const l2 = Math.hypot(n.x - q.x, n.y - q.y);
+      const k = Math.min(r, l1 / 2, l2 / 2);
+      const a = { x: q.x - ((q.x - p.x) / l1) * k, y: q.y - ((q.y - p.y) / l1) * k };
+      const b = { x: q.x + ((n.x - q.x) / l2) * k, y: q.y + ((n.y - q.y) / l2) * k };
+      d += ` L${a.x} ${a.y} Q${q.x} ${q.y} ${b.x} ${b.y}`;
+    }
+    return d + ` L${pts.at(-1).x} ${pts.at(-1).y}`;
+  }
+
+  // Con tensión: el cable está en el polo positivo (L+ o L) de una fuente en
+  // servicio, con la simulación en marcha.
+  function wireLive(w) {
+    if (!S.running) return false;
+    return (S.snap?.poles?.[w.from] ?? []).some((m) => m.endsWith("+"));
   }
 
   function renderWires() {
     const g = $("scene-wires");
     g.textContent = "";
+    // Durante un arrastre se usa el trazado simple (rápido); al soltar, A*.
+    // Los recorridos se recalculan solo si cambió la geometría (no con cada
+    // instantánea de la simulación).
+    const dragging = !!S.drag?.moved;
+    const layout = JSON.stringify([S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]), S.spec.wiring.map((w) => [w.from, w.to, w.points])]);
+    if (dragging || S.routeKey !== layout) {
+      const ctx = dragging ? null : routeContext();
+      S.routes = S.spec.wiring.map((w) => route(w, ctx));
+      S.routeKey = dragging ? null : layout;
+    }
     S.spec.wiring.forEach((w, i) => {
-      const a = termPos(w.from);
-      const b = termPos(w.to);
-      if (!a || !b) return;
-      const d = wirePath(a, b);
+      const r = S.routes[i];
+      if (!r) return;
+      const d = roundedPath(r.pts);
       const sel = S.sel?.kind === "wire" && S.sel.id === i;
-      const color = wireColor(w);
+      const c = WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
+      const live = wireLive(w);
+      // Casquillo en cada punta (un tramo corto sobre la salida del borne).
+      const ferrule = (p, s) => `<line class="wire-ferrule" x1="${p.x}" y1="${p.y}" x2="${p.x}" y2="${p.y + Math.sign(s.y - p.y) * 9}"/>`;
       g.insertAdjacentHTML(
         "beforeend",
-        `<g class="wire${sel ? " selected" : ""}" data-wire="${i}"><path class="wire-hit" d="${d}"/><path class="wire-line" d="${d}" stroke="${color}"/><title>${esc(w.from)} — ${esc(w.to)}</title></g>`,
+        `<g class="wire${sel ? " selected" : ""}${live ? " live" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+          `<path class="wire-hit" d="${d}"/>` +
+          (live ? `<path class="wire-glow" d="${d}"/>` : "") +
+          `<path class="wire-outline" d="${d}" stroke="${shade(c, 0.45)}"/>` +
+          `<path class="wire-core" d="${d}" stroke="${c}"/>` +
+          `<path class="wire-shine" d="${d}"/>` +
+          ferrule(r.a, r.s1) + ferrule(r.b, r.s2) +
+          `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`,
       );
     });
   }
@@ -382,7 +601,17 @@
       }
     } else if (sel?.kind === "wire") {
       const w = S.spec.wiring[sel.id];
-      if (w) html += `<div class="insp-title">Cable</div><p class="insp-desc">${esc(w.from)} — ${esc(w.to)}</p><button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar cable</button>`;
+      if (w) {
+        const cur = wireColorName(w);
+        html += `<div class="insp-title">Cable</div><p class="insp-desc">${esc(w.from)} — ${esc(w.to)}</p>`;
+        html += `<div class="insp-sub">Color</div><div class="wire-swatches">`;
+        html += `<button class="swatch auto${w.color ? "" : " on"}" data-color="" title="Automático (según el polo)">A</button>`;
+        for (const [name, hex] of Object.entries(WIRE_COLORS)) {
+          html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
+        }
+        html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Arrastre el cable para mover su tramo horizontal.</p>`;
+        html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar cable</button>`;
+      }
     } else {
       html += `<p class="insp-desc muted">Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr quita lo seleccionado. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
     }
@@ -414,7 +643,7 @@
   function addDevice(type, x, y, id = nextId(type)) {
     if (type === "jwsim/jwplc-basic" && S.spec.devices.some((d) => d.type === type)) return null;
     const def = S.defs.get(type);
-    S.spec.devices.push({ id, type, version: def?.version, params: {}, x: Math.round(x), y: Math.round(y) });
+    S.spec.devices.push({ id, type, version: def?.version, params: {}, x: snap(x), y: snap(y) });
     S.sel = { kind: "device", id };
     changed();
     return id;
@@ -423,7 +652,9 @@
   function addWire(from, to) {
     if (from === to || from.split(".")[0] === to.split(".")[0] && from === to) return false;
     if (S.spec.wiring.some((w) => (w.from === from && w.to === to) || (w.from === to && w.to === from))) return false;
-    S.spec.wiring.push({ from, to });
+    // El color se fija al crear (según el polo de las puntas; negro para el mando).
+    const color = poleColor(from, S.staticPoles) ?? poleColor(to, S.staticPoles) ?? "negro";
+    S.spec.wiring.push({ from, to, color });
     S.sel = { kind: "wire", id: S.spec.wiring.length - 1 };
     changed();
     return true;
@@ -455,13 +686,14 @@
     const r = await api.sceneAnalyze(cleanSpec());
     S.error = r.error ?? null;
     S.snap = r.snapshot ?? null;
+    S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
 
   function cleanSpec() {
     return {
       devices: S.spec.devices.map(({ id, type, version, params, x, y }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0 })),
-      wiring: S.spec.wiring.map(({ from, to }) => ({ from, to })),
+      wiring: S.spec.wiring.map(({ from, to, color, points }) => ({ from, to, ...(color ? { color } : {}), ...(points?.length ? { points } : {}) })),
     };
   }
 
@@ -525,7 +757,12 @@
         return;
       }
       if (wireEl) {
-        S.sel = { kind: "wire", id: Number(wireEl.dataset.wire) };
+        const i = Number(wireEl.dataset.wire);
+        S.sel = { kind: "wire", id: i };
+        if (!S.running) {
+          S.drag = { kind: "wire", i, moved: false };
+          svg.setPointerCapture(e.pointerId);
+        }
         render();
         return;
       }
@@ -544,17 +781,29 @@
       if (S.drag.kind === "pan") {
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
         $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+      } else if (S.drag.kind === "wire") {
+        // Mueve el tramo horizontal del cable (queda en la grilla).
+        const wire = S.spec.wiring[S.drag.i];
+        const r = route(wire);
+        const ym = snap(w.y);
+        if (r && ym !== r.ym) {
+          wire.points = [[r.s1.x, ym], [r.s2.x, ym]];
+          S.drag.moved = true;
+          renderWires();
+        }
       } else {
-        S.drag.dev.x = Math.round((w.x - S.drag.dx) / 5) * 5;
-        S.drag.dev.y = Math.round((w.y - S.drag.dy) / 5) * 5;
+        S.drag.dev.x = snap(w.x - S.drag.dx);
+        S.drag.dev.y = snap(w.y - S.drag.dy);
         S.drag.moved = true;
         renderDevice(S.drag.dev);
         renderWires();
       }
     });
     svg.addEventListener("pointerup", () => {
-      if (S.drag?.moved) S.dirty = true;
+      const moved = S.drag?.moved;
+      if (moved) S.dirty = true;
       S.drag = null;
+      if (moved) renderWires();
     });
     svg.addEventListener(
       "wheel",
@@ -589,6 +838,14 @@
     });
     $("scene-inspector").addEventListener("click", (e) => {
       if (e.target.id === "scene-del") removeSelected();
+      const sw = e.target.closest(".swatch");
+      if (sw && S.sel?.kind === "wire") {
+        const w = S.spec.wiring[S.sel.id];
+        if (sw.dataset.color) w.color = sw.dataset.color;
+        else delete w.color;
+        S.dirty = true;
+        render();
+      }
     });
     $("scene-diag").addEventListener("click", (e) => {
       const d = e.target.closest("li")?.dataset.dev;
@@ -721,10 +978,11 @@
         const r = el?.getBoundingClientRect();
         return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
       },
-      wireColor: (i) => document.querySelector(`.wire[data-wire="${i}"] .wire-line`)?.getAttribute("stroke") ?? null,
+      wireColor: (i) => document.querySelector(`.wire[data-wire="${i}"]`)?.dataset.color ?? null,
+      wireLive: (i) => !!document.querySelector(`.wire[data-wire="${i}"]`)?.classList.contains("live"),
       // Punto medio del cable en pantalla (para hacer clic sobre él).
       wirePoint: (i) => {
-        const path = document.querySelector(`.wire[data-wire="${i}"] .wire-line`);
+        const path = document.querySelector(`.wire[data-wire="${i}"] .wire-core`);
         if (!path) return null;
         const p = path.getPointAtLength(path.getTotalLength() / 2);
         const m = path.getScreenCTM();

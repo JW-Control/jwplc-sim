@@ -101,17 +101,18 @@ try {
   await clickAt(await actCenter("S1"), 250);
   const km = await until(() => devOut("KM1", "closed"), 8000);
   const ciclo = await until(async () => /cilindro afuera, ciclo 1/.test(await consoleText()), 8000);
+  // El cable de L+ es rojo y, con la fuente en servicio, brilla (con tensión).
   const hot = await t(() => {
     const spec = window.jwsimTest.scene.spec();
     const i = spec.wiring.findIndex((w) => w.from === "PS1.L+");
-    return window.jwsimTest.scene.wireColor(i);
+    return `${window.jwsimTest.scene.wireColor(i)}${window.jwsimTest.scene.wireLive(i) ? "+tensión" : ""}`;
   });
   const motor = await until(() => devOut("M1", "running"), 3000);
   await win.screenshot({ path: join(OUT, "escena-marcha.png") });
   await clickAt(await actCenter("S0"), 250);
   const parado = await until(async () => (await devOut("KM1", "closed")) === false, 8000);
   const parada = /ms parada/.test(await consoleText());
-  criteria.SCENE_COSIM = { ok: !!km && !!ciclo && hot === "#ff5d5d" && !!motor && !!parado && parada, km1: !!km, ciclo: !!ciclo, cable_L_plus: hot, motor: !!motor, parada };
+  criteria.SCENE_COSIM = { ok: !!km && !!ciclo && hot === "rojo+tensión" && !!motor && !!parado && parada, km1: !!km, ciclo: !!ciclo, cable_L_plus: hot, motor: !!motor, parada };
   log(`SCENE_COSIM ${JSON.stringify(criteria.SCENE_COSIM)}`);
 
   // ---- SCENE_TFT
