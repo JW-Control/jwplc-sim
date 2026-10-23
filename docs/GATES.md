@@ -24,7 +24,7 @@ Convenciones:
 JWSIM_G0_ARCH_DOC=PASS
 JWSIM_G0_LICENSE_MATRIX=PASS        (GPL-3.0-or-later adoptada; SDK MIT; materiales CC BY-SA 4.0)
 JWSIM_G0_POC_IO_BASIC=PASS
-JWSIM_G1_HAL_CORE=PASS              (Linux y Windows: 109/131 compilan, 0 fallas inesperadas)
+JWSIM_G1_HAL_CORE=PASS              (alpha.13: 119/131 compilan, 0 fallas inesperadas)
 JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS
@@ -34,7 +34,7 @@ JWSIM_G2_LOCAL_COMPILE=PASS         (Windows CI: incremental 1,2 s; toolchain in
 JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
 JWSIM_G2_UNSUPPORTED_LIB_MSG=PASS   (10 familias; mensaje con API y gate)
 JWSIM_G2_PROJECT_LINKING=PASS       (esquema jwsim-1, migración v0 → v1)
-JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI: recarga 1,86 s con la escena)
+JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI, alpha.13: recarga 1,63 s con la escena; sketch en C++20)
 JWSIM_G3_BREAKPOINTS_STEP=PASS     (gdb -i=dap; Windows CI y Linux; E2E en Electron)
 JWSIM_G3_FREEZE_TIME=PASS          (10 s detenido: millis() y tiempo virtual idénticos; sin perturbar el hash)
 JWSIM_G3_WATCH_FORCE_IO=PASS       (variables en vivo, forzado de I0/Q0 con marca visual, en la grabación)
@@ -47,10 +47,15 @@ JWSIM_G4_FRAM_PERSIST=PASS         (04.FRAM_Basic cuenta arranques; mismo hash c
 JWSIM_G4_SD_DATALOG=PASS           (SDHC SPI, FatFs y VFS reales; JWPLCDataLog con extracción; lector FAT32 propio)
 JWSIM_G4_TFT_HMI=PASS              (4 capturas idénticas píxel a píxel; 6 botones; E2E en la app)
 JWSIM_G4_RS485_MULTINODE=PASS      (3 nodos, choques, maestro externo por TCP; COM con pty)
-JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; alpha.12 y alpha.13)
-JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502; alpha.12 y alpha.13)
-                                   (G4: Windows CI corrida 2 de g4-windows.yml, Linux y wine; mismos hashes)
-JWSIM_G5_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; W5500 poblado por defecto)
+JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502)
+                                   (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)
+JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux; Windows CI en curso)
+JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
+JWSIM_G5_EXAMPLES_MATRIX=PASS       (103 ejemplos: 98 compilan, corren y pasan su prueba; 5 clasificados; artefacto)
+JWSIM_G5_RELEASE_WORKFLOW=PENDING   (sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL; falta el PR aprobado en platform-jwplc)
+JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
+JWSIM_G6_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---

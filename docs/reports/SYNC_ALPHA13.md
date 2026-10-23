@@ -5,7 +5,7 @@ Package: v2.1.0-alpha.12 (1011f2588fe0) → v2.1.0-alpha.13 (11237c2c8a56), sin 
 Fecha: 2026-10-23 (alpha.13 validada por JW Control)
 Procedimiento: ARCHITECTURE §9
 
-JWSIM_PACKAGE_SYNC_ALPHA13=PENDING (matriz G1 y Windows CI en curso)
+JWSIM_PACKAGE_SYNC_ALPHA13=PASS
 ```
 
 ## 1. Qué trae alpha.13 que afecte al simulador
@@ -68,8 +68,31 @@ real con 0 % de deriva).
 
 ## 6. Resultado
 
-En curso: matriz de compilación de G1 (Linux) y corridas de Windows.
+Todos los gates que estaban en `PASS` con alpha.12 siguen en `PASS` con
+alpha.13 y el W5500 poblado:
+
+| Gate | Linux | Windows CI |
+|---|---|---|
+| G0 POC_IO_BASIC | PASS | — |
+| G1 HAL_CORE | PASS (119/131 compilan, 0 fallas inesperadas; antes 109) | — |
+| G1 TCA6424A_MODEL, DETERMINISM, SPEED_X10, PACKAGE_EXAMPLES_IO (tablas) | PASS | — |
+| G2 LOCAL_COMPILE, UNSUPPORTED_LIB_MSG, E2E (SPLIT_UI, EXTERNAL_EDIT_RELOAD…) | PASS | PASS (corrida 4) |
+| G3 BREAKPOINTS_STEP, FREEZE_TIME, WATCH_FORCE_IO, BUS_ANALYZER, RECORD_REPLAY | PASS | PASS (corrida 9) |
+| G4 (los 9 gates y la E2E) | PASS | PASS (corrida 3) |
+
+La única regresión fue de tiempo en Windows: con alpha.13 la recarga tras una
+edición externa subió a 2,30 s (criterio de G2: < 2 s). La causa no es el
+package sino libstdc++ 14 en C++23 (`<memory>` → `<format>`): ver §7 y
+ARCHITECTURE §3.1. Con el sketch en C++20 quedó en 1,63 s.
 
 ## 7. Windows
 
-En curso: `g2-windows.yml`, `g3-windows.yml` y `g4-windows.yml` sobre `6e37224`.
+- G2: [corrida 3](https://github.com/JW-Control/jwplc-sim/actions/runs/39908620280)
+  falló (EXTERNAL_EDIT_RELOAD 2295 ms). Diagnóstico con
+  [`diag-pch.mjs`](https://github.com/JW-Control/jwplc-sim/actions/runs/39911237822):
+  restaurar el PCH 0,02 s, instanciación diferida 1,25 s (45 MB). Tras compilar
+  el sketch en C++20,
+  [corrida 4](https://github.com/JW-Control/jwplc-sim/actions/runs/39912573814):
+  PASS, `.ino` 608 ms, recarga 1627 ms, recompilación 1857 ms.
+- G3: [corrida 9](https://github.com/JW-Control/jwplc-sim/actions/runs/39908617496) PASS.
+- G4: [corrida 3](https://github.com/JW-Control/jwplc-sim/actions/runs/39908614849) PASS.
