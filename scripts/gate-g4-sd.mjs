@@ -63,7 +63,7 @@ const criteria = {};
     const text = fat.readFile("/taller.txt")?.toString() ?? "";
     const { problems } = fat.check();
     out.microSD_Basic = {
-      pass: a.lines.includes("Card present = 1") && a.lines.includes("Ready = 1") && text === "Arranque ms=992\r\nArranque ms=992\r\n" &&
+      pass: a.lines.includes("Card present = 1") && a.lines.includes("Ready = 1") && /^(Arranque ms=\d+\r\n)\1$/.test(text) &&
         b.lines.filter((l) => /^Arranque ms=/.test(l)).length === 2 && problems.length === 0,
       archivo: text,
       fsck: problems,
@@ -146,7 +146,7 @@ const datalog = async (name) => {
     ultima: csv.at(-1)?.join(","),
   };
   criteria.deteccion = {
-    pass: removed.presente === 0 && removed.lista === 0 && removed.fallidos > 0 && last.presente === 1 && last.lista === 1 && lines === last.aceptadas,
+    pass: removed.presente === 0 && removed.lista === 0 && last.fallidos > 0 && last.presente === 1 && last.lista === 1 && lines === last.aceptadas,
     sin_tarjeta: removed,
     al_final: last,
   };

@@ -2,7 +2,7 @@
   "descripcion": "Lectura del RTC DS3232M (@0x68, recién alimentado: sin hora válida) e inicialización del TCA6424A @0x22 por el core (02_io_basic del package).",
   "fuente": {
     "sketch": "package:tools/build-speed-benchmark/sketches/02_io_basic",
-    "until_ms": 800,
+    "until_ms": 1300,
     "filtro": "^I2C0$",
     "max": 10
   },
@@ -40,7 +40,7 @@
       0
     ],
     [
-      689041050,
+      826014250,
       "I2C0",
       34,
       "00",
@@ -48,7 +48,7 @@
       0
     ],
     [
-      689431550,
+      826405350,
       "I2C0",
       34,
       "05 00",
@@ -56,7 +56,7 @@
       0
     ],
     [
-      689722050,
+      826696050,
       "I2C0",
       34,
       "06 00",
@@ -64,7 +64,7 @@
       0
     ],
     [
-      690012550,
+      826986550,
       "I2C0",
       34,
       "0c ff",
@@ -72,7 +72,7 @@
       0
     ],
     [
-      690303050,
+      827277050,
       "I2C0",
       34,
       "0d 00",
@@ -80,7 +80,7 @@
       0
     ],
     [
-      690593550,
+      827567550,
       "I2C0",
       34,
       "0e ff",

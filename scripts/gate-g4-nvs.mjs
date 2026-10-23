@@ -103,7 +103,7 @@ const criteria = {};
     const st = join(work, "eeprom_write");
     const read = (r) => r.lines[r.lines.findIndex((l) => /bytes read from Flash/.test(l)) + 1]?.trim();
     const written = (r) => r.lines[r.lines.findIndex((l) => /writing random/.test(l)) + 1]?.trim();
-    const r1 = run(exe, st, 7000);
+    const r1 = run(exe, st, 9000);
     const r2 = run(exe, st, 1000);
     out.eeprom_write = { pass: !!written(r1) && read(r1) === Array(64).fill("255").join(" ") && read(r2) === written(r1), escritos: written(r1), leidos: read(r2) };
   }

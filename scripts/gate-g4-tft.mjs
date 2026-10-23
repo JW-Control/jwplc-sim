@@ -57,8 +57,10 @@ const shots = SHOTS.map(([t, what], i) => {
 // Botonera: PRESS y RELEASE de cada botón.
 const btn = await buildSketch(join(examples, "JWPLC_GlobalPeripherals", "examples", "02.Buttons_Basic"), { target, log: () => {} });
 const names = ["LEFT", "UP", "RIGHT", "ESC", "OK", "DOWN"];
-const bargs = ["--until", String(1000 + names.length * 300), "--quiet"];
-names.forEach((n, i) => bargs.push("--set", `BTN_${n}=1@${1000 + i * 300}`, "--set", `BTN_${n}=0@${1100 + i * 300}`));
+// Desde 1,5 s: la botonera se explora una vez iniciado el runtime (con
+// alpha.13 la TFT tarda ~140 ms más en iniciar: borrado, DISPON y 120 ms).
+const bargs = ["--until", String(1500 + names.length * 300), "--quiet"];
+names.forEach((n, i) => bargs.push("--set", `BTN_${n}=1@${1500 + i * 300}`, "--set", `BTN_${n}=0@${1600 + i * 300}`));
 const bout = runExe(btn.exe, [...bargs.filter((a) => a !== "--quiet")]).stdout;
 const seen = names.map((n) => ({ n, press: bout.includes(`PRESS   ${n}`), release: bout.includes(`RELEASE ${n}`) }));
 

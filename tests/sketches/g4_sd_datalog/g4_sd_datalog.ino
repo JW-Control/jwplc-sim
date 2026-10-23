@@ -3,7 +3,8 @@
 // JWSIM_G4_SD_DATALOG: registro de datos en la microSD con JWPLCDataLog
 // (JW_SD del package). Cada 100 ms agrega "ms,I0_0,I0_1,hh:mm:ss" a
 // /datalog.csv; la hora del sistema se toma del RTC (los archivos quedan con
-// la fecha real). Informa el estado cada segundo y, a los 6 s, cierra el
+// la fecha real). Informa el estado cada segundo y, a los 6 s, lo informa
+// una vez más, cierra el
 // registro y relee el archivo: "DATALOG lineas=N bytes=B".
 #include <sys/time.h>
 
@@ -54,7 +55,8 @@ void loop() {
     logger.writeLine(line);
   }
   logger.service();
-  if (now - lastReport >= 1000) {
+  // Estado cada segundo y al cerrar (la última cuenta coincide con el archivo).
+  if (now - lastReport >= 1000 || now >= 6000) {
     lastReport = now;
     Serial.printf("t=%lu presente=%d lista=%d aceptadas=%lu confirmados=%llu commits=%lu fallidos=%lu pendientes=%u\n",
                   static_cast<unsigned long>(now), JWPLC_SD.isCardPresent(), JWPLC_SD.isReady(),

@@ -1,5 +1,5 @@
 {
-  "descripcion": "Arranque del W5500 por el core (CS GPIO5), incluidos los sondeos de chip del driver.",
+  "descripcion": "Arranque del W5500 por el core (CS GPIO5) con el chip poblado: detección de w5100.cpp, cuyas tramas en formato W5200 caen en un bloque reservado del W5500 (MR sigue en 0, distinto de 08h: no es un W5200).",
   "fuente": {
     "sketch": "arbol:libraries/JWPLC_ModbusRTU/examples/02.ModbusRTU_Master_Read",
     "until_ms": 3500,
@@ -8,56 +8,56 @@
   },
   "items": [
     [
-      1003716850,
+      1131108000,
       "VSPI",
       "W5500",
       "00 17 04 27 10",
-      "ff ff ff ff ff",
+      "00 00 00 00 00",
       [],
       5
     ],
     [
-      1003719950,
+      1131111100,
       "VSPI",
       "W5500",
       "00 19 04 03",
-      "ff ff ff ff",
+      "00 00 00 00",
       [],
       4
     ],
     [
-      1003722850,
+      1131114000,
       "VSPI",
       "W5500",
       "00 00 80 01 80",
-      "ff ff ff ff ff",
+      "00 00 00 00 00",
       [],
       5
     ],
     [
-      1003725250,
+      1131116400,
       "VSPI",
       "W5500",
       "00 00 00 01 00",
-      "ff ff ff ff ff",
+      "00 00 00 00 00",
       [],
       5
     ],
     [
-      1004000650,
+      1131118800,
       "VSPI",
       "W5500",
-      "00 00 00 01 00",
-      "ff ff ff ff ff",
+      "00 00 80 01 08",
+      "00 00 00 00 00",
       [],
       5
     ],
     [
-      1005000550,
+      1131121200,
       "VSPI",
       "W5500",
       "00 00 00 01 00",
-      "ff ff ff ff ff",
+      "00 00 00 00 00",
       [],
       5
     ]
@@ -93,21 +93,27 @@
       "bsb": 0,
       "write": false,
       "address": 0,
-      "reg": "MR"
+      "reg": "MR",
+      "data": [
+        0,
+        0
+      ]
+    },
+    {
+      "chip": "W5500",
+      "bsb": 16,
+      "level": "warn"
     },
     {
       "chip": "W5500",
       "bsb": 0,
       "write": false,
       "address": 0,
-      "reg": "MR"
-    },
-    {
-      "chip": "W5500",
-      "bsb": 0,
-      "write": false,
-      "address": 0,
-      "reg": "MR"
+      "reg": "MR",
+      "data": [
+        0,
+        0
+      ]
     }
   ]
 }
