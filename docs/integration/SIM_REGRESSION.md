@@ -4,9 +4,10 @@ Gate `JWSIM_G5_RELEASE_WORKFLOW`: el flujo de release del package corre la
 regresión simulada **antes** de publicar y de los gates físicos, sin
 reemplazarlos, y no publica si falla.
 
-> Estado: **propuesta, sin aplicar**. platform-jwplc no se modifica desde este
-> repositorio; el cambio se abre como PR allá solo con la aprobación de JW
-> Control.
+> Estado: **en espera** (decisión de JW Control, 23/10/2026): se agrega a los
+> workflows de platform-jwplc al cerrar las alphas 14 (HMI Designer) y 15
+> (OpenPLC). Mientras tanto se corre a pedido desde este repositorio contra
+> las ramas del package (`package_ref`).
 
 ## Qué corre
 

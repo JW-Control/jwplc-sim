@@ -53,7 +53,7 @@ JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC e
 JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux y Windows CI)
 JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (103 ejemplos: 98 compilan, corren y pasan su prueba; 5 clasificados; artefacto)
-JWSIM_G5_RELEASE_WORKFLOW=PENDING   (sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL; falta el PR aprobado en platform-jwplc)
+JWSIM_G5_RELEASE_WORKFLOW=PENDING   (en espera hasta cerrar alpha.14 y alpha.15; sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL)
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
 JWSIM_G6_*=PENDING ... JWSIM_G10_*=PENDING
 ```
