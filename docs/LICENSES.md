@@ -38,7 +38,7 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 | `JW_FRAM` | basada en Adafruit | BSD (Adafruit, `LICENCE`) | Sí | |
 | `Adafruit_BusIO` | Adafruit | MIT | Sí | |
 | `libb64` (core) | | Dominio público | Sí | |
-| TFT_eSPI 2.5.43 | Bodmer (descargada, no versionada) | FreeBSD (BSD-2-Clause) + partes MIT (`license.txt`) | Sí | El package solo trae el `.a` y la licencia (§11 H3 de ARCHITECTURE). |
+| TFT_eSPI 2.5.43 | Bodmer (descargada, no versionada) | FreeBSD (BSD-2-Clause) + partes MIT (`license.txt`) | Sí | El package solo trae el `.a` y la licencia (§11 H3 de ARCHITECTURE). Se le aplica el cambio `JWPLC_TFT_DEFER_DISPON` del `.a` de alpha.13 en `ST7789_Init.h` (permitido por la licencia; ver `third_party/sources.json`). |
 | FatFs (ESP-IDF v5.5.1) | ChaN + glue ESP-IDF | Licencia FatFs (BSD de 1 cláusula) + Apache-2.0 | Sí | Descargada, no versionada. |
 | Headers sustitutos de ESP-IDF (`sim/hal/include`) | este repo | GPL-3.0-or-later | — | Declaraciones de API escritas desde cero; nombres y firmas por interoperabilidad. |
 | HAL nativo, motor, modelos, placa, runner | este repo | GPL-3.0-or-later (interfaz del SDK: MIT) | — | |

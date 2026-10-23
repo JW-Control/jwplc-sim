@@ -105,6 +105,16 @@
         "Fonts/Custom/Roboto_Thin_24.h": "bf9e12ee57bb992928b0e029259a1d6dd291244f17b046ba57b4e32250d307f3",
         "Fonts/Custom/Satisfy_24.h": "35f44c438df9a6c397c6dd11f6b82384c4b9eaf8aa0952ff31393800a7bda5af",
         "Fonts/Custom/Yellowtail_32.h": "f063da110e14df4baf9b02aad30385d9512ec5d3b8a07c64fd7a334e87ed14d6"
+      },
+      "patches": {
+        "TFT_Drivers/ST7789_Init.h": {
+          "why": "Mismo cambio que el libJWPLC_TFT.a de alpha.13 (gate A13-TFT-PRE4/PRE6, validado en placa): con JWPLC_TFT_DEFER_DISPON (tft_setup.h) el init de TFT_eSPI termina con la pantalla apagada y JWPLC_TFT la enciende después de limpiar la memoria a negro. Sin él se ve el rojo de fillScreen(TFT_RED) del init al arrancar. Las líneas insertadas llevan CRLF, como el archivo validado.",
+          "find": "^(?<indent>\\s*)writecommand\\(ST7789_DISPON\\);\\s*//\\s*Display on\\s*\\r?\\n\\k<indent>delay\\(120\\);",
+          "flags": "gm",
+          "replace": "$<indent>#ifndef JWPLC_TFT_DEFER_DISPON\r\n$<indent>writecommand(ST7789_DISPON);    // Display on\r\n$<indent>delay(120);\r\n$<indent>#endif",
+          "count": 2,
+          "sha256": "44873be82fe836084934a328df77f098e9ab88d212dd1d570da5e8aac74671bc"
+        }
       }
     }
   ]

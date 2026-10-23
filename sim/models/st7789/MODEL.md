@@ -6,7 +6,12 @@ aparte), con el panel IPS de 1,9" 170×320 del JWPLC Basic (CS = GPIO33, D/C
 Referencia: **ST7789V datasheet v1.6** (Sitronix). Implementación:
 [`st7789.cpp`](st7789.cpp), interfaz
 [`../include/jwsim/models/st7789.h`](../include/jwsim/models/st7789.h). El
-código bajo prueba es TFT_eSPI 2.5.43 con la configuración del package.
+código bajo prueba es TFT_eSPI 2.5.43 con la configuración del package y el
+mismo cambio de `ST7789_Init.h` con el que alpha.13 compiló `libJWPLC_TFT.a`
+(`JWPLC_TFT_DEFER_DISPON`: el init termina con la pantalla apagada y
+`JWPLC_TFT` la enciende después de limpiarla a negro; sin él se ve el
+`fillScreen(TFT_RED)` del init). Lo aplica y verifica por SHA-256
+`scripts/fetch-third-party.mjs` (`patches` en `third_party/sources.json`).
 
 ## Comportamiento modelado
 
