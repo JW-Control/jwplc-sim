@@ -7,7 +7,7 @@ virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
 Estado: G0–G4 cerrados (G1 salvo la calibración contra placa) · siguiente: G5
-Package fijado: platform-jwplc v2.1.0-alpha.12 (package.lock)
+Package fijado: platform-jwplc v2.1.0-alpha.13 (package.lock)
 ```
 
 Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
@@ -78,11 +78,12 @@ Periféricos (G4), modelados por registros contra sus hojas de datos:
 - **RS-485**: varios PLC simulados en un mismo bus Modbus RTU, y una
   herramienta externa (JW Modbus Tool) conectada al bus por un socket TCP o
   un puerto COM virtual: `node cli/jwsim-bus.mjs`.
-- **Ethernet (W5500)**: con `"ethernet": { "present": true }` en
-  `simulation.peripherals` del proyecto (o `node cli/jwsim-net.mjs
-  <sketch>`), el PLC está en una red virtual con DHCP cuya puerta de enlace
-  es el PC; sus puertos de escucha se publican en el PC (Modbus TCP 502 →
-  127.0.0.1:1502) y sus conexiones salen por la red del PC.
+- **Ethernet (W5500)**: la placa lo trae poblado. En la app (o con
+  `node cli/jwsim-net.mjs <sketch>`) el PLC está en una red virtual con
+  DHCP cuya puerta de enlace es el PC; sus puertos de escucha se publican en
+  el PC (Modbus TCP 502 → 127.0.0.1:1502) y sus conexiones salen por la red
+  del PC. `"ethernet": { "present": false }` en `simulation.peripherals`
+  del proyecto lo quita.
 
 Pruebas E2E de la interfaz: `cd app && npm run test:e2e` (G2),
 `npm run test:e2e:g3` (G3) y `npm run test:e2e:g4` (G4) (en Linux sin
@@ -107,7 +108,7 @@ paquete `g++-multilib`) reproduce el modelo de datos ILP32 del ESP32.
 ```sh
 node scripts/fetch-package.mjs        # descarga el tag fijado a .jwsim/ (no se versiona)
 node cli/jwsim-cli.mjs run \
-  .jwsim/package/v2.1.0-alpha.12/tools/build-speed-benchmark/sketches/02_io_basic \
+  .jwsim/package/v2.1.0-alpha.13/tools/build-speed-benchmark/sketches/02_io_basic \
   -- --until 3000 --set I0_0=1@1000 --set I0_0=0@2000
 node scripts/gate-g0-poc.mjs          # gate JWSIM_G0_POC_IO_BASIC
 ```
@@ -115,7 +116,7 @@ node scripts/gate-g0-poc.mjs          # gate JWSIM_G0_POC_IO_BASIC
 Opciones del runner: `--until <ms>`, `--set SEÑAL=V@ms`, `--stim archivo`,
 `--realtime <factor>`, `--seed <n>`, `--stats`, `--quiet`, `--state <dir>`
 (FRAM, NVS, RTC y microSD persistentes), `--rtc host|fijo:AAAA-MM-DDTHH:MM:SS`,
-`--eth` (W5500 poblado).
+`--no-eth` (placa sin el W5500).
 Depuración: `JWSIM_TRACE_TASK=<tarea> JWSIM_TRACE_BT=1` imprime dónde se
 bloquea una tarea; `JWSIM_EXTRA_FLAGS=-fsanitize=address` compila con ASan.
 

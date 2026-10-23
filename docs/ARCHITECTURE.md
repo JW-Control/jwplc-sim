@@ -2,7 +2,8 @@
 
 ```text
 Estado: G0 — arquitectura cerrada para iniciar G1
-Package de referencia: platform-jwplc v2.1.0-alpha.12 (1011f2588fe0), árbol JWPLC/2.1.0
+Package de referencia: platform-jwplc v2.1.0-alpha.13 (11237c2c8a56), árbol JWPLC/2.1.0
+(hasta G4 inclusive se validó con alpha.12; sincronización en §9)
 Base del core: arduino-esp32 3.3.8 (esp32-libs 3.3.8, toolchain esp-x32 2601)
 ```
 
@@ -324,7 +325,7 @@ interface DeviceStep {
 
 ## 5. Mapa de hardware del JWPLC Basic
 
-Extraído del package (alpha.12). "Fuente" indica de dónde sale cada dato.
+Extraído del package (alpha.12, revisado con alpha.13). "Fuente" indica de dónde sale cada dato.
 
 | Periférico | Conexión | Librería | Fuente | Modelo | Gate |
 |---|---|---|---|---|---|
@@ -340,7 +341,7 @@ Extraído del package (alpha.12). "Fuente" indica de dónde sale cada dato.
 | RS-485 (MAX13487E, auto-dirección) | UART2 RX 16, TX 17 | `JWPLC_RS485`, `JWPLC_ModbusRTU` | `jwplc_hardware_config.h` | **G4** UART con tiempo de carácter, bus multinodo (§7.3) | G4 RS485_MULTINODE |
 | Botonera matricial 2×3 | filas GPIO12, 2; columnas 35, 34, 36 | `JW_MatrixButtons` | `JWPLC_GlobalPeripherals.cpp` | **G4** matriz por GPIO (`BTN_*`) | G4 TFT_HMI |
 | UART0 consola | TX 1, RX 3 | `HardwareSerial` | `pins_arduino.h` | consola | G1 |
-| LEDs RUN/ERR/BUS/ETH | **no encontrados en el package alpha.12** | — | — | pendiente | ver §11 H6 |
+| Indicadores PWR/RUN/ERR/BUS/ETH | dibujados en la pantalla de reposo por el runtime (no son LEDs) | `JWPLC_Display` | render de la placa y TFT simulada | TFT | G4 TFT_HMI |
 
 Supuestos de la placa (no están en el package):
 
@@ -670,13 +671,13 @@ a la par del reloj de pared. CLI: `node cli/jwsim-bus.mjs <sketch>...
 
 El modelo del W5500 no abre sockets: lo que el chip envía (LISTEN,
 CONNECT, SEND, SENDTO, DISCON/CLOSE) sale por `W5500::Network` y lo que
-llega de la red entra con `net_*` en un instante virtual. La placa lo
-puebla con `--eth` (en la app, `simulation.peripherals.ethernet.present`
-del proyecto); sin él CS5 no responde y el runtime informa "No Ethernet
-hardware", como alpha.12 lo esperaba. La señal `ETH_CABLE` (1 =
+llega de la red entra con `net_*` en un instante virtual. Desde alpha.13 la
+placa lo trae poblado, como el JWPLC Basic; `--no-eth` (en la app,
+`simulation.peripherals.ethernet.present = false` en el proyecto) lo quita:
+CS5 no responde y el runtime informa "No Ethernet hardware". La señal `ETH_CABLE` (1 =
 conectado) desconecta el cable.
 
-- **CLI** (`--eth` sin `--port`): nadie responde en la red (el ARP vence,
+- **CLI** (sin `--port`): nadie responde en la red (el ARP vence,
   el DHCP no contesta) salvo lo que traiga el `.stim`.
 - **Protocolo**: `{"type":"net","on":1}` hace que el runner informe
   `{"type":"net","op":…}`; `{"type":"net_in",…}` entra como una entrada
@@ -778,9 +779,15 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
   W5500 (dueño del bus por tarea, sockets con "lease"), el inicio sin la
   espera de 560 ms y Modbus TCP; alpha.14 usará INTn y reutilización de
   FIFO. El modelo (§7.4) es del chip, no de una alpha: los gates
-  W5500_MODEL y MODBUS_TCP_HOST pasan con alpha.12 y con alpha.13. La
-  placa lo trae poblado solo con `--eth` mientras el package fijado sea
-  alpha.12.
+  W5500_MODEL y MODBUS_TCP_HOST pasaron con alpha.12 y con alpha.13. Desde
+  la sincronización a alpha.13 la placa lo trae poblado.
+- **Sincronización a alpha.13** (2026-10-23, validada por JW Control):
+  compila sin cambios en el simulador. Lo que hubo que ajustar fueron
+  tiempos fijados con alpha.12 (la TFT tarda ~140 ms más en iniciar),
+  capturas del analizador y referencias de la pantalla de reposo (ETH ya
+  no está vacío), y la velocidad: alpha.13 toma un mutex en cada acceso a
+  las E/S, compensado con `-O2` para `sim/` y un `S()` integrable en el
+  motor. Informe en [`docs/reports/SYNC_ALPHA13.md`](reports/SYNC_ALPHA13.md).
 
 ## 10. Límites de fidelidad
 
@@ -817,7 +824,7 @@ sin cambios. Se proponen para alphas futuras; el simulador no los parcha.
 | H3 | `libJWPLC_TFT.a` contiene TFT_eSPI 2.5.43 precompilado y el package no trae su fuente (solo la licencia). | Para compilar desde fuente el simulador descarga TFT_eSPI 2.5.43 de upstream; si el `.a` usa una versión parcheada, habría divergencia. | Publicar en el repo la fuente exacta (o el parche) con que se genera `libJWPLC_TFT.a`. |
 | H4 | `jwplcSystemTask` ejecuta en la misma vuelta el escaneo de E/S y servicios que pueden bloquear: reintento de montaje SD (esperas de 3×100 ms en `sdCommand`) y sondeo del W5500 (`delay(1)` en `W5100Class::softReset`). | Ante una falla (tarjeta detectada que no responde, W5500 que no responde) el escaneo de entradas se retrasa de 20 ms a 60–300 ms. Observado en G0 con la detección SD sin modelar y con el W5500 no poblado. | Separar el escaneo de E/S de los servicios bloqueantes (tarea propia o máquinas de estado no bloqueantes). |
 | H5 | El autoload de `Arduino.h` enlaza 16 librerías en cualquier sketch. | Más superficie a simular y a compilar en frío. | Ninguna acción necesaria; documentado para G1/G5. |
-| H6 | No se encontraron en alpha.12 definiciones de los LEDs RUN/ERR/BUS/ETH. | No se pueden modelar todavía. | Indicar pines/expansor o confirmar que son controlados por hardware. |
+| H6 | ~~No se encontraron en alpha.12 definiciones de los LEDs RUN/ERR/BUS/ETH.~~ **Resuelto**: no son LEDs; son indicadores que el runtime dibuja en la pantalla de reposo (PWR, RUN, ERR, BUS, ETH), como se ve en el render de la placa. | — | — |
 | H7 | El sdkconfig de `esp32-libs 3.3.8` no está en el package. | Valores como `CONFIG_FATFS_*` o `CONFIG_ARDUINO_RUNNING_CORE` se fijaron por defecto. | Verificar contra el `sdkconfig` del tool y fijarlos en `sim/hal/include/sdkconfig.h`. |
 | H8 | Cuatro ejemplos de `JW_MatrixButtons` (`01_BasicPress`, `02_AxisWrapSerial`, `03_EventQueue`, `05_DirectButtons_IO35_IO34_IO39`) definen su propio `enum { BTN_LEFT, … }`, que choca con `JWPLCButtonId` de `JWPLC_GlobalPeripherals.h` (incluido por el autoload de `Arduino.h`). | No compilan con la placa `jwplcbasic`, tampoco en el Arduino IDE. | Renombrar los enumeradores de los ejemplos o poner `JWPLCButtonId` en un namespace / `enum class`. |
 | H9 | Sketches de `tools/build-speed-benchmark` que usan librerías retiradas antes de alpha.12 (`08_ethernet_bridge_link`, `09_gfx_bridge_link`, `10_gfx_physical`, `16_alpha6_ethernet_nonblocking_acceptance`). | No compilan con alpha.12. | Actualizarlos a `JWPLC_TFT`/`JWPLC_Ethernet` o moverlos a un archivo histórico. |
