@@ -208,7 +208,7 @@
     });
   }
 
-  function astar(from, to, dir0, dirEnd, boxes, occ, ends, bounds) {
+  function astar(from, to, dir0, dirEnd, boxes, occ, ends, bounds, limit = 400000) {
     const blocked = (x, y) => boxes.some((b) => x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2);
     const D = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const k = (x, y, d) => `${x},${y},${d}`;
@@ -245,7 +245,7 @@
     push({ x: from.x, y: from.y, d: dir0, g: 0, f: h(from.x, from.y), prev: null });
     best.set(k(from.x, from.y, dir0), 0);
     let n = 0;
-    while (heap.length && n++ < 400000) {
+    while (heap.length && n++ < limit) {
       const c = pop();
       if (c.x === to.x && c.y === to.y) {
         const pts = [];
@@ -293,7 +293,7 @@
       mid = [s1, ...w.points.map(([x, y]) => ({ x, y })), s2];
     } else if (ctx) {
       const g = (p) => ({ x: Math.round(p.x / GRID), y: Math.round(p.y / GRID) });
-      mid = astar(g(s1), g(s2), dirOf(a, s1), dirOf(s2, b), ctx.boxes, ctx.occ, new Set([w.from, w.to]), ctx.bounds);
+      mid = astar(g(s1), g(s2), dirOf(a, s1), dirOf(s2, b), ctx.boxes, ctx.occ, new Set([w.from, w.to]), ctx.bounds, ctx.limit);
     }
     const routed = !!mid;
     if (!mid) {
@@ -310,8 +310,14 @@
       }
       out.push(p);
     }
-    // Registra los tramos (para los cables siguientes) con los bornes del cable.
-    if (ctx) {
+    if (ctx) occupy(ctx, w, out);
+    // Puntos de doblez editables: los interiores entre las dos salidas.
+    return { mid: out, vertices: out.slice(1, -1), a, b, s1, s2, routed };
+  }
+
+  // Registra los tramos de un cable (para los siguientes) con sus bornes.
+  function occupy(ctx, w, out) {
+    {
       for (let i = 1; i < out.length; i++) {
         const [p, q] = [out[i - 1], out[i]];
         if (p.x !== q.x && p.y !== q.y) continue;
@@ -325,8 +331,6 @@
         }
       }
     }
-    // Puntos de doblez editables: los interiores entre las dos salidas.
-    return { mid: out, vertices: out.slice(1, -1), a, b, s1, s2, routed };
   }
 
   function routeContext() {
@@ -366,15 +370,25 @@
   function renderWires() {
     const g = $("scene-wires");
     g.textContent = "";
-    // Durante un arrastre se usa el trazado simple (rápido); al soltar, A*.
     // Los recorridos se recalculan solo si cambió la geometría (no con cada
-    // instantánea de la simulación).
-    const dragging = !!S.drag?.moved;
+    // instantánea de la simulación). Al arrastrar un equipo o un punto de
+    // doblez se vuelven a trazar solo los cables afectados, con A* y los
+    // demás como ocupados: el cable esquiva los equipos también mientras se
+    // mueve.
     const layout = JSON.stringify([S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]), S.spec.wiring.map((w) => [w.from, w.to, w.points])]);
-    if (dragging || S.routeKey !== layout) {
-      const ctx = dragging ? null : routeContext();
-      S.routes = S.spec.wiring.map((w) => route(w, ctx));
-      S.routeKey = dragging ? null : layout;
+    if (S.routeKey !== layout) {
+      const ctx = routeContext();
+      const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
+      const affected = (w, i) =>
+        S.drag.kind === "device" ? w.from.startsWith(`${S.drag.dev.id}.`) || w.to.startsWith(`${S.drag.dev.id}.`) : S.drag.kind === "vertex" && i === S.drag.i;
+      if (moving) {
+        S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
+        ctx.limit = 40000;
+        S.routes = S.spec.wiring.map((w, i) => (affected(w, i) ? route(w, ctx) : S.routes[i]));
+      } else {
+        S.routes = S.spec.wiring.map((w) => route(w, ctx));
+      }
+      S.routeKey = layout;
     }
     // Puentes: los cables de un mismo borne entran juntos, uno al lado del
     // otro, en un casquillo doble.
@@ -801,18 +815,32 @@
           renderWires();
         }
       } else {
-        S.drag.dev.x = snap(w.x - S.drag.dx);
-        S.drag.dev.y = snap(w.y - S.drag.dy);
-        S.drag.moved = true;
-        renderDevice(S.drag.dev);
-        renderWires();
+        const nx = snap(w.x - S.drag.dx);
+        const ny = snap(w.y - S.drag.dy);
+        if (nx !== S.drag.dev.x || ny !== S.drag.dev.y) {
+          S.drag.dev.x = nx;
+          S.drag.dev.y = ny;
+          S.drag.moved = true;
+          renderDevice(S.drag.dev);
+          // Un trazado por cuadro como máximo.
+          if (!S.wireFrame) {
+            S.wireFrame = requestAnimationFrame(() => {
+              S.wireFrame = 0;
+              renderWires();
+            });
+          }
+        }
       }
     });
     svg.addEventListener("pointerup", () => {
       const moved = S.drag?.moved;
       if (moved) S.dirty = true;
       S.drag = null;
-      if (moved) renderWires();
+      // Al soltar, todos los cables se vuelven a trazar con la escena nueva.
+      if (moved) {
+        S.routeKey = null;
+        renderWires();
+      }
     });
     svg.addEventListener(
       "wheel",
@@ -1015,9 +1043,25 @@
     $("scene-fit").addEventListener("click", fit);
     $("scene-rearm").addEventListener("click", () => api.sceneRearm());
     api.onSceneSnapshot((snap) => {
+      // Relés y contactores externos: clic al atraer y al soltar.
+      for (const d of snap.devices) {
+        if (typeof d.outputs?.closed !== "boolean") continue;
+        const prev = S.snap?.devices.find((x) => x.id === d.id)?.outputs?.closed;
+        if (prev !== undefined && prev !== d.outputs.closed) window.JwsimSound?.click(d.type === "jwsim/contactor" ? "contactor" : "relay", d.outputs.closed);
+      }
       S.snap = snap;
       render();
     });
+    const sound = $("scene-sound");
+    const paintSound = () => {
+      sound.textContent = window.JwsimSound?.enabled ? "🔊 Sonido" : "🔇 Sonido";
+      sound.classList.toggle("off", !window.JwsimSound?.enabled);
+    };
+    sound.addEventListener("click", () => {
+      window.JwsimSound.enabled = !window.JwsimSound.enabled;
+      paintSound();
+    });
+    paintSound();
     api.onDisplay(() => requestAnimationFrame(copyTft));
     new ResizeObserver(() => S.view === "scene" && !S.fitted && fit()).observe($("scene-svg"));
   }

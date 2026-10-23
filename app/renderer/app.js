@@ -843,6 +843,8 @@ function onMessage(m) {
       break;
     case "signals":
       for (const [name, level] of m.changes) {
+        // Relés de salida de la placa: clic al conmutar.
+        if (name.startsWith("Q0_") && !!state.levels.get(name) !== !!level) window.JwsimSound?.click("relay", !!level);
         state.levels.set(name, !!level);
         renderSignal(name, level);
         updateWatchSignal(name);
