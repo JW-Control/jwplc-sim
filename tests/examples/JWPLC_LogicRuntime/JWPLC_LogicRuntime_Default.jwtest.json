@@ -1,12 +1,109 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Programa por defecto I0_0 AND NOT I0_1 → TON 2 s → Q0_0. I0_0 a los 2,5 s; I0_1 entre 3,5 y 4,5 s interrumpe y reinicia el TON; al soltar I0_1 Q0_0 sube ~2 s después (≈6,5 s) y no antes (sin el reinicio habría subido a los 4,5 s). I0_1 a los 7,5 s apaga Q0_0 al instante; al soltar I0_1 (8 s) el TON vuelve a contar pero I0_0 cae a los 8,5 s, así que Q0_0 no vuelve a encender. Solo Q0_0 se usa.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Default",
-  "until_ms": 8000,
+  "until_ms": 11000,
+  "stim": [
+    "2500 I0_0=1",
+    "3500 I0_1=1",
+    "4500 I0_1=0",
+    "7500 I0_1=1",
+    "8000 I0_1=0",
+    "8500 I0_0=0"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)?",
-      "^Logica: I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)? AND NOT I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)? -> TON -?\\d+(?:\\.\\d+)? s -> Q-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?",
-      "^FRAM configurada: -?\\d+(?:\\.\\d+)? bytes"
+      "^JWPLC Logic Runtime - PoC 2\\.2$",
+      "^Logica: I0_0 AND NOT I0_1 -> TON 2 s -> Q0_0$",
+      "^FRAM configurada: 8192 bytes$",
+      "^Bloques del programa: 6$",
+      "^Runtime iniciado\\. Las salidas no usadas permanecen apagadas\\.$",
+      {
+        "match": "^I0_0=0 I0_1=0 AND=0 TON=0 Q0_0=0 \\|",
+        "before_ms": 2500,
+        "min": 1
+      },
+      {
+        "match": "^I0_0=1 I0_1=0 AND=1 TON=0 Q0_0=0 \\|",
+        "after_ms": 2500,
+        "before_ms": 3500,
+        "count": 1
+      },
+      {
+        "match": "^I0_0=1 I0_1=1 AND=0 TON=0 Q0_0=0 \\|",
+        "after_ms": 3500,
+        "before_ms": 4500,
+        "count": 1
+      },
+      {
+        "match": "^I0_0=1 I0_1=0 AND=1 TON=1 Q0_0=1 \\|",
+        "after_ms": 6500,
+        "before_ms": 7500,
+        "min": 1
+      },
+      {
+        "match": "^I0_0=1 I0_1=1 AND=0 TON=0 Q0_0=0 \\|",
+        "after_ms": 7500,
+        "before_ms": 8000,
+        "count": 1
+      },
+      {
+        "match": "TON=1",
+        "after_ms": 7600,
+        "count": 0
+      },
+      {
+        "match": "^Benchmark estabilizado: estadisticas reiniciadas\\.$",
+        "count": 1,
+        "after_ms": 3900,
+        "before_ms": 4200
+      }
+    ],
+    "console_absent": [
+      "^Error de inicializacion",
+      "^Programa invalido",
+      "^Fallo de runtime"
+    ],
+    "signals": [
+      {
+        "at_ms": 2400,
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 4400,
+        "I0_0": 1,
+        "I0_1": 1,
+        "Q0_0": 0
+      },
+      {
+        "at_ms": 4600,
+        "Q0_0": 0
+      },
+      {
+        "at_ms": 6400,
+        "Q0_0": 0
+      },
+      {
+        "at_ms": 6600,
+        "Q0_0": 1,
+        "DO": "0b00000001"
+      },
+      {
+        "at_ms": 7400,
+        "Q0_0": 1,
+        "DO": "0b00000001"
+      },
+      {
+        "at_ms": 7600,
+        "Q0_0": 0,
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 10900,
+        "I0_0": 0,
+        "Q0_0": 0,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

@@ -1,12 +1,39 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Validador de programas: un programa válido da NONE y cada defecto inyectado devuelve su error específico (programa vacío, demasiados bloques, fuente ausente o no anterior, recurso fuera de rango, salida digital duplicada...). No inicializa E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Validation",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - pruebas del validador",
-      "^Este ejemplo no inicializa E\\/S ni conmuta salidas\\.",
-      "^\\[PASS\\] programa valido \\| esperado=NONE \\| obtenido=NONE"
+      "^JWPLC Logic Runtime - pruebas del validador$",
+      "^\\[PASS\\] programa valido \\| esperado=NONE \\| obtenido=NONE$",
+      "^\\[PASS\\] programa vacio \\| esperado=EMPTY_PROGRAM \\| obtenido=EMPTY_PROGRAM$",
+      "^\\[PASS\\] fuente no anterior \\| esperado=SOURCE_NOT_PREVIOUS \\| obtenido=SOURCE_NOT_PREVIOUS$",
+      "^\\[PASS\\] salida digital duplicada \\| esperado=DUPLICATE_DIGITAL_OUTPUT \\| obtenido=DUPLICATE_DIGITAL_OUTPUT$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^VALIDACION COMPLETA: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

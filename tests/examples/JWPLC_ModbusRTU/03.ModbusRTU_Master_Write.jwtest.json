@@ -1,12 +1,24 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro FC06: escribe HR1 del esclavo 2 con 1, 2, 3, 4 (un pedido 2 s después de cada resultado, plazo 1 s). Se simula el esclavo por UART2: eco correcto del valor 1 (WRITE OK), sin respuesta al valor 2 (Timeout), eco con otro valor (9) para el 3 (Invalid response) y eco correcto del 4.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/03.ModbusRTU_Master_Write",
-  "until_ms": 8000,
+  "until_ms": 9000,
+  "stim": [
+    "1200 uart2 \"\\x02\\x06\\x00\\x01\\x00\\x01\\x19\\xF9\"",
+    "6300 uart2 \"\\x02\\x06\\x00\\x01\\x00\\x09\\x18\\x3F\"",
+    "8350 uart2 \"\\x02\\x06\\x00\\x01\\x00\\x04\\xD9\\xFA\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Modbus RTU Master FC-?\\d+(?:\\.\\d+)?",
-      "^Target ID=-?\\d+(?:\\.\\d+)? \\| HR-?\\d+(?:\\.\\d+)? \\| -?\\d+(?:\\.\\d+)? -?\\d+(?:\\.\\d+)?N-?\\d+(?:\\.\\d+)?",
-      "^WRITE FAIL \\| Timeout"
-    ]
+      "^JWPLC Basic - Modbus RTU Master FC06$",
+      "^Target ID=2 \\| HR1 \\| 115200 8N1$",
+      { "match": "^\\u0002\\u0006", "port": 2, "count": 1 },
+      { "match": "^WRITE OK \\| HR1=1$", "count": 1, "after_ms": 1200, "before_ms": 1300 },
+      { "match": "^WRITE FAIL \\| Timeout$", "count": 1, "after_ms": 4100, "before_ms": 4300 },
+      { "match": "^WRITE FAIL \\| Invalid response$", "count": 1, "after_ms": 6300, "before_ms": 6400 },
+      { "match": "^WRITE OK \\| HR1=4$", "count": 1, "after_ms": 8350, "before_ms": 8450 },
+      { "match": "^WRITE (OK|FAIL)", "count": 4 }
+    ],
+    "console_absent": ["^Request rejected", "begin failed"]
   }
 }

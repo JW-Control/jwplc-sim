@@ -1,12 +1,42 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "API persistente en modo lectura sobre la FRAM real (vacía en el simulador): detecta perfil de 8 KiB y layout de 5184 bytes y reporta la FRAM sin formato (UNFORMATTED, sin slot activo) sin escribirla. No usa E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_ReadOnly",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - API persistente en modo lectura",
-      "^No inicializa E\\/S y no escribe ni formatea la FRAM\\.",
-      "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)"
+      "^JWPLC Logic Runtime - API persistente en modo lectura$",
+      "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)$",
+      "^\\[PASS\\] perfil detectado de 8 KiB$",
+      "^\\[PASS\\] gestor A\\/B ocupa 5184 bytes$",
+      "^\\[PASS\\] no existe programa cargado en RAM$",
+      "^FRAM formateada para runtime: NO$",
+      "^Slot activo: NINGUNO$",
+      "^Estado gestor: UNFORMATTED$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^API PERSISTENTE LECTURA: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

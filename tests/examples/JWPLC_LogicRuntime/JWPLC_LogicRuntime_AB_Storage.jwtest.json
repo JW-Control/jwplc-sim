@@ -1,12 +1,42 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Almacenamiento A/B sobre backend RAM: formateo, guardado en Slot A y B, fallback a A si B está corrupto y prueba de cortes de energía en cada uno de los bytes de la actualización (todos conservan A, el presupuesto completo confirma B). No toca la FRAM física ni las E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_AB_Storage",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)? almacenamiento A\\/B en RAM",
-      "^No inicializa E\\/S ni escribe la FRAM fisica\\.",
-      "^\\[PASS\\] backend RAM acepta perfil de -?\\d+(?:\\.\\d+)? KiB"
+      "^JWPLC Logic Runtime - PoC 4 almacenamiento A\\/B en RAM$",
+      "^\\[PASS\\] almacenamiento nuevo se detecta sin formato$",
+      "^\\[PASS\\] guardado candidato en Slot B$",
+      "^\\[PASS\\] fallback al programa A si B esta corrupto$",
+      "^\\[PASS\\] todos los cortes parciales conservan programa A$",
+      "^\\[PASS\\] presupuesto completo confirma programa B$",
+      "^Bytes escritos por actualizacion completa: \\d+$",
+      "^Puntos de corte probados: \\d+$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^ALMACENAMIENTO A\\/B SIMULADO: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

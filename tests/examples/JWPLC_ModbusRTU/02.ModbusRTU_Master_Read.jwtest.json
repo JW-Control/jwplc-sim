@@ -1,12 +1,26 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro FC03 al esclavo 2 (HR0..HR3, plazo 1 s, un pedido 1 s después de cada resultado). Se simula el esclavo por UART2: respuesta 1,100,200,300 a los 1,2 s y 2,1234,5678,7 a los 2,25 s; sin respuesta al pedido de 3,25 s (Timeout); respuesta con CRC dañado (CRC error) y excepción 02 (Modbus exception).",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/02.ModbusRTU_Master_Read",
-  "until_ms": 8000,
+  "until_ms": 7000,
+  "stim": [
+    "1200 uart2 \"\\x02\\x03\\x08\\x00\\x01\\x00\\x64\\x00\\xC8\\x01\\x2C\\x7A\\x28\"",
+    "2250 uart2 \"\\x02\\x03\\x08\\x00\\x02\\x04\\xD2\\x16\\x2E\\x00\\x07\\x25\\x46\"",
+    "5300 uart2 \"\\x02\\x03\\x08\\x00\\x01\\x00\\x64\\x00\\xC8\\x01\\x2C\\x7A\\x29\"",
+    "6350 uart2 \"\\x02\\x83\\x02\\x30\\xF1\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic - Modbus RTU Master FC-?\\d+(?:\\.\\d+)?",
-      "^Target ID=-?\\d+(?:\\.\\d+)? \\| -?\\d+(?:\\.\\d+)? -?\\d+(?:\\.\\d+)?N-?\\d+(?:\\.\\d+)?",
-      "^READ FAIL \\| Timeout"
-    ]
+      "^JWPLC Basic - Modbus RTU Master FC03$",
+      "^Target ID=2 \\| 115200 8N1$",
+      { "match": "^\\u0002\\u0003", "port": 2, "count": 1 },
+      { "match": "^READ OK \\| HR0=1 HR1=100 HR2=200 HR3=300$", "count": 1, "after_ms": 1200, "before_ms": 1300 },
+      { "match": "^READ OK \\| HR0=2 HR1=1234 HR2=5678 HR3=7$", "count": 1, "after_ms": 2250, "before_ms": 2350 },
+      { "match": "^READ OK", "count": 2 },
+      { "match": "^READ FAIL \\| Timeout$", "count": 1, "after_ms": 4200, "before_ms": 4300 },
+      { "match": "^READ FAIL \\| CRC error$", "count": 1, "after_ms": 5300, "before_ms": 5400 },
+      { "match": "^READ FAIL \\| Modbus exception$", "count": 1, "after_ms": 6350, "before_ms": 6450 }
+    ],
+    "console_absent": ["^Request rejected", "begin failed"]
   }
 }

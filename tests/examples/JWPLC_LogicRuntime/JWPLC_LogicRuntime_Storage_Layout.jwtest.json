@@ -1,12 +1,43 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Mapa persistente de producción: direcciones de superblocks, Slots A/B, retentivos y reserva para FRAM de 8 KiB y 32 KiB, y sus verificaciones. Solo cálculo: no lee ni escribe la FRAM ni las E/S.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_Layout",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - mapa persistente de produccion",
-      "^No inicializa E\\/S ni lee o escribe la FRAM\\.",
-      "^Perfil FRAM -?\\d+(?:\\.\\d+)? KiB"
+      "^JWPLC Logic Runtime - mapa persistente de produccion$",
+      "^\\[PASS\\] Slot A de 8 KiB inicia en 0x0040$",
+      "^\\[PASS\\] Slot B de 8 KiB inicia en 0x0A40$",
+      "^\\[PASS\\] retentivos de 8 KiB inician en 0x1440$",
+      "^\\[PASS\\] mapa de 8 KiB termina en 0x1FFF$",
+      "^\\[PASS\\] capacidad menor a 8 KiB no selecciona layout$",
+      "^Slot A: 0x40\\.\\.0xA3F \\(2560 bytes\\)$",
+      "^Retentivos: 0x1440\\.\\.0x1A3F \\(1536 bytes\\)$",
+      "^Reserva: 0x7040\\.\\.0x7FFF \\(4032 bytes\\)$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^MAPA PERSISTENTE: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

@@ -1,12 +1,23 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro cooperativo FC06: escribe HR1 del esclavo 1 (19200 8E1) con 1, 2, 3 (un pedido 2 s después de cada resultado, plazo 1 s). Se simula el esclavo por UART2: eco correcto del valor 1 (Write OK), sin respuesta al 2 (Timeout) y excepción 02 al 3 (Modbus exception).",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_WriteSingleRegister",
   "until_ms": 8000,
+  "stim": [
+    "2100 uart2 \"\\x01\\x06\\x00\\x01\\x00\\x01\\x19\\xCA\"",
+    "7200 uart2 \"\\x01\\x86\\x02\\xC3\\xA1\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Modbus RTU master cooperativo - FC-?\\d+(?:\\.\\d+)?",
-      "^Modbus RTU ready: yes",
-      "^Slave ID: -?\\d+(?:\\.\\d+)?"
-    ]
+      "^JWPLC Modbus RTU master cooperativo - FC06$",
+      "^Modbus RTU ready: yes$",
+      "^Config: SERIAL_8E1$",
+      { "match": "^\\u0001\\u0006", "port": 2, "count": 1 },
+      { "match": "^Write OK \\| HR1 = 1$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
+      { "match": "^Write failed: Timeout$", "count": 1, "after_ms": 5000, "before_ms": 5200 },
+      { "match": "^Write failed: Modbus exception$", "count": 1, "after_ms": 7200, "before_ms": 7300 },
+      { "match": "^Write (OK|failed)", "count": 3 }
+    ],
+    "console_absent": ["^Request rejected", "begin failed"]
   }
 }

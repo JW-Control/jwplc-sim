@@ -1,12 +1,99 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Persistencia entre reinicios (FRAM/NVS compartidas). 1) Comando erróneo rechazado; START respalda la ventana y guarda el Programa A (etapa 1). 2) Al reiniciar carga A y guarda B en el slot inactivo (etapa 2). 3) Al reiniciar carga B y restaura la ventana original (PASS). 4) Un cuarto arranque vuelve a pedir START (NVS limpia).",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_FRAM_Persistent",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)? persistencia entre reinicios",
-      "^No inicializa E\\/S ni conmuta salidas\\.",
-      "^FRAM detectada: -?\\d+(?:\\.\\d+)? bytes"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 8000,
+      "stim": [
+        "3000 uart0 \"GO\\n\"",
+        "6000 uart0 \"START\\n\""
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Logic Runtime - PoC 6 persistencia entre reinicios$",
+          {
+            "match": "^Escribe START y pulsa Enviar para comenzar\\.$",
+            "before_ms": 3000,
+            "count": 1
+          },
+          {
+            "match": "^Comando no reconocido\\. Escribe exactamente START\\.$",
+            "after_ms": 3000,
+            "before_ms": 3100,
+            "count": 1
+          },
+          {
+            "match": "^\\[PASS\\] Respaldo persistente guardado en NVS\\.$",
+            "after_ms": 6000
+          },
+          "^\\[PASS\\] Programa A persistido y validado\\.$",
+          {
+            "match": "^ETAPA 1 COMPLETA\\.$",
+            "after_ms": 6000,
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^FAIL",
+          "^PRUEBA ABORTADA",
+          "ETAPA 2"
+        ],
+        "signals": [
+          {
+            "at_ms": 7900,
+            "DO": "0b00000000"
+          }
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Etapa 2\\/3: cargar Programa A tras reinicio y guardar B\\.$",
+          "^\\[PASS\\] Programa A cargado despues del reinicio\\.$",
+          "^\\[PASS\\] Programa B persistido en el slot inactivo\\.$",
+          "^ETAPA 2 COMPLETA\\.$"
+        ],
+        "console_absent": [
+          "^FAIL",
+          "^Escribe START",
+          "ETAPA 1 COMPLETA"
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Etapa 3\\/3: cargar Programa B y restaurar la ventana\\.$",
+          "^\\[PASS\\] Programa B cargado despues del reinicio\\.$",
+          "^\\[PASS\\] Contenido original de FRAM restaurado exactamente\\.$",
+          "^\\[PASS\\] Estado temporal NVS eliminado\\.$",
+          {
+            "match": "^PERSISTENCIA ENTRE REINICIOS: PASS$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^FAIL",
+          "^Escribe START"
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Escribe START y pulsa Enviar para comenzar\\.$"
+        ],
+        "console_absent": [
+          "^Etapa",
+          "^Restauracion pendiente",
+          "^FAIL"
+        ]
+      }
+    }
+  ]
 }

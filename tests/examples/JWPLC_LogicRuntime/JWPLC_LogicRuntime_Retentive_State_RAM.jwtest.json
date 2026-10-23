@@ -1,12 +1,40 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Retentivos v1 en RAM: solo el SET/RESET marcado como retentivo exporta/importa su estado (el TON y el SET/RESET normal lo ignoran), el codec conserva el flag y el validador rechaza retención en TON. Inicializa E/S pero no tiene bloques de salida: con entradas activas todas las Q0 siguen apagadas.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_State_RAM",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - retentivos v-?\\d+(?:\\.\\d+)? en RAM",
-      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y no usa la FRAM\\.",
-      "^\\[PASS\\] LogicBlockDefinition conserva -?\\d+(?:\\.\\d+)? bytes"
+      "^JWPLC Logic Runtime - retentivos v1 en RAM$",
+      "^\\[PASS\\] runtime\\.begin\\(\\) inicializa E\\/S$",
+      "^\\[PASS\\] SET\\/RESET retentivo recupera valor verdadero$",
+      "^\\[PASS\\] TON ignora cualquier bit del snapshot$",
+      "^\\[PASS\\] exportacion contiene solo SET\\/RESET retentivo activo$",
+      "^\\[PASS\\] validador rechaza retencion aplicada a TON$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^RETENTIVOS EN RAM: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

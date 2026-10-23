@@ -1,12 +1,41 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "SET/RESET v1→v2 en RAM: memoria con SET, retención sin entradas, prioridad con SET y RESET simultáneos, reactivación y limpieza con stop; el motor v2 coincide con la referencia v1 en cada paso. El SET/RESET retentivo sigue rechazado (UNSUPPORTED_FLAGS). Q0 físicas apagadas.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_SetReset_RAM",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - SET\\/RESET v-?\\d+(?:\\.\\d+)? a v-?\\d+(?:\\.\\d+)? en RAM",
-      "^No inicializa E\\/S, no conmuta Q-?\\d+(?:\\.\\d+)? y no usa la FRAM\\.",
-      "^\\[PASS\\] SET\\/RESET v-?\\d+(?:\\.\\d+)? conserva descriptor de -?\\d+(?:\\.\\d+)? bytes"
+      "^JWPLC Logic Runtime - SET\\/RESET v1 a v2 en RAM$",
+      "^\\[PASS\\] SET activo: SET\\/RESET coincide$",
+      "^\\[PASS\\] memoria sin entradas: Q0 logica coincide$",
+      "^\\[PASS\\] SET y RESET simultaneos: SET\\/RESET coincide$",
+      "^\\[PASS\\] SET vuelve a activar: Q0 logica coincide$",
+      "^\\[PASS\\] stop limpia SET\\/RESET$",
+      "^\\[PASS\\] retentivo pendiente informa UNSUPPORTED_FLAGS$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^SETRESET V1 A V2 EN RAM: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

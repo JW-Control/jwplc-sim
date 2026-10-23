@@ -1,12 +1,23 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro cooperativo FC03 al esclavo 1 (19200 8E1, HR0..HR3, plazo 1 s, un pedido 1 s después de cada resultado). Se simula el esclavo por UART2: respuesta 11,22,33,44 a los 2,1 s (Read OK), sin respuesta al pedido siguiente (Timeout) y excepción 02 al tercero (Modbus exception).",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_ReadHoldingRegisters",
-  "until_ms": 8000,
+  "until_ms": 6000,
+  "stim": [
+    "2100 uart2 \"\\x01\\x03\\x08\\x00\\x0B\\x00\\x16\\x00\\x21\\x00\\x2C\\x37\\x03\"",
+    "5200 uart2 \"\\x01\\x83\\x02\\xC0\\xF1\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Modbus RTU master cooperativo - FC-?\\d+(?:\\.\\d+)?",
-      "^Modbus RTU ready: yes",
-      "^Slave ID: -?\\d+(?:\\.\\d+)?"
-    ]
+      "^JWPLC Modbus RTU master cooperativo - FC03$",
+      "^Modbus RTU ready: yes$",
+      "^Baud: 19200$",
+      "^Config: SERIAL_8E1$",
+      { "match": "^\\u0001\\u0003", "port": 2, "count": 1 },
+      { "match": "^Read OK \\| HR0: 11 HR1: 22 HR2: 33 HR3: 44$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
+      { "match": "^Read failed: Timeout$", "count": 1, "after_ms": 4000, "before_ms": 4200 },
+      { "match": "^Read failed: Modbus exception$", "count": 1, "after_ms": 5200, "before_ms": 5300 }
+    ],
+    "console_absent": ["^Request rejected", "begin failed"]
   }
 }

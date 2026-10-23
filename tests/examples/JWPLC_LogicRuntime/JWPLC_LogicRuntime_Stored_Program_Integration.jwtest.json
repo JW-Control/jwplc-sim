@@ -1,12 +1,139 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Integración runtime + almacenamiento persistente (FRAM/NVS compartidas). Inicializa E/S pero sus programas no tienen salidas: con I0_0..I0_2 activas todas las Q0 siguen apagadas. 1) Un comando erróneo se rechaza; RUNTIME guarda A y B, prepareStoredProgram() carga B, cae a A si B está corrupto y rechaza start() si ambos lo están; luego restaura. 2) Se repite el comando y la simulación se corta pocos ms después de registrar la restauración pendiente (corte de energía en plena prueba). 3) El siguiente arranque detecta la restauración pendiente y recupera la FRAM desde el respaldo NVS. 4) Un arranque más vuelve al estado original y pide de nuevo el comando.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Stored_Program_Integration",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Logic Runtime - integracion persistente de alto nivel",
-      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y no contiene bloques de salida\\.",
-      "^\\[PASS\\] backend de respaldo inicializado"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 8000,
+      "stim": [
+        "2000 I0_0=1",
+        "2000 I0_1=1",
+        "2000 I0_2=1",
+        "6200 uart0 \"hola\\n\"",
+        "6500 uart0 \"RUNTIME\\n\""
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Logic Runtime - integracion persistente de alto nivel$",
+          {
+            "match": "^\\[PASS\\] runtime\\.begin\\(\\) inicializa E\\/S$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^\\[PASS\\] start\\(\\) rechaza ausencia de programa$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^\\[PASS\\] runtime detecta almacenamiento sin formato$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^Escribe RUNTIME y pulsa Enviar para continuar\\.$",
+            "before_ms": 6200,
+            "count": 1
+          },
+          {
+            "match": "^Comando no reconocido\\. Escribe exactamente RUNTIME\\.$",
+            "after_ms": 6200,
+            "before_ms": 6300,
+            "count": 1
+          },
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] Programa A preparado por API de alto nivel$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] motor conserva copia independiente de A$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] storage informa Slot B cargado$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] runtime prepara fallback A$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] runtime detecta ausencia total de programa valido$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] runtime recupera estado original sin formato$",
+            "after_ms": 6500
+          },
+          "^Resultado: \\d+ PASS, 0 FAIL$",
+          {
+            "match": "^INTEGRACION RUNTIME PERSISTENTE: PASS$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^PRUEBA ABORTADA",
+          "^FAIL:",
+          "FALLO DE RUNTIME"
+        ],
+        "signals": [
+          {
+            "at_ms": 7900,
+            "DI": "0b00000111",
+            "DO": "0b00000000"
+          }
+        ]
+      }
+    },
+    {
+      "until_ms": 6508,
+      "stim": [
+        "6500 uart0 \"RUNTIME\\n\""
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500,
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^Resultado:",
+          "^\\[FAIL\\]"
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Restauracion pendiente detectada tras reinicio\\.$",
+          {
+            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Escribe "
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^\\[PASS\\] runtime detecta almacenamiento sin formato$",
+          "^Escribe RUNTIME y pulsa Enviar para continuar\\.$"
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Restauracion pendiente"
+        ]
+      }
+    }
+  ]
 }

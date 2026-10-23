@@ -1,12 +1,139 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Integración retentiva del runtime (FRAM/NVS compartidas). Inicializa E/S y mantiene Q0 apagadas aun con I0_0..I0_2 activas. 1) Un comando erróneo se rechaza; RETRUNTIME guarda el SET/RESET retentivo de A y B, restaura cada snapshot solo para su programa, recupera A tras rollback, descarta un snapshot corrupto y restaura todo sin tocar la reserva. 2) Se repite el comando y la simulación se corta pocos ms después de registrar la restauración pendiente (corte de energía en plena prueba). 3) El siguiente arranque detecta la restauración pendiente y recupera la FRAM desde el respaldo NVS. 4) Un arranque más vuelve al estado original y pide de nuevo el comando.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_Runtime_Integration",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Logic Runtime - integracion retentiva de alto nivel",
-      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y restaura todo al final\\.",
-      "^\\[PASS\\] backend FRAM inicializado"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 8000,
+      "stim": [
+        "2000 I0_0=1",
+        "2000 I0_1=1",
+        "2000 I0_2=1",
+        "6200 uart0 \"hola\\n\"",
+        "6500 uart0 \"RETRUNTIME\\n\""
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Logic Runtime - integracion retentiva de alto nivel$",
+          {
+            "match": "^\\[PASS\\] runtime\\.begin\\(\\) inicializa E\\/S$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^\\[PASS\\] estado original permanece UNFORMATTED$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^Escribe RETRUNTIME y pulsa Enviar para continuar\\.$",
+            "before_ms": 6200,
+            "count": 1
+          },
+          {
+            "match": "^Comando no reconocido\\. Escribe exactamente RETRUNTIME\\.$",
+            "after_ms": 6200,
+            "before_ms": 6300,
+            "count": 1
+          },
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] SET\\/RESET retentivo A queda verdadero$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] valor A reaparece antes de start$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] snapshot A no se aplica a Programa B$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] valor A restaurado queda verdadero$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] estado B se limpia ante snapshot corrupto$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] guarda posterior permanece intacta$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] politica recupera estado original sin formato$",
+            "after_ms": 6500
+          },
+          "^Resultado: \\d+ PASS, 0 FAIL$",
+          {
+            "match": "^INTEGRACION RETENTIVA DEL RUNTIME: PASS$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^PRUEBA ABORTADA",
+          "^FAIL:",
+          "FALLO DE RUNTIME"
+        ],
+        "signals": [
+          {
+            "at_ms": 7900,
+            "DI": "0b00000111",
+            "DO": "0b00000000"
+          }
+        ]
+      }
+    },
+    {
+      "until_ms": 6509,
+      "stim": [
+        "6500 uart0 \"RETRUNTIME\\n\""
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500,
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^Resultado:",
+          "^\\[FAIL\\]"
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Restauracion pendiente detectada tras reinicio\\.$",
+          {
+            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Escribe "
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^\\[PASS\\] estado original permanece UNFORMATTED$",
+          "^Escribe RETRUNTIME y pulsa Enviar para continuar\\.$"
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Restauracion pendiente"
+        ]
+      }
+    }
+  ]
 }

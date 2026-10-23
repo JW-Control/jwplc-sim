@@ -1,12 +1,16 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin cable RS-485: crc16() del pedido 01 03 00 00 00 0A debe dar 0xCDC5 (bytes RTU C5 CD) y el ejemplo informa CRC OK una sola vez.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_CRC_Test",
-  "until_ms": 8000,
+  "until_ms": 2500,
   "expect": {
     "console": [
-      "^JWPLC Modbus RTU CRC test",
-      "^Calculated CRC: 0x[0-9A-Fa-f]+",
-      "^Expected CRC:   0x[0-9A-Fa-f]+"
-    ]
+      "^JWPLC Modbus RTU CRC test$",
+      "^Calculated CRC: 0xCDC5$",
+      "^Expected CRC:   0xCDC5$",
+      "^RTU CRC bytes:  C5 CD$",
+      { "match": "^CRC OK$", "count": 1 }
+    ],
+    "console_absent": ["^CRC FAILED$"]
   }
 }

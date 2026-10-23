@@ -1,12 +1,127 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Rollback persistente (FRAM/NVS compartidas). 1) Un comando erróneo se rechaza; ROLLBACK guarda A (generación 1) y B (generación 2), rollback() reactiva el Slot A con su ID, A sigue activo tras reabrir y se restaura el contenido original. 2) Se repite el comando y la simulación se corta pocos ms después de registrar la restauración pendiente (corte de energía en plena prueba). 3) El siguiente arranque detecta la restauración pendiente y recupera la FRAM desde el respaldo NVS. 4) Un arranque más vuelve al estado original y pide de nuevo el comando.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Rollback",
-  "until_ms": 8000,
-  "expect": {
-    "console": [
-      "^JWPLC Logic Runtime - rollback persistente reversible",
-      "^No inicializa E\\/S ni conmuta salidas\\.",
-      "^\\[PASS\\] backend de respaldo inicializado"
-    ]
-  }
+  "runs": [
+    {
+      "until_ms": 8000,
+      "stim": [
+        "6200 uart0 \"hola\\n\"",
+        "6500 uart0 \"ROLLBACK\\n\""
+      ],
+      "expect": {
+        "console": [
+          "^JWPLC Logic Runtime - rollback persistente reversible$",
+          {
+            "match": "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^\\[PASS\\] mapa completo aun no esta formateado$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^Escribe ROLLBACK y pulsa Enviar para continuar\\.$",
+            "before_ms": 6200,
+            "count": 1
+          },
+          {
+            "match": "^Comando no reconocido\\. Escribe exactamente ROLLBACK\\.$",
+            "after_ms": 6200,
+            "before_ms": 6300,
+            "count": 1
+          },
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] Programa B usa generacion 2$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] storage\\(\\)\\.rollback\\(\\) reactiva candidato verificado$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] rollback reactiva Slot A$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] Slot A permanece activo tras reinicializar$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] contenido original restaurado exactamente$",
+            "after_ms": 6500
+          },
+          "^Resultado: \\d+ PASS, 0 FAIL$",
+          {
+            "match": "^ROLLBACK PERSISTENTE: PASS$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^PRUEBA ABORTADA",
+          "^FAIL:",
+          "FALLO DE RUNTIME"
+        ],
+        "signals": [
+          {
+            "at_ms": 7900,
+            "DO": "0b00000000"
+          }
+        ]
+      }
+    },
+    {
+      "until_ms": 6517,
+      "stim": [
+        "6500 uart0 \"ROLLBACK\\n\""
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500,
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^Resultado:",
+          "^\\[FAIL\\]"
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^Restauracion pendiente detectada tras reinicio\\.$",
+          {
+            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Escribe "
+        ]
+      }
+    },
+    {
+      "until_ms": 3000,
+      "expect": {
+        "console": [
+          "^\\[PASS\\] mapa completo aun no esta formateado$",
+          "^Escribe ROLLBACK y pulsa Enviar para continuar\\.$"
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Restauracion pendiente"
+        ]
+      }
+    }
+  ]
 }

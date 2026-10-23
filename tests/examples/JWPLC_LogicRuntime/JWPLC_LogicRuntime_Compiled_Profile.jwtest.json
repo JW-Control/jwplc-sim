@@ -1,12 +1,43 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Perfil de memoria compilado: 100 bloques efectivos en FRAM de 8 KiB y 32 KiB (capacidad física 100/400) y rechazo de FRAM menor a 8 KiB. Los sizeof() dependen de la arquitectura del host, por eso no se fijan. No toca E/S: con entradas activas Q0 sigue apagada.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Compiled_Profile",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - perfil compilado de memoria",
-      "^No inicializa E\\/S ni lee o escribe la FRAM\\.",
-      "^Bloques compilados: -?\\d+(?:\\.\\d+)?"
+      "^JWPLC Logic Runtime - perfil compilado de memoria$",
+      "^\\[PASS\\] build predeterminado reserva 100 bloques$",
+      "^\\[PASS\\] perfil 32 KiB conserva capacidad fisica de 400 bloques$",
+      "^\\[PASS\\] imagen de 100 bloques cabe en el slot de 8 KiB$",
+      "^\\[PASS\\] capacidad menor a 8 KiB sigue sin soporte$",
+      "^Bloques compilados: 100$",
+      "^Limite efectivo FRAM 32 KiB: 100$",
+      "^Capacidad fisica FRAM 32 KiB: 400$",
+      "^sizeof\\(JWPLC_LogicRuntime\\): \\d+$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^PERFIL COMPILADO 100 BLOQUES: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }

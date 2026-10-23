@@ -1,12 +1,40 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Adaptador v1→v2 con bloques DigitalOutput: Q0..Q2 conservan recurso y fuente, el motor v2 coincide con la referencia v1 en los patrones FALSE / solo I0 / I0 e I1 y la salida con pin negado invierte la fuente. Salidas lógicas en RAM: las Q0 físicas siguen apagadas aunque haya entradas activas.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_DigitalOutput_RAM",
-  "until_ms": 8000,
+  "until_ms": 3000,
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
-      "^JWPLC Logic Runtime - DigitalOutput v-?\\d+(?:\\.\\d+)? a v-?\\d+(?:\\.\\d+)? en RAM",
-      "^No inicializa E\\/S, no conmuta Q-?\\d+(?:\\.\\d+)? y no usa la FRAM\\.",
-      "^\\[PASS\\] DigitalOutput v-?\\d+(?:\\.\\d+)? conserva descriptor de -?\\d+(?:\\.\\d+)? bytes"
+      "^JWPLC Logic Runtime - DigitalOutput v1 a v2 en RAM$",
+      "^\\[PASS\\] adaptador convierte DigitalOutput$",
+      "^\\[PASS\\] solo I0 TRUE: Q0 logica coincide$",
+      "^\\[PASS\\] I0 e I1 TRUE: Q2 logica coincide$",
+      "^\\[PASS\\] Q0 negada invierte la fuente TRUE$",
+      "^\\[PASS\\] validador rechaza salida duplicada$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^DIGITALOUTPUT V1 A V2 EN RAM: PASS$",
+        "count": 1
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA",
+      "^FAIL:",
+      "FALLO DE RUNTIME"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
     ]
   }
 }
