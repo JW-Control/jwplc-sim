@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro bloqueante (*Sync, plazo 200 ms, 1 s de pausa por vuelta) al esclavo 2. Se simula el esclavo por UART2: la lectura FC03 de HR0..HR1 de ~1,13 s recibe 7,10 (se imprime HR0=7 HR1=10) y enseguida sale por el bus la escritura FC06 de HR1=11 (02 06 0001 000B), cuyo eco llega a los 1,17 s; la lectura siguiente recibe la excepción 02 (READ FAIL Modbus exception) y la de ~3,2 s queda sin respuesta (READ FAIL Timeout a los ~3,4 s).",
+  "sketch": "package:libraries/JW_ModbusRTU/examples/Master_Sync",
+  "until_ms": 3700,
+  "stim": [
+    "1150 uart2 \"\\x02\\x03\\x04\\x00\\x07\\x00\\x0A\\xF8\\xF5\"",
+    "1170 uart2 \"\\x02\\x06\\x00\\x01\\x00\\x0B\\x99\\xFE\"",
+    "2200 uart2 \"\\x02\\x83\\x02\\x30\\xF1\""
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^\\\\x02\\\\x03\\\\x00\\\\x00\\\\x00\\\\x02\\\\xC48\\\\x02\\\\x06\\\\x00\\\\x01\\\\x00\\\\x0B\\\\x99\\\\xFE(\\\\x02\\\\x03\\\\x00\\\\x00\\\\x00\\\\x02\\\\xC48){2}$",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^HR0=7 HR1=10$",
+        "count": 1,
+        "after_ms": 1150,
+        "before_ms": 1170
+      },
+      {
+        "match": "^READ FAIL \\| Modbus exception$",
+        "count": 1,
+        "after_ms": 2200,
+        "before_ms": 2300
+      },
+      {
+        "match": "^READ FAIL \\| Timeout$",
+        "count": 1,
+        "after_ms": 3300,
+        "before_ms": 3500
+      },
+      {
+        "match": "^READ FAIL",
+        "count": 2
+      }
+    ],
+    "console_absent": [
+      "begin failed"
+    ]
+  }
+}

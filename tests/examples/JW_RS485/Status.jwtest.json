@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Dos puertos RS-485 independientes. Bus A (Serial1, RX26/TX25, DE/RE en el GPIO 27) a 19200 8E1 sin cola TX; Bus B (Serial2, RX16/TX17, AutoDirection) a 115200 8N1 con cola TX de 512 bytes. Ambos quedan listos y sin error; el loop está vacío, así que un texto inyectado en el Bus B no produce salida.",
+  "sketch": "package:libraries/JW_RS485/examples/Status",
+  "until_ms": 2000,
+  "stim": ["1500 uart2 \"HOLA\\n\""],
+  "expect": {
+    "console": [
+      { "match": "^== Bus A ==$", "count": 1 },
+      { "match": "^== Bus B ==$", "count": 1 },
+      { "match": "^Ready: yes$", "count": 2 },
+      { "match": "^Status: OK$", "count": 2 },
+      { "match": "^Last error: OK$", "count": 2 },
+      { "match": "^Baud: 19200$", "count": 1 },
+      { "match": "^Config: SERIAL_8E1$", "count": 1 },
+      { "match": "^RX pin: 26$", "count": 1 },
+      { "match": "^TX pin: 25$", "count": 1 },
+      { "match": "^Direction: DE/RE pin 27$", "count": 1 },
+      { "match": "^Queued TX supported: no$", "count": 1 },
+      { "match": "^Baud: 115200$", "count": 1 },
+      { "match": "^Config: SERIAL_8N1$", "count": 1 },
+      { "match": "^RX pin: 16$", "count": 1 },
+      { "match": "^TX pin: 17$", "count": 1 },
+      { "match": "^Direction: AutoDirection$", "count": 1 },
+      { "match": "^TX buffer bytes: 512$", "count": 1 },
+      { "match": "^Queued TX supported: yes$", "count": 1 }
+    ],
+    "console_absent": ["^HOLA$"]
+  }
+}

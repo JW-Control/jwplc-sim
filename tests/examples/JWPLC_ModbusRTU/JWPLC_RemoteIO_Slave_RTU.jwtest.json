@@ -1,60 +1,71 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Remote I/O esclavo 2 (115200 8N1). Con I0_1 e I0_6 activas, FC02 responde 02 02 01 42 por RS-485. FC15 con Q=0x05 enciende Q0_0 y Q0_2, y a los ~100 ms sin otra escritura el fail-safe apaga todo. Tres FC05 (Q0_3 ON) cada 60 ms liberan el fail-safe y mantienen Q0_3 hasta 100 ms después del último. El comando STATUS por USB informa DI=0x42, fail-safe activo y RX/TX/OK=5/5/5.",
+  "$comment": "Remote I/O esclavo 2 (115200 8N1, fail-safe de 1000 ms desde alpha.14). Con I0_1 e I0_6 activas, FC02 responde 02 02 01 42 por RS-485. FC15 con Q=0x05 enciende Q0_0 y Q0_2, y a los ~1000 ms sin otra escritura el fail-safe apaga todo. Tres FC05 (Q0_3 ON) cada 600 ms liberan el fail-safe y mantienen Q0_3 hasta ~1000 ms después del último; el [LIVE] de los 5 s lo muestra con Q=0x08 y FS=NO. El comando STATUS por USB informa DI=0x42, Q=0x00, fail-safe activo y RX/TX/OK=5/5/5.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/JWPLC_RemoteIO_Slave_RTU",
-  "until_ms": 5600,
+  "until_ms": 7000,
   "stim": [
     "1000 I0_1=1",
     "1000 I0_6=1",
     "1500 uart2 \"\\x02\\x02\\x00\\x00\\x00\\x08\\x79\\xFF\"",
     "2000 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x01\\x05\\x7E\\x83\"",
-    "3000 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
-    "3060 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
-    "3120 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
-    "3500 uart0 \"STATUS\\n\""
+    "4000 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "4600 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "5200 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "6500 uart0 \"STATUS\\n\""
   ],
   "expect": {
     "console": [
       "^JWPLC Alpha7 A7\\.1 - Remote I/O Slave oficial$",
       "^MODBUS_BEGIN=PASS$",
       "^SLAVE_ID=2$",
+      "^FAILSAFE_MS=1000$",
       {
         "match": "^\\\\x02\\\\x02\\\\x01B!",
         "port": 2,
         "count": 1
       },
       {
-        "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$",
+        "match": "^\\[FAILSAFE\\] 100\\d ms sin FC05/FC15 -> Q=0$",
         "count": 1,
-        "after_ms": 2050,
-        "before_ms": 2200
+        "after_ms": 2950,
+        "before_ms": 3100
       },
       {
         "match": "^\\[FAILSAFE\\] liberado por escritura DO valida$",
         "count": 1,
-        "after_ms": 3000,
-        "before_ms": 3100
+        "after_ms": 4000,
+        "before_ms": 4100
       },
       {
-        "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$",
+        "match": "^\\[LIVE\\] DI=0x42 Q=0x08 RX/TX/OK=4/4/4 CRC=0 FS=NO$",
         "count": 1,
-        "after_ms": 3200,
-        "before_ms": 3300
+        "after_ms": 4900,
+        "before_ms": 5100
+      },
+      {
+        "match": "^\\[FAILSAFE\\] 100\\d ms sin FC05/FC15 -> Q=0$",
+        "count": 1,
+        "after_ms": 6150,
+        "before_ms": 6300
+      },
+      {
+        "match": "^\\[FAILSAFE\\]",
+        "count": 3
       },
       {
         "match": "^---- SLAVE STATUS ----$",
         "count": 1,
-        "after_ms": 3500
+        "after_ms": 6500
       },
       "^DI=0x42$",
+      "^Q=0x00$",
       "^FAILSAFE=ACTIVE$",
       "^COIL_WRITE=YES$",
       "^RX/TX/OK=5/5/5$",
-      "^CRC/EXCEPTIONS=0/0$",
-      {
-        "match": "^\\[LIVE\\] DI=0x42 Q=0x00 RX/TX/OK=5/5/5 CRC=0 FS=YES$",
-        "count": 1
-      }
+      "^CRC/EXCEPTIONS=0/0$"
+    ],
+    "console_absent": [
+      "MODBUS_BEGIN=FAIL"
     ],
     "signals": [
       {
@@ -66,15 +77,23 @@
         "DO": "0b00000101"
       },
       {
-        "at_ms": 2200,
+        "at_ms": 2900,
+        "DO": "0b00000101"
+      },
+      {
+        "at_ms": 3100,
         "DO": "0b00000000"
       },
       {
-        "at_ms": 3150,
+        "at_ms": 4050,
         "DO": "0b00001000"
       },
       {
-        "at_ms": 3300,
+        "at_ms": 6100,
+        "DO": "0b00001000"
+      },
+      {
+        "at_ms": 6300,
         "DO": "0b00000000"
       }
     ]

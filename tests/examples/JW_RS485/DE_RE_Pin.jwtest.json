@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Transceptor clásico con DE/RE en el GPIO 4 a 9600 8N1. printStatus() informa el puerto listo, 9600 SERIAL_8N1, RX16/TX17 y 'Direction: DE/RE pin 4' sin cola TX. Cada 500 ms sale por el bus la trama 01 03 0000 0001 84 0A (el 0x0A cierra la línea de la consola): seis tramas en 3,5 s. La conmutación del pin DE no es observable desde la prueba.",
+  "sketch": "package:libraries/JW_RS485/examples/DE_RE_Pin",
+  "until_ms": 3500,
+  "expect": {
+    "console": [
+      "^Ready: yes$",
+      "^Status: OK$",
+      "^Baud: 9600$",
+      "^Config: SERIAL_8N1$",
+      "^RX pin: 16$",
+      "^TX pin: 17$",
+      "^Direction: DE/RE pin 4$",
+      "^Queued TX supported: no$",
+      "^Last error: OK$",
+      { "match": "^\\\\x01\\\\x03\\\\x00\\\\x00\\\\x00\\\\x01\\\\x84$", "port": 2, "count": 1, "before_ms": 1000 },
+      { "match": "^\\\\x01\\\\x03\\\\x00\\\\x00\\\\x00\\\\x01\\\\x84$", "port": 2, "count": 2, "after_ms": 1000, "before_ms": 2000 },
+      { "match": "^\\\\x01\\\\x03\\\\x00\\\\x00\\\\x00\\\\x01\\\\x84$", "port": 2, "count": 6 }
+    ],
+    "console_absent": ["^Status: (?!OK)"]
+  }
+}

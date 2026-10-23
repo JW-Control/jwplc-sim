@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "AutoDirection en Serial2 a 115200 8N1. Cada segundo sale por el bus RS-485 (UART2) 'JW_RS485 n' con n consecutivo desde 0. Lo que llega por el bus se reenvía tal cual por USB: 'HOLA BUS' a los 1,5 s y 'ping 42' a los 2,6 s aparecen en UART0 después de inyectarse.",
+  "sketch": "package:libraries/JW_RS485/examples/Basic_Send",
+  "until_ms": 3500,
+  "stim": [
+    "1500 uart2 \"HOLA BUS\\n\"",
+    "2600 uart2 \"ping 42\\n\""
+  ],
+  "expect": {
+    "console": [
+      { "match": "^JW_RS485 0$", "port": 2, "count": 1, "before_ms": 1500 },
+      { "match": "^JW_RS485 1$", "port": 2, "count": 1, "after_ms": 1500, "before_ms": 2500 },
+      { "match": "^JW_RS485 2$", "port": 2, "count": 1, "after_ms": 2500 },
+      { "match": "^JW_RS485 \\d+$", "port": 2, "count": 3 },
+      { "match": "^HOLA BUS$", "port": 0, "count": 1, "after_ms": 1500, "before_ms": 1600 },
+      { "match": "^ping 42$", "port": 0, "count": 1, "after_ms": 2600, "before_ms": 2700 },
+      { "match": "^JW_RS485", "port": 0, "count": 0 }
+    ]
+  }
+}
