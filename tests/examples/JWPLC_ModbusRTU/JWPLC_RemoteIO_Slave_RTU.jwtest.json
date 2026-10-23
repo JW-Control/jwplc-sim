@@ -1,12 +1,41 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Remote I/O esclavo 2 (115200 8N1). Con I0_1 e I0_6 activas, FC02 responde 02 02 01 42 por RS-485. FC15 con Q=0x05 enciende Q0_0 y Q0_2, y a los ~100 ms sin otra escritura el fail-safe apaga todo. Tres FC05 (Q0_3 ON) cada 60 ms liberan el fail-safe y mantienen Q0_3 hasta 100 ms después del último. El comando STATUS por USB informa DI=0x42, fail-safe activo y RX/TX/OK=5/5/5.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/JWPLC_RemoteIO_Slave_RTU",
-  "until_ms": 8000,
+  "until_ms": 5600,
+  "stim": [
+    "1000 I0_1=1",
+    "1000 I0_6=1",
+    "1500 uart2 \"\\x02\\x02\\x00\\x00\\x00\\x08\\x79\\xFF\"",
+    "2000 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x01\\x05\\x7E\\x83\"",
+    "3000 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "3060 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "3120 uart2 \"\\x02\\x05\\x00\\x03\\xFF\\x00\\x7C\\x09\"",
+    "3500 uart0 \"STATUS\\n\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Alpha-?\\d+(?:\\.\\d+)? A-?\\d+(?:\\.\\d+)? - Remote I\\/O Slave oficial",
-      "^MODBUS_BEGIN=PASS",
-      "^SLAVE_ID=-?\\d+(?:\\.\\d+)?"
+      "^JWPLC Alpha7 A7\\.1 - Remote I/O Slave oficial$",
+      "^MODBUS_BEGIN=PASS$",
+      "^SLAVE_ID=2$",
+      { "match": "^\\u0002\\u0002\\u0001B!", "port": 2, "count": 1 },
+      { "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$", "count": 1, "after_ms": 2050, "before_ms": 2200 },
+      { "match": "^\\[FAILSAFE\\] liberado por escritura DO valida$", "count": 1, "after_ms": 3000, "before_ms": 3100 },
+      { "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$", "count": 1, "after_ms": 3200, "before_ms": 3300 },
+      { "match": "^---- SLAVE STATUS ----$", "count": 1, "after_ms": 3500 },
+      "^DI=0x42$",
+      "^FAILSAFE=ACTIVE$",
+      "^COIL_WRITE=YES$",
+      "^RX/TX/OK=5/5/5$",
+      "^CRC/EXCEPTIONS=0/0$",
+      { "match": "^\\[LIVE\\] DI=0x42 Q=0x00 RX/TX/OK=5/5/5 CRC=0 FS=YES$", "count": 1 }
+    ],
+    "signals": [
+      { "at_ms": 1900, "DO": "0b00000000" },
+      { "at_ms": 2050, "DO": "0b00000101" },
+      { "at_ms": 2200, "DO": "0b00000000" },
+      { "at_ms": 3150, "DO": "0b00001000" },
+      { "at_ms": 3300, "DO": "0b00000000" }
     ]
   }
 }

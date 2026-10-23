@@ -1,12 +1,24 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro bloqueante hecho a mano sobre Serial2 (19200 8E1): cada segundo lee HR0..HR3 del esclavo 1 (pedido 01 03 por RS-485). Se simula el esclavo por UART2: respuesta 2,1001,1002,1003 (Read OK), la misma con CRC dañado (CRC error, 13 bytes), excepción 02 (Modbus exception: 0x2) y luego silencio (timeout tras 1 s).",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Extern",
-  "until_ms": 8000,
+  "until_ms": 6500,
+  "stim": [
+    "2100 uart2 \"\\x01\\x03\\x08\\x00\\x02\\x03\\xE9\\x03\\xEA\\x03\\xEB\\x8A\\xFC\"",
+    "3100 uart2 \"\\x01\\x03\\x08\\x00\\x02\\x03\\xE9\\x03\\xEA\\x03\\xEB\\x00\\x00\"",
+    "4100 uart2 \"\\x01\\x83\\x02\\xC0\\xF1\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Basic v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? Modbus RTU Master Test",
-      "^------------------------------------------",
-      "^Target slave ID: -?\\d+(?:\\.\\d+)?"
-    ]
+      "^JWPLC Basic v1\\.4\\.1 Modbus RTU Master Test$",
+      "^Target slave ID: 1$",
+      "^Modbus config: SERIAL_8E1$",
+      { "match": "^\\u0001\\u0003", "port": 2, "count": 1 },
+      { "match": "^Read OK \\| HR0: 2 \\| HR1: 1001 \\| HR2: 1002 \\| HR3: 1003$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
+      { "match": "^Read failed: CRC error \\| Length: 13$", "count": 1, "after_ms": 3100, "before_ms": 3200 },
+      { "match": "^Modbus exception: 0x2$", "count": 1, "after_ms": 4100, "before_ms": 4200 },
+      { "match": "^Read failed: timeout$", "count": 1, "after_ms": 5900, "before_ms": 6100 }
+    ],
+    "console_absent": ["wrong slave ID", "wrong function", "wrong byte count"]
   }
 }

@@ -1,12 +1,138 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Maestro Remote I/O (ID local 247, esclavo 2, 115200 8N1, plazo 250 ms). Con 'RUN' por USB a los 1,5 s se simula el esclavo por UART2 respondiendo cada pedido 20 ms después: FC15 clear, FC02 (DI=0x81), FC05 Q0_0 ON, FC01 (0x01), 20 refrescos FC15 cada 40 ms durante la espera de 800 ms, FC01, FC05 OFF, FC01 (0x00), FC15 patrón 0x55, FC01 (0x55), otros 20 refrescos, FC01, FC15 clear final y FC01 (0x00): la validación termina en PASS con 58 pasos. STATUS informa 52 transacciones sin errores y un segundo RUN sin esclavo aborta por Timeout en el primer paso.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/JWPLC_RemoteIO_Master_RTU_Test",
-  "until_ms": 8000,
+  "until_ms": 4600,
+  "stim": [
+    "1500 uart0 \"RUN\\n\"",
+    "1520 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1540 uart2 \"\\x02\\x02\\x01\\x81\\x61\\xAC\"",
+    "1560 uart2 \"\\x02\\x05\\x00\\x00\\xFF\\x00\\x8C\\x09\"",
+    "1580 uart2 \"\\x02\\x01\\x01\\x01\\x90\\x0C\"",
+    "1598 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1638 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1678 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1718 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1758 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1798 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1838 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1878 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1918 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1958 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "1998 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2038 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2078 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2118 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2158 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2198 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2238 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2278 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2318 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2358 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2398 uart2 \"\\x02\\x01\\x01\\x01\\x90\\x0C\"",
+    "2418 uart2 \"\\x02\\x05\\x00\\x00\\x00\\x00\\xCD\\xF9\"",
+    "2438 uart2 \"\\x02\\x01\\x01\\x00\\x51\\xCC\"",
+    "2458 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2478 uart2 \"\\x02\\x01\\x01\\x55\\x91\\xF3\"",
+    "2496 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2536 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2576 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2616 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2656 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2696 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2736 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2776 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2816 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2856 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2896 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2936 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "2976 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3016 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3056 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3096 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3136 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3176 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3216 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3256 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3296 uart2 \"\\x02\\x01\\x01\\x55\\x91\\xF3\"",
+    "3316 uart2 \"\\x02\\x0F\\x00\\x00\\x00\\x08\\x54\\x3E\"",
+    "3336 uart2 \"\\x02\\x01\\x01\\x00\\x51\\xCC\"",
+    "3500 uart0 \"STATUS\\n\"",
+    "4000 uart0 \"RUN\\n\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC Alpha-?\\d+(?:\\.\\d+)? A-?\\d+(?:\\.\\d+)? - Remote I\\/O Master oficial",
-      "^MODBUS_BEGIN=PASS",
-      "^TARGET_SLAVE=-?\\d+(?:\\.\\d+)?"
+      "^JWPLC Alpha7 A7\\.1 - Remote I/O Master oficial$",
+      "^MODBUS_BEGIN=PASS$",
+      "^TARGET_SLAVE=2$",
+      {
+        "match": "^A7\\.1 validation START$",
+        "count": 2
+      },
+      {
+        "match": "^\\[PASS\\] FC15 clear inicial$",
+        "count": 1,
+        "after_ms": 1500,
+        "before_ms": 1600
+      },
+      {
+        "match": "^DI=0x81 bits=1 0 0 0 0 0 0 1$",
+        "count": 1
+      },
+      {
+        "match": "^\\[PASS\\] COILS expected=0x01$",
+        "count": 1
+      },
+      {
+        "match": "^\\[PASS\\] FC15 refresh DO$",
+        "count": 40
+      },
+      {
+        "match": "^\\[PASS\\] COILS_HELD expected=0x01$",
+        "count": 1
+      },
+      {
+        "match": "^\\[PASS\\] COILS expected=0x00$",
+        "count": 1
+      },
+      {
+        "match": "^COILS=0x55 bits=1 0 1 0 1 0 1 0$",
+        "count": 1
+      },
+      {
+        "match": "^\\[PASS\\] COILS_HELD expected=0x55$",
+        "count": 1
+      },
+      {
+        "match": "^\\[PASS\\] COILS_FINAL expected=0x00$",
+        "count": 1
+      },
+      {
+        "match": "^ALPHA7_A7_1_ARDUINO_ARDUINO=PASS$",
+        "count": 1,
+        "before_ms": 3500
+      },
+      "^PASS_COUNT=58$",
+      "^FAIL_COUNT=0$",
+      "^DO_REFRESH_40MS=PASS$",
+      {
+        "match": "^---- MASTER STATUS ----$",
+        "count": 1,
+        "after_ms": 3500
+      },
+      "^BUSY=NO$",
+      "^RX/TX/OK=52/52/52$",
+      "^CRC/TIMEOUT=0/0$",
+      {
+        "match": "^\\[FAIL\\] FC15 clear inicial result=\\d+ error=Timeout$",
+        "count": 1,
+        "after_ms": 4200,
+        "before_ms": 4300
+      }
+    ],
+    "console_absent": [
+      "^\\[FAIL\\] (?!FC15 clear inicial result=\\d+ error=Timeout$)",
+      "Master ocupado"
     ]
   }
 }

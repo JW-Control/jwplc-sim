@@ -1,12 +1,26 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Ciclo FC06 (challenge en HR1 del esclavo 1) + FC03 (HR0..HR3) con 19200 8E1. Esclavo simulado por UART2: ciclo 1 con eco y lectura HR1=1 (PASS y VERIFY_HR1=PASS); ciclo 2 sin respuesta (FC06 FAIL por Timeout a los 1000 ms con APP_TICKS > 0: el loop siguió corriendo); ciclo 3 con lectura HR1=999 (VERIFY_HR1=FAIL expected=3). A los 5 s las estadísticas cuentan 1 timeout y 4 respuestas OK.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Cooperative_Validation",
-  "until_ms": 8000,
+  "until_ms": 5500,
+  "stim": [
+    "2100 uart2 \"\\x01\\x06\\x00\\x01\\x00\\x01\\x19\\xCA\"",
+    "2150 uart2 \"\\x01\\x03\\x08\\x00\\x02\\x00\\x01\\x03\\xEA\\x03\\xEB\\xEA\\xD8\"",
+    "4200 uart2 \"\\x01\\x06\\x00\\x01\\x00\\x03\\x98\\x0B\"",
+    "4250 uart2 \"\\x01\\x03\\x08\\x00\\x04\\x03\\xE7\\x03\\xEA\\x03\\xEB\\x85\\x3D\""
+  ],
   "expect": {
     "console": [
-      "^JWPLC MODBUS RTU MASTER COOPERATIVE VALIDATION - ALPHA-?\\d+(?:\\.\\d+)?",
-      "^MODBUS_BEGIN=PASS",
-      "^TASK_REQUIRED=YES"
-    ]
+      "^JWPLC MODBUS RTU MASTER COOPERATIVE VALIDATION - ALPHA7$",
+      "^MODBUS_BEGIN=PASS$",
+      "^TASK_REQUIRED=YES$",
+      { "match": "^FC06 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$", "count": 2 },
+      { "match": "^FC03 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$", "count": 2 },
+      { "match": "^VERIFY_HR1=PASS \\| expected=1 actual=1$", "count": 1, "after_ms": 2150, "before_ms": 2250 },
+      { "match": "^FC06 FAIL \\| elapsed_ms=1000 \\| APP_TICKS=[1-9]\\d* \\| result=Timeout$", "count": 1, "after_ms": 3600, "before_ms": 3700 },
+      { "match": "^VERIFY_HR1=FAIL \\| expected=3 actual=999$", "count": 1, "after_ms": 4250, "before_ms": 4350 },
+      { "match": "^STATS TX=\\d+ RX=4 OK=4 CRC=0 TMO=1$", "count": 1, "after_ms": 5000 }
+    ],
+    "console_absent": ["REQUEST REJECTED", "^FC03 FAIL"]
   }
 }
