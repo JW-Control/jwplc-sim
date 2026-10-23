@@ -314,24 +314,96 @@ Reglas para modelos (`sim/models/<chip>/`):
 3. Son deterministas: sin reloj de pared, sin aleatorios no sembrados.
 4. Exponen su estado interno para la tabla de observación (G3).
 
-Dispositivos de escena (SDK, G7), en TypeScript, con un contrato que extiende
-el de la propuesta v0.1:
+### 4.1 Escena, dispositivos y netlist **[G7]**
 
-```ts
-interface SimDevice {
-  id: string; type: string; version: string;
-  ports: { name: string; kind: "digital-in" | "digital-out" | "analog" | "power"; }[];
-  parameters: Record<string, unknown>;
-  init(ctx: DeviceContext): void;
-  // Llamado al cambiar una entrada o al vencer el próximo evento propio.
-  update(t_ns: bigint, inputs: Record<string, boolean | number>): DeviceStep;
-  serialize(): object;
-}
-interface DeviceStep {
-  outputs: Record<string, boolean | number>;
-  nextEventNs?: bigint;   // horizonte propio (temporizadores internos, rampas)
-}
+La escena es lo que está **fuera** de la placa: fuentes, pulsadores,
+sensores, relés, contactores, actuadores y el cableado borne a borne. Corre
+en Node (`scene/`, sin dependencias), en tiempo virtual, sincronizada con el
+runner por horizontes (§6.6). El SDK para escribir dispositivos está en
+[docs/SDK.md](SDK.md).
+
+```text
+scene/netlist.mjs        netlist por conectividad (solve, analyze)
+scene/scene.mjs          motor: dispositivos, cableado, punto fijo, eventos, enlaces
+scene/device-kit.mjs     Delay (retardos) y Ramp (rampas como segmentos)
+scene/devices/*.mjs      biblioteca v0.1 y la placa jwsim/jwplc-basic
+sdk/jwsim-device.d.ts    contrato TypeScript (DeviceDefinition)
+cli/lib/cosim.mjs        co-simulación headless (jwsim-cli test con "scene")
+app/lib/scene-session.mjs  co-simulación interactiva (app)
 ```
+
+**Contrato** (ver [`sdk/jwsim-device.d.ts`](../sdk/jwsim-device.d.ts)). Cada
+dispositivo declara bornes, parámetros, acciones del usuario y sus
+elementos eléctricos: fuentes, cargas y contactos. En cada instante en que
+algo cambia, `update(t, inputs)` recibe el estado de sus cargas, sus
+enlaces mecánicos, sus acciones y las señales de la placa. Devuelve los
+contactos cerrados, sus salidas y su próximo evento propio
+(`nextEventNs`). Respecto de la propuesta v0.1, los puertos lógicos
+(`digital-in/out`) pasan a ser bornes eléctricos. Así se cablea como en un
+tablero (`KM1.13 → plc.I0_2`) y la netlist decide qué está energizado.
+
+**Netlist** (`scene/netlist.mjs`). No resuelve tensiones ni corrientes:
+trabaja por conectividad.
+
+- Los cables y los contactos cerrados unen bornes en grupos
+  equipotenciales (union-find).
+- Cada fuente marca su positivo (`L+`, `L`) y su retorno (`M`, `N`).
+- Una carga se energiza con un extremo en el positivo y el otro en el
+  retorno de una misma fuente. Se verifica la tensión nominal: con más
+  tensión se quema, con menos (o con otra clase de corriente) no se
+  energiza. En las cargas polarizadas también se verifica la polaridad.
+
+Fallas: cortocircuito (positivo y retorno en el mismo grupo) y cruce de
+alimentaciones (el positivo de una fuente unido a otra). En ambos casos la
+fuente dispara y queda sin tensión hasta rearmar. También la sobretensión,
+que quema la carga.
+
+El análisis estático une todos los contactos posibles y avisa de cada
+bobina o carga que no puede energizarse con ninguna combinación ("bobina
+sin alimentación"). Las entradas sin usar de la placa no avisan: el común
+M1 compartido no cuenta como cableado propio.
+
+Simplificaciones: dos cargas en serie no se energizan, porque el nodo
+intermedio no tiene polo. No hay caídas de tensión, corrientes ni
+potencias. Dos fuentes de CC con el 0 V común son válidas.
+
+**Motor de escena** (`scene/scene.mjs`). Evalúa en el instante `t` hasta
+un punto fijo: resuelve la netlist, actualiza cada dispositivo (en el orden
+de la escena) y repite mientras algo cambie. Un relé que se corta a sí
+mismo con retardo 0 no converge en 50 vueltas y se informa como oscilación;
+con retardos reales vibra.
+
+Las magnitudes continuas (carrera de un cilindro, velocidad de un motor)
+se publican como segmentos lineales `{value, rate}`. Un enlace mecánico
+(un fin de carrera en `Y1.position` entre 1 y 1) conmuta en el instante
+exacto en que el valor entra en su rango: la escena calcula el cruce y lo
+declara como evento.
+
+**La placa en la escena** (`jwsim/jwplc-basic`) usa el pinout del SVG
+(JW Control, 2026-10-23):
+
+- `24VDC`/`M0`: alimentación.
+- `I0_x`: entradas sink. Se activan con I0_x en el +24 V y M1 en el 0 V.
+- `Q0_x.1`/`Q0_x.2`: contacto seco de cada relé de salida, con atraque de
+  10 ms y caída de 5 ms. Sin 24 V en 24VDC/M0, los relés no cierran.
+
+La escena solo maneja las entradas que tienen cable; el resto queda para los
+botones de la interfaz.
+
+**Biblioteca v0.1** (16 definiciones):
+
+| Tipo | Bornes | Comportamiento |
+|---|---|---|
+| `power-24vdc`, `power-230vac` | L+/M, L/N | Fuente con disparo por cortocircuito o cruce |
+| `pushbutton-no`, `pushbutton-nc` | 13-14, 11-12 | Contacto mientras se pulsa |
+| `selector-2`, `selector-3` | 13-14/21-22, 13-14/23-24 | Posiciones 0/I e I/0/II |
+| `limit-switch` | 13-14, 21-22 | A mano o por enlace mecánico |
+| `sensor-inductive`, `sensor-photoelectric` | BN/BU/BK | PNP o NPN, NA o NC, tiempo de respuesta, alimentado y con polaridad |
+| `lamp`, `buzzer` | X1-X2, +/- | 24 VDC o 230 VAC; el zumbador es polarizado |
+| `relay` | A1-A2, 11-12-14, 21-22-24 | Conmutados; atraque 8 ms, caída 4 ms |
+| `contactor` | A1-A2, 1-2/3-4/5-6, 13-14, 21-22 | Atraque 20 ms, caída 10 ms |
+| `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
+| `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 
 ## 5. Mapa de hardware del JWPLC Basic
 
@@ -427,7 +499,7 @@ escaneo hasta ≈67 ms la primera vez (§11 H4).
   graba la sesión interactiva (entradas, pulsos y forzados) y la reproduce
   comparando el hash (§7.1).
 
-### 6.6 Sincronización con el motor de escena
+### 6.6 Sincronización con el motor de escena **[G7]**
 
 Sincronización conservadora por horizontes (estilo co-simulación):
 
@@ -439,9 +511,27 @@ Sincronización conservadora por horizontes (estilo co-simulación):
 3. El motor de escena evalúa dispositivos en ese instante y devuelve nuevas
    entradas y su nuevo horizonte.
 
-Las entradas del usuario (clic en un pulsador) se fechan en el próximo
-límite de 1 ms virtual y se graban; así la reproducción es exacta aunque la
-interacción original haya sido en tiempo real.
+Implementación:
+
+- **Runner** (`sim/runner/port.cpp`). Con `{"type":"scene","watch":"Q0_0,…"}`,
+  el runner solo avanza hasta el `horizon` que le da la escena. Un oyente
+  en cada señal vigilada anota el cambio y pide `jwsim_request_stop()`: la
+  tarea que escribió la salida se detiene en su próximo punto de
+  sincronización. El runner responde `{"type":"horizon","t_ns","reason":"output",
+  "changes"}` con el instante del cambio y espera. La escena responde con
+  `set` y `at_ns` = ese instante.
+- **CLI** (`cli/lib/cosim.mjs`). Las acciones programadas de una prueba
+  también son horizontes, y la consola se fecha con precisión de 5 ms.
+  Nada depende del reloj de pared: el hash de traza es el mismo con
+  cualquier tamaño de horizonte (verificado en G7).
+- **App** (`app/lib/scene-session.mjs`). Horizonte máximo de 10 ms
+  virtuales: un clic en un pulsador se aplica en el próximo horizonte,
+  fechado en ese instante. Las entradas que manda la escena pasan por
+  `set`, quedan en la grabación de la sesión (G3) y la reproducción da el
+  mismo hash sin la escena.
+- **Dispositivos nativos** (SDK, `sim/runner/native_device.cpp`). Corren
+  dentro del runner y agendan sus eventos en el planificador: no necesitan
+  horizontes.
 
 ### 6.7 Garantías y excepciones de determinismo
 
@@ -492,7 +582,8 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 | runner→UI | `display` | nueva versión del framebuffer |
 | runner→UI | `stopped` | motivo (`time`, `breakpoint`, `idle`, `fatal`), `t_ns`, hash |
 | runner→UI | `fatal` | API no soportada, `esp_restart`, assert, crash |
-| ambos | `horizon` | sincronización con el motor de escena (§6.6) |
+| UI→runner | `scene` | **[G7]** `{on, watch}`: co-simulación con la escena; el runner solo avanza hasta el horizonte |
+| ambos | `horizon` | **[G7]** UI→runner `{until_ns}`; runner→UI `{t_ns, reason: output\|until, changes}` (§6.6) |
 
 Implementado en G2 **[G2]**: `hello` (placa y nivel de cada señal), `run`
 con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,
@@ -740,12 +831,15 @@ detectar cambios (G2 EXTERNAL_EDIT_RELOAD).
   },
   "scene": {
     "devices": [
-      { "id": "S1", "type": "jwsim/pushbutton-no", "version": "1.0.0", "params": { "label": "Marcha" } },
-      { "id": "KM1", "type": "jwsim/contactor", "version": "1.0.0", "params": { "coil": "24VDC" } }
+      { "id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0 },
+      { "id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 200 },
+      { "id": "S1", "type": "jwsim/pushbutton-no", "version": "1.0.0", "params": { "label": "Marcha" }, "x": 420, "y": -190 },
+      { "id": "KM1", "type": "jwsim/contactor", "version": "1.0.0", "params": { "coil": "24VDC" }, "x": 240, "y": 640 }
     ],
     "wiring": [
-      { "from": "S1.out", "to": "plc.I0_0" },
-      { "from": "plc.Q0_0", "to": "KM1.coil" }
+      { "from": "PS1.L+", "to": "plc.24VDC" }, { "from": "PS1.M", "to": "plc.M0" }, { "from": "PS1.M", "to": "plc.M1" },
+      { "from": "PS1.L+", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
+      { "from": "PS1.L+", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "KM1.A1" }, { "from": "KM1.A2", "to": "PS1.M" }
     ]
   },
   "exercise": { "file": "./exercise/rubrica.json" },
@@ -758,7 +852,12 @@ Schema 2020-12, MIT). `cli/lib/project.mjs` valida al abrir y al guardar
 (subconjunto del estándar sin dependencias; contrastado con Ajv), migra
 versiones anteriores y conserva los campos desconocidos. `scene.inputMode`
 (`toggle`/`push`) y `scene.inputs` (`{"I0_1": 1}`) guardan la escena mínima
-de G2: modo de las entradas y su nivel inicial. La versión 0 es el borrador
+de G2: modo de las entradas y su nivel inicial. **[G7]** `scene.devices` y
+`scene.wiring` son la escena (§4.1; esquema propio en
+[`schema/jwsim-scene-1.json`](../schema/jwsim-scene-1.json)). Cada
+dispositivo tiene `id`, `type` (`autor/nombre`), la `version` mínima (misma
+versión mayor), `params` y su posición `x`/`y` en la vista. Cada cable une
+dos bornes `<dispositivo>.<borne>`. La versión 0 es el borrador
 previo a v1 (`{"jwsim": 0, "sketch", "openplc", "hmi", "realtime", "seed"}`)
 y sirve para probar la ruta de migración.
 
@@ -817,7 +916,8 @@ el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
 | Doble núcleo | Afinidad, prioridades, apropiación en puntos de sincronización | Carreras finas entre núcleos sin puntos de sincronización |
 | Interrupciones | GPIO por flanco/nivel en contexto ISR del núcleo dueño | Latencia de entrada a la ISR (0 en el modelo), anidamiento por niveles de prioridad |
 | Memoria | — | Tamaño de pila/heap del ESP32, desbordes (pilas del host ≥ 256 KiB) |
-| E/S digitales | Registro a registro en el TCA6424A | Tiempos eléctricos, rebotes (los agrega el dispositivo de escena) |
+| E/S digitales | Registro a registro en el TCA6424A; el core escanea las entradas cada 20 ms (`getJWPLCIoScanPeriod_ms`), igual que en la placa | Tiempos eléctricos, rebotes (los agrega el dispositivo de escena) |
+| Escena (G7) | Conectividad, polos, polaridad, tensión nominal, cortocircuitos y cruces; retardos y rampas exactos en tiempo virtual | Sin tensiones intermedias, corrientes, caídas ni potencias; dos cargas en serie no se energizan; sin rebote de contactos ni arco; los dispositivos nativos arrancan de cero tras `esp_restart()` |
 | TFT | (G4) comandos ST7789 y framebuffer | Tiempo de pintado: TFT_eSPI usa el procesador Generic, más lento que la ruta por registros del firmware real |
 | SD | (G4) SDHC en modo SPI (comandos, CRC, R1/R7/OCR/CSD/CID), FatFs y VFS reales, detección de tarjeta | Tiempos internos fijos (inicialización 100 ms, lectura 100 µs, programación 500 µs); sin desgaste ni errores del medio; sin modo SD de 4 bits |
 | NVS | (G4) formato lógico de ESP-IDF v5: entradas tipadas, espacios de nombres, errores `ESP_ERR_NVS_*` | No reproduce la disposición física de páginas de la flash ni su desgaste |

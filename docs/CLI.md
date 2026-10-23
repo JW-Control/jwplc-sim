@@ -10,6 +10,9 @@ node cli/jwsim-cli.mjs run    <sketch_dir> [opciones de build] -- [opciones del 
 node cli/jwsim-cli.mjs test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record]
 node cli/jwsim-cli.mjs parity [<ref>] [--package <dir>] [--update]
 node cli/jwsim-cli.mjs matrix [--filter <texto>] [opciones de build]
+node cli/jwsim-cli.mjs device build|test|pack <carpeta>          (G7)
+node cli/jwsim-cli.mjs device install <tipo>[@versión] [--index <url|archivo>]
+node cli/jwsim-cli.mjs device list [--index <url|archivo>]
 ```
 
 ## Opciones comunes
@@ -108,6 +111,50 @@ que se espera de una o varias corridas:
 El JSON lista cada prueba con `ok`, la etapa (`build`, `expect`, `pass`) y,
 por corrida, el código de salida, `JWSIM_RESULT` y las fallas. La salida
 completa de una corrida fallida queda en `build/tests/work/<prueba>/`.
+
+**Con escena (G7).** `scene` es un archivo de escena (`.json`), un proyecto
+`.jwsim` (su campo `scene`) o la escena en línea. El runner corre en modo
+puerto, co-simulado con la escena por horizontes (ARCHITECTURE §6.6).
+
+- `actions`: acciones sobre dispositivos en instantes dados, por ejemplo
+  `{"at_ms": 1000, "device": "S1", "action": "press", "value": true}`.
+- `expect.scene`:
+  - `state`: salidas o contactos de los dispositivos en `at_ms`, por
+    ejemplo `{"at_ms": 1100, "KM1.closed": true, "M1.speed": 1}`;
+  - `faults`: fallas en orden, por ejemplo `["short:PS1"]`;
+  - `findings`: avisos del cableado, por ejemplo `["KM1.coil"]`.
+- La consola, `signals` y `JWSIM_RESULT` (con `trace_hash`) se evalúan
+  igual. La consola se fecha con precisión de 5 ms. `expect.screen` no está
+  disponible con escena.
+
+```json
+{
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 3000,
+  "actions": [{ "at_ms": 1000, "device": "S1", "action": "press", "value": true }],
+  "expect": { "scene": { "state": [{ "at_ms": 1100, "KM1.closed": true }], "faults": [] } }
+}
+```
+
+**Dispositivos nativos (G7).** `devices` carga bibliotecas del SDK en el
+runner: `{"source": "<carpeta>", "params": {…}}` las compila desde sus
+fuentes; `{"type": "autor/nombre"}` usa las instaladas del índice.
+
+### device (G7)
+
+SDK de dispositivos e índice comunitario ([docs/SDK.md](SDK.md)):
+
+| Subcomando | Qué hace |
+|---|---|
+| `device build <carpeta>` | Nativo: compila la biblioteca (`.so`, `.dll`, `.dylib`) con el toolchain del simulador en `build/devices/<nombre>/`. De escena: valida el contrato. |
+| `device test <carpeta>` | De escena: valida y corre sus `*.test.mjs` con `JWSIM_SDK` → `sdk/testing.mjs`. |
+| `device pack <carpeta>` | Paquete `.tar.gz` reproducible con su SHA-256 y tamaño (para el índice). |
+| `device install <tipo>[@versión]` | Instala desde el índice (`--index`, `JWSIM_INDEX` o el de GitHub). Verifica la firma Ed25519 del índice, el tamaño y el SHA-256 del paquete, las rutas del tar y el manifiesto. Si algo falla no instala nada; con `--json` el error trae `"security": true`. |
+| `device list` | Dispositivos instalados en `~/.jwsim/devices` (`JWSIM_HOME`) y, con `--index`, los del índice. |
+
+Códigos de salida: 0 bien; 1 falla (pruebas, compilación, firma o
+integridad); 2 uso incorrecto.
 
 ### parity
 

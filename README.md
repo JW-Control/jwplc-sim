@@ -98,7 +98,9 @@ pantalla, `xvfb-run -a npm run test:e2e`).
 - [Licencias](docs/LICENSES.md): matriz de dependencias y recomendación.
 - [CLI](docs/CLI.md): `jwsim-cli` sin interfaz (JSON, códigos de salida,
   pruebas `*.jwtest.json`, paridad con el package, matriz de ejemplos).
-- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md), [G5](docs/reports/G5.md), [sincronización con alpha.13](docs/reports/SYNC_ALPHA13.md).
+- Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md), [G5](docs/reports/G5.md), [G7](docs/reports/G7.md), [sincronización con alpha.13](docs/reports/SYNC_ALPHA13.md).
+- [SDK de dispositivos](docs/SDK.md): dispositivos de escena en TypeScript,
+  nativos en C, plantillas e índice comunitario firmado.
 
 ## Prueba rápida (headless)
 

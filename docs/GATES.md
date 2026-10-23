@@ -55,7 +55,13 @@ JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el r
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (103 ejemplos: 98 compilan, corren y pasan su prueba; 5 clasificados; artefacto)
 JWSIM_G5_RELEASE_WORKFLOW=PENDING   (en espera hasta cerrar alpha.14 y alpha.15; sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL)
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
-JWSIM_G6_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G6_*=PENDING                  (OpenPLC: después de cerrar la alpha.15 de Kenyi)
+JWSIM_G7_DEVICE_LIBRARY=PASS        (16 dispositivos, 19 pruebas de comportamiento; docs/reports/G7.md)
+JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)
+JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)
+JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
+                                    (G7: Linux; Windows con .github/workflows/g7.yml; escena en la app: E2E PASS)
+JWSIM_G8_*=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---
