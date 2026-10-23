@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Display_Status",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Ethernet_Display_Status",
+      "^Runtime auto Ethernet \\+ Display test\\. No begin\\(\\) called\\.",
+      "^Display ready"
+    ]
+  }
+}

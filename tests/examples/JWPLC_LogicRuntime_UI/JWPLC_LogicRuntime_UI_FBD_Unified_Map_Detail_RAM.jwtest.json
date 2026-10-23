@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_FBD_Unified_Map_Detail_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime UI - Unified MAPA\\/DETALLE preview",
+      "^Implementacion independiente: no hereda V-?\\d+(?:\\.\\d+)?\\.\\.\\.V-?\\d+(?:\\.\\d+)?\\.",
+      "^Alcance: MAPA, DETALLE, navegacion, T\\/Ta y transiciones\\."
+    ]
+  }
+}

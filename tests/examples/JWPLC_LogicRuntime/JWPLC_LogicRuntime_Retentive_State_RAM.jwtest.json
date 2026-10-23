@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_State_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - retentivos v-?\\d+(?:\\.\\d+)? en RAM",
+      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y no usa la FRAM\\.",
+      "^\\[PASS\\] LogicBlockDefinition conserva -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

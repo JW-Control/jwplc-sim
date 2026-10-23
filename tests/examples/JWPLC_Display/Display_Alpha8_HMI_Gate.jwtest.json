@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_Alpha8_HMI_Gate",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^=== ALPHA-?\\d+(?:\\.\\d+)? HARDWARE GATE - HMI \\+ BUTTONS ===",
+      "^FASE -?\\d+(?:\\.\\d+)?: dejar -?\\d+(?:\\.\\d+)? minutos SIN tocar botones\\.",
+      "^Esperado: IDLE estable y UNEXPECTED_USER_ENTRY=-?\\d+(?:\\.\\d+)?\\."
+    ]
+  }
+}

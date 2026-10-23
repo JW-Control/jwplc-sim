@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_ReadHoldingRegisters",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Modbus RTU master cooperativo - FC-?\\d+(?:\\.\\d+)?",
+      "^Modbus RTU ready: yes",
+      "^Slave ID: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

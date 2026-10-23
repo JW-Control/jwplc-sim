@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/05.microSD_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - microSD",
+      "^Card present = -?\\d+(?:\\.\\d+)?",
+      "^Ready = -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

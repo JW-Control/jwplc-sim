@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_Store_FRAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - store retentivo en FRAM fisica",
+      "^No inicializa E\\/S ni conmuta salidas\\.",
+      "^\\[PASS\\] backend FRAM inicializado"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_ReadOnly",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - API persistente en modo lectura",
+      "^No inicializa E\\/S y no escribe ni formatea la FRAM\\.",
+      "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)"
+    ]
+  }
+}

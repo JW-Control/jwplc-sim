@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Ethernet HTTP TFT Diagnostics",
+      "^Host: http:\\/\\/example\\.com\\/",
+      "^OK=GET \\| LEFT\\/RIGHT=pagina \\| UP\\/DOWN=cambia\\+guarda FRAM \\| ESC=IDLE"
+    ]
+  }
+}

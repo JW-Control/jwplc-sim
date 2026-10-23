@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_DigitalOutput_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - DigitalOutput v-?\\d+(?:\\.\\d+)? a v-?\\d+(?:\\.\\d+)? en RAM",
+      "^No inicializa E\\/S, no conmuta Q-?\\d+(?:\\.\\d+)? y no usa la FRAM\\.",
+      "^\\[PASS\\] DigitalOutput v-?\\d+(?:\\.\\d+)? conserva descriptor de -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

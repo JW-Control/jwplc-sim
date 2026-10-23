@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_Metadata_Diagnostic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - diagnostico publico de metadata",
+      "^No inicializa E\\/S ni conmuta salidas\\.",
+      "^\\[PASS\\] backend de respaldo inicializado"
+    ]
+  }
+}

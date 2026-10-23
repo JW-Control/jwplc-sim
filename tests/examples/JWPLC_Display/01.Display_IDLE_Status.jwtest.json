@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "OK alterna ERR (TST/clear), DOWN alterna RUN (arranca en 1), RIGHT pide un redibujado; cada pulsación una sola vez.",
+  "sketch": "package:libraries/JWPLC_Display/examples/01.Display_IDLE_Status",
+  "until_ms": 4000,
+  "stim": [
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "1900 BTN_DOWN=1", "2000 BTN_DOWN=0",
+    "2300 BTN_RIGHT=1", "2400 BTN_RIGHT=0",
+    "2700 BTN_OK=1", "2800 BTN_OK=0"
+  ],
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Display IDLE$",
+      "^OK=ERR \\| DOWN=RUN \\| RIGHT=forceRedraw$",
+      { "match": "^ERR = TST$", "count": 1, "after_ms": 1500, "before_ms": 1900 },
+      { "match": "^RUN = 0$", "count": 1, "after_ms": 1900, "before_ms": 2300 },
+      { "match": "^Display redraw solicitado$", "count": 1, "after_ms": 2300, "before_ms": 2700 },
+      { "match": "^ERR = clear$", "count": 1, "after_ms": 2700 }
+    ]
+  }
+}

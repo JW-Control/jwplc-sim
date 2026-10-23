@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Default",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)?",
+      "^Logica: I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)? AND NOT I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)? -> TON -?\\d+(?:\\.\\d+)? s -> Q-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?",
+      "^FRAM configurada: -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

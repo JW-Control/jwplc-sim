@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/03.Ethernet_Diagnostics",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Ethernet diagnostics",
+      "^--- ETH STATUS ---",
+      "^Ethernet enabled: yes"
+    ]
+  }
+}

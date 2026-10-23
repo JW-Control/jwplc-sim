@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Ton_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - TON v-?\\d+(?:\\.\\d+)? a v-?\\d+(?:\\.\\d+)? en RAM",
+      "^Tiempo explicito por scan; no conmuta Q-?\\d+(?:\\.\\d+)? ni usa FRAM\\.",
+      "^\\[PASS\\] TON v-?\\d+(?:\\.\\d+)? conserva descriptor de -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

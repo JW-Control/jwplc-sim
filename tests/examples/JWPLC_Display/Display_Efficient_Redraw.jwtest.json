@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_Efficient_Redraw",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC_Display efficient redraw test",
+      "^OK=USER \\| retorno automatico en -?\\d+(?:\\.\\d+)?s",
+      "^Display configurado"
+    ]
+  }
+}

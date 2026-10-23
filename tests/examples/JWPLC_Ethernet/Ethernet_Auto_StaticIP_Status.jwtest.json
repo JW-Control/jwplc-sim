@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Auto_StaticIP_Status",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Ethernet_Auto_StaticIP_Status",
+      "^Configuring static IP\\. No begin\\(\\) called\\.",
+      "^Mode: STATIC \\| Enabled: yes \\| Attempted: no \\| Ready: no \\| Link: UP \\| Status: Not started \\| IP: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? \\| Gateway: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? \\| DNS: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/01.DigitalIO_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Digital I\\/O",
+      "^IN=0x[0-9A-Fa-f]+ OUT=0x[0-9A-Fa-f]+ I-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?=-?\\d+(?:\\.\\d+)? Q-?\\d+(?:\\.\\d+)?_-?\\d+(?:\\.\\d+)?=-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/DigitalIO_BlockRead",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC DigitalIO block read",
+      "^IN: -?\\d+(?:\\.\\d+)?b-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

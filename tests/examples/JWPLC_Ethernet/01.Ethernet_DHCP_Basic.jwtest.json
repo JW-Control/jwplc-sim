@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/01.Ethernet_DHCP_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Ethernet DHCP",
+      "^ready=-?\\d+(?:\\.\\d+)? busy=-?\\d+(?:\\.\\d+)? diag=INI status=Not started",
+      "^ready=-?\\d+(?:\\.\\d+)? busy=-?\\d+(?:\\.\\d+)? diag=LNK status=Link OFF"
+    ]
+  }
+}

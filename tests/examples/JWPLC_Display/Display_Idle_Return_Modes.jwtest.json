@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_Idle_Return_Modes",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Display_Idle_Return_Modes",
+      "^OK=USER",
+      "^Display ready\\. Mode: IDLE_RETURN_TIMEOUT"
+    ]
+  }
+}

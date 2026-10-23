@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_EditSession_Structural_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime UI - EditSession estructural RAM v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?",
+      "^Prueba append\\/remove\\/compactacion\\/aplicacion sin TFT ni FRAM\\.",
+      "^\\[OK\\]   Programa base valida"
+    ]
+  }
+}

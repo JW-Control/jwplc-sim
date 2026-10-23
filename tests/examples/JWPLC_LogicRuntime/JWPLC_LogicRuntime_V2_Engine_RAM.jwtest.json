@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - motor v-?\\d+(?:\\.\\d+)? en RAM",
+      "^No inicializa E\\/S, no conmuta Q-?\\d+(?:\\.\\d+)? y no usa la FRAM\\.",
+      "^\\[PASS\\] perfil compilado conserva -?\\d+(?:\\.\\d+)? bloques"
+    ]
+  }
+}

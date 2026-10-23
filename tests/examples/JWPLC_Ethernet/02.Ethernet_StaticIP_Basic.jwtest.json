@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/02.Ethernet_StaticIP_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Ethernet Static IP",
+      "^IP solicitada: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?",
+      "^diag=INI status=Not started ready=-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

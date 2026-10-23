@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V1_V2_Integrated_Regression_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - regresion integrada v-?\\d+(?:\\.\\d+)? a v-?\\d+(?:\\.\\d+)?",
+      "^Entradas simuladas; no conmuta Q-?\\d+(?:\\.\\d+)? fisicas ni usa FRAM\\.",
+      "^\\[PASS\\] descriptor v-?\\d+(?:\\.\\d+)? conserva -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

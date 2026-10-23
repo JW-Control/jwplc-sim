@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Slave_HoldingRegisters",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Modbus RTU slave holding registers",
+      "^Modbus RTU ready: yes",
+      "^Slave ID: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

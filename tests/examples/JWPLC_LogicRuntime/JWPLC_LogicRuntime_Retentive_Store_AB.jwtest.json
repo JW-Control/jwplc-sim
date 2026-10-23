@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_Store_AB",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - store retentivo A\\/B simulado",
+      "^No inicializa E\\/S ni accede a la FRAM fisica\\.",
+      "^\\[PASS\\] region retentiva -?\\d+(?:\\.\\d+)? KiB inicia en 0x[0-9A-Fa-f]+"
+    ]
+  }
+}

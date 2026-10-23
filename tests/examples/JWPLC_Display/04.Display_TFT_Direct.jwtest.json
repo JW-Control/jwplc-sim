@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/04.Display_TFT_Direct",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - TFT direct",
+      "^OK=USER \\| ESC=IDLE"
+    ]
+  }
+}

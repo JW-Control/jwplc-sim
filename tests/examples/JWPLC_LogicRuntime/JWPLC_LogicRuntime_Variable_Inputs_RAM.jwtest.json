@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Variable_Inputs_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - entradas variables v-?\\d+(?:\\.\\d+)? en RAM",
+      "^No inicializa E\\/S, no conmuta Q-?\\d+(?:\\.\\d+)? y no usa la FRAM\\.",
+      "^\\[PASS\\] LogicBlockDefinition v-?\\d+(?:\\.\\d+)? conserva -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

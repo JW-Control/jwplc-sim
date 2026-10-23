@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Retentive_Runtime_Integration",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - integracion retentiva de alto nivel",
+      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y restaura todo al final\\.",
+      "^\\[PASS\\] backend FRAM inicializado"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Auto_DHCP_Status",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^Ethernet_Auto_DHCP_Status",
+      "^Runtime auto Ethernet test\\. No begin\\(\\) called\\.",
+      "^Enabled: yes \\| Attempted: no \\| Ready: no \\| HW: not found \\| Link: UP \\| Status: Not started \\| IP: -?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/06.Runtime_Cache_Status",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Runtime cache views",
+      "^IO ready=-?\\d+(?:\\.\\d+)? IN=0x[0-9A-Fa-f]+ OUT=0x[0-9A-Fa-f]+ scanMs=-?\\d+(?:\\.\\d+)? \\| RTC present=-?\\d+(?:\\.\\d+)? valid=-?\\d+(?:\\.\\d+)? updateMs=-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

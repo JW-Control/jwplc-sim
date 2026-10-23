@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Validation",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - pruebas del validador",
+      "^Este ejemplo no inicializa E\\/S ni conmuta salidas\\.",
+      "^\\[PASS\\] programa valido \\| esperado=NONE \\| obtenido=NONE"
+    ]
+  }
+}

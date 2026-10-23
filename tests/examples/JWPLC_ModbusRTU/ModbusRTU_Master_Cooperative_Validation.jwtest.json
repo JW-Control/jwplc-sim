@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Cooperative_Validation",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC MODBUS RTU MASTER COOPERATIVE VALIDATION - ALPHA-?\\d+(?:\\.\\d+)?",
+      "^MODBUS_BEGIN=PASS",
+      "^TASK_REQUIRED=YES"
+    ]
+  }
+}

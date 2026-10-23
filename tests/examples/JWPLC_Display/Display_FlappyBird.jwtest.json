@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_FlappyBird",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC TFT Flappy Bird - Optimized",
+      "^FPS objetivo: -?\\d+(?:\\.\\d+)?",
+      "^Velocidad juego: -?\\d+(?:\\.\\d+)?%"
+    ]
+  }
+}

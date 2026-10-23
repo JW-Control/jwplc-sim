@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/03.Display_HMI_Pages",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - HMI pages",
+      "^OK=USER \\| LEFT=P-?\\d+(?:\\.\\d+)? \\| RIGHT=P-?\\d+(?:\\.\\d+)? \\| ESC=IDLE"
+    ]
+  }
+}

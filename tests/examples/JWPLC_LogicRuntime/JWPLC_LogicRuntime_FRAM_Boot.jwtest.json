@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_FRAM_Boot",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)? arranque desde FRAM",
+      "^FRAM detectada: -?\\d+(?:\\.\\d+)? bytes",
+      "^Ventana persistente: 0x[0-9A-Fa-f]+\\.\\.0x[0-9A-Fa-f]+"
+    ]
+  }
+}

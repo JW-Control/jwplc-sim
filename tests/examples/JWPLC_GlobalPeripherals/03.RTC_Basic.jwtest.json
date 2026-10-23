@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/03.RTC_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - RTC",
+      "^RTC present=-?\\d+(?:\\.\\d+)? valid=-?\\d+(?:\\.\\d+)? lostPower=-?\\d+(?:\\.\\d+)? \\| tempRTC=-?\\d+(?:\\.\\d+)? C"
+    ]
+  }
+}

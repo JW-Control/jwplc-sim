@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/04.FRAM_Basic",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - FRAM",
+      "^FRAM size = -?\\d+(?:\\.\\d+)? bytes",
+      "^Primer uso: creando bloque FRAM\\."
+    ]
+  }
+}

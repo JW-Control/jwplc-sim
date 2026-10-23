@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/03.ModbusRTU_Master_Write",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Modbus RTU Master FC-?\\d+(?:\\.\\d+)?",
+      "^Target ID=-?\\d+(?:\\.\\d+)? \\| HR-?\\d+(?:\\.\\d+)? \\| -?\\d+(?:\\.\\d+)? -?\\d+(?:\\.\\d+)?N-?\\d+(?:\\.\\d+)?",
+      "^WRITE FAIL \\| Timeout"
+    ]
+  }
+}

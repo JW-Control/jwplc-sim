@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_Continuous_Stress_TFT",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic - Ethernet Continuous Stress TFT v-?\\d+(?:\\.\\d+)?",
+      "^Destino: http:\\/\\/example\\.com:-?\\d+(?:\\.\\d+)?\\/",
+      "^Arranque: espera hasta -?\\d+(?:\\.\\d+)? ms y exige estabilidad de -?\\d+(?:\\.\\d+)? ms"
+    ]
+  }
+}

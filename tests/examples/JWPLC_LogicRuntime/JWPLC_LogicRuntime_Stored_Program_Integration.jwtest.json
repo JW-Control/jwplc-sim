@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Stored_Program_Integration",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - integracion persistente de alto nivel",
+      "^Inicializa E\\/S, mantiene Q-?\\d+(?:\\.\\d+)? apagadas y no contiene bloques de salida\\.",
+      "^\\[PASS\\] backend de respaldo inicializado"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_FRAM_Persistent",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)? persistencia entre reinicios",
+      "^No inicializa E\\/S ni conmuta salidas\\.",
+      "^FRAM detectada: -?\\d+(?:\\.\\d+)? bytes"
+    ]
+  }
+}

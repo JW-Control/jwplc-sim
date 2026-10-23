@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_SPI_Coexistence",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Ethernet \\+ SD \\+ FRAM \\+ Display SPI coexistence test",
+      "^Runtime auto Ethernet\\. No begin\\(\\) called\\.",
+      "^FRAM bootCounter: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

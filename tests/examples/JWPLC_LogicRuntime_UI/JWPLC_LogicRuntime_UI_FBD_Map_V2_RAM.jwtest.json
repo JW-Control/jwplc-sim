@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime_UI/examples/JWPLC_LogicRuntime_UI_FBD_Map_V2_RAM",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime UI - mapa FBD v-?\\d+(?:\\.\\d+)? en RAM",
+      "^-?\\d+(?:\\.\\d+)? bloques, -?\\d+(?:\\.\\d+)? enlaces, AND-?\\d+(?:\\.\\d+)? con pin negado y TON -?\\d+(?:\\.\\d+)? s\\.",
+      "^Editor v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? candidato: TON con base tipo LOGO!\\."
+    ]
+  }
+}

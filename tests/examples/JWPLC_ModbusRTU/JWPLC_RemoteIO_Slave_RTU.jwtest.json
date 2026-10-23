@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/JWPLC_RemoteIO_Slave_RTU",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Alpha-?\\d+(?:\\.\\d+)? A-?\\d+(?:\\.\\d+)? - Remote I\\/O Slave oficial",
+      "^MODBUS_BEGIN=PASS",
+      "^SLAVE_ID=-?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

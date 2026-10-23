@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Slave_Extern",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Basic v-?\\d+(?:\\.\\d+)?\\.-?\\d+(?:\\.\\d+)? Modbus RTU Slave externo",
+      "^---------------------------------------------",
+      "^Slave ID: -?\\d+(?:\\.\\d+)?"
+    ]
+  }
+}

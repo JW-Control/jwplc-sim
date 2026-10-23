@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_Tetris",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC TFT Tetris - Optimized \\+ Buzzer",
+      "^FPS objetivo: -?\\d+(?:\\.\\d+)?",
+      "^Velocidad: -?\\d+(?:\\.\\d+)?%"
+    ]
+  }
+}

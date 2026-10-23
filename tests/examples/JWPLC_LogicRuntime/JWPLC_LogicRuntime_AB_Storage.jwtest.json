@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_AB_Storage",
+  "until_ms": 8000,
+  "expect": {
+    "console": [
+      "^JWPLC Logic Runtime - PoC -?\\d+(?:\\.\\d+)? almacenamiento A\\/B en RAM",
+      "^No inicializa E\\/S ni escribe la FRAM fisica\\.",
+      "^\\[PASS\\] backend RAM acepta perfil de -?\\d+(?:\\.\\d+)? KiB"
+    ]
+  }
+}
