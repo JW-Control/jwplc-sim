@@ -14,13 +14,41 @@
       "^JWPLC MODBUS RTU MASTER COOPERATIVE VALIDATION - ALPHA7$",
       "^MODBUS_BEGIN=PASS$",
       "^TASK_REQUIRED=YES$",
-      { "match": "^FC06 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$", "count": 2 },
-      { "match": "^FC03 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$", "count": 2 },
-      { "match": "^VERIFY_HR1=PASS \\| expected=1 actual=1$", "count": 1, "after_ms": 2150, "before_ms": 2250 },
-      { "match": "^FC06 FAIL \\| elapsed_ms=1000 \\| APP_TICKS=[1-9]\\d* \\| result=Timeout$", "count": 1, "after_ms": 3600, "before_ms": 3700 },
-      { "match": "^VERIFY_HR1=FAIL \\| expected=3 actual=999$", "count": 1, "after_ms": 4250, "before_ms": 4350 },
-      { "match": "^STATS TX=\\d+ RX=4 OK=4 CRC=0 TMO=1$", "count": 1, "after_ms": 5000 }
+      {
+        "match": "^FC06 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$",
+        "count": 2
+      },
+      {
+        "match": "^FC03 PASS \\| elapsed_ms=\\d+ \\| APP_TICKS=[1-9]\\d* \\| result=OK$",
+        "count": 2
+      },
+      {
+        "match": "^VERIFY_HR1=PASS \\| expected=1 actual=1$",
+        "count": 1,
+        "after_ms": 2150,
+        "before_ms": 2250
+      },
+      {
+        "match": "^FC06 FAIL \\| elapsed_ms=1000 \\| APP_TICKS=[1-9]\\d* \\| result=Timeout$",
+        "count": 1,
+        "after_ms": 3600,
+        "before_ms": 3700
+      },
+      {
+        "match": "^VERIFY_HR1=FAIL \\| expected=3 actual=999$",
+        "count": 1,
+        "after_ms": 4250,
+        "before_ms": 4350
+      },
+      {
+        "match": "^STATS TX=\\d+ RX=4 OK=4 CRC=0 TMO=1$",
+        "count": 1,
+        "after_ms": 5000
+      }
     ],
-    "console_absent": ["REQUEST REJECTED", "^FC03 FAIL"]
+    "console_absent": [
+      "REQUEST REJECTED",
+      "^FC03 FAIL"
+    ]
   }
 }

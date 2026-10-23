@@ -14,14 +14,35 @@
     "console": [
       "^Iniciando PLC como Esclavo Modbus\\.\\.\\.$",
       "^Esclavo Modbus ID 1 listo en 9600 baudios\\.$",
-      { "match": "^\\u0001\\u0003\\u0002", "port": 2, "count": 1 }
+      {
+        "match": "^\\\\x01\\\\x03\\\\x02",
+        "port": 2,
+        "count": 1
+      }
     ],
-    "console_absent": ["^Error al iniciar Modbus RTU"],
+    "console_absent": [
+      "^Error al iniciar Modbus RTU"
+    ],
     "signals": [
-      { "at_ms": 2900, "DI": "0b00000101", "DO": "0b00000000" },
-      { "at_ms": 3100, "DO": "0b10100101", "Q0_0": 1, "Q0_7": 1 },
-      { "at_ms": 3900, "DO": "0b10100101" },
-      { "at_ms": 4100, "DO": "0b00000000" }
+      {
+        "at_ms": 2900,
+        "DI": "0b00000101",
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 3100,
+        "DO": "0b10100101",
+        "Q0_0": 1,
+        "Q0_7": 1
+      },
+      {
+        "at_ms": 3900,
+        "DO": "0b10100101"
+      },
+      {
+        "at_ms": 4100,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

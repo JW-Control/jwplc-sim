@@ -12,13 +12,43 @@
     "console": [
       "^JWPLC Basic - Modbus RTU Master FC06$",
       "^Target ID=2 \\| HR1 \\| 115200 8N1$",
-      { "match": "^\\u0002\\u0006", "port": 2, "count": 1 },
-      { "match": "^WRITE OK \\| HR1=1$", "count": 1, "after_ms": 1200, "before_ms": 1300 },
-      { "match": "^WRITE FAIL \\| Timeout$", "count": 1, "after_ms": 4100, "before_ms": 4300 },
-      { "match": "^WRITE FAIL \\| Invalid response$", "count": 1, "after_ms": 6300, "before_ms": 6400 },
-      { "match": "^WRITE OK \\| HR1=4$", "count": 1, "after_ms": 8350, "before_ms": 8450 },
-      { "match": "^WRITE (OK|FAIL)", "count": 4 }
+      {
+        "match": "^\\\\x02\\\\x06",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^WRITE OK \\| HR1=1$",
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1300
+      },
+      {
+        "match": "^WRITE FAIL \\| Timeout$",
+        "count": 1,
+        "after_ms": 4100,
+        "before_ms": 4300
+      },
+      {
+        "match": "^WRITE FAIL \\| Invalid response$",
+        "count": 1,
+        "after_ms": 6300,
+        "before_ms": 6400
+      },
+      {
+        "match": "^WRITE OK \\| HR1=4$",
+        "count": 1,
+        "after_ms": 8350,
+        "before_ms": 8450
+      },
+      {
+        "match": "^WRITE (OK|FAIL)",
+        "count": 4
+      }
     ],
-    "console_absent": ["^Request rejected", "begin failed"]
+    "console_absent": [
+      "^Request rejected",
+      "begin failed"
+    ]
   }
 }

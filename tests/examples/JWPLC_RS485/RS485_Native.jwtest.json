@@ -15,9 +15,19 @@
       "^Baud: 19200$",
       "^Config: SERIAL_8E1$",
       "^Holding registers: 8$",
-      { "match": "^\\u0001\\u0003\\u0006\\u0003", "port": 2, "count": 1 },
-      { "match": "^\\u0001\\u0003\\u0006\\u0003\\uFFFD\\u0003\\uFFFD\\u0003\\uFFFD\\u001D\\uFFFD$", "port": 2, "count": 1 }
+      {
+        "match": "^\\\\x01\\\\x03\\\\x06\\\\x03",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^\\\\x01\\\\x03\\\\x06\\\\x03\\\\xE9\\\\x03\\\\xEA\\\\x03\\\\xEB\\\\x1D\\\\x9E$",
+        "port": 2,
+        "count": 1
+      }
     ],
-    "console_absent": ["^Last error: (?!OK)"]
+    "console_absent": [
+      "^Last error: (?!OK)"
+    ]
   }
 }

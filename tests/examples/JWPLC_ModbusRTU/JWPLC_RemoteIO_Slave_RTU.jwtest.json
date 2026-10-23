@@ -18,24 +18,65 @@
       "^JWPLC Alpha7 A7\\.1 - Remote I/O Slave oficial$",
       "^MODBUS_BEGIN=PASS$",
       "^SLAVE_ID=2$",
-      { "match": "^\\u0002\\u0002\\u0001B!", "port": 2, "count": 1 },
-      { "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$", "count": 1, "after_ms": 2050, "before_ms": 2200 },
-      { "match": "^\\[FAILSAFE\\] liberado por escritura DO valida$", "count": 1, "after_ms": 3000, "before_ms": 3100 },
-      { "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$", "count": 1, "after_ms": 3200, "before_ms": 3300 },
-      { "match": "^---- SLAVE STATUS ----$", "count": 1, "after_ms": 3500 },
+      {
+        "match": "^\\\\x02\\\\x02\\\\x01B!",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$",
+        "count": 1,
+        "after_ms": 2050,
+        "before_ms": 2200
+      },
+      {
+        "match": "^\\[FAILSAFE\\] liberado por escritura DO valida$",
+        "count": 1,
+        "after_ms": 3000,
+        "before_ms": 3100
+      },
+      {
+        "match": "^\\[FAILSAFE\\] 10\\d ms sin FC05/FC15 -> Q=0$",
+        "count": 1,
+        "after_ms": 3200,
+        "before_ms": 3300
+      },
+      {
+        "match": "^---- SLAVE STATUS ----$",
+        "count": 1,
+        "after_ms": 3500
+      },
       "^DI=0x42$",
       "^FAILSAFE=ACTIVE$",
       "^COIL_WRITE=YES$",
       "^RX/TX/OK=5/5/5$",
       "^CRC/EXCEPTIONS=0/0$",
-      { "match": "^\\[LIVE\\] DI=0x42 Q=0x00 RX/TX/OK=5/5/5 CRC=0 FS=YES$", "count": 1 }
+      {
+        "match": "^\\[LIVE\\] DI=0x42 Q=0x00 RX/TX/OK=5/5/5 CRC=0 FS=YES$",
+        "count": 1
+      }
     ],
     "signals": [
-      { "at_ms": 1900, "DO": "0b00000000" },
-      { "at_ms": 2050, "DO": "0b00000101" },
-      { "at_ms": 2200, "DO": "0b00000000" },
-      { "at_ms": 3150, "DO": "0b00001000" },
-      { "at_ms": 3300, "DO": "0b00000000" }
+      {
+        "at_ms": 1900,
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 2050,
+        "DO": "0b00000101"
+      },
+      {
+        "at_ms": 2200,
+        "DO": "0b00000000"
+      },
+      {
+        "at_ms": 3150,
+        "DO": "0b00001000"
+      },
+      {
+        "at_ms": 3300,
+        "DO": "0b00000000"
+      }
     ]
   }
 }

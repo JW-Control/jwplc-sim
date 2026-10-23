@@ -13,14 +13,49 @@
     "console": [
       "^JWPLC Basic - Modbus RTU Master FC03$",
       "^Target ID=2 \\| 115200 8N1$",
-      { "match": "^\\u0002\\u0003", "port": 2, "count": 1 },
-      { "match": "^READ OK \\| HR0=1 HR1=100 HR2=200 HR3=300$", "count": 1, "after_ms": 1200, "before_ms": 1300 },
-      { "match": "^READ OK \\| HR0=2 HR1=1234 HR2=5678 HR3=7$", "count": 1, "after_ms": 2250, "before_ms": 2350 },
-      { "match": "^READ OK", "count": 2 },
-      { "match": "^READ FAIL \\| Timeout$", "count": 1, "after_ms": 4200, "before_ms": 4300 },
-      { "match": "^READ FAIL \\| CRC error$", "count": 1, "after_ms": 5300, "before_ms": 5400 },
-      { "match": "^READ FAIL \\| Modbus exception$", "count": 1, "after_ms": 6350, "before_ms": 6450 }
+      {
+        "match": "^\\\\x02\\\\x03",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^READ OK \\| HR0=1 HR1=100 HR2=200 HR3=300$",
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1300
+      },
+      {
+        "match": "^READ OK \\| HR0=2 HR1=1234 HR2=5678 HR3=7$",
+        "count": 1,
+        "after_ms": 2250,
+        "before_ms": 2350
+      },
+      {
+        "match": "^READ OK",
+        "count": 2
+      },
+      {
+        "match": "^READ FAIL \\| Timeout$",
+        "count": 1,
+        "after_ms": 4200,
+        "before_ms": 4300
+      },
+      {
+        "match": "^READ FAIL \\| CRC error$",
+        "count": 1,
+        "after_ms": 5300,
+        "before_ms": 5400
+      },
+      {
+        "match": "^READ FAIL \\| Modbus exception$",
+        "count": 1,
+        "after_ms": 6350,
+        "before_ms": 6450
+      }
     ],
-    "console_absent": ["^Request rejected", "begin failed"]
+    "console_absent": [
+      "^Request rejected",
+      "begin failed"
+    ]
   }
 }

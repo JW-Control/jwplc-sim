@@ -13,11 +13,33 @@
       "^Modbus RTU ready: yes$",
       "^Baud: 19200$",
       "^Config: SERIAL_8E1$",
-      { "match": "^\\u0001\\u0003", "port": 2, "count": 1 },
-      { "match": "^Read OK \\| HR0: 11 HR1: 22 HR2: 33 HR3: 44$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
-      { "match": "^Read failed: Timeout$", "count": 1, "after_ms": 4000, "before_ms": 4200 },
-      { "match": "^Read failed: Modbus exception$", "count": 1, "after_ms": 5200, "before_ms": 5300 }
+      {
+        "match": "^\\\\x01\\\\x03",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^Read OK \\| HR0: 11 HR1: 22 HR2: 33 HR3: 44$",
+        "count": 1,
+        "after_ms": 2100,
+        "before_ms": 2200
+      },
+      {
+        "match": "^Read failed: Timeout$",
+        "count": 1,
+        "after_ms": 4000,
+        "before_ms": 4200
+      },
+      {
+        "match": "^Read failed: Modbus exception$",
+        "count": 1,
+        "after_ms": 5200,
+        "before_ms": 5300
+      }
     ],
-    "console_absent": ["^Request rejected", "begin failed"]
+    "console_absent": [
+      "^Request rejected",
+      "begin failed"
+    ]
   }
 }

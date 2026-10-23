@@ -12,12 +12,37 @@
       "^JWPLC Modbus RTU master cooperativo - FC06$",
       "^Modbus RTU ready: yes$",
       "^Config: SERIAL_8E1$",
-      { "match": "^\\u0001\\u0006", "port": 2, "count": 1 },
-      { "match": "^Write OK \\| HR1 = 1$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
-      { "match": "^Write failed: Timeout$", "count": 1, "after_ms": 5000, "before_ms": 5200 },
-      { "match": "^Write failed: Modbus exception$", "count": 1, "after_ms": 7200, "before_ms": 7300 },
-      { "match": "^Write (OK|failed)", "count": 3 }
+      {
+        "match": "^\\\\x01\\\\x06",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^Write OK \\| HR1 = 1$",
+        "count": 1,
+        "after_ms": 2100,
+        "before_ms": 2200
+      },
+      {
+        "match": "^Write failed: Timeout$",
+        "count": 1,
+        "after_ms": 5000,
+        "before_ms": 5200
+      },
+      {
+        "match": "^Write failed: Modbus exception$",
+        "count": 1,
+        "after_ms": 7200,
+        "before_ms": 7300
+      },
+      {
+        "match": "^Write (OK|failed)",
+        "count": 3
+      }
     ],
-    "console_absent": ["^Request rejected", "begin failed"]
+    "console_absent": [
+      "^Request rejected",
+      "begin failed"
+    ]
   }
 }

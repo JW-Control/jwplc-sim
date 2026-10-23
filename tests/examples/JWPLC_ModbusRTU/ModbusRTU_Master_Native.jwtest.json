@@ -3,7 +3,9 @@
   "$comment": "Defecto del ejemplo (no del simulador): usa readHoldingRegisters() como si fuera bloqueante, pero con el motor ASYNC por defecto del package solo inicia la transacción (devuelve 'aceptada') y el sketch nunca llama a task(). Por eso imprime 'Read OK' con ceros sin respuesta todavía, el pedido 01 03 sale por RS-485 pero la respuesta correcta del esclavo 1 (11,22,33,44, inyectada a los 2,1 s) nunca se procesa y cada lectura posterior falla con 'Master busy', igual que en la placa. Si el ejemplo se corrige (motor SYNC o task()), esperar 'Read OK | HR0: 11 HR1: 22 HR2: 33 HR3: 44'.",
   "sketch": "package:libraries/JWPLC_ModbusRTU/examples/ModbusRTU_Master_Native",
   "until_ms": 4500,
-  "stim": ["2100 uart2 \"\\x01\\x03\\x08\\x00\\x0B\\x00\\x16\\x00\\x21\\x00\\x2C\\x37\\x03\""],
+  "stim": [
+    "2100 uart2 \"\\x01\\x03\\x08\\x00\\x0B\\x00\\x16\\x00\\x21\\x00\\x2C\\x37\\x03\""
+  ],
   "expect": {
     "console": [
       "^Modbus RTU ready: yes$",
@@ -11,10 +13,24 @@
       "^Baud: 19200$",
       "^Config: SERIAL_8E1$",
       "^Motor: ASYNC$",
-      { "match": "^\\u0001\\u0003", "port": 2, "count": 1 },
-      { "match": "^Read OK \\| HR0: 0 HR1: 0 HR2: 0 HR3: 0$", "count": 1, "before_ms": 2100 },
-      { "match": "^Read failed: Master busy$", "count": 2, "after_ms": 3000 }
+      {
+        "match": "^\\\\x01\\\\x03",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^Read OK \\| HR0: 0 HR1: 0 HR2: 0 HR3: 0$",
+        "count": 1,
+        "before_ms": 2100
+      },
+      {
+        "match": "^Read failed: Master busy$",
+        "count": 2,
+        "after_ms": 3000
+      }
     ],
-    "console_absent": ["^Read OK \\| HR0: 11"]
+    "console_absent": [
+      "^Read OK \\| HR0: 11"
+    ]
   }
 }

@@ -13,13 +13,42 @@
     "console": [
       "^JWPLC Basic - Modbus RTU Slave$",
       "^ID=2 \\| 115200 8N1 \\| HR0\\.\\.HR7$",
-      { "match": "^HR0=1 HR1=100 RX=0 TX=0 CRC=0$", "count": 1, "before_ms": 1500 },
-      { "match": "^HR0=2 HR1=100 RX=1 TX=1 CRC=0$", "count": 1, "after_ms": 1500, "before_ms": 2500 },
-      { "match": "^HR0=3 HR1=1234 RX=2 TX=2 CRC=0$", "count": 1, "after_ms": 2500, "before_ms": 3500 },
-      { "match": "^HR0=4 HR1=1234 RX=3 TX=2 CRC=1$", "count": 1, "after_ms": 3500, "before_ms": 4500 },
-      { "match": "^HR0=5 HR1=1234 RX=3 TX=2 CRC=1$", "count": 1, "after_ms": 4500 },
-      { "match": "^\\u0002\\u0003\\u0008", "port": 2, "count": 1 }
+      {
+        "match": "^HR0=1 HR1=100 RX=0 TX=0 CRC=0$",
+        "count": 1,
+        "before_ms": 1500
+      },
+      {
+        "match": "^HR0=2 HR1=100 RX=1 TX=1 CRC=0$",
+        "count": 1,
+        "after_ms": 1500,
+        "before_ms": 2500
+      },
+      {
+        "match": "^HR0=3 HR1=1234 RX=2 TX=2 CRC=0$",
+        "count": 1,
+        "after_ms": 2500,
+        "before_ms": 3500
+      },
+      {
+        "match": "^HR0=4 HR1=1234 RX=3 TX=2 CRC=1$",
+        "count": 1,
+        "after_ms": 3500,
+        "before_ms": 4500
+      },
+      {
+        "match": "^HR0=5 HR1=1234 RX=3 TX=2 CRC=1$",
+        "count": 1,
+        "after_ms": 4500
+      },
+      {
+        "match": "^\\\\x02\\\\x03\\\\x08",
+        "port": 2,
+        "count": 1
+      }
     ],
-    "console_absent": ["begin failed"]
+    "console_absent": [
+      "begin failed"
+    ]
   }
 }

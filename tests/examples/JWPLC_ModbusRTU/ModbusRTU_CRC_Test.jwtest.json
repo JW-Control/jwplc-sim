@@ -9,8 +9,13 @@
       "^Calculated CRC: 0xCDC5$",
       "^Expected CRC:   0xCDC5$",
       "^RTU CRC bytes:  C5 CD$",
-      { "match": "^CRC OK$", "count": 1 }
+      {
+        "match": "^CRC OK$",
+        "count": 1
+      }
     ],
-    "console_absent": ["^CRC FAILED$"]
+    "console_absent": [
+      "^CRC FAILED$"
+    ]
   }
 }

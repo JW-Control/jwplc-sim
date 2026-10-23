@@ -13,12 +13,40 @@
       "^JWPLC Basic v1\\.4\\.1 Modbus RTU Master Test$",
       "^Target slave ID: 1$",
       "^Modbus config: SERIAL_8E1$",
-      { "match": "^\\u0001\\u0003", "port": 2, "count": 1 },
-      { "match": "^Read OK \\| HR0: 2 \\| HR1: 1001 \\| HR2: 1002 \\| HR3: 1003$", "count": 1, "after_ms": 2100, "before_ms": 2200 },
-      { "match": "^Read failed: CRC error \\| Length: 13$", "count": 1, "after_ms": 3100, "before_ms": 3200 },
-      { "match": "^Modbus exception: 0x2$", "count": 1, "after_ms": 4100, "before_ms": 4200 },
-      { "match": "^Read failed: timeout$", "count": 1, "after_ms": 5900, "before_ms": 6100 }
+      {
+        "match": "^\\\\x01\\\\x03",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^Read OK \\| HR0: 2 \\| HR1: 1001 \\| HR2: 1002 \\| HR3: 1003$",
+        "count": 1,
+        "after_ms": 2100,
+        "before_ms": 2200
+      },
+      {
+        "match": "^Read failed: CRC error \\| Length: 13$",
+        "count": 1,
+        "after_ms": 3100,
+        "before_ms": 3200
+      },
+      {
+        "match": "^Modbus exception: 0x2$",
+        "count": 1,
+        "after_ms": 4100,
+        "before_ms": 4200
+      },
+      {
+        "match": "^Read failed: timeout$",
+        "count": 1,
+        "after_ms": 5900,
+        "before_ms": 6100
+      }
     ],
-    "console_absent": ["wrong slave ID", "wrong function", "wrong byte count"]
+    "console_absent": [
+      "wrong slave ID",
+      "wrong function",
+      "wrong byte count"
+    ]
   }
 }

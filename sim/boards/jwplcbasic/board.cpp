@@ -172,6 +172,37 @@ uint8_t JwplcBasic::outputs() const {
   return v;
 }
 
+namespace {
+// Línea de consola imprimible: el texto (UTF-8 válido, tabuladores) va tal
+// cual; los bytes de control y los que no forman UTF-8 se escriben como \xHH,
+// y la barra invertida como \\. Así una trama binaria (Modbus RTU por UART2) no se corta
+// en el primer 0x00 ni se pierde en caracteres de reemplazo.
+std::string printable(const std::string &raw) {
+  std::string out;
+  const size_t n = raw.size();
+  for (size_t i = 0; i < n;) {
+    const auto b = static_cast<uint8_t>(raw[i]);
+    size_t len = b < 0x80 ? 1 : (b & 0xE0) == 0xC0 ? 2 : (b & 0xF0) == 0xE0 ? 3 : (b & 0xF8) == 0xF0 ? 4 : 0;
+    bool ok = len > 0 && i + len <= n && !(len == 2 && b < 0xC2);
+    for (size_t k = 1; ok && k < len; ++k) ok = (static_cast<uint8_t>(raw[i + k]) & 0xC0) == 0x80;
+    if (ok && len == 1 && (b == '\\' || b == 0x7F || (b < 0x20 && b != '\t'))) ok = false;
+    if (ok) {
+      out.append(raw, i, len);
+      i += len;
+    } else if (b == '\\') {
+      out += "\\\\";
+      ++i;
+    } else {
+      char hex[5];
+      std::snprintf(hex, sizeof hex, "\\x%02X", b);
+      out += hex;
+      ++i;
+    }
+  }
+  return out;
+}
+} // namespace
+
 void JwplcBasic::uart_tx(int port, const uint8_t *data, size_t len) {
   if (port < 0 || port > 2) return;
   if (uart_sink_) uart_sink_(port, data, len);
@@ -179,7 +210,7 @@ void JwplcBasic::uart_tx(int port, const uint8_t *data, size_t len) {
   for (size_t i = 0; i < len; ++i) {
     const char c = static_cast<char>(data[i]);
     if (c == '\n') {
-      if (echo_) std::printf("[%10.3f ms] UART%d %s\n", now_ms(), port, line.c_str());
+      if (echo_) std::printf("[%10.3f ms] UART%d %s\n", now_ms(), port, printable(line).c_str());
       line.clear();
     } else if (c != '\r') {
       line.push_back(c);
@@ -190,7 +221,7 @@ void JwplcBasic::uart_tx(int port, const uint8_t *data, size_t len) {
 void JwplcBasic::flush_console() {
   for (int p = 0; p < 3; ++p) {
     if (!console_line_[p].empty()) {
-      if (echo_) std::printf("[%10.3f ms] UART%d %s\n", now_ms(), p, console_line_[p].c_str());
+      if (echo_) std::printf("[%10.3f ms] UART%d %s\n", now_ms(), p, printable(console_line_[p]).c_str());
       console_line_[p].clear();
     }
   }
