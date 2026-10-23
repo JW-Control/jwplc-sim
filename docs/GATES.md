@@ -50,7 +50,7 @@ JWSIM_G4_RS485_MULTINODE=PASS      (3 nodos, choques, maestro externo por TCP; C
 JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; W5500 poblado por defecto)
 JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)
-JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux; Windows CI en curso)
+JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux y Windows CI)
 JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (103 ejemplos: 98 compilan, corren y pasan su prueba; 5 clasificados; artefacto)
 JWSIM_G5_RELEASE_WORKFLOW=PENDING   (sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL; falta el PR aprobado en platform-jwplc)
