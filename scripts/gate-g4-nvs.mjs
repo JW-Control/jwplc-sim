@@ -13,11 +13,10 @@
 //                 una vez por arranque sobre el mismo estado
 //   determinismo  mismo estado de partida → mismo hash
 //
-// Hallazgo H13 del package (docs/reports/G4.md): Superblock_Redundancy espera
-// prepareBoot() == Unformatted con ambas copias del superblock corruptas,
-// pero la librería devuelve CorruptMetadata (lo que valida
-// Storage_Metadata_Diagnostic). Es lógica pura, sin hardware: esa única
-// verificación se acepta como falla conocida y el gate avisa si desaparece.
+// Fallas conocidas del package (KNOWN): ninguna desde alpha.14. Hasta
+// alpha.13, Superblock_Redundancy esperaba Unformatted con ambas copias del
+// superblock corruptas y la librería devuelve CorruptMetadata (hallazgo H13,
+// corregido en el ejemplo).
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -121,7 +120,8 @@ const criteria = {};
   const T = 6000; // después de la pregunta (Metadata_Diagnostic pregunta a los 5,6 s)
   const word = (w) => [`${T} uart0 "${w}\\n"`];
   // Ejemplo → arranques: { stim, ok(líneas, timeline) }.
-  const KNOWN = { Storage_API_Superblock_Redundancy: ["[FAIL] politica mantiene estado seguro UNFORMATTED"] };
+  /** @type {Record<string, string[]>} */
+  const KNOWN = {};
   const summary = (lines, known = []) => {
     const p = lines.filter((l) => /^\[PASS\]/.test(l)).length;
     const fails = lines.filter((l) => /^\[FAIL\]|^FAIL|ABORTADA|FALLO/.test(l));

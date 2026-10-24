@@ -55,6 +55,7 @@ JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el r
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (103 ejemplos: 98 compilan, corren y pasan su prueba; 5 clasificados; artefacto)
 JWSIM_G5_RELEASE_WORKFLOW=PENDING   (en espera hasta cerrar alpha.14 y alpha.15; sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL)
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
+JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; rama de integración @ 9a27b138, sin tag todavía)
 JWSIM_G6_*=PENDING                  (OpenPLC: después de cerrar la alpha.15 de Kenyi)
 JWSIM_G7_DEVICE_LIBRARY=PASS        (16 dispositivos, 19 pruebas de comportamiento; docs/reports/G7.md)
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)
@@ -173,4 +174,4 @@ JWSIM_G8_*=PENDING ... JWSIM_G10_*=PENDING
 
 | Gate | Criterios |
 |---|---|
-| `JWSIM_PACKAGE_SYNC_ALPHAxx` | `package.lock` apunta al tag `v2.1.0-alpha.xx`; build sin cambios del package; todos los gates en `PASS` previamente siguen en `PASS` (o la regresión queda documentada como punto de extensión). |
+| `JWSIM_PACKAGE_SYNC_ALPHAxx` | `package.lock` apunta al tag `v2.1.0-alpha.xx` (o, antes de publicarse, a la rama de integración y su commit); build sin cambios del package; todos los gates en `PASS` previamente siguen en `PASS` (o la regresión queda documentada como punto de extensión). |
