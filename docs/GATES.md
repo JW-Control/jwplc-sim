@@ -62,7 +62,8 @@ JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones co
 JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)
 JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
                                     (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
-JWSIM_G8_*=PENDING ... JWSIM_G10_*=PENDING
+JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (símbolos v2: 14 de 20 plantillas; faltan fin de carrera, sensores, relé, electroválvula y motor)
+JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING ... JWSIM_G10_*=PENDING
 ```
 
 ---
@@ -150,7 +151,7 @@ JWSIM_G8_*=PENDING ... JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. | E2E. |
+| `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. C1: los 18 dispositivos de la biblioteca tienen símbolo según `docs/simbolos/LINEAMIENTOS.md` (modelo comercial real, vista frontal, 4 px/mm; los de campo a una escala reducida fija), aprobado por JW Control. C2: cableado editable (crear, quitar, puntos de doblez, color, puentes) sin superponerse a los equipos. C3: estados legibles y animados con la simulación: cables con tensión, contactos y palancas, vástago del cilindro, giro del motor, pilotos, disparo de las protecciones. | `node scripts/export-symbols.mjs` sin `plantilla: null` + E2E de la escena (`app/tests/e2e-g7.mjs`) + vistas de escala. |
 | `JWSIM_G8_3D_SCENES` | Escenas 3D (three.js) de procesos: cinta, cilindro, tanque, puerta. ≥ 30 fps en el host de referencia. | Medición. |
 | `JWSIM_G8_OIP_FUXA` | Puente con Open Industry Project y FUXA (Modbus TCP) documentado y probado. | Prueba de integración. |
 
