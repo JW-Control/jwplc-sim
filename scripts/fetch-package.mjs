@@ -4,7 +4,7 @@
 // Descarga el árbol del package JWPLC fijado en package.lock, sin copiarlo al
 // repositorio. Resultado: .jwsim/package/<REF>/ (ignorado por git; las "/" de
 // una rama pasan a "_"). REF puede ser un tag (debe apuntar a COMMIT) o una
-// rama: si la rama siguió avanzando se trae COMMIT exacto.
+// rama: si la rama siguió avanzando, o ya no existe, se trae COMMIT exacto.
 //
 // Uso:
 //   node scripts/fetch-package.mjs            # clona/verifica según package.lock
@@ -103,24 +103,38 @@ export function resolvePackageRoot({ fetch = true } = {}) {
 
   mkdirSync(dirname(dest), { recursive: true });
   console.error(`[fetch-package] clonando ${lock.JWPLC_PACKAGE_REPO} @ ${lock.JWPLC_PACKAGE_REF}`);
-  execFileSync(
-    "git",
-    ["-c", "advice.detachedHead=false", "clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", "--branch", lock.JWPLC_PACKAGE_REF, lock.JWPLC_PACKAGE_REPO, dest],
-    { stdio: "inherit" },
-  );
-  execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...SPARSE_PATHS.map((p) => `/${p}`)], { cwd: dest, stdio: "inherit" });
-  let head = revParse(dest, "HEAD");
-  // Con --branch, una rama deja HEAD como referencia simbólica; un tag, separado.
-  let isBranch = true;
-  try {
-    git(["symbolic-ref", "-q", "HEAD"], dest);
-  } catch {
-    isBranch = false;
-  }
-  if (head !== lock.JWPLC_PACKAGE_COMMIT && isBranch) {
-    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} avanzó; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}`);
+  const sparse = () => execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...SPARSE_PATHS.map((p) => `/${p}`)], { cwd: dest, stdio: "inherit" });
+  const byCommit = () => {
     execFileSync("git", ["fetch", "--quiet", "--depth", "1", "origin", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
     execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
+  };
+  let isBranch = true;
+  try {
+    execFileSync(
+      "git",
+      ["-c", "advice.detachedHead=false", "clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", "--branch", lock.JWPLC_PACKAGE_REF, lock.JWPLC_PACKAGE_REPO, dest],
+      { stdio: ["ignore", "inherit", "pipe"] },
+    );
+    sparse();
+    // Con --branch, una rama deja HEAD como referencia simbólica; un tag, separado.
+    try {
+      git(["symbolic-ref", "-q", "HEAD"], dest);
+    } catch {
+      isBranch = false;
+    }
+  } catch {
+    // La rama ya no existe (renombrada o borrada tras fusionarse): se trae el
+    // commit fijado directamente, que es lo que manda en package.lock.
+    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} no existe en el remoto; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)} directamente`);
+    rmSync(dest, { recursive: true, force: true });
+    execFileSync("git", ["clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", "--no-checkout", lock.JWPLC_PACKAGE_REPO, dest], { stdio: "inherit" });
+    sparse();
+    byCommit();
+  }
+  let head = revParse(dest, "HEAD");
+  if (head !== lock.JWPLC_PACKAGE_COMMIT && isBranch) {
+    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} avanzó; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}`);
+    byCommit();
     head = revParse(dest, "HEAD");
   }
   if (head !== lock.JWPLC_PACKAGE_COMMIT) {

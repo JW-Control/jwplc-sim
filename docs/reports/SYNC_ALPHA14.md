@@ -1,18 +1,25 @@
 # Sincronización con platform-jwplc 2.1.0-alpha.14
 
 ```text
-Package: v2.1.0-alpha.13 (11237c2c8a56) → v2.1.0-alpha.14/feature/hmi-designer (9a27b138b795), sin modificaciones
+Package: v2.1.0-alpha.13 (11237c2c8a56) → v2.1.0-alpha.14/HmiDesigner/main (eddee62e592d, cierre de alpha.14), sin modificaciones
 Fecha: 2026-10-24 (desarrollo de alpha.14 cerrado; publicación y documentación pendientes)
 Procedimiento: ARCHITECTURE §9
 
 JWSIM_PACKAGE_SYNC_ALPHA14=PASS
 ```
 
-alpha.14 todavía no tiene tag: `package.lock` fija la rama de integración
-y su commit. `scripts/fetch-package.mjs` ahora acepta una rama: si avanza
-con los commits de publicación, trae igual el commit fijado (un tag que se
-mueve sigue siendo un error). Cuando se publique, basta con cambiar `REF`
-por el tag si su árbol coincide.
+alpha.14 todavía no tiene tag: `package.lock` fija la rama de cierre
+(`v2.1.0-alpha.14/HmiDesigner/main`) y su commit. `scripts/fetch-package.mjs`
+acepta una rama: si avanza, o si se renombra o borra (como pasó con
+`v2.1.0-alpha.14/feature/hmi-designer`), trae igual el commit fijado; un tag
+que se mueve sigue siendo un error. Cuando se publique, basta con cambiar
+`REF` por el tag si su árbol coincide.
+
+La matriz y los gates se corrieron con `9a27b138`; entre ese commit y el
+cierre (`eddee62e`) solo cambian READMEs, un script de benchmark y el retiro
+de `libJWPLC_ModbusRTU.a` (la librería queda en fuente, como ya la compilaba
+el simulador). Con el cierre: paridad PASS y los 19 ejemplos de Modbus RTU
+pasan.
 
 ## 1. Qué trae alpha.14 que afecte al simulador
 

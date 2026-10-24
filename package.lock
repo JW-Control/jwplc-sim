@@ -3,8 +3,8 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.14: desarrollo cerrado en la rama de integración (24/10/2026);
+# 2.1.0-alpha.14: cierre en la rama v2.1.0-alpha.14/HmiDesigner/main (24/10/2026);
 # al publicarse, cambiar REF por el tag si su árbol coincide.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.14/feature/hmi-designer
-JWPLC_PACKAGE_COMMIT=9a27b138b7956b4757239007bdad7bca076c9bfa
+JWPLC_PACKAGE_REF=v2.1.0-alpha.14/HmiDesigner/main
+JWPLC_PACKAGE_COMMIT=eddee62e592d328b4cbfd0fe4fbc11cfef7be263
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
