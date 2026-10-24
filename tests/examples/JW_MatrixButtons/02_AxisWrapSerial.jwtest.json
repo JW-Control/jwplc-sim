@@ -1,0 +1,101 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "applyAxis() con wrap: RIGHT dos veces lleva a la página 2 (120); OK entra a editar; UP sube a 121; ESC invierte el eje (Yinv=ON) y UP baja a 120 y 119; OK guarda 119; LEFT tres veces pasa por 1 y 0 y da la vuelta a la página 5 (2500). Desde alpha.14 usa el objeto global JWPLC_Buttons (hallazgo H8).",
+  "sketch": "package:libraries/JW_MatrixButtons/examples/02_AxisWrapSerial",
+  "until_ms": 5200,
+  "stim": [
+    "1200 BTN_RIGHT=1",
+    "1300 BTN_RIGHT=0",
+    "1500 BTN_RIGHT=1",
+    "1600 BTN_RIGHT=0",
+    "1800 BTN_OK=1",
+    "1900 BTN_OK=0",
+    "2100 BTN_UP=1",
+    "2200 BTN_UP=0",
+    "2400 BTN_ESC=1",
+    "2500 BTN_ESC=0",
+    "2700 BTN_UP=1",
+    "2800 BTN_UP=0",
+    "3000 BTN_UP=1",
+    "3100 BTN_UP=0",
+    "3300 BTN_OK=1",
+    "3400 BTN_OK=0",
+    "3600 BTN_LEFT=1",
+    "3700 BTN_LEFT=0",
+    "3900 BTN_LEFT=1",
+    "4000 BTN_LEFT=0",
+    "4200 BTN_LEFT=1",
+    "4300 BTN_LEFT=0"
+  ],
+  "expect": {
+    "console": [
+      "^\\[PAGE\\] page=0 val=10 Yinv=OFF$",
+      {
+        "match": "^\\[PAGE\\] page=1 val=50 Yinv=OFF$",
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1300
+      },
+      {
+        "match": "^\\[PAGE\\] page=2 val=120 Yinv=OFF$",
+        "count": 1,
+        "after_ms": 1500,
+        "before_ms": 1600
+      },
+      {
+        "match": "^\\[EDIT\\] page=2 val=120 Yinv=OFF$",
+        "count": 1,
+        "after_ms": 1800,
+        "before_ms": 1900
+      },
+      {
+        "match": "^\\[EDIT\\] page=2 val=121 Yinv=OFF$",
+        "count": 1,
+        "after_ms": 2100,
+        "before_ms": 2200
+      },
+      {
+        "match": "^\\[EDIT\\] page=2 val=121 Yinv=ON$",
+        "count": 1,
+        "after_ms": 2400,
+        "before_ms": 2500
+      },
+      {
+        "match": "^\\[EDIT\\] page=2 val=120 Yinv=ON$",
+        "count": 1,
+        "after_ms": 2700,
+        "before_ms": 2800
+      },
+      {
+        "match": "^\\[EDIT\\] page=2 val=119 Yinv=ON$",
+        "count": 1,
+        "after_ms": 3000,
+        "before_ms": 3100
+      },
+      {
+        "match": "^\\[PAGE\\] page=2 val=119 Yinv=ON$",
+        "count": 1,
+        "after_ms": 3300,
+        "before_ms": 3400
+      },
+      {
+        "match": "^\\[PAGE\\] page=1 val=50 Yinv=ON$",
+        "count": 1,
+        "after_ms": 3600,
+        "before_ms": 3700
+      },
+      {
+        "match": "^\\[PAGE\\] page=0 val=10 Yinv=ON$",
+        "count": 1,
+        "after_ms": 3900,
+        "before_ms": 4000
+      },
+      {
+        "match": "^\\[PAGE\\] page=5 val=2500 Yinv=ON$",
+        "count": 1,
+        "after_ms": 4200,
+        "before_ms": 4300
+      }
+    ]
+  }
+}

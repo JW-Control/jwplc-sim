@@ -6,14 +6,5 @@
     "tools/build-speed-benchmark/sketches/10_gfx_physical": "Usa constantes ST77XX_* de Adafruit ST7789, retirado en alpha.12.",
     "tools/build-speed-benchmark/sketches/16_alpha6_ethernet_nonblocking_acceptance": "Usa constantes ST77XX_* de Adafruit ST7789, retirado en alpha.12."
   },
-  "unsupportedPattern": "no está soportada por JWPLC Sim",
-  "packageIssue": {
-    "JWPLC/2.1.0/libraries/JW_MatrixButtons/examples/01_BasicPress": "Define su propio enum BTN_LEFT/BTN_RIGHT/... que choca con JWPLCButtonId de JWPLC_GlobalPeripherals.h, incluido por el autoload de Arduino.h en la placa jwplcbasic. También falla en el Arduino IDE (hallazgo H8).",
-    "JWPLC/2.1.0/libraries/JW_MatrixButtons/examples/02_AxisWrapSerial": "Define su propio enum BTN_LEFT/BTN_RIGHT/... que choca con JWPLCButtonId de JWPLC_GlobalPeripherals.h, incluido por el autoload de Arduino.h en la placa jwplcbasic. También falla en el Arduino IDE (hallazgo H8).",
-    "JWPLC/2.1.0/libraries/JW_MatrixButtons/examples/03_EventQueue": "Define su propio enum BTN_LEFT/BTN_RIGHT/... que choca con JWPLCButtonId de JWPLC_GlobalPeripherals.h, incluido por el autoload de Arduino.h en la placa jwplcbasic. También falla en el Arduino IDE (hallazgo H8).",
-    "JWPLC/2.1.0/libraries/JW_MatrixButtons/examples/05_DirectButtons_IO35_IO34_IO39": "Define su propio enum BTN_LEFT/BTN_RIGHT/... que choca con JWPLCButtonId de JWPLC_GlobalPeripherals.h, incluido por el autoload de Arduino.h en la placa jwplcbasic. También falla en el Arduino IDE (hallazgo H8)."
-  },
-  "externalLibrary": {
-    "JWPLC/2.1.0/libraries/JW_MatrixButtons/examples/04_GLCD_MenuDemo": "Requiere U8g2 (librería externa no incluida en el package). Las librerías instaladas por el usuario se soportan en G2."
-  }
+  "unsupportedPattern": "no está soportada por JWPLC Sim"
 }

@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Descarga el árbol del package JWPLC fijado en package.lock, sin copiarlo al
-// repositorio. Resultado: .jwsim/package/<REF>/ (ignorado por git).
+// repositorio. Resultado: .jwsim/package/<REF>/ (ignorado por git; las "/" de
+// una rama pasan a "_"). REF puede ser un tag (debe apuntar a COMMIT) o una
+// rama: si la rama siguió avanzando se trae COMMIT exacto.
 //
 // Uso:
 //   node scripts/fetch-package.mjs            # clona/verifica según package.lock
@@ -90,7 +92,7 @@ export function resolvePackageRoot({ fetch = true } = {}) {
     return { root: dir, lock, source: "JWPLC_PACKAGE_DIR" };
   }
 
-  const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF);
+  const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF.replaceAll("/", "_"));
   if (existsSync(join(dest, ".git"))) {
     const head = revParse(dest, "HEAD");
     if (head === lock.JWPLC_PACKAGE_COMMIT) return { root: dest, lock, source: "cache" };
@@ -107,7 +109,20 @@ export function resolvePackageRoot({ fetch = true } = {}) {
     { stdio: "inherit" },
   );
   execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...SPARSE_PATHS.map((p) => `/${p}`)], { cwd: dest, stdio: "inherit" });
-  const head = revParse(dest, "HEAD");
+  let head = revParse(dest, "HEAD");
+  // Con --branch, una rama deja HEAD como referencia simbólica; un tag, separado.
+  let isBranch = true;
+  try {
+    git(["symbolic-ref", "-q", "HEAD"], dest);
+  } catch {
+    isBranch = false;
+  }
+  if (head !== lock.JWPLC_PACKAGE_COMMIT && isBranch) {
+    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} avanzó; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}`);
+    execFileSync("git", ["fetch", "--quiet", "--depth", "1", "origin", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
+    execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
+    head = revParse(dest, "HEAD");
+  }
   if (head !== lock.JWPLC_PACKAGE_COMMIT) {
     throw new Error(
       `El tag ${lock.JWPLC_PACKAGE_REF} apunta a ${head}, pero package.lock fija ${lock.JWPLC_PACKAGE_COMMIT}. ` +

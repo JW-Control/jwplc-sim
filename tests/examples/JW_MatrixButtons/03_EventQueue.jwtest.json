@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Cola de eventos del último scan: OK (id 4) pulsado 200 ms da PRESS y RELEASE con held=200; UP (id 1) mantenido 900 ms da PRESS, REPEAT cada 120 ms desde los 220 ms (el package habilita repeat en UP) y RELEASE con held=900. Desde alpha.14 usa el objeto global JWPLC_Buttons (hallazgo H8).",
+  "sketch": "package:libraries/JW_MatrixButtons/examples/03_EventQueue",
+  "until_ms": 3000,
+  "stim": [
+    "1200 BTN_OK=1",
+    "1400 BTN_OK=0",
+    "1800 BTN_UP=1",
+    "2700 BTN_UP=0"
+  ],
+  "expect": {
+    "console": [
+      "^Event queue demo listo\\.$",
+      {
+        "match": "^id=4 PRESS mult=0 held=0$",
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1400
+      },
+      {
+        "match": "^id=4 RELEASE mult=0 held=200$",
+        "count": 1,
+        "after_ms": 1400,
+        "before_ms": 1800
+      },
+      {
+        "match": "^id=1 PRESS mult=0 held=0$",
+        "count": 1,
+        "after_ms": 1800,
+        "before_ms": 2000
+      },
+      {
+        "match": "^id=1 REPEAT mult=1 held=\\d+$",
+        "min": 5,
+        "max": 7,
+        "after_ms": 2000,
+        "before_ms": 2700
+      },
+      {
+        "match": "^id=1 RELEASE mult=0 held=900$",
+        "count": 1,
+        "after_ms": 2700,
+        "before_ms": 3000
+      }
+    ]
+  }
+}

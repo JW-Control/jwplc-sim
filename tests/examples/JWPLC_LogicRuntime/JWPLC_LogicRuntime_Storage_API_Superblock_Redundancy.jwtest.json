@@ -1,45 +1,109 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Redundancia de superblocks (FRAM/NVS compartidas). 1) Un comando erróneo se rechaza; SUPERBLOCK corrompe la copia más nueva (se usa la copia 1 con A), luego la anterior (se usa la copia 0 con B) y luego ambas (sin formato), restaura y deja todo como estaba. DEFECTO DEL PACKAGE (no del simulador, igual en la placa): con ambas copias inválidas prepareBoot() devuelve CORRUPT_METADATA (JWPLCLogicStorage.cpp, coherente con Storage_Metadata_Diagnostic), pero el ejemplo aún espera UNFORMATTED; se fija esa única falla. 2) Se repite el comando y la simulación se corta pocos ms después de registrar la restauración pendiente (corte de energía en plena prueba). 3) El siguiente arranque detecta la restauración pendiente y recupera la FRAM desde el respaldo NVS. 4) Un arranque más vuelve al estado original y pide de nuevo el comando.",
+  "$comment": "Redundancia de superblocks (FRAM/NVS compartidas). 1) Un comando erróneo se rechaza; SUPERBLOCK corrompe la copia más nueva (se usa la copia 1 con A), luego la anterior (se usa la copia 0 con B) y luego ambas (sin formato), restaura y deja todo como estaba. Con ambas copias inválidas la política queda en CORRUPT_METADATA (desde alpha.14 el ejemplo lo espera así; hallazgo H13) y todas las verificaciones pasan. 2) Se repite el comando y la simulación se corta pocos ms después de registrar la restauración pendiente (corte de energía en plena prueba). 3) El siguiente arranque detecta la restauración pendiente y recupera la FRAM desde el respaldo NVS. 4) Un arranque más vuelve al estado original y pide de nuevo el comando.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_Storage_API_Superblock_Redundancy",
   "runs": [
     {
       "until_ms": 8000,
-      "stim": ["6200 uart0 \"hola\\n\"", "6500 uart0 \"SUPERBLOCK\\n\""],
+      "stim": [
+        "6200 uart0 \"hola\\n\"",
+        "6500 uart0 \"SUPERBLOCK\\n\""
+      ],
       "expect": {
         "console": [
           "^JWPLC Logic Runtime - redundancia de superblocks$",
-          { "match": "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)$", "before_ms": 6200 },
-          { "match": "^\\[PASS\\] mapa completo aun no esta formateado$", "before_ms": 6200 },
-          { "match": "^Escribe SUPERBLOCK y pulsa Enviar para continuar\\.$", "before_ms": 6200, "count": 1 },
+          {
+            "match": "^\\[PASS\\] storage\\(\\)\\.begin\\(JWPLC_FRAM\\)$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^\\[PASS\\] mapa completo aun no esta formateado$",
+            "before_ms": 6200
+          },
+          {
+            "match": "^Escribe SUPERBLOCK y pulsa Enviar para continuar\\.$",
+            "before_ms": 6200,
+            "count": 1
+          },
           {
             "match": "^Comando no reconocido\\. Escribe exactamente SUPERBLOCK\\.$",
             "after_ms": 6200,
             "before_ms": 6300,
             "count": 1
           },
-          { "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] fachada reabre usando la copia redundante 1$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] copia 1 reconstruye Programa A$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] copia 0 reconstruye Programa B$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] gestor informa UNFORMATTED con ambas copias invalidas$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] ambas copias invalidas no ofrecen programa arrancable$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] Programa B vuelve a quedar activo tras restaurar metadata$", "after_ms": 6500 },
-          { "match": "^\\[PASS\\] contenido original restaurado exactamente$", "after_ms": 6500 },
-          { "match": "^\\[FAIL\\] politica mantiene estado seguro UNFORMATTED$", "count": 1 },
-          "^Resultado: \\d+ PASS, 1 FAIL$",
-          { "match": "^REDUNDANCIA DE SUPERBLOCKS: FAIL$", "count": 1 }
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] fachada reabre usando la copia redundante 1$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] copia 1 reconstruye Programa A$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] copia 0 reconstruye Programa B$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] gestor informa UNFORMATTED con ambas copias invalidas$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] ambas copias invalidas no ofrecen programa arrancable$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] Programa B vuelve a quedar activo tras restaurar metadata$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] contenido original restaurado exactamente$",
+            "after_ms": 6500
+          },
+          {
+            "match": "^\\[PASS\\] politica mantiene estado seguro CORRUPT_METADATA$",
+            "count": 1,
+            "after_ms": 6500
+          },
+          "^Resultado: \\d+ PASS, 0 FAIL$",
+          {
+            "match": "^REDUNDANCIA DE SUPERBLOCKS: PASS$",
+            "count": 1
+          }
         ],
-        "console_absent": ["^\\[FAIL\\] (?!politica mantiene estado seguro UNFORMATTED$)", "^PRUEBA ABORTADA", "^FAIL:"],
-        "signals": [{ "at_ms": 7900, "DO": "0b00000000" }]
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^PRUEBA ABORTADA",
+          "^FAIL:"
+        ],
+        "signals": [
+          {
+            "at_ms": 7900,
+            "DO": "0b00000000"
+          }
+        ]
       }
     },
     {
       "until_ms": 6517,
-      "stim": ["6500 uart0 \"SUPERBLOCK\\n\""],
+      "stim": [
+        "6500 uart0 \"SUPERBLOCK\\n\""
+      ],
       "expect": {
-        "console": [{ "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500, "count": 1 }],
-        "console_absent": ["^Resultado:", "^\\[FAIL\\]"]
+        "console": [
+          {
+            "match": "^\\[PASS\\] restauracion pendiente registrada$",
+            "after_ms": 6500,
+            "count": 1
+          }
+        ],
+        "console_absent": [
+          "^Resultado:",
+          "^\\[FAIL\\]"
+        ]
       }
     },
     {
@@ -47,16 +111,28 @@
       "expect": {
         "console": [
           "^Restauracion pendiente detectada tras reinicio\\.$",
-          { "match": "^\\[PASS\\] Recuperacion automatica completada\\.$", "count": 1 }
+          {
+            "match": "^\\[PASS\\] Recuperacion automatica completada\\.$",
+            "count": 1
+          }
         ],
-        "console_absent": ["^\\[FAIL\\]", "^Escribe "]
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Escribe "
+        ]
       }
     },
     {
       "until_ms": 3000,
       "expect": {
-        "console": ["^\\[PASS\\] mapa completo aun no esta formateado$", "^Escribe SUPERBLOCK y pulsa Enviar para continuar\\.$"],
-        "console_absent": ["^\\[FAIL\\]", "^Restauracion pendiente"]
+        "console": [
+          "^\\[PASS\\] mapa completo aun no esta formateado$",
+          "^Escribe SUPERBLOCK y pulsa Enviar para continuar\\.$"
+        ],
+        "console_absent": [
+          "^\\[FAIL\\]",
+          "^Restauracion pendiente"
+        ]
       }
     }
   ]

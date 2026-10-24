@@ -1,0 +1,65 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Botonera frontal con el objeto global JWPLC_Buttons (el package la escanea en segundo plano): cada tecla da un único [PRESS] poco después de pulsarla (filtro de rebote). Desde alpha.14 el ejemplo ya no declara su propio enum ni otra instancia de JW_MatrixButtons (hallazgo H8).",
+  "sketch": "package:libraries/JW_MatrixButtons/examples/01_BasicPress",
+  "until_ms": 3200,
+  "stim": [
+    "1200 BTN_LEFT=1",
+    "1300 BTN_LEFT=0",
+    "1500 BTN_UP=1",
+    "1600 BTN_UP=0",
+    "1800 BTN_RIGHT=1",
+    "1900 BTN_RIGHT=0",
+    "2100 BTN_ESC=1",
+    "2200 BTN_ESC=0",
+    "2400 BTN_OK=1",
+    "2500 BTN_OK=0",
+    "2700 BTN_DOWN=1",
+    "2800 BTN_DOWN=0"
+  ],
+  "expect": {
+    "console": [
+      "^BasicPress listo\\.$",
+      {
+        "match": "^\\[PRESS\\] LEFT$",
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1300
+      },
+      {
+        "match": "^\\[PRESS\\] UP$",
+        "count": 1,
+        "after_ms": 1500,
+        "before_ms": 1600
+      },
+      {
+        "match": "^\\[PRESS\\] RIGHT$",
+        "count": 1,
+        "after_ms": 1800,
+        "before_ms": 1900
+      },
+      {
+        "match": "^\\[PRESS\\] ESC$",
+        "count": 1,
+        "after_ms": 2100,
+        "before_ms": 2200
+      },
+      {
+        "match": "^\\[PRESS\\] OK$",
+        "count": 1,
+        "after_ms": 2400,
+        "before_ms": 2500
+      },
+      {
+        "match": "^\\[PRESS\\] DOWN$",
+        "count": 1,
+        "after_ms": 2700,
+        "before_ms": 2800
+      },
+      {
+        "match": "^\\[PRESS\\] ",
+        "count": 6
+      }
+    ]
+  }
+}

@@ -1,9 +1,14 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Motor v2 en RAM: ciclo EMPTY→READY→RUNNING→STOPPED, copia profunda del programa, scans con patrones (XOR impar, AND4/AND8) y carga de la capacidad máxima (100 bloques, 512 enlaces). DEFECTO DEL PACKAGE (no del simulador): el ejemplo exige sizeof(motor) <= arreglos mínimos + 64 bytes, pero el motor ya incluye _timing[100] y _startedAtMs[100] del TON (500 bytes más), así que también falla en la placa. Se fija exactamente esa falla.",
+  "$comment": "Motor v2 en RAM: ciclo EMPTY→READY→RUNNING→STOPPED, copia profunda del programa, scans con patrones (XOR impar, AND4/AND8) y carga de la capacidad máxima (100 bloques, 512 enlaces). Desde alpha.14 el límite de tamaño incluye _timing[] y _startedAtMs[] del TON (hallazgo H11) y todas las verificaciones pasan.",
   "sketch": "package:libraries/JWPLC_LogicRuntime/examples/JWPLC_LogicRuntime_V2_Engine_RAM",
   "until_ms": 3000,
-  "stim": ["1500 I0_0=1", "1500 I0_1=1", "1500 I0_2=1", "1500 I0_3=1"],
+  "stim": [
+    "1500 I0_0=1",
+    "1500 I0_1=1",
+    "1500 I0_2=1",
+    "1500 I0_3=1"
+  ],
   "expect": {
     "console": [
       "^JWPLC Logic Runtime - motor v2 en RAM$",
@@ -13,12 +18,24 @@
       "^\\[PASS\\] AND8 queda verdadero$",
       "^\\[PASS\\] programa maximo conserva 512 enlaces$",
       "^\\[PASS\\] stop limpia valores y contador$",
-      { "match": "^\\[FAIL\\] overhead del motor permanece menor o igual a 64 bytes$", "count": 1 },
       "^sizeof motor v2: \\d+ bytes$",
-      "^Resultado: \\d+ PASS, 1 FAIL$",
-      { "match": "^MOTOR V2 EN RAM: FAIL$", "count": 1 }
+      "^\\[PASS\\] overhead del motor permanece menor o igual a 64 bytes$",
+      "^Resultado: \\d+ PASS, 0 FAIL$",
+      {
+        "match": "^MOTOR V2 EN RAM: PASS$",
+        "count": 1
+      }
     ],
-    "console_absent": ["^\\[FAIL\\] (?!overhead del motor permanece menor o igual a 64 bytes$)", "^PRUEBA ABORTADA"],
-    "signals": [{ "at_ms": 2900, "DI": "0b00001111", "DO": "0b00000000" }]
+    "console_absent": [
+      "^\\[FAIL\\]",
+      "^PRUEBA ABORTADA"
+    ],
+    "signals": [
+      {
+        "at_ms": 2900,
+        "DI": "0b00001111",
+        "DO": "0b00000000"
+      }
+    ]
   }
 }

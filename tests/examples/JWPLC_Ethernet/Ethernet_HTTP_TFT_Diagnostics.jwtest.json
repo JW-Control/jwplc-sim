@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Dos arranques con FRAM y RTC compartidos. (1) Sin servidor DHCP ni hora válida: crea el bloque FRAM (arranque #1), UP/UP/DOWN guardan y verifican 1, 2, 1, RIGHT/LEFT cambian de página; la hora inválida no enciende ERR (ERR: NINGUNO); OK con Ethernet sin IP informa 'Ethernet no esta listo' y la causa pasa a ERR: HTTP sin contar un GET. (2) RTC fijo 2026-03-15 10:30 y el servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1: recupera el bloque (arranque #2), UP continúa desde el valor guardado (2), ETH queda OK con la IP ofrecida y OK lanza el GET a example.com; como nadie responde DNS en la red simulada el resultado es FALLO CONNECT/DNS, se cuenta 1 GET sin éxito y ERR: HTTP.",
+  "$comment": "Dos arranques con FRAM y RTC compartidos. (1) Sin servidor DHCP ni hora válida: crea el bloque FRAM (arranque #1), UP/UP/DOWN guardan y verifican 1, 2, 1, RIGHT/LEFT cambian de página; la hora inválida no enciende ERR (ERR: NINGUNO); OK con Ethernet sin IP informa 'Ethernet no esta listo' y la causa pasa a ERR: HTTP sin contar un GET. (2) RTC fijo 2026-03-15 10:30 y el servidor DHCP guionado responde OFFER y ACK (xid 0x394, el que genera el firmware con la semilla por defecto; MAC 02:4A:57:C4:0A:24) con 192.168.250.10/24, puerta de enlace y DNS 192.168.250.1: recupera el bloque (arranque #2), UP continúa desde el valor guardado (2), ETH queda OK con la IP ofrecida y OK lanza el GET a example.com; como nadie responde DNS en la red simulada, la librería espera su plazo (~15 s) y el resultado es FALLO CONNECT/DNS a los ~22 s, se cuenta 1 GET sin éxito y ERR: HTTP. Desde alpha.14 el ejemplo ya no toma el mutex SPI por fuera de la librería (hallazgo H15): con un servidor real el GET llega a HTTP 200 (scripts/diag-eth-http.mjs).",
   "sketch": "package:libraries/JWPLC_Ethernet/examples/Ethernet_HTTP_TFT_Diagnostics",
   "runs": [
     {
@@ -96,7 +96,7 @@
       }
     },
     {
-      "until_ms": 11000,
+      "until_ms": 24000,
       "args": [
         "--rtc",
         "fijo:2026-03-15T10:30:00"
@@ -133,27 +133,27 @@
           {
             "match": "^=== Resultado HTTP ===$",
             "count": 1,
-            "after_ms": 6880
+            "after_ms": 20000
           },
           {
             "match": "^Estado: FALLO CONNECT/DNS$",
             "count": 1,
-            "after_ms": 6880
+            "after_ms": 20000
           },
           {
             "match": "^Bytes: 0$",
             "count": 1,
-            "after_ms": 6880
+            "after_ms": 20000
           },
           {
             "match": "^FRAM GET/OK: 1/0$",
             "count": 1,
-            "after_ms": 6880
+            "after_ms": 20000
           },
           {
             "match": "^ETH: OK \\| IP: 192\\.168\\.250\\.10 \\| RTC: 2026-03-15 10:30:\\d\\d \\| FRAM: GUARDADO OK \\| HTTP: FALLO CONNECT/DNS \\| GET OK: 0/1 \\| ERR: HTTP$",
             "count": 1,
-            "after_ms": 8880
+            "after_ms": 20000
           }
         ],
         "console_absent": [
