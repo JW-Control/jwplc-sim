@@ -63,6 +63,7 @@
   // contrato se usa el símbolo dibujado en código.
   const templates = new Map();
   const warnings = [];
+  const spins = new Map(); // ángulo de cada data-spin por dispositivo
 
   function registerTemplate(type, text) {
     const doc = new DOMParser().parseFromString(text, "image/svg+xml");
@@ -97,7 +98,7 @@
       terms[id] = { x, y: side === "t" ? 0 : h, side, screw: y };
     }
     if (!Object.keys(terms).length) return bad("no marca ningún borne (.jw-term)");
-    templates.set(type, { w, h, terms, svg });
+    templates.set(type, { w, h, terms, svg, animated: !!svg.querySelector("[data-spin]") });
   }
 
   // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
@@ -144,6 +145,19 @@
       const f = Math.max(0, Math.min(1, (v - Number(v0)) / (Number(v1) - Number(v0) || 1)));
       el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} rotate(${Number(a0) + f * (Number(a1) - Number(a0))} ${cx} ${cy})`);
     }
+    // data-spin="out.speed:cx:cy:vueltas_por_s": giro continuo con la simulación
+    // (motor). El ángulo se integra con el tiempo simulado de cada dispositivo:
+    // se detiene en pausa y sigue la rampa de la velocidad.
+    root.querySelectorAll("[data-spin]").forEach((el, i) => {
+      const [expr, cx, cy, rps] = el.getAttribute("data-spin").split(":");
+      const v = Number(valueOf(expr, ctx) ?? 0) || 0;
+      const key = `${st.id ?? ""}:${i}`;
+      const t = Number(st.t_ms ?? 0);
+      const prev = spins.get(key) ?? { t, a: 0, v };
+      const a = t > prev.t ? (prev.a + ((prev.v + v) / 2) * Number(rps) * 360 * ((t - prev.t) / 1000)) % 360 : t < prev.t ? 0 : prev.a;
+      spins.set(key, { t, a, v });
+      el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} rotate(${a.toFixed(2)} ${cx} ${cy})`);
+    });
     for (const el of root.querySelectorAll("[data-action]")) el.classList.add("act");
     const ser = new XMLSerializer();
     // En un grupo .tpl: los estilos de los textos de la app no lo alcanzan.
@@ -411,5 +425,8 @@
     }
   }
 
-  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, registerTemplate, templates, warnings };
+  /** ¿La plantilla del dispositivo cambia con el tiempo (data-spin)? */
+  const animated = (type, def, p) => !!templates.get(templateKey(type, def, p) ?? "")?.animated;
+
+  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, animated, registerTemplate, templates, warnings };
 })();
