@@ -20,6 +20,34 @@ import { analyze, solve } from "./netlist.mjs";
 import { Registry } from "./devices/index.mjs";
 
 const MAX_ITER = 50;
+
+// Bornes renombrados entre versiones de un tipo: escenas guardadas antes del
+// cambio se leen con los nombres nuevos (la app hace lo mismo al abrirlas).
+const RENAMED = {
+  // Fuente 24 VDC 1.x (L+/M) → 2.0 (Mean Well: +V1 +V2 −V1 −V2).
+  "jwsim/power-24vdc": { "L+": "+V1", M: "-V1" },
+};
+
+/**
+ * Escena con los nombres de bornes vigentes (no modifica la original).
+ * @param {SceneSpec} spec
+ * @returns {SceneSpec}
+ */
+export function migrateScene(spec) {
+  const map = new Map();
+  for (const d of spec.devices ?? []) if (RENAMED[d.type]) map.set(d.id, RENAMED[d.type]);
+  if (!map.size) return spec;
+  const end = (e) => {
+    const i = e.indexOf(".");
+    const ren = map.get(e.slice(0, i))?.[e.slice(i + 1)];
+    return ren ? `${e.slice(0, i)}.${ren}` : e;
+  };
+  return {
+    ...spec,
+    devices: (spec.devices ?? []).map((d) => (RENAMED[d.type] && d.version && Number(String(d.version).split(".")[0]) < 2 ? { ...d, version: undefined } : d)),
+    wiring: (spec.wiring ?? []).map((w) => ({ ...w, from: end(w.from), to: end(w.to) })),
+  };
+}
 const MAX_EVENTS = 20000;
 
 /**
@@ -95,6 +123,7 @@ export class Scene {
    */
   constructor(spec, opts = {}) {
     const registry = opts.registry ?? new Registry();
+    spec = migrateScene(spec);
     this.spec = spec;
     for (const d of spec.devices ?? []) {
       if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(d.id)) throw new Error(`identificador de dispositivo inválido: ${d.id}`);

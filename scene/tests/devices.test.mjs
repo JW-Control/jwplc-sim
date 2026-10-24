@@ -10,7 +10,7 @@ import { faults, ms, scene } from "./helpers.mjs";
 
 // Circuito de prueba: L+ → contacto → lámpara → M.
 const lampVia = (dev, a, b) =>
-  scene(["PS:power-24vdc", dev, "H:lamp"], [`PS.L+ - ${a}`, `${b} - H.X1`, "H.X2 - PS.M"]);
+  scene(["PS:power-24vdc", dev, "H:lamp"], [`PS.+V1 - ${a}`, `${b} - H.X1`, "H.X2 - PS.-V1"]);
 
 test("registro: los 16 dispositivos con tipo, versión, bornes y parámetros válidos", () => {
   const r = new Registry();
@@ -56,7 +56,7 @@ test("selector de 2 posiciones: 13-14 en I, 21-22 en 0", () => {
 test("selector de 3 posiciones: I cierra 13-14, II cierra 23-24, 0 ninguno", () => {
   const s = scene(
     ["PS:power-24vdc", "S:selector-3", "H1:lamp", "H2:lamp"],
-    ["PS.L+ - S.13", "PS.L+ - S.23", "S.14 - H1.X1", "S.24 - H2.X1", "H1.X2 - PS.M", "H2.X2 - PS.M"],
+    ["PS.+V1 - S.13", "PS.+V1 - S.23", "S.14 - H1.X1", "S.24 - H2.X1", "H1.X2 - PS.-V1", "H2.X2 - PS.-V1"],
   );
   const lit = () => [s.output("H1", "lit"), s.output("H2", "lit")];
   assert.deepEqual(lit(), [false, false]);
@@ -74,7 +74,7 @@ test("fin de carrera: a mano y por la posición del cilindro", () => {
       "PS:power-24vdc", "S:pushbutton-no", "Y1:solenoid-valve", "H:lamp",
       { id: "B1", type: "jwsim/limit-switch", params: { source: "Y1.position", min: 1, max: 1 } },
     ],
-    ["PS.L+ - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.M", "PS.L+ - B1.13", "B1.14 - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.-V1", "PS.+V1 - B1.13", "B1.14 - H.X1", "H.X2 - PS.-V1"],
   );
   s.act("B1", "actuate", true, ms(1));
   assert.equal(s.output("H", "lit"), true);
@@ -94,7 +94,7 @@ for (const kind of ["inductive", "photoelectric"]) {
   test(`sensor ${kind} PNP NA: salida al + con alimentación y tras el tiempo de respuesta`, () => {
     const s = scene(
       ["PS:power-24vdc", `B:sensor-${kind}`, "H:lamp"],
-      ["PS.L+ - B.BN", "B.BU - PS.M", "B.BK - H.X1", "H.X2 - PS.M"],
+      ["PS.+V1 - B.BN", "B.BU - PS.-V1", "B.BK - H.X1", "H.X2 - PS.-V1"],
     );
     s.act("B", "target", true, ms(10));
     const resp = kind === "inductive" ? 1 : 0.5;
@@ -111,7 +111,7 @@ for (const kind of ["inductive", "photoelectric"]) {
 test("sensor sin alimentación o con polaridad invertida: no conmuta", () => {
   const s = scene(
     ["PS:power-24vdc", "B:sensor-inductive", "H:lamp"],
-    ["PS.M - B.BN", "B.BU - PS.L+", "B.BK - H.X1", "H.X2 - PS.M"],
+    ["PS.-V1 - B.BN", "B.BU - PS.+V1", "B.BK - H.X1", "H.X2 - PS.-V1"],
   );
   s.act("B", "target", true, ms(1));
   s.advanceTo(ms(5));
@@ -122,7 +122,7 @@ test("sensor sin alimentación o con polaridad invertida: no conmuta", () => {
 test("sensor NPN: la salida conmuta a 0 V (carga desde L+)", () => {
   const s = scene(
     ["PS:power-24vdc", { id: "B", type: "jwsim/sensor-inductive", params: { output: "npn" } }, "H:lamp"],
-    ["PS.L+ - B.BN", "B.BU - PS.M", "PS.L+ - H.X1", "H.X2 - B.BK"],
+    ["PS.+V1 - B.BN", "B.BU - PS.-V1", "PS.+V1 - H.X1", "H.X2 - B.BK"],
   );
   s.act("B", "target", true, ms(1));
   s.advanceTo(ms(3));
@@ -135,7 +135,7 @@ test("sensor fotoeléctrico NC (modo oscuridad) por la posición del cilindro", 
       "PS:power-24vdc", "Y1:solenoid-valve", "H:lamp", "S:pushbutton-no",
       { id: "B", type: "jwsim/sensor-photoelectric", params: { contact: "nc", source: "Y1.position", min: 0.4, max: 1 } },
     ],
-    ["PS.L+ - B.BN", "B.BU - PS.M", "B.BK - H.X1", "H.X2 - PS.M", "PS.L+ - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.M"],
+    ["PS.+V1 - B.BN", "B.BU - PS.-V1", "B.BK - H.X1", "H.X2 - PS.-V1", "PS.+V1 - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.-V1"],
   );
   s.advanceTo(ms(1));
   assert.equal(s.output("H", "lit"), true, "sin objeto: salida activa (NC)");
@@ -153,7 +153,7 @@ test("lámpara: tensión nominal, insuficiente y sobretensión (se quema)", () =
 
   const low = scene(
     ["PS:power-24vdc", { id: "H", type: "jwsim/lamp", params: { rating: "230VAC" } }],
-    ["PS.L+ - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.equal(low.output("H", "lit"), false);
   assert.ok(low.warnings.some((w) => w.type === "undervoltage"));
@@ -169,16 +169,16 @@ test("lámpara: tensión nominal, insuficiente y sobretensión (se quema)", () =
 });
 
 test("zumbador: suena con la polaridad correcta", () => {
-  const s = scene(["PS:power-24vdc", "B:buzzer"], ["PS.L+ - B.+", "B.- - PS.M"]);
+  const s = scene(["PS:power-24vdc", "B:buzzer"], ["PS.+V1 - B.+", "B.- - PS.-V1"]);
   assert.equal(s.output("B", "sounding"), true);
-  const r = scene(["PS:power-24vdc", "B:buzzer"], ["PS.L+ - B.-", "B.+ - PS.M"]);
+  const r = scene(["PS:power-24vdc", "B:buzzer"], ["PS.+V1 - B.-", "B.+ - PS.-V1"]);
   assert.equal(r.output("B", "sounding"), false);
 });
 
 test("relé: contactos conmutados con atraque 8 ms y caída 4 ms", () => {
   const s = scene(
     ["PS:power-24vdc", "S:pushbutton-no", "K:relay", "H1:lamp", "H2:lamp"],
-    ["PS.L+ - S.13", "S.14 - K.A1", "K.A2 - PS.M", "PS.L+ - K.11", "K.14 - H1.X1", "K.12 - H2.X1", "H1.X2 - PS.M", "H2.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - K.A1", "K.A2 - PS.-V1", "PS.+V1 - K.11", "K.14 - H1.X1", "K.12 - H2.X1", "H1.X2 - PS.-V1", "H2.X2 - PS.-V1"],
   );
   assert.deepEqual([s.output("H1", "lit"), s.output("H2", "lit")], [false, true]);
   s.act("S", "press", true, ms(10));
@@ -191,11 +191,28 @@ test("relé: contactos conmutados con atraque 8 ms y caída 4 ms", () => {
   assert.deepEqual([s.output("H1", "lit"), s.output("H2", "lit")], [false, true]);
 });
 
-test("contactor: polos principales y auxiliares con atraque 20 ms y caída 10 ms", () => {
+test("pulsadores de dos bloques: 2 NA (13-14, 23-24) y NA + NC (13-14, 21-22)", () => {
+  const nono = scene(
+    ["PS:power-24vdc", "S:pushbutton-nono", "H1:lamp", "H2:lamp"],
+    ["PS.+V1 - S.13", "PS.+V1 - S.23", "S.14 - H1.X1", "S.24 - H2.X1", "H1.X2 - PS.-V1", "H2.X2 - PS.-V1"],
+  );
+  assert.deepEqual([nono.output("H1", "lit"), nono.output("H2", "lit")], [false, false]);
+  nono.act("S", "press", true, ms(1));
+  assert.deepEqual([nono.output("H1", "lit"), nono.output("H2", "lit")], [true, true]);
+  const nonc = scene(
+    ["PS:power-24vdc", "S:pushbutton-nonc", "H1:lamp", "H2:lamp"],
+    ["PS.+V1 - S.13", "PS.+V1 - S.21", "S.14 - H1.X1", "S.22 - H2.X1", "H1.X2 - PS.-V1", "H2.X2 - PS.-V1"],
+  );
+  assert.deepEqual([nonc.output("H1", "lit"), nonc.output("H2", "lit")], [false, true]);
+  nonc.act("S", "press", true, ms(1));
+  assert.deepEqual([nonc.output("H1", "lit"), nonc.output("H2", "lit")], [true, false]);
+});
+
+test("contactor: polos principales y auxiliar NC (aux 01) con atraque 20 ms y caída 10 ms", () => {
   const s = scene(
-    ["PS:power-24vdc", "L:power-230vac", "S:pushbutton-no", "KM:contactor", "M:motor", "H:lamp"],
-    ["PS.L+ - S.13", "S.14 - KM.A1", "KM.A2 - PS.M", "L.L - KM.1", "KM.2 - M.U1", "M.U2 - L.N",
-      "PS.L+ - KM.21", "KM.22 - H.X1", "H.X2 - PS.M"],
+    ["PS:power-24vdc", "L:power-230vac", "S:pushbutton-no", { id: "KM", type: "jwsim/contactor", params: { aux: "01" } }, "M:motor", "H:lamp"],
+    ["PS.+V1 - S.13", "S.14 - KM.A1", "KM.A2 - PS.-V1", "L.L - KM.1", "KM.2 - M.U1", "M.U2 - L.N",
+      "PS.+V1 - KM.21", "KM.22 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.equal(s.output("H", "lit"), true, "auxiliar NC cerrado en reposo");
   s.act("S", "press", true, ms(0.5));
@@ -210,8 +227,36 @@ test("contactor: polos principales y auxiliares con atraque 20 ms y caída 10 ms
   assert.equal(s.output("KM", "closed"), false);
 });
 
+test("contactor: el auxiliar por defecto (aux 10) es 13-14 NA y 21-22 no conecta", () => {
+  const s = scene(
+    ["PS:power-24vdc", "S:pushbutton-no", "KM:contactor", "H1:lamp", "H2:lamp"],
+    ["PS.+V1 - S.13", "S.14 - KM.A1", "KM.A2 - PS.-V1", "PS.+V1 - KM.13", "KM.14 - H1.X1", "H1.X2 - PS.-V1",
+      "PS.+V1 - KM.21", "KM.22 - H2.X1", "H2.X2 - PS.-V1"],
+  );
+  assert.equal(s.output("H1", "lit"), false);
+  assert.equal(s.output("H2", "lit"), false, "sin bloque 21-22");
+  s.act("S", "press", true, ms(0));
+  s.advanceTo(ms(30));
+  assert.equal(s.output("H1", "lit"), true);
+  assert.equal(s.output("H2", "lit"), false);
+});
+
+test("fuente 24 VDC: +V1/+V2 y −V1/−V2 puenteados; relé DC OK solo en la MDR", () => {
+  const wiring = ["PS.+V2 - PS.DCOK1", "PS.DCOK2 - H.X1", "H.X2 - PS.-V2"];
+  const mdr = scene([{ id: "PS", type: "jwsim/power-24vdc", params: { model: "MDR-60" } }, "H:lamp"], wiring);
+  assert.equal(mdr.output("H", "lit"), true);
+  const hdr = scene([{ id: "PS", type: "jwsim/power-24vdc", params: { model: "HDR-60" } }, "H:lamp"], wiring);
+  assert.equal(hdr.output("H", "lit"), false, "la HDR no tiene relé DC OK");
+});
+
+test("escena guardada con la fuente 1.x (L+/M) se lee como +V1/−V1", () => {
+  const s = scene(["PS:power-24vdc", "H:lamp"], ["PS.L+ - H.X1", "H.X2 - PS.M"]);
+  assert.equal(s.output("H", "lit"), true);
+  assert.deepEqual(s.spec.wiring.map((w) => `${w.from}-${w.to}`), ["PS.+V1-H.X1", "H.X2-PS.-V1"]);
+});
+
 test("electroválvula: carrera de 500 ms al salir y 400 ms al volver", () => {
-  const s = scene(["PS:power-24vdc", "S:pushbutton-no", "Y:solenoid-valve"], ["PS.L+ - S.13", "S.14 - Y.A1", "Y.A2 - PS.M"]);
+  const s = scene(["PS:power-24vdc", "S:pushbutton-no", "Y:solenoid-valve"], ["PS.+V1 - S.13", "S.14 - Y.A1", "Y.A2 - PS.-V1"]);
   s.act("S", "press", true, ms(0));
   s.advanceTo(ms(250));
   assert.ok(Math.abs(s.output("Y", "position") - 0.5) < 1e-9);
@@ -238,7 +283,7 @@ test("motor: rampa de arranque y de parada; en CC el sentido sigue a la polarida
 
   const dc = scene(
     ["PS:power-24vdc", { id: "M", type: "jwsim/motor", params: { rating: "24VDC" } }],
-    ["PS.M - M.U1", "M.U2 - PS.L+"],
+    ["PS.-V1 - M.U1", "M.U2 - PS.+V1"],
   );
   dc.advanceTo(ms(400));
   assert.equal(dc.output("M", "speed"), -1);
@@ -247,8 +292,8 @@ test("motor: rampa de arranque y de parada; en CC el sentido sigue a la polarida
 test("JWPLC Basic: entrada sink, salida a relé (10 ms) y relés sin alimentación", () => {
   const s = scene(
     ["plc:jwplc-basic", "PS:power-24vdc", "S:pushbutton-no", "H:lamp"],
-    ["PS.L+ - plc.24VDC", "PS.M - plc.M0", "PS.M - plc.M1", "PS.L+ - S.13", "S.14 - plc.I0_3",
-      "PS.L+ - plc.Q0_5.1", "plc.Q0_5.2 - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - plc.24VDC", "PS.-V1 - plc.M0", "PS.-V1 - plc.M1", "PS.+V1 - S.13", "S.14 - plc.I0_3",
+      "PS.+V1 - plc.Q0_5.1", "plc.Q0_5.2 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.deepEqual(s.boardInputs(), { I0_3: 0 }, "solo maneja las entradas cableadas");
   s.act("S", "press", true, ms(5));
@@ -262,7 +307,7 @@ test("JWPLC Basic: entrada sink, salida a relé (10 ms) y relés sin alimentaci�
 
   const off = scene(
     ["plc:jwplc-basic", "PS:power-24vdc", "H:lamp"],
-    ["PS.L+ - plc.Q0_0.1", "plc.Q0_0.2 - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - plc.Q0_0.1", "plc.Q0_0.2 - H.X1", "H.X2 - PS.-V1"],
   );
   off.setSignals({ Q0_0: 1 }, ms(1));
   off.advanceTo(ms(50));
@@ -273,7 +318,7 @@ test("JWPLC Basic: entrada sink, salida a relé (10 ms) y relés sin alimentaci�
 test("entrada sink con polaridad invertida (M1 al +): no se activa y avisa", () => {
   const s = scene(
     ["plc:jwplc-basic", "PS:power-24vdc", "S:pushbutton-no"],
-    ["PS.L+ - plc.M1", "PS.M - S.13", "S.14 - plc.I0_0"],
+    ["PS.+V1 - plc.M1", "PS.-V1 - S.13", "S.14 - plc.I0_0"],
   );
   s.act("S", "press", true, ms(1));
   assert.deepEqual(s.boardInputs(), { I0_0: 0 });

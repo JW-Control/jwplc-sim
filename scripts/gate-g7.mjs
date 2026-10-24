@@ -15,6 +15,7 @@ import { ROOT } from "../cli/lib/build.mjs";
 import { packDevice } from "../cli/lib/device.mjs";
 import { signIndex, trustedKeys, verifyIndex } from "../cli/lib/index.mjs";
 import { packTarGz } from "../cli/lib/tar.mjs";
+import { compareVersions } from "../scene/devices/index.mjs";
 
 const argv = process.argv.slice(2);
 const only = argv.includes("--only") ? argv[argv.indexOf("--only") + 1] : null;
@@ -60,7 +61,7 @@ function gate(name, fn) {
   });
 }
 
-const V01 = ["pushbutton-no", "pushbutton-nc", "selector-2", "selector-3", "limit-switch", "sensor-inductive",
+const V01 = ["pushbutton-no", "pushbutton-nc", "pushbutton-nono", "pushbutton-nonc", "selector-2", "selector-3", "limit-switch", "sensor-inductive",
   "sensor-photoelectric", "lamp", "buzzer", "relay", "contactor", "solenoid-valve", "motor"];
 
 if (!only || only === "library") {
@@ -91,7 +92,7 @@ if (!only || only === "sdk") {
     const strict = ["sdk/examples/timer-relay/tsconfig.json", "sdk/template/scene-device/tsconfig.json"].map((p) => [p, tsc(["-p", p, "--noEmit"])]);
     check("C1 TypeScript estricto contra sdk/jwsim-device.d.ts (ejemplo y plantilla)", strict.every(([, r]) => r.code === 0), strict.map(([p, r]) => `${p}: ${r.code === 0 ? "OK" : r.out.slice(0, 300)}`).join("; "));
     const lib = tsc(["--noEmit", "--allowJs", "--checkJs", "--strict", "false", "--target", "es2022", "--module", "nodenext", "--moduleResolution", "nodenext", "--skipLibCheck", "scene/scene.mjs", "scene/devices/index.mjs"]);
-    check("C2 la biblioteca incluida cumple el contrato (checkJs)", lib.code === 0, lib.code === 0 ? "16 dispositivos" : lib.out.slice(0, 400));
+    check("C2 la biblioteca incluida cumple el contrato (checkJs)", lib.code === 0, lib.code === 0 ? "18 dispositivos" : lib.out.slice(0, 400));
     const ex = cli(["device", "test", "sdk/examples/timer-relay", "--json"]);
     const tp = cli(["device", "test", "sdk/template/scene-device", "--json"]);
     check("C3 dispositivo de escena de ejemplo y plantilla: pruebas", ex.json?.tests?.ok && tp.json?.tests?.ok, `${ex.json?.type}: ${ex.json?.tests?.ok}; ${tp.json?.type}: ${tp.json?.tests?.ok}`);
@@ -140,7 +141,7 @@ if (!only || only === "index") {
         import { registryWithInstalled } from ${JSON.stringify(new URL("../cli/lib/device.mjs", import.meta.url).href)};
         import { Scene } from ${JSON.stringify(new URL("../scene/scene.mjs", import.meta.url).href)};
         const s = new Scene({ devices: [{ id: "PS", type: "jwsim/power-24vdc" }, { id: "KT", type: "jwcontrol/timer-relay", params: { timeMs: 100 } }],
-          wiring: [{ from: "PS.L+", to: "KT.A1" }, { from: "KT.A2", to: "PS.M" }] }, { registry: await registryWithInstalled() });
+          wiring: [{ from: "PS.+V1", to: "KT.A1" }, { from: "KT.A2", to: "PS.-V1" }] }, { registry: await registryWithInstalled() });
         s.advanceTo(100_000_000n);
         console.log("closed=" + s.output("KT", "closed"));`], { env: { ...process.env, ...env } });
       check("C3 lo instalado se usa (nativo en el runner, de escena en una escena, listado)",
@@ -171,7 +172,9 @@ if (!only || only === "index") {
 
       // C5: paquete alterado (índice y firma intactos).
       const t2 = copy("paquete");
-      const pkgFile = join(t2, "packages", "jwcontrol-timer-relay-1.0.0.tar.gz");
+      // El paquete que se instalaría: la versión más nueva del índice.
+      const tr = JSON.parse(readFileSync(join(t2, "jwsim_index.json"), "utf8")).packages.find((p) => p.type === "jwcontrol/timer-relay");
+      const pkgFile = join(t2, [...tr.versions].sort((a, b) => compareVersions(b.version, a.version))[0].url);
       const buf = readFileSync(pkgFile);
       buf[buf.length - 10] ^= 0xff;
       writeFileSync(pkgFile, buf);

@@ -11,6 +11,13 @@
       "license": "GPL-3.0-or-later",
       "versions": [
         {
+          "version": "1.1.0",
+          "url": "packages/jwcontrol-marcha-cilindro-1.1.0.tar.gz",
+          "checksum": "SHA-256:b8cc04636647b72d194a905ffde5994305ff90900f52e0c8ee22ba81b5033696",
+          "size": 1914,
+          "sdk": 1
+        },
+        {
           "version": "1.0.0",
           "url": "packages/jwcontrol-marcha-cilindro-1.0.0.tar.gz",
           "checksum": "SHA-256:c976be102771d0739870230e647b3f15e52e07e574065db03a4823fca61c7cae",
@@ -44,6 +51,13 @@
       "author": "JW Control",
       "license": "MIT",
       "versions": [
+        {
+          "version": "1.0.1",
+          "url": "packages/jwcontrol-timer-relay-1.0.1.tar.gz",
+          "checksum": "SHA-256:115d2b8a528e20cabbcf6548dcf5b3548ef1fa8357cf36dfc7ff2bd2990c6e9b",
+          "size": 2347,
+          "sdk": 1
+        },
         {
           "version": "1.0.0",
           "url": "packages/jwcontrol-timer-relay-1.0.0.tar.gz",

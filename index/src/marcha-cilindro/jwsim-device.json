@@ -1,6 +1,6 @@
 {
   "type": "jwcontrol/marcha-cilindro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "example",
   "name": "Marcha, parada y cilindro",
   "description": "Proyecto de ejemplo: JWPLC Basic con marcha/parada de un contactor confirmado por su auxiliar, motor de 230 VAC y ciclo de un cilindro con fin de carrera y sensor inductivo.",

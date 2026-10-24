@@ -1,27 +1,201 @@
 {
   "$comment": "Escena del gate G7 para tests/sketches/g7_cosim: fuente de 24 VDC, JWPLC Basic, pulsadores, contactor KM1 con su auxiliar a I0_2, electroválvula Y1 con fin de carrera B1 (afuera) e inductivo B0 (adentro), motor de 230 VAC por los polos de KM1 y piloto de falla H1.",
   "devices": [
-    {"id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0},
-    {"id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 200},
-    {"id": "L1", "type": "jwsim/power-230vac", "x": 40, "y": 880},
-    {"id": "S1", "type": "jwsim/pushbutton-no", "params": {"label": "Marcha"}, "x": 380, "y": -180},
-    {"id": "S0", "type": "jwsim/pushbutton-nc", "params": {"label": "Parada"}, "x": 460, "y": -180},
-    {"id": "KM1", "type": "jwsim/contactor", "x": 240, "y": 620},
-    {"id": "M1", "type": "jwsim/motor", "x": 280, "y": 880},
-    {"id": "Y1", "type": "jwsim/solenoid-valve", "params": {"strokeMs": 300, "returnMs": 200}, "x": 440, "y": 620},
-    {"id": "B1", "type": "jwsim/limit-switch", "params": {"source": "Y1.position", "min": 1, "max": 1}, "x": 560, "y": -180},
-    {"id": "B0", "type": "jwsim/sensor-inductive", "params": {"source": "Y1.position", "min": 0, "max": 0.05}, "x": 660, "y": -180},
-    {"id": "H1", "type": "jwsim/lamp", "params": {"color": "rojo", "label": "Falla"}, "x": 660, "y": 620}
+    {
+      "id": "plc",
+      "type": "jwsim/jwplc-basic",
+      "x": 300,
+      "y": 0
+    },
+    {
+      "id": "PS1",
+      "type": "jwsim/power-24vdc",
+      "x": 40,
+      "y": 60
+    },
+    {
+      "id": "L1",
+      "type": "jwsim/power-230vac",
+      "x": 40,
+      "y": 1020
+    },
+    {
+      "id": "S1",
+      "type": "jwsim/pushbutton-no",
+      "params": {
+        "label": "Marcha"
+      },
+      "x": 300,
+      "y": -320
+    },
+    {
+      "id": "S0",
+      "type": "jwsim/pushbutton-nc",
+      "params": {
+        "label": "Parada"
+      },
+      "x": 480,
+      "y": -320
+    },
+    {
+      "id": "KM1",
+      "type": "jwsim/contactor",
+      "x": 240,
+      "y": 620
+    },
+    {
+      "id": "M1",
+      "type": "jwsim/motor",
+      "x": 280,
+      "y": 1040
+    },
+    {
+      "id": "Y1",
+      "type": "jwsim/solenoid-valve",
+      "params": {
+        "strokeMs": 300,
+        "returnMs": 200
+      },
+      "x": 500,
+      "y": 620
+    },
+    {
+      "id": "B1",
+      "type": "jwsim/limit-switch",
+      "params": {
+        "source": "Y1.position",
+        "min": 1,
+        "max": 1
+      },
+      "x": 680,
+      "y": -200
+    },
+    {
+      "id": "B0",
+      "type": "jwsim/sensor-inductive",
+      "params": {
+        "source": "Y1.position",
+        "min": 0,
+        "max": 0.05
+      },
+      "x": 780,
+      "y": -200
+    },
+    {
+      "id": "H1",
+      "type": "jwsim/lamp",
+      "params": {
+        "color": "rojo",
+        "label": "Falla"
+      },
+      "x": 740,
+      "y": 620
+    }
   ],
   "wiring": [
-    {"from": "PS1.L+", "to": "plc.24VDC"}, {"from": "PS1.M", "to": "plc.M0"}, {"from": "PS1.M", "to": "plc.M1"},
-    {"from": "PS1.L+", "to": "S1.13"}, {"from": "S1.14", "to": "plc.I0_0"}, {"from": "PS1.L+", "to": "S0.11"},
-    {"from": "S0.12", "to": "plc.I0_1"}, {"from": "PS1.L+", "to": "KM1.13"}, {"from": "KM1.14", "to": "plc.I0_2"},
-    {"from": "PS1.L+", "to": "B1.13"}, {"from": "B1.14", "to": "plc.I0_3"}, {"from": "PS1.L+", "to": "B0.BN"},
-    {"from": "B0.BU", "to": "PS1.M"}, {"from": "B0.BK", "to": "plc.I0_4"}, {"from": "PS1.L+", "to": "plc.Q0_0.1"},
-    {"from": "plc.Q0_0.2", "to": "KM1.A1"}, {"from": "KM1.A2", "to": "PS1.M"}, {"from": "PS1.L+", "to": "plc.Q0_1.1"},
-    {"from": "plc.Q0_1.2", "to": "Y1.A1"}, {"from": "Y1.A2", "to": "PS1.M"}, {"from": "PS1.L+", "to": "plc.Q0_2.1"},
-    {"from": "plc.Q0_2.2", "to": "H1.X1"}, {"from": "H1.X2", "to": "PS1.M"}, {"from": "L1.L", "to": "KM1.1"},
-    {"from": "KM1.2", "to": "M1.U1"}, {"from": "M1.U2", "to": "L1.N"}
+    {
+      "from": "PS1.+V1",
+      "to": "plc.24VDC"
+    },
+    {
+      "from": "PS1.-V1",
+      "to": "plc.M0"
+    },
+    {
+      "from": "PS1.-V1",
+      "to": "plc.M1"
+    },
+    {
+      "from": "PS1.+V1",
+      "to": "S1.13"
+    },
+    {
+      "from": "S1.14",
+      "to": "plc.I0_0"
+    },
+    {
+      "from": "PS1.+V1",
+      "to": "S0.11"
+    },
+    {
+      "from": "S0.12",
+      "to": "plc.I0_1"
+    },
+    {
+      "from": "PS1.+V2",
+      "to": "KM1.13"
+    },
+    {
+      "from": "KM1.14",
+      "to": "plc.I0_2"
+    },
+    {
+      "from": "PS1.+V2",
+      "to": "B1.13"
+    },
+    {
+      "from": "B1.14",
+      "to": "plc.I0_3"
+    },
+    {
+      "from": "PS1.+V2",
+      "to": "B0.BN"
+    },
+    {
+      "from": "B0.BU",
+      "to": "PS1.-V2"
+    },
+    {
+      "from": "B0.BK",
+      "to": "plc.I0_4"
+    },
+    {
+      "from": "PS1.+V1",
+      "to": "plc.Q0_0.1"
+    },
+    {
+      "from": "plc.Q0_0.2",
+      "to": "KM1.A1"
+    },
+    {
+      "from": "KM1.A2",
+      "to": "PS1.-V2"
+    },
+    {
+      "from": "PS1.+V1",
+      "to": "plc.Q0_1.1"
+    },
+    {
+      "from": "plc.Q0_1.2",
+      "to": "Y1.A1"
+    },
+    {
+      "from": "Y1.A2",
+      "to": "PS1.-V2"
+    },
+    {
+      "from": "PS1.+V1",
+      "to": "plc.Q0_2.1"
+    },
+    {
+      "from": "plc.Q0_2.2",
+      "to": "H1.X1"
+    },
+    {
+      "from": "H1.X2",
+      "to": "PS1.-V2"
+    },
+    {
+      "from": "L1.L",
+      "to": "KM1.1"
+    },
+    {
+      "from": "KM1.2",
+      "to": "M1.U1"
+    },
+    {
+      "from": "M1.U2",
+      "to": "L1.N"
+    }
   ]
 }

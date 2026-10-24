@@ -1,38 +1,45 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // @ts-check
-// Elementos de mando: pulsadores NA/NC, selectores de 2 y 3 posiciones y
+// Elementos de mando: pulsadores (NA, NC, 2 NA, NA + NC), selectores de 2 y 3 posiciones y
 // fin de carrera. Numeración de bornes según IEC 60947-5-1 (x3-x4 NA,
 // x1-x2 NC).
 
 const COLORS = ["verde", "rojo", "amarillo", "azul", "blanco", "negro"];
 
+// Bloques de contactos de cada pulsador: [borne, borne, NA (true) / NC (false)].
+/** @type {Record<string, { name: string, blocks: [string, string, boolean][], label: string, color: string }>} */
+const BLOCKS = {
+  no: { name: "Pulsador NA", blocks: [["13", "14", true]], label: "Marcha", color: "verde" },
+  nc: { name: "Pulsador NC", blocks: [["11", "12", false]], label: "Parada", color: "rojo" },
+  nono: { name: "Pulsador 2 NA", blocks: [["13", "14", true], ["23", "24", true]], label: "Marcha", color: "verde" },
+  nonc: { name: "Pulsador NA + NC", blocks: [["13", "14", true], ["21", "22", false]], label: "Marcha", color: "verde" },
+};
+
 /**
- * @param {"no" | "nc"} kind
+ * @param {"no" | "nc" | "nono" | "nonc"} kind
  * @returns {import("../../sdk/jwsim-device.js").DeviceDefinition}
  */
 function pushbutton(kind) {
-  const no = kind === "no";
-  const [a, b] = no ? ["13", "14"] : ["11", "12"];
+  const { name, blocks, label, color } = BLOCKS[kind];
+  const desc = blocks.map(([a, b, no]) => `${a}-${b} ${no ? "NA" : "NC"}`).join(" y ");
   return {
     type: `jwsim/pushbutton-${kind}`,
     version: "1.0.0",
-    name: no ? "Pulsador NA" : "Pulsador NC",
+    name,
     category: "Mando",
-    description: no
-      ? "Pulsador de contacto normalmente abierto (13-14): cierra mientras se mantiene pulsado."
-      : "Pulsador de contacto normalmente cerrado (11-12): abre mientras se mantiene pulsado.",
+    description: `Pulsador de 22 mm con contactos ${desc}: cambian mientras se mantiene pulsado.`,
     parameters: [
-      { id: "label", label: "Rótulo", type: "string", default: no ? "Marcha" : "Parada" },
-      { id: "color", label: "Color", type: "enum", options: COLORS, default: no ? "verde" : "rojo" },
+      { id: "label", label: "Rótulo", type: "string", default: label },
+      { id: "color", label: "Color", type: "enum", options: COLORS, default: color },
     ],
-    terminals: [{ id: a }, { id: b }],
+    terminals: blocks.flatMap(([a, b]) => [{ id: a }, { id: b }]),
     actions: [{ id: "press", label: "Pulsar", kind: "momentary" }],
-    electrical: () => ({ contacts: { [`${a}-${b}`]: [a, b] } }),
+    electrical: () => ({ contacts: Object.fromEntries(blocks.map(([a, b]) => [`${a}-${b}`, [a, b]])) }),
     create: () => ({
       update(_t, inp) {
         const pressed = !!inp.actions.press;
-        return { contacts: { [`${a}-${b}`]: no ? pressed : !pressed }, outputs: { pressed } };
+        return { contacts: Object.fromEntries(blocks.map(([a, b, no]) => [`${a}-${b}`, no ? pressed : !pressed])), outputs: { pressed } };
       },
     }),
   };
@@ -40,6 +47,8 @@ function pushbutton(kind) {
 
 export const pushbuttonNO = pushbutton("no");
 export const pushbuttonNC = pushbutton("nc");
+export const pushbuttonNONO = pushbutton("nono");
+export const pushbuttonNONC = pushbutton("nonc");
 
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const selector2 = {

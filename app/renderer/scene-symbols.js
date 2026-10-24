@@ -43,7 +43,7 @@
     contactor: [160, 160, ["1", "3", "5", "13", "21", "A1"], ["2", "4", "6", "14", "22", "A2"]],
     "solenoid-valve": [200, 100, ["A1"], ["A2"]],
     motor: [120, 120, ["U1", "U2"], []],
-    "power-24vdc": [100, 120, [], ["L+", "M"]],
+    "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
   // Segunda línea del rótulo (más chica): función del borne.
@@ -76,8 +76,13 @@
     if (vb.length !== 4 || vb[0] !== 0 || vb[1] !== 0) return bad('viewBox debe ser "0 0 ancho alto"');
     const [, , w, h] = vb;
     if (w % GRID || h % GRID) return bad(`ancho y alto deben ser múltiplos de ${GRID} (${w} × ${h})`);
-    // Sin scripts ni eventos en línea: el archivo solo dibuja.
+    // Sin scripts ni eventos en línea: el archivo solo dibuja. Una <image> solo
+    // puede traer su contenido incrustado (p. ej. el logo oficial en PNG).
     for (const el of svg.querySelectorAll("script, foreignObject")) el.remove();
+    for (const el of svg.querySelectorAll("image")) {
+      const href = el.getAttribute("href") ?? el.getAttributeNS("http://www.w3.org/1999/xlink", "href") ?? "";
+      if (!/^data:image\/(png|jpeg|svg\+xml)[;,]/i.test(href)) el.remove();
+    }
     for (const el of svg.querySelectorAll("*")) {
       for (const at of [...el.attributes]) if (/^on/i.test(at.name) || /javascript:/i.test(at.value)) el.removeAttribute(at.name);
     }
@@ -141,13 +146,28 @@
     }
     for (const el of root.querySelectorAll("[data-action]")) el.classList.add("act");
     const ser = new XMLSerializer();
-    return [...root.childNodes].map((n) => (n.nodeType === 1 ? ser.serializeToString(n) : "")).join("");
+    // En un grupo .tpl: los estilos de los textos de la app no lo alcanzan.
+    return `<g class="tpl">${[...root.childNodes].map((n) => (n.nodeType === 1 ? ser.serializeToString(n) : "")).join("")}</g>`;
   }
 
-  /** Disposición de un tipo: tamaño y bornes { id: { x, y, side } } (y = borde: entrada del cable). */
-  function layout(type, def) {
-    const tpl = templates.get(type);
-    if (tpl) return { w: tpl.w, h: tpl.h, terms: tpl.terms, template: true };
+  // Plantilla de un dispositivo: la de su variante si un parámetro de lista la
+  // elige (<tipo>__<valor>, p. ej. power-24vdc__mdr60 con model = "MDR-60"),
+  // si no la del tipo. null: se dibuja en código.
+  const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
+  function templateKey(type, def, p) {
+    for (const prm of def?.parameters ?? []) {
+      if (prm.type !== "enum") continue;
+      const k = `${type}__${slug(p?.[prm.id] ?? prm.default)}`;
+      if (templates.has(k)) return k;
+    }
+    return templates.has(type) ? type : null;
+  }
+
+  /** Disposición de un dispositivo: tamaño y bornes { id: { x, y, side } } (y = borde: entrada del cable). */
+  function layout(type, def, p) {
+    const key = templateKey(type, def, p);
+    const tpl = key && templates.get(key);
+    if (tpl) return { w: tpl.w, h: tpl.h, terms: tpl.terms, template: key };
     const short = type.split("/")[1];
     let [w, h, top, bottom] = type.startsWith("jwsim/") && LAYOUT[short] ? LAYOUT[short] : [];
     if (!w) {
@@ -209,8 +229,8 @@
    * @param {object} def definición (para genéricos)
    */
   function draw(type, lay, st, p, def) {
-    const tpl = templates.get(type);
-    if (tpl) return drawTemplate(tpl, st, p);
+    const key = templateKey(type, def, p);
+    if (key) return drawTemplate(templates.get(key), st, p);
     const o = st.outputs ?? {};
     const { w, h } = lay;
     const short = type.startsWith("jwsim/") ? type.split("/")[1] : "";
@@ -364,8 +384,8 @@
           `<text class="sym-big light" x="${cx}" y="22">24 V DC</text>` +
           led(18, 46, ok, "#37d67a") + `<text class="sym-tag" x="44" y="49">DC OK</text>` +
           (ok ? "" : `<text class="sym-bad" x="${cx}" y="70">DISPARADA</text>`) +
-          `<rect x="${lay.terms["L+"].x - 9}" y="${h - 46}" width="18" height="5" fill="#e0392b"/>` +
-          `<rect x="${lay.terms.M.x - 9}" y="${h - 46}" width="18" height="5" fill="#2f62d6"/>`
+          `<rect x="${lay.terms["+V1"].x - 9}" y="${h - 46}" width="18" height="5" fill="#e0392b"/>` +
+          `<rect x="${lay.terms["-V1"].x - 9}" y="${h - 46}" width="18" height="5" fill="#2f62d6"/>`
         );
       }
       case "power-230vac": {
@@ -391,5 +411,5 @@
     }
   }
 
-  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, registerTemplate, templates, warnings };
+  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, registerTemplate, templates, warnings };
 })();

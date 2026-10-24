@@ -1046,14 +1046,29 @@ button.io.on {
   stroke: var(--accent);
   outline: 2px solid var(--accent);
 }
+/* Marco de selección (las plantillas .svg no tienen .dev-box). */
+.dev .sel-frame {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+  display: none;
+}
+.dev.selected .sel-frame {
+  display: inline;
+}
 .dev .dev-box.tripped,
 .dev .dev-box.damaged {
   stroke: var(--err);
   stroke-dasharray: 5 3;
 }
-.dev text {
+/* Solo los textos que dibuja la app: una plantilla .svg (.tpl) trae los suyos. */
+.dev text:not(.tpl *) {
   fill: var(--text);
   text-anchor: middle;
+}
+.dev text {
   pointer-events: none;
 }
 .dev .dev-id {

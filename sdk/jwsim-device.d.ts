@@ -22,7 +22,7 @@ export interface ParameterSpec {
 }
 
 export interface TerminalSpec {
-  /** Nombre del borne en el dispositivo ("A1", "13", "L+"). En la escena: "<id>.<borne>". */
+  /** Nombre del borne en el dispositivo ("A1", "13", "+V1"). En la escena: "<id>.<borne>". */
   id: string;
   label?: string;
 }

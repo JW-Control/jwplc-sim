@@ -8,12 +8,12 @@ import { test } from "node:test";
 import { analyze, parseRating, solve } from "../netlist.mjs";
 import { faults, ms, scene } from "./helpers.mjs";
 
-const PS = { id: "PS", pos: "PS.L+", neg: "PS.M", kind: "DC", volts: 24 };
+const PS = { id: "PS", pos: "PS.+V1", neg: "PS.-V1", kind: "DC", volts: 24 };
 
 test("netlist pura: carga entre polos, sin camino y en serie", () => {
   const load = (id, a, b) => ({ id, a, b, rating: "24VDC" });
   const r = solve({
-    wires: [["PS.L+", "H1.X1"], ["H1.X2", "PS.M"], ["PS.L+", "H2.X1"], ["H2.X2", "H3.X1"], ["H3.X2", "PS.M"]],
+    wires: [["PS.+V1", "H1.X1"], ["H1.X2", "PS.-V1"], ["PS.+V1", "H2.X1"], ["H2.X2", "H3.X1"], ["H3.X2", "PS.-V1"]],
     sources: [PS],
     switches: [],
     loads: [load("H1", "H1.X1", "H1.X2"), load("H2", "H2.X1", "H2.X2"), load("H3", "H3.X1", "H3.X2"), load("H4", "H4.X1", "H4.X2")],
@@ -31,12 +31,12 @@ test("netlist pura: carga entre polos, sin camino y en serie", () => {
 test("cortocircuito al pulsar: la fuente dispara, las cargas caen y queda disparada hasta rearmar", () => {
   const s = scene(
     ["PS:power-24vdc", "S:pushbutton-no", "H:lamp"],
-    ["PS.L+ - S.13", "S.14 - PS.M", "PS.L+ - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - PS.-V1", "PS.+V1 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.equal(s.output("H", "lit"), true);
   s.act("S", "press", true, ms(10));
   assert.deepEqual(faults(s), ["short:PS"]);
-  assert.match(s.snapshot().faults[0].message, /Cortocircuito en PS: PS\.L\+ y PS\.M/);
+  assert.match(s.snapshot().faults[0].message, /Cortocircuito en PS: PS\.\+V1 y PS\.-V1/);
   assert.equal(s.output("H", "lit"), false);
   assert.equal(s.output("PS", "on"), false);
   s.act("S", "press", false, ms(20));
@@ -47,7 +47,7 @@ test("cortocircuito al pulsar: la fuente dispara, las cargas caen y queda dispar
 });
 
 test("rearmar con el cortocircuito presente vuelve a disparar", () => {
-  const s = scene(["PS:power-24vdc", "S:pushbutton-no"], ["PS.L+ - S.13", "S.14 - PS.M"]);
+  const s = scene(["PS:power-24vdc", "S:pushbutton-no"], ["PS.+V1 - S.13", "S.14 - PS.-V1"]);
   s.act("S", "press", true, ms(1));
   s.rearm(ms(2));
   assert.deepEqual(faults(s), ["short:PS", "short:PS"]);
@@ -56,7 +56,7 @@ test("rearmar con el cortocircuito presente vuelve a disparar", () => {
 test("cortocircuito a través de un contacto principal del contactor", () => {
   const s = scene(
     ["PS:power-24vdc", "S:pushbutton-no", "KM:contactor"],
-    ["PS.L+ - S.13", "S.14 - KM.A1", "KM.A2 - PS.M", "PS.L+ - KM.1", "KM.2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - KM.A1", "KM.A2 - PS.-V1", "PS.+V1 - KM.1", "KM.2 - PS.-V1"],
   );
   s.act("S", "press", true, ms(0));
   s.advanceTo(ms(19));
@@ -71,7 +71,7 @@ test("cortocircuito a través de un contacto principal del contactor", () => {
 test("cruce de alimentaciones 24 VDC con 230 VAC: disparan ambas", () => {
   const s = scene(
     ["PS:power-24vdc", "L:power-230vac", "S:pushbutton-no", "H:lamp"],
-    ["PS.L+ - S.13", "S.14 - L.L", "PS.L+ - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - L.L", "PS.+V1 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.equal(s.output("H", "lit"), true);
   s.act("S", "press", true, ms(1));
@@ -84,7 +84,7 @@ test("cruce de alimentaciones 24 VDC con 230 VAC: disparan ambas", () => {
 test("dos fuentes de 24 VDC con el 0 V común: sin falla", () => {
   const s = scene(
     ["PS1:power-24vdc", "PS2:power-24vdc", "H1:lamp", "H2:lamp"],
-    ["PS1.M - PS2.M", "PS1.L+ - H1.X1", "H1.X2 - PS1.M", "PS2.L+ - H2.X1", "H2.X2 - PS1.M"],
+    ["PS1.-V1 - PS2.-V1", "PS1.+V1 - H1.X1", "H1.X2 - PS1.-V1", "PS2.+V1 - H2.X1", "H2.X2 - PS1.-V1"],
   );
   assert.deepEqual(faults(s), []);
   assert.equal(s.output("H1", "lit"), true);
@@ -94,7 +94,7 @@ test("dos fuentes de 24 VDC con el 0 V común: sin falla", () => {
 test("bobina sin alimentación (análisis estático): A2 sin cablear o sin retorno", () => {
   const s = scene(
     ["PS:power-24vdc", "S:pushbutton-no", "KM1:contactor", "KM2:contactor", "K3:relay"],
-    ["PS.L+ - S.13", "S.14 - KM1.A1", "S.14 - KM2.A1", "KM2.A2 - K3.A1"],
+    ["PS.+V1 - S.13", "S.14 - KM1.A1", "S.14 - KM2.A1", "KM2.A2 - K3.A1"],
   );
   const msg = Object.fromEntries(s.findings.map((f) => [f.load, f.message]));
   assert.match(msg["KM1.coil"], /^Bobina sin alimentación: KM1\.coil nunca se energiza \(KM1\.A2 sin cablear\)/);
@@ -108,7 +108,7 @@ test("bobina sin alimentación (análisis estático): A2 sin cablear o sin retor
 test("análisis estático: una bobina mandada por contactos abiertos sí puede energizarse (sin aviso)", () => {
   const s = scene(
     ["PS:power-24vdc", "S:pushbutton-no", "KM:contactor", "H:lamp"],
-    ["PS.L+ - S.13", "S.14 - KM.A1", "KM.A2 - PS.M", "PS.L+ - KM.13", "KM.14 - H.X1", "H.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - KM.A1", "KM.A2 - PS.-V1", "PS.+V1 - KM.13", "KM.14 - H.X1", "H.X2 - PS.-V1"],
   );
   assert.deepEqual(s.findings, []);
   // Y un dispositivo sin ningún cable no avisa (todavía no se cableó).
@@ -137,7 +137,7 @@ test("sobretensión: bobina de 24 VDC en 230 VAC se quema y queda fuera hasta re
 test("bobina de 230 VAC en 24 VDC: tensión insuficiente, no atrae", () => {
   const s = scene(
     ["PS:power-24vdc", { id: "KM", type: "jwsim/contactor", params: { coil: "230VAC" } }],
-    ["PS.L+ - KM.A1", "KM.A2 - PS.M"],
+    ["PS.+V1 - KM.A1", "KM.A2 - PS.-V1"],
   );
   s.advanceTo(ms(100));
   assert.equal(s.output("KM", "closed"), false);
@@ -149,8 +149,8 @@ test("contactos auxiliares: autorretención con 13-14 y enclavamiento con 21-22"
   const s = scene(
     ["PS:power-24vdc", "S0:pushbutton-nc", "S1:pushbutton-no", "S2:pushbutton-no", "KM1:contactor", "KM2:contactor"],
     [
-      "PS.L+ - S0.11", "S0.12 - S1.13", "S1.14 - KM1.A1", "S0.12 - KM1.13", "KM1.14 - KM1.A1", "KM1.A2 - PS.M",
-      "S0.12 - S2.13", "S2.14 - KM1.21", "KM1.22 - KM2.A1", "KM2.A2 - PS.M",
+      "PS.+V1 - S0.11", "S0.12 - S1.13", "S1.14 - KM1.A1", "S0.12 - KM1.13", "KM1.14 - KM1.A1", "KM1.A2 - PS.-V1",
+      "S0.12 - S2.13", "S2.14 - KM1.21", "KM1.22 - KM2.A1", "KM2.A2 - PS.-V1",
     ],
   );
   s.act("S1", "press", true, ms(0));
@@ -167,7 +167,7 @@ test("contactos auxiliares: autorretención con 13-14 y enclavamiento con 21-22"
 });
 
 test("relé que se corta a sí mismo: sin retardo oscila (falla); con retardo vibra", () => {
-  const wiring = ["PS.L+ - K.11", "K.12 - K.A1", "K.A2 - PS.M"];
+  const wiring = ["PS.+V1 - K.11", "K.12 - K.A1", "K.A2 - PS.-V1"];
   const zero = scene(["PS:power-24vdc", { id: "K", type: "jwsim/relay", params: { pullInMs: 0, dropOutMs: 0 } }], wiring);
   assert.ok(faults(zero).includes("oscillation:"));
 
@@ -179,8 +179,8 @@ test("relé que se corta a sí mismo: sin retardo oscila (falla); con retardo vi
 });
 
 test("cableado inválido: borne o dispositivo inexistente", () => {
-  assert.throws(() => scene(["PS:power-24vdc"], ["PS.L+ - X.1"]), /dispositivo inexistente en "X\.1"/);
-  assert.throws(() => scene(["PS:power-24vdc", "H:lamp"], ["PS.L+ - H.A1"]), /no tiene el borne "A1"/);
+  assert.throws(() => scene(["PS:power-24vdc"], ["PS.+V1 - X.1"]), /dispositivo inexistente en "X\.1"/);
+  assert.throws(() => scene(["PS:power-24vdc", "H:lamp"], ["PS.+V1 - H.A1"]), /no tiene el borne "A1"/);
   assert.throws(() => scene(["PS:power-24vdc", "PS:lamp"], []), /identificador repetido/);
 });
 
@@ -189,7 +189,7 @@ test("determinismo: la misma escena y acciones dan la misma secuencia de eventos
     const s = scene(
       ["PS:power-24vdc", "S:pushbutton-no", "Y:solenoid-valve", "K:relay",
         { id: "B", type: "jwsim/limit-switch", params: { source: "Y.position", min: 1, max: 1 } }],
-      ["PS.L+ - S.13", "S.14 - Y.A1", "Y.A2 - PS.M", "PS.L+ - B.13", "B.14 - K.A1", "K.A2 - PS.M"],
+      ["PS.+V1 - S.13", "S.14 - Y.A1", "Y.A2 - PS.-V1", "PS.+V1 - B.13", "B.14 - K.A1", "K.A2 - PS.-V1"],
     );
     s.act("S", "press", true, ms(3));
     s.advanceTo(ms(700));

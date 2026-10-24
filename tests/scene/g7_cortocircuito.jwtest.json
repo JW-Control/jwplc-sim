@@ -11,11 +11,11 @@
       { "id": "H1", "type": "jwsim/lamp" }
     ],
     "wiring": [
-      { "from": "PS1.L+", "to": "plc.24VDC" }, { "from": "PS1.M", "to": "plc.M0" }, { "from": "PS1.M", "to": "plc.M1" },
-      { "from": "PS1.L+", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
-      { "from": "PS1.L+", "to": "S0.11" }, { "from": "S0.12", "to": "plc.I0_1" },
-      { "from": "PS1.L+", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "H1.X1" }, { "from": "H1.X2", "to": "PS1.M" },
-      { "from": "plc.Q0_0.2", "to": "PS1.M" }
+      { "from": "PS1.+V1", "to": "plc.24VDC" }, { "from": "PS1.-V1", "to": "plc.M0" }, { "from": "PS1.-V1", "to": "plc.M1" },
+      { "from": "PS1.+V1", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
+      { "from": "PS1.+V1", "to": "S0.11" }, { "from": "S0.12", "to": "plc.I0_1" },
+      { "from": "PS1.+V1", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "H1.X1" }, { "from": "H1.X2", "to": "PS1.-V1" },
+      { "from": "plc.Q0_0.2", "to": "PS1.-V1" }
     ]
   },
   "until_ms": 1300,

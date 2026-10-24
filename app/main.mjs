@@ -17,7 +17,7 @@ import { DebugSession } from "./lib/debug-session.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
 import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
-import { Registry } from "../scene/devices/index.mjs";
+import { Registry, builtinDevices } from "../scene/devices/index.mjs";
 import { Scene } from "../scene/scene.mjs";
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
@@ -455,14 +455,22 @@ ipcMain.handle("scene:symbols", () => {
   const out = {};
   const dir = join(import.meta.dirname, "renderer", "assets", "devices");
   if (existsSync(dir)) {
+    // <nombre>.svg → jwsim/<nombre>; <nombre>__<variante>.svg de un tipo incluido →
+    // su variante (jwsim/<nombre>__<variante>); <autor>__<nombre>.svg → <autor>/<nombre>.
+    const builtin = new Set(builtinDevices.map((d) => d.type.split("/")[1]));
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".svg"))) {
       const name = f.slice(0, -4);
-      out[name.includes("__") ? name.replace("__", "/") : `jwsim/${name}`] = readFileSync(join(dir, f), "utf8");
+      const [head] = name.split("__");
+      const key = !name.includes("__") || builtin.has(head) ? `jwsim/${name}` : name.replace("__", "/");
+      out[key] = readFileSync(join(dir, f), "utf8");
     }
   }
+  // Dispositivos instalados: symbol.svg y sus variantes symbol__<variante>.svg.
   for (const d of installedDevices()) {
-    const f = join(d.dir, "symbol.svg");
-    if (existsSync(f)) out[d.type] = readFileSync(f, "utf8");
+    if (!existsSync(d.dir)) continue;
+    for (const f of readdirSync(d.dir).filter((x) => /^symbol(__[a-z0-9]+)?\.svg$/.test(x))) {
+      out[`${d.type}${f.slice(6, -4)}`] = readFileSync(join(d.dir, f), "utf8");
+    }
   }
   return out;
 });

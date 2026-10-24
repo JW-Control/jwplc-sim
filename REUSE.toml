@@ -35,3 +35,11 @@ path = ["index/**", "cli/keys/**", ".gitattributes"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Símbolos y placa de la escena (G7). El logo de Mean Well incrustado en las
+# fuentes es marca de su dueño (docs/LICENSES.md §3.6).
+[[annotations]]
+path = ["app/renderer/assets/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 JW Control"
+SPDX-License-Identifier = "GPL-3.0-or-later"

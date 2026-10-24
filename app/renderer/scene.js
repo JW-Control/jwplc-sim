@@ -57,8 +57,12 @@
   function symbolFor(dev) {
     const t = dev.type;
     if (t === "jwsim/jwplc-basic") return { w: S.board.w, h: S.board.h, terms: S.boardEntries, screws: S.boardTerms, sides: S.boardSides, board: true };
-    if (!layouts.has(t)) {
-      const lay = window.JwsimSymbols.layout(t, S.defs.get(t));
+    // Una plantilla por variante (p. ej. el modelo de la fuente): la caché va por plantilla.
+    const def = S.defs.get(t);
+    const p = { ...defaultsOf(t), ...(dev.params ?? {}) };
+    const key = window.JwsimSymbols.templateKey(t, def, p) ?? t;
+    if (!layouts.has(key)) {
+      const lay = window.JwsimSymbols.layout(t, def, p);
       const terms = {};
       const screws = {};
       const sides = {};
@@ -68,9 +72,9 @@
         screws[id] = [v.x, v.screw ?? (v.side === "t" ? v.y + k : v.y - k)];
         sides[id] = v.side;
       }
-      layouts.set(t, { w: lay.w, h: lay.h, terms, screws, sides, lay });
+      layouts.set(key, { w: lay.w, h: lay.h, terms, screws, sides, lay });
     }
-    return layouts.get(t);
+    return layouts.get(key);
   }
 
   const out = (id) => S.snap?.devices.find((d) => d.id === id) ?? { outputs: {}, contacts: {}, actions: {}, damaged: [] };
@@ -160,12 +164,12 @@
     };
   }
 
-  // Color de un borne según su polo: L+ rojo, M azul, L marrón, N celeste.
+  // Color de un borne según su polo: +V rojo, −V azul, L marrón, N celeste.
   function poleColor(term, poles) {
     const i = term.indexOf(".");
     const dev = devById(term.slice(0, i));
     const t = term.slice(i + 1);
-    if (dev?.type === "jwsim/power-24vdc") return t === "L+" ? "rojo" : "azul";
+    if (dev?.type === "jwsim/power-24vdc" && /^[+-]V/.test(t)) return t[0] === "+" ? "rojo" : "azul";
     if (dev?.type === "jwsim/power-230vac") return t === "L" ? "marrón" : "celeste";
     for (const m of poles?.[term] ?? []) {
       const ac = devById(m.replace(/[+-]$/, "").split(".")[0])?.type === "jwsim/power-230vac";
@@ -441,16 +445,19 @@
       html += `<rect class="ferrule" x="${p.x - wd / 2}" y="${y}" width="${wd}" height="${len}" rx="2" fill="${shade(c, 0.8)}"/>`;
       html += `<rect class="ferrule-tip" x="${p.x - wd / 2 + 1}" y="${p.up ? p.y - 3 : p.y}" width="${wd - 2}" height="3" fill="#c9ced5"/>`;
     }
-    // Puntos de doblez del cable seleccionado (arrastrables; ✕ los quita).
+    // Puntos de doblez del cable seleccionado (arrastrables; ✕ los quita), en
+    // su propia capa sobre los equipos para que ninguno los tape.
+    let handles = "";
     if (S.sel?.kind === "wire" && S.routes[S.sel.id] && !S.running) {
       const r = S.routes[S.sel.id];
       const own = !!S.spec.wiring[S.sel.id].points?.length;
       r.vertices.forEach((v, k) => {
-        html += `<circle class="wire-handle" data-v="${k}" cx="${v.x}" cy="${v.y}" r="5"/>`;
-        if (own) html += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
+        handles += `<circle class="wire-handle" data-v="${k}" cx="${v.x}" cy="${v.y}" r="5"/>`;
+        if (own) handles += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
       });
     }
     g.innerHTML = html;
+    $("scene-handles").innerHTML = handles;
   }
 
   function renderDevice(dev, force = false) {
@@ -505,6 +512,7 @@
       const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
       g.innerHTML =
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
+        `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
         `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`;
     }
     // Bornes en su propia capa, encima de los cables (un clic en un borne ya
@@ -965,6 +973,15 @@
     // Escena del proyecto (campo "scene" del .jwsim).
     load(sc) {
       S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []) };
+      // Bornes renombrados (igual que migrateScene de scene/scene.mjs): la fuente
+      // de 24 VDC 1.x tenía L+/M; desde la 2.0, +V1 +V2 −V1 −V2.
+      const ren = { "L+": "+V1", M: "-V1" };
+      const ps = new Set(S.spec.devices.filter((d) => d.type === "jwsim/power-24vdc").map((d) => d.id));
+      const fix = (e) => {
+        const i = e.indexOf(".");
+        return ps.has(e.slice(0, i)) && ren[e.slice(i + 1)] ? `${e.slice(0, i)}.${ren[e.slice(i + 1)]}` : e;
+      };
+      for (const w of S.spec.wiring) [w.from, w.to] = [fix(w.from), fix(w.to)];
       S.snap = null;
       S.sel = null;
       S.fitted = false;
@@ -1009,6 +1026,16 @@
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
       analyze: () => analyze(),
+      setParam: (id, key, value) => {
+        const d = devById(id);
+        d.params = { ...(d.params ?? {}), [key]: value };
+        render(true);
+        if (!S.running) analyze();
+      },
+      templateOf: (id) => {
+        const d = devById(id);
+        return window.JwsimSymbols.templateKey(d.type, S.defs.get(d.type), { ...defaultsOf(d.type), ...(d.params ?? {}) });
+      },
       move: (id, x, y) => {
         const d = devById(id);
         d.x = x;
@@ -1024,7 +1051,7 @@
       useSymbol: (type, text) => {
         const n = window.JwsimSymbols.warnings.length;
         window.JwsimSymbols.registerTemplate(type, text);
-        layouts.delete(type);
+        layouts.clear();
         render(true);
         return window.JwsimSymbols.warnings.slice(n);
       },

@@ -1,6 +1,6 @@
 {
   "type": "jwcontrol/timer-relay",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "kind": "scene",
   "name": "Relé temporizador",
   "description": "Temporizador a la conexión o a la desconexión (IEC 61812) con contacto conmutado 15-16-18. Ejemplo del SDK escrito en TypeScript.",

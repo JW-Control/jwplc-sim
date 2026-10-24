@@ -15,6 +15,9 @@
 //   SCENE_SYMBOL  una plantilla .svg (docs/simbolos/pushbutton-no.svg) reemplaza
 //                 el símbolo de S1 con sus bornes y su color; una que no cumple
 //                 el contrato (viewBox fuera de la grilla) se rechaza con aviso
+//   SCENE_VARIANTS las plantillas de assets/devices cargan sin avisos; la fuente
+//                 elige su plantilla por modelo (MDR-60 → HDR-60 → NDR-120) con
+//                 el logo incrustado, y los cables siguen en sus bornes
 // Informe en build/gates/JWSIM_G7_E2E.json y capturas en build/gates/g7/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g7.mjs
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -107,7 +110,7 @@ try {
   // El cable de L+ es rojo y, con la fuente en servicio, brilla (con tensión).
   const hot = await t(() => {
     const spec = window.jwsimTest.scene.spec();
-    const i = spec.wiring.findIndex((w) => w.from === "PS1.L+");
+    const i = spec.wiring.findIndex((w) => w.from === "PS1.+V1");
     return `${window.jwsimTest.scene.wireColor(i)}${window.jwsimTest.scene.wireLive(i) ? "+tensión" : ""}`;
   });
   const motor = await until(() => devOut("M1", "running"), 3000);
@@ -137,20 +140,22 @@ try {
   await t((id) => window.jwsimTest.scene.move(id, -200, 100), h);
   await win.click("#scene-fit");
   await clickAt(await term(`${h}.X1`));
-  await clickAt(await term("PS1.L+"));
+  await clickAt(await term("PS1.+V1"));
   await clickAt(await term(`${h}.X2`));
-  await clickAt(await term("PS1.M"));
+  await clickAt(await term("PS1.-V1"));
   const wired = await t(() => window.jwsimTest.scene.spec().wiring.length);
   log(`cables: ${wired}; nuevos: ${JSON.stringify(await t(() => window.jwsimTest.scene.spec().wiring.slice(26)))}`);
   await win.screenshot({ path: join(OUT, "escena-cableado.png") });
   const lit = await until(() => devOut(h, "lit"), 3000);
   // Arrastrar KM1 60 px a la derecha.
   const before = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "KM1").x);
-  const kb = await (await win.$("#scene-root .dev[data-id='KM1'] .dev-box")).boundingBox();
-  await win.mouse.move(kb.x + 8, kb.y + kb.height / 2);
+  // Desde el centro del cuerpo (la plantilla del contactor no tiene zonas de clic).
+  const kb = await (await win.$("#scene-root .dev[data-id='KM1']")).boundingBox();
+  const [kx, ky] = [kb.x + kb.width / 2, kb.y + kb.height / 2];
+  await win.mouse.move(kx, ky);
   await win.mouse.down();
-  await win.mouse.move(kb.x + 40, kb.y + kb.height / 2, { steps: 5 });
-  await win.mouse.move(kb.x + 68, kb.y + kb.height / 2, { steps: 5 });
+  await win.mouse.move(kx + 32, ky, { steps: 5 });
+  await win.mouse.move(kx + 60, ky, { steps: 5 });
   await win.mouse.up();
   const after = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "KM1").x);
   // Quitar el cable de retorno de la lámpara nueva: aviso en el análisis.
@@ -181,7 +186,7 @@ try {
   await t(() => window.jwsimTest.saveProject());
   await win.waitForTimeout(500);
   const saved = JSON.parse(readFileSync(projFile, "utf8")).scene;
-  const savedOk = saved.devices.some((d) => d.id === h) && saved.wiring.some((w) => w.from === `${h}.X1` && w.to === "PS1.L+") && saved.devices.find((d) => d.id === "KM1").x === after;
+  const savedOk = saved.devices.some((d) => d.id === h) && saved.wiring.some((w) => w.from === `${h}.X1` && w.to === "PS1.+V1") && saved.devices.find((d) => d.id === "KM1").x === after;
   criteria.SCENE_EDIT = {
     ok: wired === 28 && !!lit && after - before >= 50 && !!warned && savedOk && bent.length > 0 && cleared,
     bend_points: bent.length,
@@ -215,8 +220,37 @@ try {
     rejected: badWarn,
   };
   log(`SCENE_SYMBOL ${JSON.stringify(criteria.SCENE_SYMBOL)}`);
+
+  // ---- SCENE_VARIANTS
+  const loadWarn = await t(() => window.JwsimSymbols.warnings.filter((w) => !w.startsWith("jwsim/lamp: ancho")));
+  const nTpl = await t(() => window.JwsimSymbols.templates.size);
+  const variants = [];
+  for (const model of ["MDR-60", "HDR-60", "NDR-120"]) {
+    await t(([m]) => window.jwsimTest.scene.setParam("PS1", "model", m), [model]);
+    await win.waitForTimeout(150);
+    variants.push(
+      await t(([m]) => {
+        const g = document.querySelector("#scene-devices > g[data-id='PS1']");
+        const b = g.getBBox();
+        return { model: m, tpl: window.jwsimTest.scene.templateOf("PS1"), w: Math.round(b.width), h: Math.round(b.height), logo: !!g.querySelector("image[href^='data:image/png']") };
+      }, [model]),
+    );
+  }
+  const psWired = await t(() => ["PS1.+V1", "PS1.+V2", "PS1.-V1", "PS1.-V2"].every((e) => window.jwsimTest.scene.termScreen(e)));
+  await win.screenshot({ path: join(OUT, "escena-fuentes.png") });
+  criteria.SCENE_VARIANTS = {
+    ok:
+      loadWarn.length === 0 && nTpl >= 14 && psWired &&
+      variants.map((v) => v.tpl).join() === "jwsim/power-24vdc__mdr60,jwsim/power-24vdc__hdr60,jwsim/power-24vdc__ndr120" &&
+      variants.every((v) => v.logo) && new Set(variants.map((v) => `${v.w}x${v.h}`)).size === 3,
+    templates: nTpl,
+    warnings: loadWarn,
+    variants,
+    wired: psWired,
+  };
+  log(`SCENE_VARIANTS ${JSON.stringify(criteria.SCENE_VARIANTS)}`);
 } finally {
-  const ok = Object.values(criteria).length === 5 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 6 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_G7_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_G7_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();

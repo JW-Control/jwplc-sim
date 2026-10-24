@@ -411,22 +411,23 @@ botones de la interfaz.
 - **Remate:** en cada borne asoma el casquillo del terminal. Si dos o más
   cables comparten borne (puente), entran juntos en un casquillo doble.
 - **Color:** cada cable tiene el suyo (`color`, de la paleta IEC). Al
-  crearlo se elige según el polo del borne: L+ rojo, M azul, L marrón,
+  crearlo se elige según el polo del borne: +V rojo, −V azul, L marrón,
   N celeste; el mando en negro. Con la simulación en marcha, los cables en
   el positivo de una fuente en servicio brillan.
 
-**Biblioteca v0.1** (16 definiciones):
+**Biblioteca** (18 definiciones; símbolos en `docs/SIMBOLOS.md` §6):
 
 | Tipo | Bornes | Comportamiento |
 |---|---|---|
-| `power-24vdc`, `power-230vac` | L+/M, L/N | Fuente con disparo por cortocircuito o cruce |
-| `pushbutton-no`, `pushbutton-nc` | 13-14, 11-12 | Contacto mientras se pulsa |
+| `power-24vdc` 2.0 | +V1 +V2 −V1 −V2 (puenteados), L N PE, DCOK1-DCOK2 | Mean Well MDR-60 (por defecto, con relé DC OK), HDR-60 o NDR-120 (`model`); disparo por cortocircuito o cruce. Fuente ideal: entrega 24 V sin cablear la entrada L/N. Escenas con la 1.x (L+/M) se leen como +V1/−V1 (`migrateScene`) |
+| `power-230vac` | L/N | Red con disparo por cortocircuito o cruce |
+| `pushbutton-no`, `pushbutton-nc`, `pushbutton-nono`, `pushbutton-nonc` | 13-14; 11-12; 13-14 + 23-24; 13-14 + 21-22 | Contactos mientras se pulsa |
 | `selector-2`, `selector-3` | 13-14/21-22, 13-14/23-24 | Posiciones 0/I e I/0/II |
 | `limit-switch` | 13-14, 21-22 | A mano o por enlace mecánico |
 | `sensor-inductive`, `sensor-photoelectric` | BN/BU/BK | PNP o NPN, NA o NC, tiempo de respuesta, alimentado y con polaridad |
-| `lamp`, `buzzer` | X1-X2, +/- | 24 VDC o 230 VAC; el zumbador es polarizado |
+| `lamp`, `buzzer` | X1-X2, +/- | 24 VDC o 230 VAC, modelo XB2 o AD16 (`model`); el zumbador es polarizado |
 | `relay` | A1-A2, 11-12-14, 21-22-24 | Conmutados; atraque 8 ms, caída 4 ms |
-| `contactor` | A1-A2, 1-2/3-4/5-6, 13-14, 21-22 | Atraque 20 ms, caída 10 ms |
+| `contactor` | A1-A2, 1-2/3-4/5-6, 13-14 o 21-22 | Auxiliar 13-14 NA (`aux` 10, CJX2-0910) o 21-22 NC (`aux` 01, CJX2-0901); atraque 20 ms, caída 10 ms |
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 
@@ -857,14 +858,14 @@ detectar cambios (G2 EXTERNAL_EDIT_RELOAD).
   "scene": {
     "devices": [
       { "id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0 },
-      { "id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 200 },
-      { "id": "S1", "type": "jwsim/pushbutton-no", "version": "1.0.0", "params": { "label": "Marcha" }, "x": 420, "y": -190 },
-      { "id": "KM1", "type": "jwsim/contactor", "version": "1.0.0", "params": { "coil": "24VDC" }, "x": 240, "y": 640 }
+      { "id": "PS1", "type": "jwsim/power-24vdc", "params": { "model": "MDR-60" }, "x": 40, "y": 60 },
+      { "id": "S1", "type": "jwsim/pushbutton-no", "version": "1.0.0", "params": { "label": "Marcha" }, "x": 300, "y": -320 },
+      { "id": "KM1", "type": "jwsim/contactor", "version": "1.0.0", "params": { "coil": "24VDC", "aux": "10" }, "x": 240, "y": 620 }
     ],
     "wiring": [
-      { "from": "PS1.L+", "to": "plc.24VDC" }, { "from": "PS1.M", "to": "plc.M0" }, { "from": "PS1.M", "to": "plc.M1" },
-      { "from": "PS1.L+", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
-      { "from": "PS1.L+", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "KM1.A1" }, { "from": "KM1.A2", "to": "PS1.M" }
+      { "from": "PS1.+V1", "to": "plc.24VDC" }, { "from": "PS1.-V1", "to": "plc.M0" }, { "from": "PS1.-V1", "to": "plc.M1" },
+      { "from": "PS1.+V1", "to": "S1.13" }, { "from": "S1.14", "to": "plc.I0_0" },
+      { "from": "PS1.+V1", "to": "plc.Q0_0.1" }, { "from": "plc.Q0_0.2", "to": "KM1.A1" }, { "from": "KM1.A2", "to": "PS1.-V1" }
     ]
   },
   "exercise": { "file": "./exercise/rubrica.json" },

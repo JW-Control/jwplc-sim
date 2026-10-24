@@ -15,8 +15,9 @@ export const lamp = {
   version: "1.0.0",
   name: "Lámpara piloto",
   category: "Señalización",
-  description: "Piloto luminoso (X1-X2). Se enciende con su tensión nominal; con más tensión se quema.",
+  description: "Piloto luminoso de 22 mm (X1-X2): metálico XB2 o monobloque AD16. Se enciende con su tensión nominal; con más tensión se quema.",
   parameters: [
+    { id: "model", label: "Modelo", type: "enum", options: ["XB2", "AD16"], default: "XB2" },
     { id: "rating", label: "Tensión", type: "enum", options: RATINGS, default: "24VDC" },
     { id: "color", label: "Color", type: "enum", options: ["verde", "rojo", "amarillo", "azul", "blanco"], default: "verde" },
     { id: "label", label: "Rótulo", type: "string", default: "" },
@@ -77,24 +78,26 @@ export const contactor = {
   version: "1.0.0",
   name: "Contactor",
   category: "Maniobra",
-  description: "Contactor de 3 polos (1-2, 3-4, 5-6) con auxiliares 13-14 (NA) y 21-22 (NC).",
+  description: "Contactor de 3 polos (1-2, 3-4, 5-6) con un contacto auxiliar incorporado: 13-14 NA (aux 10, CJX2-0910) o 21-22 NC (aux 01, CJX2-0901).",
   parameters: [
     { id: "coil", label: "Bobina", type: "enum", options: RATINGS, default: "24VDC" },
+    { id: "aux", label: "Auxiliar", type: "enum", options: ["10", "01"], default: "10" },
     { id: "pullInMs", label: "Atraque", type: "number", default: 20, unit: "ms" },
     { id: "dropOutMs", label: "Caída", type: "number", default: 10, unit: "ms" },
   ],
   terminals: ["A1", "A2", "1", "2", "3", "4", "5", "6", "13", "14", "21", "22"].map((id) => ({ id })),
   electrical: (p) => ({
     loads: [{ id: "coil", a: "A1", b: "A2", rating: String(p.coil), coil: true }],
-    contacts: { "1-2": ["1", "2"], "3-4": ["3", "4"], "5-6": ["5", "6"], "13-14": ["13", "14"], "21-22": ["21", "22"] },
+    contacts: { "1-2": ["1", "2"], "3-4": ["3", "4"], "5-6": ["5", "6"], ...(p.aux === "01" ? { "21-22": ["21", "22"] } : { "13-14": ["13", "14"] }) },
   }),
   create(ctx) {
     const k = new Delay(ms(ctx.params.pullInMs), ms(ctx.params.dropOutMs));
+    const nc = ctx.params.aux === "01";
     return {
       update(t, inp) {
         const on = k.step(t, inp.loads.coil.on);
         return {
-          contacts: { "1-2": on, "3-4": on, "5-6": on, "13-14": on, "21-22": !on },
+          contacts: { "1-2": on, "3-4": on, "5-6": on, ...(nc ? { "21-22": !on } : { "13-14": on }) },
           outputs: { energized: inp.loads.coil.on, closed: on },
           nextEventNs: earliest(k.next),
         };

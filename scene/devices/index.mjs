@@ -5,7 +5,7 @@
 // JWSIM_G7_DEVICE_LIBRARY) y registro por tipo y versión.
 
 import { buzzer, contactor, lamp, motor, relay, solenoidValve } from "./loads.mjs";
-import { limitSwitch, pushbuttonNC, pushbuttonNO, selector2, selector3 } from "./controls.mjs";
+import { limitSwitch, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3 } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24 } from "./supplies.mjs";
 import { sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
@@ -16,6 +16,8 @@ export const builtinDevices = [
   power230,
   pushbuttonNO,
   pushbuttonNC,
+  pushbuttonNONO,
+  pushbuttonNONC,
   selector2,
   selector3,
   limitSwitch,

@@ -5,7 +5,7 @@
 // archivo:
 //
 //   const { sceneWith, ms } = await import(process.env.JWSIM_SDK);
-//   const s = sceneWith(miDispositivo, ["PS:power-24vdc", "K:acme/mi-rele"], ["PS.L+ - K.A1", "K.A2 - PS.M"]);
+//   const s = sceneWith(miDispositivo, ["PS:power-24vdc", "K:acme/mi-rele"], ["PS.+V1 - K.A1", "K.A2 - PS.-V1"]);
 //   s.advanceTo(ms(100));
 //   assert.equal(s.output("K", "closed"), true);
 import { Registry } from "../scene/devices/index.mjs";

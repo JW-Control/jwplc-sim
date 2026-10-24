@@ -7,11 +7,18 @@ tocar código, siempre que respete este contrato. El simulador lo carga desde:
 
 - `app/renderer/assets/devices/<nombre>.svg` para la biblioteca incluida
   (`jwsim/<nombre>`, p. ej. `contactor.svg`);
-- `app/renderer/assets/devices/<autor>__<nombre>.svg` para otro autor;
-- `symbol.svg` en la carpeta de un dispositivo del SDK instalado del índice.
+- `app/renderer/assets/devices/<nombre>__<variante>.svg` para una variante
+  de un tipo incluido (ver §1.1);
+- `app/renderer/assets/devices/<autor>__<nombre>.svg` para otro autor (cuando
+  `<autor>` no es un tipo incluido);
+- `symbol.svg` (y `symbol__<variante>.svg`) en la carpeta de un dispositivo
+  del SDK instalado del índice.
 
 Un archivo que no cumple el contrato se ignora y deja un aviso en la consola
-de la app.
+de la app. **Cómo dibujar** (modelo comercial real, vista frontal, escala de
+4 px/mm, estados interpretables, materiales y textos): ver
+[`simbolos/LINEAMIENTOS.md`](simbolos/LINEAMIENTOS.md), con los generadores
+de cada familia en `simbolos/herramientas/`.
 
 ## 1. Tamaño y grilla
 
@@ -22,6 +29,23 @@ de la app.
   catálogos Schneider/Siemens). Cuerpo claro o el color real del equipo,
   contorno oscuro de 1,5 a 2 px, tornillos Phillips en las borneras y
   rótulos de bornes legibles (8 a 9 px).
+
+### 1.1 Variantes por parámetro
+
+Un tipo puede tener una plantilla por valor de un parámetro de lista: el
+archivo `<nombre>__<valor>.svg`, con el valor en minúsculas y sin signos
+(`MDR-60` → `mdr60`). Si no hay plantilla para ese valor se usa la del tipo
+(`<nombre>.svg`). Hoy:
+
+| Tipo | Parámetro | Plantillas |
+|---|---|---|
+| `power-24vdc` | `model` | `power-24vdc__mdr60.svg` (por defecto), `__hdr60`, `__ndr120` |
+| `lamp` | `model` | `lamp.svg` (XB2, por defecto), `lamp__ad16.svg` |
+| `contactor` | `aux` | `contactor.svg` (10: 13-14 NA, CJX2-0910), `contactor__01.svg` (01: 21-22 NC, CJX2-0901) |
+
+Cada variante puede tener otro tamaño y otros bornes. Una variante que no
+muestra un borne de la definición (p. ej. la HDR-60 no tiene PE) deja ese
+borne sin cablear.
 
 ## 2. Bornes
 
@@ -69,7 +93,11 @@ Varios atributos pueden ir en el mismo elemento.
 ## 4. Lo que no se admite
 
 Por seguridad, al cargar se quitan `<script>`, `<foreignObject>`, los
-atributos `on…` y los enlaces `javascript:`. Los `id` deben ser propios del
+atributos `on…`, los enlaces `javascript:` y toda `<image>` cuyo `href` no
+sea una imagen incrustada (`data:image/png`, `data:image/jpeg` o
+`data:image/svg+xml`). Así van los logos oficiales de marca (lineamientos
+§2.7). Los estilos de texto de la app no alcanzan a la plantilla: los
+`fill`, `font-*` y `text-anchor` del archivo se respetan. Los `id` deben ser propios del
 símbolo (un prefijo con el tipo evita choques, porque varios símbolos
 conviven en el mismo documento). Fuentes: las del sistema (`sans-serif`);
 para un texto con una tipografía especial, mejor convertirlo a trazos.
@@ -96,3 +124,16 @@ para un texto con una tipografía especial, mejor convertirlo a trazos.
 El kit de símbolos (`node scripts/export-symbols.mjs`) trae, por cada tipo,
 el tamaño actual, sus bornes, parámetros, acciones y salidas, y los dibujos
 actuales en reposo y activos como punto de partida.
+
+## 6. Estado de la biblioteca
+
+Símbolos v2 (aprobados por JW Control el 24/10/2026, según
+`simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
+(familia XB2), pilotos XB2 y AD16, zumbador AD16-22SM, selectores de 2 y
+3 posiciones, contactor CJX2 (1NA y 1NC) y fuentes Mean Well MDR-60,
+HDR-60 y NDR-120. Las vistas de verificación están en `simbolos/vistas/`.
+
+Pendientes (todavía dibujados en código, sin escala real): red de 230 VAC,
+fin de carrera, sensores inductivo y fotoeléctrico, relé enchufable,
+electroválvula con cilindro y motor. `node scripts/export-symbols.mjs`
+los marca con `plantilla: null` en `dispositivos.json`.

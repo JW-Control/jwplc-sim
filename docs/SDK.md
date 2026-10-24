@@ -153,7 +153,7 @@ jwsim-cli device test <carpeta>      # valida el contrato y corre *.test.mjs
 
 ```js
 const { sceneWith, ms } = await import(process.env.JWSIM_SDK);
-const s = sceneWith(device, ["PS:power-24vdc", "KT:jwcontrol/timer-relay"], ["PS.L+ - KT.A1", "KT.A2 - PS.M"]);
+const s = sceneWith(device, ["PS:power-24vdc", "KT:jwcontrol/timer-relay"], ["PS.+V1 - KT.A1", "KT.A2 - PS.-V1"]);
 s.advanceTo(ms(3000));
 assert.equal(s.output("KT", "closed"), true);
 ```

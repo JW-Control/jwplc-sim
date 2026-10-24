@@ -12,7 +12,7 @@
 const ms = (v) => BigInt(Math.round(v * 1e6));
 const device = {
     type: "jwcontrol/timer-relay",
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Relé temporizador",
     category: "Maniobra",
     description: "Temporizador a la conexión o a la desconexión con contacto conmutado 15-16-18.",

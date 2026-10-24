@@ -134,6 +134,14 @@ decisión 7 ya lo resuelve; se fija aquí:
 marca: los forks deberán cambiar el nombre del producto. Usar esas marcas
 solo de forma descriptiva ("compatible con…").
 
+Los símbolos de la escena reproducen equipos comerciales reales (Mean Well,
+Schneider, CHINT) para que se reconozcan en el tablero. El logo de Mean Well
+de las fuentes (`app/renderer/assets/devices/power-24vdc__*.svg`,
+`docs/simbolos/marcas/`) es el archivo oficial entregado por JW Control y se
+usa solo para identificar el modelo simulado; las marcas pertenecen a sus
+dueños y no implican respaldo. Un fork que no quiera usarlas puede vaciar el
+grupo `<g id="<tipo>-logo">` de cada archivo (lineamientos §2.7).
+
 ## 4. Obligaciones al distribuir el instalador
 
 1. Incluir `LICENSE` (GPL-3.0) y un `THIRD_PARTY_NOTICES` generado a partir

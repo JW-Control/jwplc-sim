@@ -12,7 +12,7 @@ const circuit = (params) =>
   sceneWith(
     device,
     ["PS:power-24vdc", "S:pushbutton-no", { id: "KT", type: "jwcontrol/timer-relay", params }, "H1:lamp", "H2:lamp"],
-    ["PS.L+ - S.13", "S.14 - KT.A1", "KT.A2 - PS.M", "PS.L+ - KT.15", "KT.18 - H1.X1", "KT.16 - H2.X1", "H1.X2 - PS.M", "H2.X2 - PS.M"],
+    ["PS.+V1 - S.13", "S.14 - KT.A1", "KT.A2 - PS.-V1", "PS.+V1 - KT.15", "KT.18 - H1.X1", "KT.16 - H2.X1", "H1.X2 - PS.-V1", "H2.X2 - PS.-V1"],
   );
 
 test("a la conexión: conmuta timeMs después de energizar y cae al soltar", () => {

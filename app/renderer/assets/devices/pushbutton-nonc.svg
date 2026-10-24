@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Pulsador NA 22 mm modular (tipo Schneider XB2-BA + ZB2-BE101 / CHINT NP2-BA + NP2-BE101). Vista frontal girada 90 grados. Escala 4 px/mm. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 240">
+<defs>
+<linearGradient id="pbnonc-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="pbnonc-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="pbnonc-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="pbnonc-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="pbnonc-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="pbnonc-mat" cx=".5" cy=".45" r=".55"><stop offset=".75" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>
+<radialGradient id="pbnonc-sun" cx=".5" cy=".5" r=".5"><stop offset=".78" stop-color="#000" stop-opacity=".15"/><stop offset="1" stop-color="#000" stop-opacity=".65"/></radialGradient>
+</defs>
+<rect x="42.0" y="1" width="36" height="238" rx="3" fill="url(#pbnonc-blk)" stroke="#16181b" stroke-width="1.6"/>
+<rect x="54" y="1" width="12" height="3" fill="#000"/><rect x="54" y="236" width="12" height="3" fill="#000"/>
+<rect x="48.5" y="5.5" width="23.0" height="23.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="60" cy="17" r="8.5" fill="url(#pbnonc-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M54.5 17H65.5M60 11.5V22.5" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<rect x="48.5" y="211.5" width="23.0" height="23.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="60" cy="223" r="8.5" fill="url(#pbnonc-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M54.5 223H65.5M60 217.5V228.5" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="13" cx="60" cy="17" r="11"/>
+<circle class="jw-term" data-term="14" cx="60" cy="223" r="11"/>
+<text x="38.0" y="12" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">13</text>
+<text x="38.0" y="22" text-anchor="end" font-family="sans-serif" font-size="7" font-weight="800" fill="#2c8a4a">NO</text>
+<text x="38.0" y="227" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">14</text>
+<rect x="82.0" y="1" width="36" height="238" rx="3" fill="url(#pbnonc-blk)" stroke="#16181b" stroke-width="1.6"/>
+<rect x="94" y="1" width="12" height="3" fill="#000"/><rect x="94" y="236" width="12" height="3" fill="#000"/>
+<rect x="88.5" y="5.5" width="23.0" height="23.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="100" cy="17" r="8.5" fill="url(#pbnonc-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M94.5 17H105.5M100 11.5V22.5" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<rect x="88.5" y="211.5" width="23.0" height="23.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="100" cy="223" r="8.5" fill="url(#pbnonc-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M94.5 223H105.5M100 217.5V228.5" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="21" cx="100" cy="17" r="11"/>
+<circle class="jw-term" data-term="22" cx="100" cy="223" r="11"/>
+<text x="122.0" y="12" text-anchor="start" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">21</text>
+<text x="122.0" y="22" text-anchor="start" font-family="sans-serif" font-size="7" font-weight="800" fill="#c0392b">NC</text>
+<text x="122.0" y="227" text-anchor="start" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">22</text>
+<path d="M24 34 H136 V58 H144 V70 H136 V170 H144 V182 H136 V206 H24 V182 H16 V170 H24 V70 H16 V58 H24 Z" transform="translate(0 2)" fill="#000" opacity=".25"/>
+<path d="M24 34 H136 V58 H144 V70 H136 V170 H144 V182 H136 V206 H24 V182 H16 V170 H24 V70 H16 V58 H24 Z" fill="url(#pbnonc-zmk)" stroke="#16181b" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M25 36 H135" stroke="#8d9194" stroke-width="1.5"/>
+<circle cx="36" cy="48" r="6" fill="#0f1012" stroke="#16181b"/><circle cx="124" cy="192" r="6" fill="#0f1012" stroke="#16181b"/>
+<rect x="122" y="26" width="12" height="8" rx="1.5" fill="url(#pbnonc-brs)" stroke="#16181b" stroke-width="1"/><line x1="128" y1="27" x2="128" y2="33" stroke="#3a2c14" stroke-width="1.6"/>
+<rect x="26" y="206" width="12" height="8" rx="1.5" fill="url(#pbnonc-brs)" stroke="#16181b" stroke-width="1"/><line x1="32" y1="207" x2="32" y2="213" stroke="#3a2c14" stroke-width="1.6"/>
+<text x="80" y="50" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#b9bdc1">1 · 3</text>
+<text x="80" y="198" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#b9bdc1">2 · 4</text>
+<circle cx="80" cy="122" r="62" fill="#000" opacity=".3"/>
+<circle cx="80" cy="120" r="62" fill="url(#pbnonc-chr)" stroke="#16181b" stroke-width="1.4"/>
+<circle cx="80" cy="120" r="56.5" fill="#0d0e10"/>
+<g data-action="press" data-kind="momentary">
+<circle cx="80" cy="120" r="62" fill="#000" opacity="0"/>
+<g data-show="!out.pressed">
+<circle data-fill="param.color" fill="#2fbf5a" cx="80" cy="120" r="55"/>
+<circle cx="80" cy="120" r="55" fill="url(#pbnonc-mat)"/>
+<path d="M32 100 A52 52 0 0 1 66 69" fill="none" stroke="#fff" stroke-width="1.5" opacity=".2"/>
+</g>
+<g data-show="out.pressed">
+<circle data-fill="param.color" fill="#2fbf5a" cx="80" cy="121" r="53"/>
+<circle cx="80" cy="121" r="53" fill="url(#pbnonc-sun)"/>
+</g>
+</g>
+</svg>

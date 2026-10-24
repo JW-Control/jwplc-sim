@@ -9,7 +9,7 @@ import device from "./device.mjs";
 const { sceneWith, ms } = await import(process.env.JWSIM_SDK);
 
 test("parpadea con la bobina energizada y se apaga sin ella", () => {
-  const s = sceneWith(device, ["PS:power-24vdc", "S:pushbutton-no", "B:autor/mi-dispositivo"], ["PS.L+ - S.13", "S.14 - B.X1", "B.X2 - PS.M"]);
+  const s = sceneWith(device, ["PS:power-24vdc", "S:pushbutton-no", "B:autor/mi-dispositivo"], ["PS.+V1 - S.13", "S.14 - B.X1", "B.X2 - PS.-V1"]);
   assert.equal(s.output("B", "lit"), false);
   s.act("S", "press", true, ms(100));
   assert.equal(s.output("B", "lit"), true);

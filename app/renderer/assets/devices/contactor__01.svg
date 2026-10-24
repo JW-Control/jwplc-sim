@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Contactor 3 polos 9 A + 1NC (forma tipo LC1D09 / CJX2-0901; variante aux 01 generada desde contactor.svg). Vista frontal. Escala 4 px/mm. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320">
+<defs>
+<linearGradient id="contactor-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="contactor-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="contactor-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="contactor-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="contactor-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="contactor-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="contactor-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="contactor-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="contactor-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="contactor-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="contactor-wht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f8f9"/><stop offset="1" stop-color="#dfe2e6"/></linearGradient>
+<linearGradient id="contactor-drk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#26292d"/><stop offset=".5" stop-color="#34383d"/><stop offset="1" stop-color="#222427"/></linearGradient>
+<radialGradient id="contactor-soot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#140b06" stop-opacity=".9"/><stop offset=".45" stop-color="#2e1c10" stop-opacity=".6"/><stop offset=".8" stop-color="#5a3a1e" stop-opacity=".25"/><stop offset="1" stop-color="#5a3a1e" stop-opacity="0"/></radialGradient>
+<linearGradient id="contactor-win" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a7be0"/><stop offset="1" stop-color="#1d4fa6"/></linearGradient>
+<radialGradient id="contactor-glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".3" stop-color="#7dff9a" stop-opacity=".8"/><stop offset="1" stop-color="#2fbf5a" stop-opacity="0"/></radialGradient>
+<radialGradient id="contactor-hot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".9"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="12" y="11" width="180" height="304" rx="5" fill="#000" opacity=".25"/>
+<rect x="10" y="8" width="180" height="304" rx="5" fill="url(#contactor-wht)" stroke="#16181b" stroke-width="1.6"/>
+<rect x="11" y="8" width="178" height="14" fill="#2a2d31"/>
+<rect x="29" y="8" width="22" height="14" fill="#121315"/>
+<rect x="69" y="8" width="22" height="14" fill="#121315"/>
+<rect x="109" y="8" width="22" height="14" fill="#121315"/>
+<rect x="149" y="8" width="22" height="14" fill="#121315"/>
+<rect x="57" y="8" width="6" height="14" fill="#3d4146"/>
+<rect x="97" y="8" width="6" height="14" fill="#3d4146"/>
+<rect x="137" y="8" width="6" height="14" fill="#3d4146"/>
+<rect x="11" y="298" width="178" height="14" fill="#2a2d31"/>
+<rect x="29" y="298" width="22" height="14" fill="#121315"/>
+<rect x="69" y="298" width="22" height="14" fill="#121315"/>
+<rect x="109" y="298" width="22" height="14" fill="#121315"/>
+<rect x="149" y="298" width="22" height="14" fill="#121315"/>
+<rect x="57" y="298" width="6" height="14" fill="#3d4146"/>
+<rect x="97" y="298" width="6" height="14" fill="#3d4146"/>
+<rect x="137" y="298" width="6" height="14" fill="#3d4146"/>
+<rect x="34" y="6" width="12" height="4" fill="#000"/><rect x="34" y="310" width="12" height="4" fill="#000"/>
+<rect x="74" y="6" width="12" height="4" fill="#000"/><rect x="74" y="310" width="12" height="4" fill="#000"/>
+<rect x="114" y="6" width="12" height="4" fill="#000"/><rect x="114" y="310" width="12" height="4" fill="#000"/>
+<rect x="154" y="6" width="12" height="4" fill="#000"/><rect x="154" y="310" width="12" height="4" fill="#000"/>
+<rect x="10" y="94" width="180" height="134" fill="url(#contactor-drk)" stroke="#16181b" stroke-width="1.2"/>
+<text x="22" y="112" font-family="sans-serif" font-size="10" font-weight="800" fill="#e9ebee" letter-spacing=".5">CJX2-0901</text>
+<text x="178" y="112" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#aeb4bb">9 A</text>
+<rect x="18" y="122" width="40" height="44" rx="2" fill="#15171a"/>
+<rect x="20" y="124" width="36" height="40" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="23" y="127" width="8" height="34" fill="#fff" opacity=".18"/>
+<rect x="142" y="122" width="40" height="44" rx="2" fill="#15171a"/>
+<rect x="144" y="124" width="36" height="40" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="147" y="127" width="8" height="34" fill="#fff" opacity=".18"/>
+<rect x="26" y="174" width="18" height="16" fill="#1a1c1f"/><rect x="156" y="174" width="18" height="16" fill="#1a1c1f"/>
+<rect x="60" y="114" width="80" height="70" rx="2" fill="#0b0c0d"/>
+<g data-show="!out.closed">
+<rect x="62" y="168" width="76" height="10" fill="#000" opacity=".6"/>
+<rect x="62" y="116" width="76" height="52" rx="2" fill="#15171a" stroke="#000"/>
+<rect x="65" y="119" width="33" height="46" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="102" y="119" width="33" height="46" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="68" y="122" width="7" height="40" fill="#fff" opacity=".18"/>
+<path d="M63 117 H137" stroke="#fff" stroke-width="1.5" opacity=".35"/>
+<rect x="84" y="124" width="32" height="34" rx="2" fill="#111" stroke="#000"/>
+<rect x="86" y="126" width="28" height="30" rx="1" fill="#2e9e4f"/>
+<text x="100" y="149" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="900" fill="#fff">O</text>
+<text x="100" y="178" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#8d939b">OFF</text>
+</g>
+<g data-show="out.closed">
+<rect x="63" y="117" width="74" height="64" rx="1" fill="none" stroke="#000" stroke-width="6" opacity=".7"/>
+<g transform="translate(100 142) scale(.84) translate(-100 -142)">
+<rect x="62" y="116" width="76" height="52" rx="2" fill="#15171a" stroke="#000"/>
+<rect x="65" y="119" width="33" height="46" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="102" y="119" width="33" height="46" rx="2" fill="url(#contactor-win)" stroke="#0e1f40"/>
+<rect x="68" y="122" width="7" height="40" fill="#fff" opacity=".18"/>
+<rect x="62" y="116" width="76" height="52" rx="2" fill="#000" opacity="0.42"/>
+<rect x="84" y="124" width="32" height="34" rx="2" fill="#111" stroke="#000"/>
+<rect x="86" y="126" width="28" height="30" rx="1" fill="#d6332a"/>
+<text x="100" y="149" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="900" fill="#fff">I</text>
+</g>
+<text x="100" y="180" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#ff8a80">ON</text>
+</g>
+<rect x="56" y="188" width="88" height="32" rx="2" fill="#f2f3f5" stroke="#16181b" stroke-width="1.2"/>
+<text x="100" y="201" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a">BOBINA</text>
+<text x="100" y="215" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#16181b" data-text="param.coil">24VDC</text>
+<rect x="23" y="49" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="26.0" y="52.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="40" cy="66" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M34.0 66H46.0M40 60.0V72.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="1" cx="40" cy="66" r="11"/>
+<text x="40" y="45" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">1/L1</text>
+<rect x="63" y="49" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="66.0" y="52.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="80" cy="66" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M74.0 66H86.0M80 60.0V72.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="3" cx="80" cy="66" r="11"/>
+<text x="80" y="45" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">3/L2</text>
+<rect x="103" y="49" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="106.0" y="52.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="120" cy="66" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M114.0 66H126.0M120 60.0V72.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="5" cx="120" cy="66" r="11"/>
+<text x="120" y="45" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">5/L3</text>
+<rect x="143" y="49" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="146.0" y="52.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="160" cy="66" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M153.9 66H166.1M160 60.0V72.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="21" cx="160" cy="66" r="11"/>
+<text x="160" y="45" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">21 NC</text>
+<rect x="23" y="237" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="26.0" y="240.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="40" cy="254" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M34.0 254H46.0M40 247.9V260.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="2" cx="40" cy="254" r="11"/>
+<text x="40" y="282" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">2/T1</text>
+<rect x="63" y="237" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="66.0" y="240.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="80" cy="254" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M74.0 254H86.0M80 247.9V260.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="4" cx="80" cy="254" r="11"/>
+<text x="80" y="282" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">4/T2</text>
+<rect x="103" y="237" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="106.0" y="240.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="120" cy="254" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M114.0 254H126.0M120 247.9V260.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="6" cx="120" cy="254" r="11"/>
+<text x="120" y="282" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">6/T3</text>
+<rect x="143" y="237" width="34" height="34" rx="3" fill="#c9ced4" stroke="#8a929c"/>
+<rect x="146.0" y="240.0" width="28.0" height="28.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="160" cy="254" r="11.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M153.9 254H166.1M160 247.9V260.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="22" cx="160" cy="254" r="11"/>
+<text x="160" y="282" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#16181b">22 NC</text>
+<g data-show="damaged">
+<rect x="10" y="8" width="180" height="304" rx="5" fill="#9a6a2e" opacity=".28"/>
+<ellipse cx="100" cy="176" rx="104" ry="118" fill="url(#contactor-soot)"/>
+<path d="M58 222 q3 6 0 10 M120 224 q-2 5 1 8" stroke="#1a0f08" stroke-width="4" stroke-linecap="round" fill="none" opacity=".7"/>
+<rect x="56" y="188" width="88" height="32" rx="2" fill="#2a1d14" stroke="#000"/>
+<text x="100" y="208" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#ffb199">BOBINA QUEMADA</text>
+</g>
+<rect x="7" y="1" width="26" height="26" rx="3" fill="#2a2d31" stroke="#16181b" stroke-width="1.2"/>
+<rect x="9.0" y="3.0" width="22.0" height="22.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="20" cy="14" r="8.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M15.6 14H24.4M20 9.6V18.4" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="A1" cx="20" cy="14" r="11"/>
+<rect x="167" y="293" width="26" height="26" rx="3" fill="#2a2d31" stroke="#16181b" stroke-width="1.2"/>
+<rect x="169.0" y="295.0" width="22.0" height="22.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="180" cy="306" r="8.0" fill="url(#contactor-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M175.6 306H184.4M180 301.6V310.4" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="A2" cx="180" cy="306" r="11"/>
+<text x="38" y="30" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b">A1</text>
+<text x="162" y="309" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="800" fill="#f2f3f5">A2</text>
+</svg>

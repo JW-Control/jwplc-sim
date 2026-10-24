@@ -35,6 +35,8 @@ for (const d of ["actuales", "placa", "plantillas", "referencias"]) mkdirSync(jo
 const ACTIVE = {
   "pushbutton-no": { pressed: true },
   "pushbutton-nc": { pressed: true },
+  "pushbutton-nono": { pressed: true },
+  "pushbutton-nonc": { pressed: true },
   "selector-2": { position: 1 },
   "selector-3": { position: 1 },
   "limit-switch": { actuated: true },
@@ -74,30 +76,59 @@ const browser = await chromium.launch(exe ? { executablePath: exe } : {});
 const page = await browser.newPage({ deviceScaleFactor: 2 });
 const css = readFileSync(join(ROOT, "app", "renderer", "style.css"), "utf8");
 await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body style="background:#101317"></body></html>`);
-await page.addScriptTag({ path: join(ROOT, "app", "renderer", "scene-symbols.js") });
+// Plantillas .svg de la app (mismo criterio que scene:symbols de app/main.mjs).
+const ASSETS = join(ROOT, "app", "renderer", "assets", "devices");
+const builtin = new Set(builtinDevices.map((d) => d.type.split("/")[1]));
+const templates = {};
+for (const f of existsSync(ASSETS) ? readdirSync(ASSETS).filter((x) => x.endsWith(".svg")) : []) {
+  const name = f.slice(0, -4);
+  const key = !name.includes("__") || builtin.has(name.split("__")[0]) ? `jwsim/${name}` : name.replace("__", "/");
+  templates[key] = readFileSync(join(ASSETS, f), "utf8");
+}
+const loadSymbols = async () => {
+  await page.addScriptTag({ path: join(ROOT, "app", "renderer", "scene-symbols.js") });
+  await page.evaluate((t) => Object.entries(t).forEach(([k, v]) => window.JwsimSymbols.registerTemplate(k, v)), templates);
+};
+await loadSymbols();
 // Estilos de los rótulos, para que cada .svg se vea igual fuera de la app.
 const symCss = [...css.matchAll(/\.dev text\.sym-[^{]+\{[^}]*\}/g)].map((m) => m[0].replaceAll(".dev ", "")).join("\n");
 
 for (const d of devices) {
   const short = d.type.split("/")[1];
-  const params = Object.fromEntries((d.parameters ?? []).map((p) => [p.id, p.default]));
-  const lay = await page.evaluate(([t, def]) => window.JwsimSymbols.layout(t, def), [d.type, { terminals: d.terminals }]);
-  info[d.type].tamano = { ancho: lay.w, alto: lay.h };
-  info[d.type].bornes = info[d.type].bornes.map((b) => ({ ...b, x: lay.terms[b.id]?.x, lado: lay.terms[b.id]?.side === "b" ? "abajo" : "arriba" }));
-  const states = [["reposo", {}], ["activo", ACTIVE[short] ?? {}]];
-  if (short.startsWith("power")) states.push(["disparada", {}]);
-  for (const [state, outputs] of states) {
-    const st = { outputs, contacts: {}, damaged: [], tripped: state === "disparada" };
-    const inner = await page.evaluate(([t, l, s, p]) => window.JwsimSymbols.draw(t, l, s, p, null), [d.type, lay, st, params]);
-    const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 ${lay.w + 20} ${lay.h + 20}" width="${(lay.w + 20) * 2}" height="${(lay.h + 20) * 2}">` +
-      `<style>text{text-anchor:middle;font-family:sans-serif}\n${symCss}</style><g class="dev">${inner}</g></svg>`;
-    writeFileSync(join(OUT, "actuales", `${short}-${state}.svg`), svg);
-    await page.setContent(`<html><body style="margin:0;background:#101317">${svg}</body></html>`);
-    await (await page.$("svg")).screenshot({ path: join(OUT, "actuales", `${short}-${state}.png`), omitBackground: false });
+  const defaults = Object.fromEntries((d.parameters ?? []).map((p) => [p.id, p.default]));
+  const def = { terminals: d.terminals, parameters: d.parameters };
+  // Variantes: un valor de un parámetro de lista que tiene su propia plantilla.
+  const variants = [["", defaults]];
+  for (const prm of d.parameters ?? []) {
+    if (prm.type !== "enum") continue;
+    for (const v of prm.options) {
+      const params = { ...defaults, [prm.id]: v };
+      const key = await page.evaluate(([t, df, p]) => window.JwsimSymbols.templateKey(t, df, p), [d.type, def, params]);
+      if (key?.includes("__") && v !== prm.default) variants.push([`-${String(v).toLowerCase().replace(/[^a-z0-9]/g, "")}`, params]);
+    }
   }
-  await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body></body></html>`);
-  await page.addScriptTag({ path: join(ROOT, "app", "renderer", "scene-symbols.js") });
+  info[d.type].variantes = [];
+  for (const [suffix, params] of variants) {
+    const lay = await page.evaluate(([t, df, p]) => window.JwsimSymbols.layout(t, df, p), [d.type, def, params]);
+    const entry = { archivo: `${short}${suffix}`, parametros: suffix ? params : undefined, plantilla: lay.template ?? null, tamano: { ancho: lay.w, alto: lay.h },
+      bornes: Object.entries(lay.terms).map(([id, t]) => ({ id, x: t.x, lado: t.side === "b" ? "abajo" : "arriba" })) };
+    info[d.type].variantes.push(entry);
+    const states = [["reposo", {}], ["activo", ACTIVE[short] ?? {}]];
+    if (short.startsWith("power")) states.push(["disparada", {}]);
+    if (["lamp", "contactor"].includes(short)) states.push(["danado", {}]);
+    for (const [state, outputs] of states) {
+      const st = { outputs, contacts: {}, damaged: state === "danado" ? ["x"] : [], tripped: state === "disparada" };
+      const inner = await page.evaluate(([t, l, s, p, df]) => window.JwsimSymbols.draw(t, l, s, p, df), [d.type, lay, st, params, def]);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 ${lay.w + 20} ${lay.h + 20}" width="${(lay.w + 20) * 2}" height="${(lay.h + 20) * 2}">` +
+        `<style>.dev text:not(.tpl *){text-anchor:middle;font-family:sans-serif}\n${symCss}</style><g class="dev">${inner}</g></svg>`;
+      writeFileSync(join(OUT, "actuales", `${short}${suffix}-${state}.svg`), svg);
+      await page.setContent(`<html><body style="margin:0;background:#101317">${svg}</body></html>`);
+      await (await page.$("svg")).screenshot({ path: join(OUT, "actuales", `${short}${suffix}-${state}.png`), omitBackground: false });
+    }
+    await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body></body></html>`);
+    await loadSymbols();
+  }
 }
 await browser.close();
 
@@ -119,7 +150,9 @@ Para rehacer los símbolos de los dispositivos de la escena (o crear nuevos).
    \`x\` y el lado actuales), parámetros, acciones y salidas. Se puede cambiar
    el tamaño y la posición de los bornes (siempre \`x\` múltiplo de 20); los
    nombres de los bornes, acciones y salidas son los de la definición.
-3. \`actuales/\`: cómo se ven hoy, en reposo y activos (punto de partida).
+3. \`actuales/\`: cómo se ven hoy, en reposo, activos y (si aplica) dañados o
+   disparados, una vez por variante. En \`dispositivos.json\`, \`plantilla: null\`
+   indica que todavía se dibuja en código (falta su símbolo).
 4. \`plantillas/pushbutton-no.svg\`: un símbolo completo que cumple el contrato.
 5. \`placa/jwplc-basic.svg\`: la placa, para mantener el mismo estilo.
 6. \`referencias/\`: el estilo buscado (equipos de tablero vistos de frente).
