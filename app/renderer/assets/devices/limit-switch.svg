@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Fin de carrera Telemecanique XCKJ10511 (palanca de rodillo), vista frontal segun fotos de JW Control. Escala 4 px/mm. -->
+<!-- Fin de carrera Telemecanique XCKJ10511 (palanca de rodillo), vista frontal segun fotos y plano del fabricante. Escala 4 px/mm. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 620">
 <defs>
 <linearGradient id="limit-switch-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
@@ -16,76 +16,79 @@
 <linearGradient id="limit-switch-cov" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a5290"/><stop offset=".5" stop-color="#2f4580"/><stop offset="1" stop-color="#26396b"/></linearGradient>
 <linearGradient id="limit-switch-head" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9a9fa4"/><stop offset=".25" stop-color="#d4d7d9"/><stop offset=".7" stop-color="#bfc3c6"/><stop offset="1" stop-color="#8e9398"/></linearGradient>
 <linearGradient id="limit-switch-arm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f9499"/><stop offset=".4" stop-color="#e2e4e6"/><stop offset="1" stop-color="#9da2a7"/></linearGradient>
+<radialGradient id="limit-switch-cone" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#eceef0"/><stop offset=".55" stop-color="#d0d3d6"/><stop offset=".8" stop-color="#a7acb1"/><stop offset="1" stop-color="#7c8186"/></radialGradient>
 <radialGradient id="limit-switch-roll" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#3a3d42"/><stop offset=".7" stop-color="#1a1c1f"/><stop offset="1" stop-color="#0c0d0e"/></radialGradient>
 <radialGradient id="limit-switch-nut" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#f1f2f3"/><stop offset=".6" stop-color="#b9bdc1"/><stop offset="1" stop-color="#7d8287"/></radialGradient>
 </defs>
-<rect x="1" y="192" width="158" height="342" rx="8" fill="#000" opacity=".25"/>
-<path d="M1 198 Q1 190 9 190 H151 Q159 190 159 198 V522 Q159 530 151 530 H9 Q1 530 1 522 Z" fill="url(#limit-switch-body)" stroke="#0f1630" stroke-width="1.4"/>
-<rect x="8" y="230" width="12" height="20" rx="5" fill="#0d1330" stroke="#3a4a7a" stroke-width=".8"/>
-<rect x="8" y="480" width="12" height="20" rx="5" fill="#0d1330" stroke="#3a4a7a" stroke-width=".8"/>
-<rect x="140" y="230" width="12" height="20" rx="5" fill="#0d1330" stroke="#3a4a7a" stroke-width=".8"/>
-<rect x="140" y="480" width="12" height="20" rx="5" fill="#0d1330" stroke="#3a4a7a" stroke-width=".8"/>
-<circle cx="80" cy="252" r="7.0" fill="url(#limit-switch-scr)" stroke="#16181b" stroke-width="1"/><path d="M76.2 252H83.8M80 248.2V255.8" stroke="#16181b" stroke-width="1.8" stroke-linecap="round"/>
-<rect x="18" y="264" width="124" height="196" rx="7" fill="url(#limit-switch-cov)" stroke="#1a2650" stroke-width="1.2"/>
-<rect x="20" y="266" width="120" height="192" rx="6" fill="none" stroke="#5d74b0" stroke-width=".8" opacity=".6"/>
-<circle cx="80" cy="515" r="7.0" fill="url(#limit-switch-scr)" stroke="#16181b" stroke-width="1"/><path d="M76.2 515H83.8M80 511.1V518.9" stroke="#16181b" stroke-width="1.8" stroke-linecap="round"/>
+<rect x="1" y="224.0" width="158" height="310.0" rx="7" fill="#000" opacity=".25"/>
+<rect x="1" y="222.0" width="158" height="310.0" rx="7" fill="url(#limit-switch-body)" stroke="#0f1630" stroke-width="1.4"/>
+<circle cx="20" cy="252" r="10.6" fill="#0d1330" stroke="#3a4a7a" stroke-width=".9"/>
+<circle cx="20" cy="492" r="10.6" fill="#0d1330" stroke="#3a4a7a" stroke-width=".9"/>
+<circle cx="140" cy="252" r="10.6" fill="#0d1330" stroke="#3a4a7a" stroke-width=".9"/>
+<circle cx="140" cy="492" r="10.6" fill="#0d1330" stroke="#3a4a7a" stroke-width=".9"/>
+<circle cx="80" cy="250.0" r="7.0" fill="url(#limit-switch-scr)" stroke="#16181b" stroke-width="1"/><path d="M76.2 250.0H83.8M80 246.2V253.8" stroke="#16181b" stroke-width="1.8" stroke-linecap="round"/>
+<rect x="16" y="264" width="128" height="204" rx="7" fill="url(#limit-switch-cov)" stroke="#1a2650" stroke-width="1.2"/>
+<rect x="18" y="266" width="124" height="200" rx="6" fill="none" stroke="#5d74b0" stroke-width=".8" opacity=".6"/>
+<circle cx="80" cy="506.0" r="7.0" fill="url(#limit-switch-scr)" stroke="#16181b" stroke-width="1"/><path d="M76.2 506.0H83.8M80 502.1V509.9" stroke="#16181b" stroke-width="1.8" stroke-linecap="round"/>
 <g id="limit-switch-logo"></g>
 <text x="80" y="322" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="#e9edf6">XCKJ</text>
-<line x1="24" y1="327" x2="136" y2="327" stroke="#e9edf6" stroke-width=".8"/>
-<line x1="110" y1="327" x2="110" y2="452" stroke="#e9edf6" stroke-width=".8"/>
-<text x="23" y="337" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">EN / IEC 60947-5-1</text>
-<text x="23" y="346" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">Ui : 500V Uimp : 6kV</text>
-<text x="23" y="355" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">AC15  240V  3A</text>
-<line x1="24" y1="358" x2="110" y2="358" stroke="#e9edf6" stroke-width=".8"/>
-<text x="23" y="368" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">EN 50041</text>
-<line x1="24" y1="371" x2="110" y2="371" stroke="#e9edf6" stroke-width=".8"/>
+<line x1="22" y1="327" x2="138" y2="327" stroke="#e9edf6" stroke-width=".8"/>
+<line x1="110" y1="327" x2="110" y2="454" stroke="#e9edf6" stroke-width=".8"/>
+<text x="22" y="337" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">EN / IEC 60947-5-1</text>
+<text x="22" y="346" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">Ui : 500V Uimp : 6kV</text>
+<text x="22" y="355" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">AC15  240V  3A</text>
+<line x1="22" y1="359" x2="110" y2="359" stroke="#e9edf6" stroke-width=".8"/>
+<text x="22" y="368" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">EN 50041</text>
+<line x1="22" y1="372" x2="110" y2="372" stroke="#e9edf6" stroke-width=".8"/>
 <text x="113" y="340" font-family="sans-serif" font-size="9" font-weight="600" fill="#e9edf6">IP 66</text>
-<line x1="110" y1="344" x2="136" y2="344" stroke="#e9edf6" stroke-width=".8"/>
-<circle cx="123" cy="358" r="6" fill="none" stroke="#e9edf6" stroke-width=".9"/>
-<circle cx="31" cy="383" r="7" fill="none" stroke="#e9edf6" stroke-width="1"/>
-<text x="41" y="380" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">LISTED</text>
-<text x="41" y="387" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">170M</text>
-<text x="41" y="394" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">IND. CONT. EQ.</text>
-<circle cx="31" cy="414" r="7" fill="none" stroke="#e9edf6" stroke-width="1"/>
-<text x="41" y="412" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">Enc. Type 4</text>
-<text x="41" y="421" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">A300 Q300</text>
-<text x="23" y="446" font-family="sans-serif" font-size="7.5" fill="#e9edf6">Made in France</text>
-<text x="114" y="448" font-family="sans-serif" font-size="12" fill="#e9edf6">CE</text>
-<polygon points="101.0,550.0 90.5,568.2 69.5,568.2 59.0,550.0 69.5,531.8 90.5,531.8" fill="url(#limit-switch-nut)" stroke="#16181b" stroke-width="1"/>
-<rect x="68" y="562" width="24" height="10" rx="3" fill="#2b2e33" stroke="#16181b"/>
-<rect x="72" y="571" width="16" height="9" fill="#3a3e44" stroke="#16181b" stroke-width=".8"/>
-<path d="M75.2 580 C72.0 592 40 588 40 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
+<line x1="110" y1="344" x2="138" y2="344" stroke="#e9edf6" stroke-width=".8"/>
+<circle cx="123" cy="359" r="6" fill="none" stroke="#e9edf6" stroke-width=".9"/>
+<circle cx="30" cy="384" r="7" fill="none" stroke="#e9edf6" stroke-width="1"/>
+<text x="40" y="381" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">LISTED</text>
+<text x="40" y="388" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">170M</text>
+<text x="40" y="395" font-family="sans-serif" font-size="7" font-weight="600" fill="#e9edf6">IND. CONT. EQ.</text>
+<circle cx="30" cy="416" r="7" fill="none" stroke="#e9edf6" stroke-width="1"/>
+<text x="40" y="414" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">Enc. Type 4</text>
+<text x="40" y="423" font-family="sans-serif" font-size="8" font-weight="600" fill="#e9edf6">A300 Q300</text>
+<text x="22" y="448" font-family="sans-serif" font-size="7.5" fill="#e9edf6">Made in France</text>
+<text x="114" y="450" font-family="sans-serif" font-size="12" fill="#e9edf6">CE</text>
+<polygon points="101.0,552.0 90.5,570.2 69.5,570.2 59.0,552.0 69.5,533.8 90.5,533.8" fill="url(#limit-switch-nut)" stroke="#16181b" stroke-width="1"/>
+<rect x="68" y="564" width="24" height="10" rx="3" fill="#2b2e33" stroke="#16181b"/>
+<rect x="72" y="573" width="16" height="9" fill="#3a3e44" stroke="#16181b" stroke-width=".8"/>
+<path d="M75.2 582 C72.0 594 40 590 40 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
 <rect x="36" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
 <rect x="35" y="616" width="10" height="4" fill="#16181b"/>
-<text x="40" y="598" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#2b2f35">13</text>
+<text x="40" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">13</text>
 <circle class="jw-term" data-term="13" cx="40" cy="608" r="11"/>
-<path d="M77.6 580 C76.0 592 60 588 60 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
+<path d="M77.6 582 C76.0 594 60 590 60 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
 <rect x="56" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
 <rect x="55" y="616" width="10" height="4" fill="#16181b"/>
-<text x="60" y="598" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#2b2f35">14</text>
+<text x="60" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">14</text>
 <circle class="jw-term" data-term="14" cx="60" cy="608" r="11"/>
-<path d="M82.4 580 C84.0 592 100 588 100 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
+<path d="M82.4 582 C84.0 594 100 590 100 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
 <rect x="96" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
 <rect x="95" y="616" width="10" height="4" fill="#16181b"/>
-<text x="100" y="598" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#2b2f35">21</text>
+<text x="100" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">21</text>
 <circle class="jw-term" data-term="21" cx="100" cy="608" r="11"/>
-<path d="M84.8 580 C88.0 592 120 588 120 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
+<path d="M84.8 582 C88.0 594 120 590 120 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
 <rect x="116" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
 <rect x="115" y="616" width="10" height="4" fill="#16181b"/>
-<text x="120" y="598" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#2b2f35">22</text>
+<text x="120" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">22</text>
 <circle class="jw-term" data-term="22" cx="120" cy="608" r="11"/>
-<rect x="17" y="94" width="126" height="104" rx="6" fill="url(#limit-switch-head)" stroke="#5f6469" stroke-width="1.2"/>
-<circle cx="25" cy="102" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>
-<circle cx="135" cy="102" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>
-<circle cx="80" cy="170" r="31" fill="#b2b6ba" stroke="#6b7075" stroke-width="1"/>
-<g data-rotate="out.actuated:0:1:0:25:80:170" data-action="actuate" data-kind="momentary">
-<path d="M64 170 V44 Q64 30 80 30 Q96 30 96 44 V170 Z" fill="url(#limit-switch-arm)" stroke="#5f6469" stroke-width="1.2"/>
-<circle cx="80" cy="170" r="24" fill="url(#limit-switch-arm)" stroke="#5f6469" stroke-width="1.2"/>
-<polygon points="93.0,170.0 86.5,181.3 73.5,181.3 67.0,170.0 73.5,158.7 86.5,158.7" fill="url(#limit-switch-nut)" stroke="#5f6469" stroke-width="1"/>
-<circle cx="80" cy="170" r="5.5" fill="#d9dcdf" stroke="#5f6469" stroke-width=".8"/>
-<line x1="76" y1="170" x2="84" y2="170" stroke="#4a4f54" stroke-width="1.4"/>
-<circle cx="80" cy="44" r="40" fill="url(#limit-switch-roll)" stroke="#000" stroke-width="1"/>
-<circle cx="80" cy="44" r="31" fill="none" stroke="#2c2f33" stroke-width="1.2"/>
-<polygon points="95.0,44.0 87.5,57.0 72.5,57.0 65.0,44.0 72.5,31.0 87.5,31.0" fill="url(#limit-switch-nut)" stroke="#5f6469" stroke-width="1"/>
+<rect x="12" y="122.0" width="136" height="106.0" rx="5" fill="url(#limit-switch-head)" stroke="#5f6469" stroke-width="1.2"/>
+<circle cx="22.0" cy="130.0" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>
+<circle cx="138.0" cy="130.0" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>
+<circle cx="80" cy="165.5" r="34.0" fill="#000" opacity=".22"/>
+<circle cx="80" cy="164" r="34.0" fill="url(#limit-switch-cone)" stroke="#6b7075" stroke-width="1"/>
+<circle cx="80" cy="164" r="25.6" fill="none" stroke="#f5f6f7" stroke-width="1" opacity=".7"/>
+<g data-rotate="out.actuated:0:1:0:25:80:164" data-action="actuate" data-kind="momentary">
+<path d="M58.0 164 L63.2 44 Q80 24 96.8 44 L102.0 164 Z" fill="url(#limit-switch-arm)" stroke="#5f6469" stroke-width="1.2"/>
+<polygon points="103.2,164.0 97.6,171.3 96.4,180.4 87.3,181.6 80.0,187.2 72.7,181.6 63.6,180.4 62.4,171.3 56.8,164.0 62.4,156.7 63.6,147.6 72.7,146.4 80.0,140.8 87.3,146.4 96.4,147.6 97.6,156.7" fill="url(#limit-switch-nut)" stroke="#5f6469" stroke-width=".9" stroke-linejoin="round"/>
+<polygon points="93.2,164.0 86.6,175.4 73.4,175.4 66.8,164.0 73.4,152.6 86.6,152.6" fill="url(#limit-switch-nut)" stroke="#5f6469" stroke-width="1"/>
+<circle cx="80" cy="164" r="6.4" fill="#d9dcdf" stroke="#5f6469" stroke-width=".8"/>
+<line x1="75.2" y1="164" x2="84.8" y2="164" stroke="#4a4f54" stroke-width="1.4"/>
+<circle cx="80" cy="44" r="44" fill="url(#limit-switch-roll)" stroke="#000" stroke-width="1"/>
+<circle cx="80" cy="44" r="34.0" fill="none" stroke="#2c2f33" stroke-width="1.2"/>
+<polygon points="95.2,44.0 87.6,57.2 72.4,57.2 64.8,44.0 72.4,30.8 87.6,30.8" fill="url(#limit-switch-nut)" stroke="#5f6469" stroke-width="1"/>
 </g>
 </svg>
