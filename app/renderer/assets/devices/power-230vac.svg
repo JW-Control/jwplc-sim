@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Red 230 VAC: interruptor termomagnetico 2P CHINT NXB-63 C16 (36 x 81 mm). Vista frontal. Escala 4 px/mm. -->
+<!-- Red 230 VAC: interruptor termomagnetico 2P CHINT NXB-63 C16, vista frontal segun foto de JW Control. Escala 4 px/mm. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 340">
 <defs>
 <linearGradient id="power-230vac-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
@@ -12,60 +12,85 @@
 <radialGradient id="power-230vac-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
 <radialGradient id="power-230vac-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
 <linearGradient id="power-230vac-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
-<linearGradient id="power-230vac-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d6d9dc"/><stop offset=".12" stop-color="#f3f4f5"/><stop offset=".88" stop-color="#f3f4f5"/><stop offset="1" stop-color="#cfd3d7"/></linearGradient>
-<linearGradient id="power-230vac-face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbfc"/><stop offset="1" stop-color="#e8eaec"/></linearGradient>
-<linearGradient id="power-230vac-lev" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2d31"/><stop offset=".45" stop-color="#4b5056"/><stop offset="1" stop-color="#1d1f22"/></linearGradient>
-<linearGradient id="power-230vac-hole" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3e43"/><stop offset="1" stop-color="#16181b"/></linearGradient>
+<linearGradient id="power-230vac-wht" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e6e8ea"/><stop offset=".1" stop-color="#fbfbfc"/><stop offset=".9" stop-color="#fbfbfc"/><stop offset="1" stop-color="#e2e5e8"/></linearGradient>
+<radialGradient id="power-230vac-boss" cx=".5" cy=".45" r=".55"><stop offset="0" stop-color="#d9dde1"/><stop offset=".72" stop-color="#eef0f2"/><stop offset="1" stop-color="#ffffff"/></radialGradient>
+<linearGradient id="power-230vac-zinc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3ecf3"/><stop offset=".45" stop-color="#9fb2c2"/><stop offset=".7" stop-color="#cfdbe5"/><stop offset="1" stop-color="#7f93a4"/></linearGradient>
+<linearGradient id="power-230vac-hdl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa0ea"/><stop offset="1" stop-color="#2e7fd6"/></linearGradient>
+<linearGradient id="power-230vac-bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f97e6"/><stop offset=".55" stop-color="#2f80d8"/><stop offset="1" stop-color="#2569b5"/></linearGradient>
 </defs>
-<rect x="8" y="10" width="144" height="326" rx="4" fill="#000" opacity=".22"/>
-<rect x="8" y="8" width="144" height="326" rx="4" fill="url(#power-230vac-body)" stroke="#16181b" stroke-width="1.6"/>
-<line x1="80" y1="9" x2="80" y2="333" stroke="#9aa0a6" stroke-width="1.2"/>
-<rect x="10" y="86" width="140" height="168" rx="3" fill="url(#power-230vac-face)" stroke="#8d939a" stroke-width="1.2"/>
-<rect x="25" y="29" width="30" height="30" rx="3" fill="url(#power-230vac-hole)"/><circle cx="40" cy="44" r="9.5" fill="url(#power-230vac-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M34.8 44H45.2M40 38.8V49.2" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/><path d="M37.1 41.1L42.9 46.9M42.9 41.1L37.1 46.9" stroke="#16181b" stroke-width=".9" opacity=".6"/>
-<rect x="36" y="0" width="8" height="34" fill="#7a4a22" stroke="#16181b" stroke-width=".8"/>
-<rect x="34" y="22" width="12" height="12" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<rect x="105" y="29" width="30" height="30" rx="3" fill="url(#power-230vac-hole)"/><circle cx="120" cy="44" r="9.5" fill="url(#power-230vac-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M114.8 44H125.2M120 38.8V49.2" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/><path d="M117.2 41.1L122.8 46.9M122.8 41.1L117.2 46.9" stroke="#16181b" stroke-width=".9" opacity=".6"/>
-<rect x="116" y="0" width="8" height="34" fill="#2f62d6" stroke="#16181b" stroke-width=".8"/>
-<rect x="114" y="22" width="12" height="12" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<text x="18" y="44" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">1</text>
-<text x="142" y="44" text-anchor="start" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">3</text>
+<rect x="1" y="10" width="158" height="324" rx="5" fill="#000" opacity=".2"/>
+<rect x="1" y="8" width="78" height="324" rx="5" fill="url(#power-230vac-wht)" stroke="#9aa1a8" stroke-width="1.2"/>
+<rect x="81" y="8" width="78" height="324" rx="5" fill="url(#power-230vac-wht)" stroke="#9aa1a8" stroke-width="1.2"/>
+<rect x="79" y="8" width="2" height="324" fill="#b9bfc5"/>
+<line x1="3" y1="67" x2="157" y2="67" stroke="#c9ced3" stroke-width="1.6"/>
+<line x1="3" y1="69" x2="157" y2="69" stroke="#ffffff" stroke-width="1"/>
+<line x1="3" y1="265" x2="157" y2="265" stroke="#c9ced3" stroke-width="1.6"/>
+<line x1="3" y1="267" x2="157" y2="267" stroke="#ffffff" stroke-width="1"/>
+<circle cx="40" cy="32" r="17" fill="url(#power-230vac-boss)" stroke="#c4c9ce" stroke-width="1"/><circle cx="40" cy="32" r="11.5" fill="url(#power-230vac-zinc)" stroke="#5f6f7d" stroke-width="1"/><line x1="40" y1="32" x2="49.2" y2="35.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="43.8" y2="41.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="36.2" y2="41.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="30.8" y2="35.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="30.8" y2="28.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="36.2" y2="22.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="43.8" y2="22.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="32" x2="49.2" y2="28.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><path d="M33 32H47M40 25V39" stroke="#46525d" stroke-width="3" stroke-linecap="round"/><rect x="37.5" y="29.5" width="5" height="5" fill="#5b6873"/>
+<rect x="36" y="0" width="8" height="22" fill="#7a4a22" stroke="#16181b" stroke-width=".8"/>
+<rect x="35" y="16" width="10" height="10" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<circle cx="120" cy="32" r="17" fill="url(#power-230vac-boss)" stroke="#c4c9ce" stroke-width="1"/><circle cx="120" cy="32" r="11.5" fill="url(#power-230vac-zinc)" stroke="#5f6f7d" stroke-width="1"/><line x1="120" y1="32" x2="129.2" y2="35.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="123.8" y2="41.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="116.2" y2="41.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="110.8" y2="35.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="110.8" y2="28.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="116.2" y2="22.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="123.8" y2="22.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="32" x2="129.2" y2="28.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><path d="M113 32H127M120 25V39" stroke="#46525d" stroke-width="3" stroke-linecap="round"/><rect x="117.5" y="29.5" width="5" height="5" fill="#5b6873"/>
+<rect x="116" y="0" width="8" height="22" fill="#2f62d6" stroke="#16181b" stroke-width=".8"/>
+<rect x="115" y="16" width="10" height="10" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<path d="M5 72 H68 L76 80 V94 H5 Z" fill="#2e7fd6"/>
 <g id="power-230vac-logo"></g>
-<text x="80" y="104" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#16181b">NXB-63</text>
-<text x="44" y="126" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="800" fill="#16181b">C16</text>
-<rect x="96" y="111" width="38" height="18" fill="none" stroke="#16181b" stroke-width="1.1"/>
-<text x="115" y="124" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#16181b">6000</text>
-<text x="80" y="242" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#3c4146">230/400V~  IEC/EN 60898-1</text>
-<rect x="35" y="136" width="18" height="9" rx="1.5" fill="#1d1f22"/>
-<rect data-show="!tripped" x="37" y="137.5" width="14" height="6" fill="#e0392b"/>
-<rect data-show="tripped" x="37" y="137.5" width="14" height="6" fill="#2fae4f"/>
-<rect x="107" y="136" width="18" height="9" rx="1.5" fill="#1d1f22"/>
-<rect data-show="!tripped" x="109" y="137.5" width="14" height="6" fill="#e0392b"/>
-<rect data-show="tripped" x="109" y="137.5" width="14" height="6" fill="#2fae4f"/>
-<text x="80" y="160" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#c62f24">I  ON</text>
-<text x="80" y="234" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#2a8f45">O  OFF</text>
-<rect x="28" y="166" width="32" height="56" rx="4" fill="url(#power-230vac-hole)" stroke="#16181b" stroke-width="1"/>
-<rect x="100" y="166" width="32" height="56" rx="4" fill="url(#power-230vac-hole)" stroke="#16181b" stroke-width="1"/>
-<g data-show="!tripped">
-<rect x="32" y="169" width="24" height="26" rx="3" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1.2"/>
-<line x1="36" y1="175" x2="52" y2="175" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="179" x2="52" y2="179" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="183" x2="52" y2="183" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="187" x2="52" y2="187" stroke="#6c7278" stroke-width="1"/>
-<rect x="104" y="169" width="24" height="26" rx="3" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1.2"/>
-<line x1="108" y1="175" x2="124" y2="175" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="179" x2="124" y2="179" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="183" x2="124" y2="183" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="187" x2="124" y2="187" stroke="#6c7278" stroke-width="1"/>
-<rect x="56" y="178" width="48" height="8" rx="2" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1"/>
-</g><g data-show="tripped">
-<rect x="32" y="193" width="24" height="26" rx="3" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1.2"/>
-<line x1="36" y1="199" x2="52" y2="199" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="203" x2="52" y2="203" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="207" x2="52" y2="207" stroke="#6c7278" stroke-width="1"/><line x1="36" y1="211" x2="52" y2="211" stroke="#6c7278" stroke-width="1"/>
-<rect x="104" y="193" width="24" height="26" rx="3" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1.2"/>
-<line x1="108" y1="199" x2="124" y2="199" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="203" x2="124" y2="203" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="207" x2="124" y2="207" stroke="#6c7278" stroke-width="1"/><line x1="108" y1="211" x2="124" y2="211" stroke="#6c7278" stroke-width="1"/>
-<rect x="56" y="202" width="48" height="8" rx="2" fill="url(#power-230vac-lev)" stroke="#16181b" stroke-width="1"/>
+<rect x="85" y="73" width="70" height="7" rx="1" fill="#2e7fd6"/>
+<text x="7" y="112" font-family="sans-serif" font-size="12.5" fill="#3a3f45">NXB-63</text>
+<circle cx="66" cy="108" r="5.5" fill="none" stroke="#3a3f45" stroke-width=".9"/>
+<text x="7" y="125" font-family="sans-serif" font-size="12.5" fill="#3a3f45">C16</text>
+<line x1="7" y1="128" x2="32" y2="128" stroke="#3a3f45" stroke-width=".8"/>
+<text x="7" y="136" font-family="sans-serif" font-size="7" fill="#3a3f45">400V~</text>
+<text x="7" y="144" font-family="sans-serif" font-size="7" fill="#3a3f45">50Hz</text>
+<text x="7" y="152" font-family="sans-serif" font-size="7" fill="#3a3f45">6000A</text>
+<line x1="7" y1="154" x2="32" y2="154" stroke="#3a3f45" stroke-width=".8"/>
+<text x="7" y="162" font-family="sans-serif" font-size="7" fill="#3a3f45">IEC60898-1</text>
+<text x="7" y="170" font-family="sans-serif" font-size="7" fill="#3a3f45">GB/T 10963.1</text>
+<text x="57" y="162" font-family="sans-serif" font-size="7" fill="#3a3f45">↕ I ON</text>
+<text x="57" y="170" font-family="sans-serif" font-size="7" fill="#3a3f45">  O OFF</text>
+<text x="107" y="146" font-family="sans-serif" font-size="7" fill="#3a3f45">1</text>
+<text x="107" y="170" font-family="sans-serif" font-size="7" fill="#3a3f45">2</text>
+<path d="M112 148 v4 l-3 3 m3 -3 m0 0 v2 q3 2 0 4 q-3 2 0 4 v3" fill="none" stroke="#3a3f45" stroke-width=".9"/>
+<text x="121" y="146" font-family="sans-serif" font-size="7" fill="#3a3f45">3</text>
+<text x="121" y="170" font-family="sans-serif" font-size="7" fill="#3a3f45">4</text>
+<path d="M126 148 v4 l-3 3 m3 -3 m0 0 v2 q3 2 0 4 q-3 2 0 4 v3" fill="none" stroke="#3a3f45" stroke-width=".9"/>
+<rect x="40" y="124" width="12" height="8" rx="1.2" fill="#0e2a1c"/>
+<rect data-show="!out.on" x="41" y="125" width="10" height="6" fill="#1f7a4a"/>
+<rect data-show="out.on" x="41" y="125" width="10" height="6" fill="#d23a2c"/>
+<rect x="120" y="124" width="12" height="8" rx="1.2" fill="#0e2a1c"/>
+<rect data-show="!out.on" x="121" y="125" width="10" height="6" fill="#1f7a4a"/>
+<rect data-show="out.on" x="121" y="125" width="10" height="6" fill="#d23a2c"/>
+<rect x="3" y="176" width="154" height="88" fill="#eef0f2"/>
+<rect x="9" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>
+<rect x="60" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>
+<rect x="89" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>
+<rect x="140" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>
+<g data-show="out.on">
+<rect x="21" y="200" width="38" height="58" rx="2" fill="url(#power-230vac-hdl)" stroke="#1f5ea6" stroke-width="1"/>
+<rect x="21" y="252" width="38" height="6" fill="#1e4f8a" opacity=".55"/>
+<rect x="101" y="200" width="38" height="58" rx="2" fill="url(#power-230vac-hdl)" stroke="#1f5ea6" stroke-width="1"/>
+<rect x="101" y="252" width="38" height="6" fill="#1e4f8a" opacity=".55"/>
+<rect x="3" y="177" width="154" height="36" rx="4" fill="url(#power-230vac-bar)" stroke="#1f5ea6" stroke-width="1.2"/>
+<line x1="8" y1="184" x2="152" y2="184" stroke="#8cc0f2" stroke-width="1"/>
+<rect x="34" y="179" width="12" height="5" rx="1" fill="#163f6e"/>
+<rect x="114" y="179" width="12" height="5" rx="1" fill="#163f6e"/>
+</g><g data-show="!out.on">
+<rect x="21" y="179" width="38" height="46" rx="2" fill="url(#power-230vac-hdl)" stroke="#1f5ea6" stroke-width="1"/>
+<rect x="21" y="179" width="38" height="5" fill="#1e4f8a" opacity=".45"/>
+<rect x="101" y="179" width="38" height="46" rx="2" fill="url(#power-230vac-hdl)" stroke="#1f5ea6" stroke-width="1"/>
+<rect x="101" y="179" width="38" height="5" fill="#1e4f8a" opacity=".45"/>
+<rect x="3" y="222" width="154" height="40" rx="4" fill="url(#power-230vac-bar)" stroke="#1f5ea6" stroke-width="1.2"/>
+<line x1="8" y1="229" x2="152" y2="229" stroke="#8cc0f2" stroke-width="1"/>
+<rect x="34" y="251" width="12" height="5" rx="1" fill="#163f6e"/>
+<rect x="114" y="251" width="12" height="5" rx="1" fill="#163f6e"/>
 </g>
-<rect x="25" y="281" width="30" height="30" rx="3" fill="url(#power-230vac-hole)"/><circle cx="40" cy="296" r="9.5" fill="url(#power-230vac-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M34.8 296H45.2M40 290.8V301.2" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/><path d="M37.1 293.1L42.9 298.9M42.9 293.1L37.1 298.9" stroke="#16181b" stroke-width=".9" opacity=".6"/>
-<rect x="34" y="334" width="12" height="6" fill="#16181b"/>
-<circle class="jw-term" data-term="L" cx="40" cy="296" r="11"/>
-<text x="18" y="292" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">2</text>
-<text x="18" y="304" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="800" fill="#7a4a22">L</text>
-<rect x="105" y="281" width="30" height="30" rx="3" fill="url(#power-230vac-hole)"/><circle cx="120" cy="296" r="9.5" fill="url(#power-230vac-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M114.8 296H125.2M120 290.8V301.2" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/><path d="M117.2 293.1L122.8 298.9M122.8 293.1L117.2 298.9" stroke="#16181b" stroke-width=".9" opacity=".6"/>
-<rect x="114" y="334" width="12" height="6" fill="#16181b"/>
-<circle class="jw-term" data-term="N" cx="120" cy="296" r="11"/>
-<text x="142" y="292" text-anchor="start" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">4</text>
-<text x="142" y="304" text-anchor="start" font-family="sans-serif" font-size="9" font-weight="800" fill="#2f62d6">N</text>
+<circle cx="40" cy="305" r="17" fill="url(#power-230vac-boss)" stroke="#c4c9ce" stroke-width="1"/><circle cx="40" cy="305" r="11.5" fill="url(#power-230vac-zinc)" stroke="#5f6f7d" stroke-width="1"/><line x1="40" y1="305" x2="49.2" y2="308.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="43.8" y2="314.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="36.2" y2="314.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="30.8" y2="308.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="30.8" y2="301.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="36.2" y2="295.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="43.8" y2="295.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="40" y1="305" x2="49.2" y2="301.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><path d="M33 305H47M40 298V312" stroke="#46525d" stroke-width="3" stroke-linecap="round"/><rect x="37.5" y="302.5" width="5" height="5" fill="#5b6873"/>
+<rect x="34" y="332" width="12" height="8" fill="#16181b"/>
+<circle class="jw-term" data-term="L" cx="40" cy="305" r="11"/>
+<text x="12" y="301" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#3a3f45">2</text>
+<text x="12" y="313" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#7a4a22">L</text>
+<circle cx="120" cy="305" r="17" fill="url(#power-230vac-boss)" stroke="#c4c9ce" stroke-width="1"/><circle cx="120" cy="305" r="11.5" fill="url(#power-230vac-zinc)" stroke="#5f6f7d" stroke-width="1"/><line x1="120" y1="305" x2="129.2" y2="308.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="123.8" y2="314.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="116.2" y2="314.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="110.8" y2="308.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="110.8" y2="301.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="116.2" y2="295.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="123.8" y2="295.8" stroke="#ffffff" stroke-width=".8" opacity=".55"/><line x1="120" y1="305" x2="129.2" y2="301.2" stroke="#ffffff" stroke-width=".8" opacity=".55"/><path d="M113 305H127M120 298V312" stroke="#46525d" stroke-width="3" stroke-linecap="round"/><rect x="117.5" y="302.5" width="5" height="5" fill="#5b6873"/>
+<rect x="114" y="332" width="12" height="8" fill="#16181b"/>
+<circle class="jw-term" data-term="N" cx="120" cy="305" r="11"/>
+<text x="92" y="301" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#3a3f45">4</text>
+<text x="92" y="313" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#2f62d6">N</text>
 </svg>
