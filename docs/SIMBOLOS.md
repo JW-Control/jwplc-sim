@@ -136,8 +136,8 @@ Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 3 posiciones, contactor CJX2 (1NA y 1NC) y fuentes Mean Well MDR-60,
 HDR-60 y NDR-120. Las vistas de verificación están en `simbolos/vistas/`.
 
-G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control):
-red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
+G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control;
+aprobados el 25/10/2026): red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
 Telemecanique XCKJ10511 (cables con marcador y función NA/NC) y sensor
 inductivo Autonics PR18-8D (M18, Sn 8 mm), con la pieza arrastrable y la
 zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). Como
