@@ -6,3 +6,5 @@ node_modules/
 *.o
 *.a
 *.exe
+# Estado no volátil que la app guarda por proyecto al simular
+*.estado/
