@@ -90,6 +90,13 @@ que se espera de una o varias corridas:
   `<ms> uart0 "texto\n"`, `<ms> force Q0_3=1`, `<ms> net …`) o un archivo
   `.stim` relativo.
 - `args`: opciones extra del runner (`--rtc fijo:2026-01-01T08:00:00`, `--no-eth`).
+- `faults` (G9): fallas inyectadas, cada una con `kind`, `at_ms` (0 por
+  defecto) y opcionalmente `until_ms` (se quita en ese instante):
+  `sd-absent` (microSD retirada), `rtc-battery` (RTC sin batería: solo al
+  arrancar), `rs485-noise` (`rate` de 0 a 1 y `seed`) y, con escena,
+  `stuck` (`device`, `value`), `welded` (`device`), `burnt` (`device`) y
+  `open` (`wire`: "PS1.+V1 KM1.13"). Ejemplos en `tests/faults/`
+  (ARCHITECTURE §4.2).
 - `runs`: varias corridas seguidas con la memoria no volátil compartida
   (FRAM, NVS, SD, RTC); por ejemplo, contar arranques.
 - `expect`:

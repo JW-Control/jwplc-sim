@@ -431,6 +431,32 @@ botones de la interfaz.
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 
+### 4.2 Fallas inyectadas **[G9]**
+
+Para enseñar diagnóstico y para probar que un programa reacciona bien, se
+inyectan fallas en la escena y en la placa. Son entradas como cualquier
+otra: tienen instante, quedan en la traza y una corrida con las mismas
+fallas da el mismo hash.
+
+| Falla | Dónde | Efecto | Cómo se inyecta |
+|---|---|---|---|
+| Sensor o mando pegado (`stuck`) | escena | Se comporta como accionado (`value` true) o en reposo, haga lo que haga el usuario o el enlace mecánico | `Scene.inject`, inspector de la escena, `faults` de una prueba |
+| Relé o contactor soldado (`welded`) | escena | Los contactos se pegan en el primer cierre y no abren aunque caiga la bobina; el indicador mecánico (`closed`) los sigue | ídem |
+| Carga quemada (`burnt`) | escena | Bobina, lámpara, bobinado o sensor abiertos: no conducen | ídem |
+| Cable cortado (`open`) | escena | El cable sale de la netlist de la simulación (no del análisis estático: en el plano sigue estando) | ídem; inspector del cable |
+| microSD retirada | placa | `SD_CARD=0`: GPIO39 en alto y la tarjeta no responde; al volver arranca apagada (hace falta CMD0) | clic en el zócalo, `T SD_CARD=0`, `faults: sd-absent` |
+| RTC sin batería | placa | Al alimentar, el DS3232M no conservó nada: 2000-01-01, OSF = 1, SRAM en cero (fila 12 del MODEL.md). Un `esp_restart` no corta la alimentación | `--rtc sin-bateria`, menú Fallas de la app, `faults: rtc-battery` |
+| Ruido en RS-485 | placa | Cada byte que llega a la UART 2 sale con un bit invertido con probabilidad `rate`; splitmix64 con `seed`: reproducible. `JWSIM_RESULT` informa `rs485_corrupted` | `T noise uart2 <rate> [seed]`, mensaje `noise` del puerto, menú Fallas, `faults: rs485-noise` |
+
+En la app, con la simulación en marcha, el inspector de un equipo o de un
+cable muestra los botones de falla que le corresponden; el equipo con una
+falla lleva una marca roja, el cable cortado se dibuja punteado con ✂ y el
+diagnóstico lista las fallas activas. El menú «Fallas» de la placa tiene el
+RTC sin batería (al iniciar) y el ruido en RS-485 (en vivo). Las fallas de
+la placa quedan en la grabación (`.stim`); las de la escena, como las
+acciones de escena, no se graban todavía.
+
+
 ## 5. Mapa de hardware del JWPLC Basic
 
 Extraído del package (alpha.12, revisado con alpha.13). "Fuente" indica de dónde sale cada dato.

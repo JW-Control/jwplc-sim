@@ -1271,3 +1271,82 @@ button.io.on {
   font-size: 6px;
   font-weight: 700;
 }
+
+/* Fallas inyectadas (G9) */
+.fault-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+button.fault.on {
+  background: #5a1f1f;
+  border-color: #e05252;
+  color: #ffd7d7;
+}
+.dev-fault circle {
+  fill: #d93636;
+  stroke: #fff;
+  stroke-width: 2;
+}
+.dev .dev-fault text {
+  fill: #fff;
+  font: 700 15px sans-serif;
+  text-anchor: middle;
+}
+.wire.cut .wire-core,
+.wire.cut .wire-outline {
+  stroke-dasharray: 10 7;
+}
+.wire-cut {
+  fill: #ff6b6b;
+  font: 700 16px sans-serif;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.scene-diag li.inj {
+  color: #ffb3b3;
+}
+
+.faults-menu {
+  position: relative;
+  margin-left: auto;
+  margin-right: 8px;
+}
+.faults-menu > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.faults-menu[open] > summary {
+  border-color: #e05252;
+}
+.faults-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: 260px;
+  padding: 10px;
+  background: var(--panel, #1b1f24);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  display: grid;
+  gap: 8px;
+}
+.faults-pop label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.faults-pop select {
+  margin-left: auto;
+}
+.faults-pop p {
+  margin: 0;
+}

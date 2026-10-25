@@ -492,6 +492,16 @@ ipcMain.handle("scene:act", (_e, { device, action, value }) => {
   return !!sceneSession;
 });
 
+ipcMain.handle("scene:inject", (_e, fault) => {
+  sceneSession?.inject(fault);
+  return !!sceneSession;
+});
+
+ipcMain.handle("scene:clearFault", (_e, key) => {
+  sceneSession?.clearFault(key);
+  return !!sceneSession;
+});
+
 ipcMain.handle("scene:rearm", () => {
   sceneSession?.rearm();
   return !!sceneSession;

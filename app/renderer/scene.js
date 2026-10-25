@@ -366,6 +366,30 @@
 
   // Con tensión: el cable está en el polo positivo (L+ o L) de una fuente en
   // servicio, con la simulación en marcha.
+  // Cable cortado por una falla inyectada (G9).
+  const wireKey = (w) => `open:${[w.from, w.to].sort().join(" ")}`;
+  function wireCut(w) {
+    return S.running && (S.snap?.injected ?? []).some((f) => f.key === wireKey(w));
+  }
+
+  const FAULT_LABEL = { stuck: "pegado", welded: "contactos soldados", burnt: "carga quemada" };
+  const faultLabel = (k) => FAULT_LABEL[k] ?? k;
+
+  // Fallas que admite un dispositivo (según sus acciones y salidas).
+  function faultOptions(dev, def, st) {
+    const o = st.outputs ?? {};
+    const opts = [];
+    if ((def.actions ?? []).some((a) => a.kind !== "select") || dev.params?.source) {
+      opts.push({ kind: "stuck", value: true, label: "Pegado accionado" }, { kind: "stuck", value: false, label: "Pegado en reposo" });
+    }
+    if ("closed" in o) opts.push({ kind: "welded", label: "Contactos soldados" });
+    const short = dev.type.split("/")[1];
+    const burnt = { lamp: "Lámpara quemada", buzzer: "Zumbador quemado", relay: "Bobina cortada", contactor: "Bobina cortada", "solenoid-valve": "Bobina cortada", motor: "Bobinado abierto" }[short] ??
+      (short?.startsWith("sensor-") ? "Sensor dañado" : null);
+    if (burnt) opts.push({ kind: "burnt", label: burnt });
+    return opts;
+  }
+
   function wireLive(w) {
     if (!S.running) return false;
     return (S.snap?.poles?.[w.from] ?? []).some((m) => m.endsWith("+"));
@@ -423,9 +447,13 @@
       const d = roundedPath(pts);
       const sel = S.sel?.kind === "wire" && S.sel.id === i;
       const c = WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
-      const live = wireLive(w);
+      const cut = wireCut(w);
+      const live = wireLive(w) && !cut;
+      const mid = pts[Math.floor(pts.length / 2)];
+      const prev = pts[Math.floor(pts.length / 2) - 1] ?? mid;
       html +=
-        `<g class="wire${sel ? " selected" : ""}${live ? " live" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+        `<g class="wire${sel ? " selected" : ""}${live ? " live" : ""}${cut ? " cut" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+        (cut ? `<text class="wire-cut" x="${(mid.x + prev.x) / 2}" y="${(mid.y + prev.y) / 2 + 5}">✂</text>` : "") +
         `<path class="wire-hit" d="${d}"/>` +
         (live ? `<path class="wire-glow" d="${d}"/>` : "") +
         `<path class="wire-outline" d="${d}" stroke="${shade(c, 0.45)}"/>` +
@@ -478,7 +506,7 @@
     // Un símbolo con giro (data-spin) se redibuja en cada instante simulado.
     const pp = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
-    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, dev.params, S.running, st.t_ms]);
+    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     tg?.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
@@ -516,7 +544,11 @@
       g.innerHTML =
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
-        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`;
+        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
+        // Falla inyectada (G9): marca roja arriba a la derecha.
+        (st.injected?.length
+          ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
+          : "");
     }
     // Bornes en su propia capa, encima de los cables (un clic en un borne ya
     // cableado empieza otro cable en vez de seleccionar el existente).
@@ -554,6 +586,7 @@
     const side = $("scene-inspector");
     const sel = S.sel;
     let html = "";
+    let stateHtml = "";
     if (sel?.kind === "device") {
       const dev = devById(sel.id);
       const def = dev && S.defs.get(dev.type);
@@ -572,9 +605,24 @@
         }
         const vals = Object.entries(st.outputs ?? {});
         if (vals.length) {
-          html += `<div class="insp-sub">Estado${S.snap ? ` · t = ${S.snap.t_ms.toFixed(1)} ms` : ""}</div><table class="insp-vals">`;
-          for (const [k, v] of vals) html += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
-          html += "</table>";
+          // El estado cambia con cada instantánea: va en su propio contenedor
+          // para no reemplazar el resto del inspector (botones, campos).
+          stateHtml = `<div class="insp-sub">Estado${S.snap ? ` · t = ${S.snap.t_ms.toFixed(1)} ms` : ""}</div><table class="insp-vals">`;
+          for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
+          stateHtml += "</table>";
+          html += `<div class="insp-state"></div>`;
+        }
+        // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
+        const opts = dev.type === "jwsim/jwplc-basic" ? [] : faultOptions(dev, def, st);
+        if (opts.length) {
+          const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
+          html += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
+          for (const f of opts) {
+            const on = act.some((a) => a.kind === f.kind && (f.kind !== "stuck" || (a.value !== false) === f.value));
+            const data = esc(JSON.stringify({ kind: f.kind, device: dev.id, ...(f.kind === "stuck" ? { value: f.value } : {}) }));
+            html += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
+          }
+          html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
         }
         if (dev.type !== "jwsim/jwplc-basic") html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar ${esc(dev.id)}</button>`;
       }
@@ -591,15 +639,30 @@
         html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita.</p>`;
         if (w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
         html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar cable</button>`;
+        if (S.running) {
+          const cut = wireCut(w);
+          html += `<div class="insp-sub">Fallas</div><div class="fault-btns"><button class="small fault${cut ? " on" : ""}" data-fault="${esc(JSON.stringify({ kind: "open", wire: `${w.from} ${w.to}` }))}" data-on="${cut ? 1 : 0}">${cut ? "Reparar cable" : "Cortar cable"}</button></div>`;
+        }
       }
     } else {
       html += `<p class="insp-desc muted">Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr quita lo seleccionado. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
     }
-    side.innerHTML = html;
+    if (side.dataset.key !== html) {
+      side.innerHTML = html;
+      side.dataset.key = html;
+    }
+    const stateEl = side.querySelector(".insp-state");
+    if (stateEl && stateEl.innerHTML !== stateHtml) stateEl.innerHTML = stateHtml;
     // Diagnóstico: fallas, avisos del cableado y de la solución actual.
     const diag = $("scene-diag");
     const items = [];
     for (const f of S.snap?.faults ?? []) items.push(["bad", `${f.t_ms.toFixed(1)} ms · ${f.message}`, f.device]);
+    if (S.running) {
+      for (const f of S.snap?.injected ?? []) {
+        const what = f.kind === "open" ? `cable ${f.wire} cortado` : `${f.device}: ${faultLabel(f.kind)}${f.kind === "stuck" ? (f.value === false ? " en reposo" : " accionado") : ""}`;
+        items.push(["inj", `Falla inyectada · ${what}`, f.device]);
+      }
+    }
     for (const f of S.snap?.findings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     for (const f of S.snap?.warnings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     if (S.error) items.unshift(["bad", S.error, null]);
@@ -938,6 +1001,17 @@
       dev.params = { ...(dev.params ?? {}), [id]: p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value };
       changed();
     });
+    // Fallas (G9): en marcha el inspector se redibuja con cada instantánea;
+    // con pointerdown el botón responde aunque se reemplace antes de soltar.
+    $("scene-inspector").addEventListener("pointerdown", (e) => {
+      const fb = e.target.closest("[data-fault]");
+      if (!fb || !S.running || fb.disabled) return;
+      e.preventDefault();
+      const f = JSON.parse(fb.dataset.fault);
+      const key = f.kind === "open" ? `open:${f.wire.split(" ").sort().join(" ")}` : `${f.kind}:${f.device}`;
+      if (fb.dataset.on === "1") api.sceneClearFault(key);
+      else api.sceneInject(f);
+    });
     $("scene-inspector").addEventListener("click", (e) => {
       if (e.target.id === "scene-del") removeSelected();
       if (e.target.id === "scene-wire-auto" && S.sel?.kind === "wire") {
@@ -1082,6 +1156,10 @@
       act: (id, action, value) => act(id, action, value),
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
+      select: (id) => {
+        S.sel = typeof id === "number" ? { kind: "wire", id } : { kind: "device", id };
+        render();
+      },
       analyze: () => analyze(),
       setParam: (id, key, value) => {
         const d = devById(id);

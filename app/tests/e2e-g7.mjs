@@ -11,6 +11,9 @@
 //                 clics en los bornes (se enciende en el análisis), arrastrar un
 //                 dispositivo, quitar un cable (aviso de carga sin alimentación)
 //                 y guardar el proyecto con la escena
+//   SCENE_FAULTS  (G9) en marcha, desde el inspector: bobina de KM1 cortada
+//                 (marca roja; la marcha no confirma y el firmware entra en
+//                 falla), se quita; cable cortado (trazo punteado) y reparado
 //   SCENE_DRAG    la pieza del sensor inductivo B0 se arrastra: en marcha
 //                 lleva la acción "distance" a 0 mm (detecta); detenida, fija
 //                 el parámetro en 20 mm (fin del recorrido)
@@ -134,6 +137,37 @@ try {
   });
   criteria.SCENE_TFT = { ok: tftLit > 200, lit_pixels: tftLit };
   log(`SCENE_TFT ${JSON.stringify(criteria.SCENE_TFT)}`);
+
+  // ---- SCENE_FAULTS (G9): fallas inyectadas desde el inspector, en marcha.
+  // Bobina de KM1 cortada: la marcha no confirma y el firmware entra en
+  // falla; la marca roja aparece en KM1. Después, un cable cortado.
+  const clickFault = async (label) => {
+    const r = await win.locator("#scene-inspector button.fault", { hasText: label }).first().boundingBox({ timeout: 3000 });
+    await win.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+    await win.mouse.down();
+    await win.mouse.up();
+  };
+  await t(() => window.jwsimTest.scene.select("KM1"));
+  await clickFault("Bobina cortada");
+  const burnt = await until(async () => (await snap())?.injected?.some((f) => f.key === "burnt:KM1"), 3000);
+  const badge = await until(() => win.$("#scene-devices > g[data-id='KM1'] .dev-fault"), 3000);
+  await clickAt(await actCenter("S1"), 250);
+  const fallaKm = await until(async () => /FALLA KM1 sin confirmacion/.test(await consoleText()), 5000);
+  await clickFault("Bobina cortada");   // la misma: quita la falla
+  const unburnt = await until(async () => !(await snap())?.injected?.length, 3000);
+  await clickAt(await actCenter("S0"), 250);  // la parada rearma la falla del firmware
+  const cw = await t(() => window.jwsimTest.scene.spec().wiring.findIndex((w) => w.from === "PS1.+V1" && w.to === "S1.13"));
+  await t((i) => window.jwsimTest.scene.select(i), cw);
+  await clickFault("Cortar cable");
+  const cutDrawn = await until(() => win.$(`.wire.cut[data-wire="${cw}"]`), 3000);
+  await win.screenshot({ path: join(OUT, "escena-fallas.png") });
+  await clickFault("Reparar cable");
+  const repaired = await until(async () => !(await snap())?.injected?.length, 3000);
+  criteria.SCENE_FAULTS = {
+    ok: !!burnt && !!badge && !!fallaKm && !!unburnt && !!cutDrawn && !!repaired,
+    burnt_injected: !!burnt, badge: !!badge, firmware_fault: !!fallaKm, cleared: !!unburnt, wire_cut_drawn: !!cutDrawn, repaired: !!repaired,
+  };
+  log(`SCENE_FAULTS ${JSON.stringify(criteria.SCENE_FAULTS)}`);
 
   // ---- SCENE_DRAG: la pieza del sensor inductivo se arrastra (data-drag).
   // En marcha mueve la acción "distance"; detenida, fija el parámetro.
@@ -271,7 +305,7 @@ try {
   };
   log(`SCENE_VARIANTS ${JSON.stringify(criteria.SCENE_VARIANTS)}`);
 } finally {
-  const ok = Object.values(criteria).length === 7 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 8 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_G7_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_G7_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();

@@ -132,6 +132,7 @@ function setStatus(kind, text) {
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
   for (const b of document.querySelectorAll("#inputs .io, #keypad .key, #sd-slot")) b.disabled = !live;
+  $("fault-rtc").disabled = live;
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
   $("btn-dbg-pause").disabled = kind !== "running";
   $("btn-rec-save").disabled = !(kind === "running" || kind === "paused");
@@ -228,6 +229,10 @@ function wireKeypad() {
     k.addEventListener("pointerup", up);
     k.addEventListener("pointercancel", up);
   }
+  // Falla G9: ruido en la línea RS-485, en vivo (se graba como entrada).
+  $("fault-noise").addEventListener("change", (e) => {
+    if (["running", "paused", "break"].includes(state.sim)) api.command({ type: "noise", port: 2, rate: Number(e.target.value), seed: 1 });
+  });
   // Zócalo microSD: quitar o poner la tarjeta (señal SD_CARD, se graba).
   $("sd-slot").addEventListener("click", () => {
     if (["running", "paused", "break"].includes(state.sim)) setInput("SD_CARD", !state.levels.get("SD_CARD"));
@@ -410,7 +415,9 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   state.replay = replay;
   if (replay) consoleWrite(`[jwsim] reproduciendo ${replay.file}${replay.t_ns ? ` hasta t=${fmtTime(replay.t_ns)}` : ""}\n`, "sys");
   const sceneSpec = replay ? null : (window.JwsimScene?.specForRun() ?? null);
-  const started = await api.start(r.exe, replay?.file, state.project?.file ?? null, replay?.rtc ?? null, sceneSpec);
+  // Falla G9 "RTC sin batería": vale para el arranque.
+  const rtc = replay?.rtc ?? ($("fault-rtc").checked ? "sin-bateria" : null);
+  const started = await api.start(r.exe, replay?.file, state.project?.file ?? null, rtc, sceneSpec);
   window.JwsimScene?.onStart(started);
   if (started?.error) {
     setStatus("error", "Escena inválida");
@@ -418,6 +425,8 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
     return false;
   }
   state.sessionRtc = started?.rtc ?? null;
+  // Falla G9 "ruido en RS-485" elegida antes de iniciar (se graba como entrada).
+  if (!replay && Number($("fault-noise").value) > 0) api.command({ type: "noise", port: 2, rate: Number($("fault-noise").value), seed: 1 });
   if (state.view === "buses") api.command({ type: "subscribe", buses: 1 });
   // La escena se aplica en t = 0, antes de que corra el firmware.
   for (const [signal, v] of Object.entries(scene)) {
@@ -808,7 +817,7 @@ async function saveRecording() {
 
 function parseStimHeader(text) {
   const m = text.match(/^# fin t_ns=(\d+) hash=(0x[0-9a-f]+)/m);
-  const rtc = text.match(/^# rtc (fijo:\S+)/m)?.[1] ?? null;
+  const rtc = text.match(/^# rtc (fijo:\S+|sin-bateria)/m)?.[1] ?? null;
   return m ? { t_ns: Number(m[1]), hash: m[2], rtc } : { t_ns: 0, hash: null, rtc };
 }
 

@@ -76,6 +76,21 @@
               <button class="seg" data-view="scene" role="radio" aria-checked="false" title="Escena: la placa cableada a dispositivos industriales">Escena</button>
             </div>
             <span class="muted" id="board-name">JWPLC Basic</span>
+            <details class="faults-menu" id="faults-menu">
+              <summary title="Fallas de la placa (G9): RTC sin batería, ruido en RS-485">⚠ Fallas</summary>
+              <div class="faults-pop">
+                <label><input type="checkbox" id="fault-rtc" /> RTC sin batería <span class="muted">(al iniciar)</span></label>
+                <label>Ruido en RS-485
+                  <select id="fault-noise" title="Probabilidad de que cada byte recibido por la UART 2 llegue corrupto">
+                    <option value="0">sin ruido</option>
+                    <option value="0.01">1 %</option>
+                    <option value="0.1">10 %</option>
+                    <option value="1">100 %</option>
+                  </select>
+                </label>
+                <p class="muted">La microSD se quita con un clic en su zócalo. Las fallas de equipos y cables (pegado, soldado, quemado, cable cortado) se inyectan desde la escena, con el equipo o el cable seleccionado.</p>
+              </div>
+            </details>
             <div class="mode" role="radiogroup" aria-label="Modo de las entradas">
               <button class="seg active" data-mode="toggle" role="radio" aria-checked="true" title="Clic alterna la entrada">Interruptor</button>
               <button class="seg" data-mode="push" role="radio" aria-checked="false" title="La entrada está activa mientras se mantiene presionada">Pulsador</button>

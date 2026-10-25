@@ -22,6 +22,7 @@ export function wireSnapshot(snap) {
     warnings: snap.warnings,
     findings: snap.findings,
     faults: snap.faults.map((f) => ({ t_ms: ms(f.t), type: f.type, device: f.device, message: f.message })),
+    injected: snap.injected ?? [],
   };
 }
 
@@ -52,6 +53,15 @@ export class SceneSession extends EventEmitter {
 
   rearm() {
     this.#queue.push({ rearm: true });
+  }
+
+  /** Falla inyectada (G9): stuck, welded, burnt u open (ver Scene.inject). */
+  inject(fault) {
+    this.#queue.push({ inject: fault });
+  }
+
+  clearFault(key) {
+    this.#queue.push({ clear: key });
   }
 
   stop() {
@@ -110,6 +120,8 @@ export class SceneSession extends EventEmitter {
     for (const op of ops) {
       try {
         if (op.rearm) this.scene.rearm(at);
+        else if (op.inject) this.scene.inject(op.inject, at);
+        else if (op.clear) this.scene.clearFault(op.clear, at);
         else this.scene.act(op.device, op.action, op.value, at);
       } catch (err) {
         this.emit("error", err);

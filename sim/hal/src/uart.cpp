@@ -128,11 +128,11 @@ void uart_inject(int port, const uint8_t *data, size_t len) {
   uart_struct_t *u = get(static_cast<uint8_t>(port));
   if (!u) return;
   if (!timed(u)) {
-    for (size_t i = 0; i < len; ++i) {
-      const uint8_t b = noisy(u->num, data[i]);
-      u->rx.push_back(b);
-      jwsim_trace_bytes(&b, 1);
-    }
+    // Un solo registro de traza por bloque, como antes del ruido.
+    std::vector<uint8_t> in(data, data + len);
+    for (auto &b : in) b = noisy(u->num, b);
+    u->rx.insert(u->rx.end(), in.begin(), in.end());
+    jwsim_trace_bytes(in.data(), in.size());
     return;
   }
   const jwsim_ns_t now = jwsim_now(), ch = char_ns(u);
