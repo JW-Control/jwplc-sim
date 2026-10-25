@@ -86,6 +86,32 @@ export interface ReadSpec {
   source: string;
 }
 
+/**
+ * Sonda (elemento sensor) de un dispositivo: sus bornes y la salida que mide
+ * (p. ej. la PT100 de un tanque: 3 bornes y tMasa). La lee el transmisor
+ * cuyos bornes de entrada estén cableados a estos, uno con uno.
+ */
+export interface ProbeSpec {
+  id: string;
+  /** Tipo de sonda; solo la lee una entrada del mismo tipo ("pt100", "ph", "atc"). */
+  kind: string;
+  /** Bornes propios, en orden: el k-ésimo va al k-ésimo de la entrada. */
+  terminals: string[];
+  /** Salida del dispositivo con el valor medido. */
+  output: string;
+}
+
+/**
+ * Entrada de sonda de un transmisor. En update(), values[id] es el valor de
+ * la sonda cableada o NaN si falta un cable, está cortado o los bornes no
+ * coinciden (el transmisor la ve abierta).
+ */
+export interface ProbeInputSpec {
+  id: string;
+  kind: string;
+  terminals: string[];
+}
+
 /** Esclavo Modbus RTU en el bus RS-485 de la placa (bornes A y B del dispositivo). */
 export interface ModbusSpec {
   /** Dirección 1..247. */
@@ -111,7 +137,7 @@ export interface DeviceInputs {
   loads: Record<string, LoadState>;
   /** Enlaces mecánicos declarados en links(). */
   links: Record<string, boolean>;
-  /** Lecturas numéricas declaradas en reads() (booleanos como 0/1). */
+  /** Lecturas numéricas declaradas en reads() (booleanos como 0/1) y sondas de probeInputs() (NaN: abierta). */
   values?: Record<string, number>;
   /** Acciones del usuario (pulsar, posición del selector). */
   actions: Record<string, number | boolean | string>;
@@ -178,6 +204,10 @@ export interface DeviceDefinition {
   links?(params: Record<string, any>): LinkSpec[];
   /** Lecturas numéricas de salidas de otros dispositivos. */
   reads?(params: Record<string, any>): ReadSpec[];
+  /** Sondas propias que otro dispositivo puede leer por cable. */
+  probes?(params: Record<string, any>): ProbeSpec[];
+  /** Entradas de sonda: se leen por cable de la sonda de otro dispositivo. */
+  probeInputs?(params: Record<string, any>): ProbeInputSpec[];
   /** Esclavo Modbus RTU en el bus RS-485 (bornes A y B). */
   modbus?(params: Record<string, any>): ModbusSpec;
   electrical?(params: Record<string, any>): Electrical;

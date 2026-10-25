@@ -78,13 +78,14 @@ Las expresiones leen el estado del dispositivo:
 | `contact.<contacto>` | Contacto cerrado: `contact.13-14` |
 | `damaged`, `tripped` | Carga quemada; fuente disparada |
 | `!expr`, `expr=valor` | Negación y comparación: `!out.closed`, `param.output=npn` |
+| `expr>n`, `expr<n` | Comparación numérica: `out.serpentin>0.05`, `!out.tMasa<20` |
 | `expr\|expr` | La primera que tenga valor: `out.distance\|param.distance` (la salida en marcha, el parámetro en edición) |
 
 | Atributo | Efecto |
 |---|---|
 | `data-show="expr"` | El elemento se ve solo si la expresión es verdadera. |
 | `data-fill="expr"` | Pone `fill` al valor. Los nombres de color de los parámetros (`verde`, `rojo`, `amarillo`, `azul`, `blanco`, `negro`) se traducen a la paleta de lentes. |
-| `data-text="expr"`, `"expr:%"` o `"expr:mm"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje; con `:mm`, como largo con un decimal (`12,5 mm`). |
+| `data-text="expr"`, `"expr:%"`, `"expr:mm"`, `"expr:dN:unidad"` o `"expr:hm"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje; con `:mm`, como largo con un decimal (`12,5 mm`); con `:d1:°C`, con N decimales y la unidad (`27,4 °C`; sin valor, `—`); con `:hm`, horas como `8 h 05 min`. |
 | `data-translate="expr:v0:v1:x\|y:dist"` | Desplaza el elemento de 0 a `dist` px mientras el valor va de `v0` a `v1`. Ejemplo: `out.position:0:1:x:60` para el vástago del cilindro. Por tramos, `expr:v0,v1,…:x\|y:p0,p1,…`: cada valor cae en su posición en px y entre dos se interpola; sirve para exagerar un tramo corto (la histéresis del sensor inductivo: `out.distance:0,8,8.8,20:x:0,170,220,320`). |
 | `data-rotate="expr:v0:v1:a0:a1:cx:cy"` | Gira de `a0` a `a1` grados alrededor de (`cx`, `cy`). Ejemplo: `out.position:-1:1:-45:45:40:50` para la perilla de un selector. |
 | `data-spin="expr:cx:cy:vps"` | Giro continuo con la simulación alrededor de (`cx`, `cy`): con el valor 1 da `vps` vueltas por segundo de tiempo simulado; con 0 se detiene, con un valor negativo gira al revés. El ángulo se integra con el tiempo simulado (se detiene en pausa y sigue la rampa). Ejemplo: `out.speed:60:60:2` para el ventilador de un motor. |
@@ -144,6 +145,13 @@ zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). Como
 en EduVolt, el área de trabajo no está a escala: un cono exagerado con una
 escala por tramos para que la histéresis se vea y se pueda manipular; la
 cota sobre la pieza da la distancia real.
+
+Bloques de planta (propuesta, sin aprobar): el fermentador de café
+(`fermentador.svg`, generado por `simbolos/herramientas/gen_fermentador.py`)
+es un esquema de proceso, no la vista de un equipo: terma solar, válvula Y1,
+bombas M1 y M2, flujostato FS1, tanque con serpentín y sondas, y abajo la
+regleta con los bornes que se cablean al tablero. Los cables de las sondas
+se dibujan porque son los que se llevan a los transmisores.
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
 fotoeléctrico, relé enchufable, electroválvula con cilindro y motor.

@@ -138,9 +138,22 @@ fuente es un segmento, la escena calcula los cruces exactos.
 
 `reads(params)` devuelve `[{ id, source: "FER1.tMasa" }]`: en cada `update`
 el dispositivo recibe en `inputs.values[id]` el valor de esa salida (los
-booleanos como 0/1; un segmento, en el instante actual). Así un transmisor
-mide la temperatura de un proceso o un tanque lee el estado de sus válvulas
-y bombas.
+booleanos como 0/1; un segmento, en el instante actual). Es una lectura sin
+cable: sirve para enlaces que no se cablean en la realidad. Lo que en la
+planta va por cable (una sonda a su transmisor) se modela con §2.3.3.
+
+### 2.3.3 Sondas por cable
+
+Un bloque de planta declara sus elementos sensores con
+`probes(params)`: `[{ id, kind, terminals, output }]` (p. ej. la PT100 de la
+masa: `kind: "pt100"`, tres bornes y la salida `tMasa`). Un transmisor
+declara sus entradas con `probeInputs(params)`: `[{ id, kind, terminals }]`.
+En cada `update`, `inputs.values[id]` trae el valor de la sonda del mismo
+`kind` cuyos bornes estén unidos por cables activos a los de la entrada,
+**uno con uno y en orden**; si falta o se corta un cable (falla `open`), o
+los hilos están cruzados, llega `NaN` y el transmisor la ve abierta.
+Ejemplos: `jwsim/fermentador` (sondas `pt100`, `ph` y `atc`) y los
+transmisores `pt100-rs485` y `ph-rs485` en `scene/devices/process.mjs`.
 
 ### 2.3.2 Esclavo Modbus RTU (bus RS-485)
 

@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bloque de planta: fermentador de café con terma solar, Y1, M1, M2, FS1, PT100 y electrodo de pH. Generado por docs/simbolos/herramientas/gen_fermentador.py. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 620">
+<defs>
+<linearGradient id="fermentador-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="fermentador-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="fermentador-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="fermentador-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="fermentador-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="fermentador-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="fermentador-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="fermentador-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="fermentador-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="fermentador-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+</defs>
+<rect x="1" y="1" width="918" height="618" rx="10" fill="#eef1f4" stroke="#16181b" stroke-width="2"/>
+<text x="20" y="26" text-anchor="start" font-family="sans-serif" font-size="13" font-weight="800" fill="#16181b" >FERMENTADOR DE CAFÉ</text>
+<text x="20" y="40" text-anchor="start" font-family="sans-serif" font-size="8" font-weight="600" fill="#59606a" >bloque de planta · sin cablear al tablero</text>
+<polygon points="34,58 150,58 168,104 52,104" fill="#1f4f8f" stroke="#0d2342" stroke-width="1.5"/>
+<line x1="63" y1="58" x2="81" y2="104" stroke="#6fa0d8" stroke-width="1"/>
+<line x1="92" y1="58" x2="110" y2="104" stroke="#6fa0d8" stroke-width="1"/>
+<line x1="121" y1="58" x2="139" y2="104" stroke="#6fa0d8" stroke-width="1"/>
+<line x1="43" y1="81" x2="159" y2="81" stroke="#6fa0d8" stroke-width="1"/>
+<path d="M100 104 V124" stroke="#16181b" stroke-width="2"/>
+<rect x="40" y="124" width="120" height="200" rx="44" fill="#d9dde2" stroke="#16181b" stroke-width="2"/>
+<rect x="46" y="200" width="108" height="118" rx="38" fill="#e46a4a" opacity=".22"/>
+<text x="100" y="168" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >TERMA SOLAR</text>
+<text x="100" y="182" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#59606a" >80 L</text>
+<text x="100" y="214" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="800" fill="#16181b" data-text="out.tTerma:d1:°C">—</text>
+<path d="M160 160 H380" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.flujo"/>
+<path d="M160 160 H380" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.flujo"/>
+<path d="M160 160 H380" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<polygon points="244,146 260,160 244,174" fill="#c9ced4" stroke="#16181b" stroke-width="1.6" data-show="!out.valvula"/>
+<polygon points="276,146 260,160 276,174" fill="#c9ced4" stroke="#16181b" stroke-width="1.6" data-show="!out.valvula"/>
+<polygon points="244,146 260,160 244,174" fill="#2fbf5a" stroke="#16181b" stroke-width="1.6" data-show="out.valvula"/>
+<polygon points="276,146 260,160 276,174" fill="#2fbf5a" stroke="#16181b" stroke-width="1.6" data-show="out.valvula"/>
+<path d="M260 160 V134" stroke="#16181b" stroke-width="2"/>
+<rect x="246" y="112" width="28" height="22" rx="2" fill="#3a3e44" stroke="#16181b"/>
+<text x="260" y="127" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#f4f5f7" >Y1</text>
+<text x="260" y="192" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >VÁLVULA AGUA CALIENTE</text>
+<path d="M380 80 Q380 60 400 60 H620 Q640 60 640 80 V400 L522 444 H498 L380 400 Z" fill="#dfe3e7" stroke="#16181b" stroke-width="2.4"/>
+<path d="M383 118 H637 V398 L521 441 H499 L383 398 Z" fill="#d8a24a" opacity=".55"/>
+<ellipse cx="406" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="214" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="230" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="406" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="246" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="262" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="406" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="278" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="294" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="406" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="310" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="326" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="406" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="342" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="358" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="406" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="426" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="446" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="466" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="486" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="506" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="526" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="546" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="566" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="586" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="606" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="626" cy="374" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="396" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="416" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="436" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="456" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="476" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="496" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="516" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="536" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="556" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="576" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="596" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<ellipse cx="616" cy="390" rx="7" ry="4.5" fill="#6b3f1f" opacity=".85"/>
+<text x="392" y="138" text-anchor="start" font-family="sans-serif" font-size="8" font-weight="800" fill="#5a3a10" >MOSTO</text>
+<text x="414" y="206" text-anchor="start" font-family="sans-serif" font-size="8" font-weight="800" fill="#3a2410" >MASA</text>
+<path d="M380 175 H404 V232 H596 A15 15 0 0 1 596 262 H404 A15 15 0 0 0 404 292 H596 A15 15 0 0 1 596 322 H404 A15 15 0 0 0 404 352 H596 A11 11 0 0 1 596 374 H380" fill="none" stroke="#b5651d" stroke-width="6" stroke-linejoin="round"/>
+<path d="M380 175 H404 V232 H596 A15 15 0 0 1 596 262 H404 A15 15 0 0 0 404 292 H596 A15 15 0 0 1 596 322 H404 A15 15 0 0 0 404 352 H596 A11 11 0 0 1 596 374 H380" fill="none" stroke="#d9472b" stroke-width="3" stroke-linejoin="round" data-show="out.serpentin>0.05"/>
+<text x="500" y="226" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="800" fill="#5a3a10" >SERPENTÍN</text>
+<path d="M380 374 H322" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.flujo"/>
+<path d="M380 374 H322" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.flujo"/>
+<path d="M380 374 H322" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<path d="M278 374 H234" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.flujo"/>
+<path d="M278 374 H234" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.flujo"/>
+<path d="M278 374 H234" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<path d="M206 374 H100 V324" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.flujo"/>
+<path d="M206 374 H100 V324" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.flujo"/>
+<path d="M206 374 H100 V324" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<circle cx="300" cy="374" r="22" fill="#c9ced4" stroke="#16181b" stroke-width="2" data-show="!out.bombaRetorno"/>
+<circle cx="300" cy="374" r="22" fill="#2fbf5a" stroke="#16181b" stroke-width="2" data-show="out.bombaRetorno"/>
+<g data-spin="out.bombaRetorno:300:374:2">
+<path d="M300 374 L300 357 A6 6 0 0 1 307 362 Z" fill="#16181b" transform="rotate(0 300 374)"/>
+<path d="M300 374 L300 357 A6 6 0 0 1 307 362 Z" fill="#16181b" transform="rotate(120 300 374)"/>
+<path d="M300 374 L300 357 A6 6 0 0 1 307 362 Z" fill="#16181b" transform="rotate(240 300 374)"/>
+</g>
+<circle cx="300" cy="374" r="4" fill="#f4f5f7" stroke="#16181b"/>
+<text x="300" y="410" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#16181b" >M1</text>
+<text x="300" y="421" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >BOMBA RETORNO</text>
+<text x="300" y="344" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#d11a1a" data-show="out.bombaEnSeco">EN SECO</text>
+<rect x="206" y="362" width="28" height="24" rx="3" fill="#f4f5f7" stroke="#16181b" stroke-width="1.6"/>
+<path d="M220 366 L228 380" stroke="#16181b" stroke-width="2"/>
+<circle cx="220" cy="352" r="5" fill="#c9ced4" stroke="#16181b" data-show="!out.flujo"/>
+<circle cx="220" cy="352" r="5" fill="#2fbf5a" stroke="#16181b" data-show="out.flujo"/>
+<text x="220" y="404" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="800" fill="#16181b" >FS1</text>
+<text x="220" y="414" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >FLUJOSTATO</text>
+<path d="M510 444 V456 H656 V400 H678" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.bombaMosto"/>
+<path d="M510 444 V456 H656 V400 H678" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.bombaMosto"/>
+<path d="M510 444 V456 H656 V400 H678" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<path d="M722 400 H750 V96 H640" fill="none" stroke="#8a929c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="!out.bombaMosto"/>
+<path d="M722 400 H750 V96 H640" fill="none" stroke="#d9472b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" data-show="out.bombaMosto"/>
+<path d="M722 400 H750 V96 H640" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1" stroke-linejoin="round"/>
+<circle cx="700" cy="400" r="22" fill="#c9ced4" stroke="#16181b" stroke-width="2" data-show="!out.bombaMosto"/>
+<circle cx="700" cy="400" r="22" fill="#2fbf5a" stroke="#16181b" stroke-width="2" data-show="out.bombaMosto"/>
+<g data-spin="out.bombaMosto:700:400:2">
+<path d="M700 400 L700 383 A6 6 0 0 1 707 388 Z" fill="#16181b" transform="rotate(0 700 400)"/>
+<path d="M700 400 L700 383 A6 6 0 0 1 707 388 Z" fill="#16181b" transform="rotate(120 700 400)"/>
+<path d="M700 400 L700 383 A6 6 0 0 1 707 388 Z" fill="#16181b" transform="rotate(240 700 400)"/>
+</g>
+<circle cx="700" cy="400" r="4" fill="#f4f5f7" stroke="#16181b"/>
+<text x="700" y="436" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#16181b" >M2</text>
+<text x="700" y="447" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >BOMBA MOSTO</text>
+<rect x="556" y="314" width="96" height="8" rx="4" fill="#c0c6cd" stroke="#16181b"/>
+<rect x="652" y="304" width="30" height="28" rx="3" fill="#3a3e44" stroke="#16181b"/>
+<text x="667" y="288" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b" >PT100</text>
+<text x="667" y="298" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >T MASA</text>
+<path d="M668 332 C668 470 460 440 460 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M668 332 C668 470 460 440 460 506" fill="none" stroke="#c62828" stroke-width="2.8"/>
+<path d="M674 332 C674 470 500 440 500 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M674 332 C674 470 500 440 500 506" fill="none" stroke="#c62828" stroke-width="2.8"/>
+<path d="M680 332 C680 470 540 440 540 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M680 332 C680 470 540 440 540 506" fill="none" stroke="#f4f5f7" stroke-width="2.8"/>
+<rect x="580" y="36" width="20" height="26" rx="2" fill="#3a3e44" stroke="#16181b"/>
+<rect x="586" y="62" width="8" height="176" fill="#e8eef3" stroke="#16181b"/>
+<circle cx="590" cy="242" r="8" fill="#cfe6f7" stroke="#16181b"/>
+<text x="574" y="46" text-anchor="end" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b" >pH + ATC</text>
+<text x="574" y="56" text-anchor="end" font-family="sans-serif" font-size="7" font-weight="700" fill="#59606a" >T MOSTO</text>
+<path d="M590 36 V28 H774 V480 C774 494 640 486 640 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M590 36 V28 H774 V480 C774 494 640 486 640 506" fill="none" stroke="#1b1d20" stroke-width="2.8"/>
+<path d="M590 36 V28 H774 V480 C774 494 680 486 680 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M590 36 V28 H774 V480 C774 494 680 486 680 506" fill="none" stroke="#59606a" stroke-width="2.8"/>
+<path d="M590 36 V28 H774 V480 C774 494 720 486 720 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M590 36 V28 H774 V480 C774 494 720 486 720 506" fill="none" stroke="#f4f5f7" stroke-width="2.8"/>
+<path d="M590 36 V28 H774 V480 C774 494 760 486 760 506" fill="none" stroke="#16181b" stroke-width="4.5"/>
+<path d="M590 36 V28 H774 V480 C774 494 760 486 760 506" fill="none" stroke="#f4f5f7" stroke-width="2.8"/>
+<text x="848" y="32" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#59606a" >VALORES</text>
+<rect x="790" y="40" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="53" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >T MASA</text>
+<text x="898" y="73" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.tMasa:d1:°C">—</text>
+<rect x="790" y="88" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="101" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >T MOSTO</text>
+<text x="898" y="121" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.tMosto:d1:°C">—</text>
+<rect x="790" y="136" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="149" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >pH</text>
+<text x="898" y="169" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.ph:d2">—</text>
+<rect x="790" y="184" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="197" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >TERMA</text>
+<text x="898" y="217" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.tTerma:d1:°C">—</text>
+<rect x="790" y="232" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="245" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >SERPENTÍN</text>
+<text x="898" y="265" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.serpentin:%">—</text>
+<rect x="790" y="280" width="116" height="40" rx="4" fill="#15181c" stroke="#16181b"/>
+<text x="798" y="293" text-anchor="start" font-family="sans-serif" font-size="7.5" font-weight="800" fill="#8fa3b8" >TIEMPO</text>
+<text x="898" y="313" text-anchor="end" font-family="sans-serif" font-size="15" font-weight="800" fill="#e9f7ee" data-text="out.horas:hm">—</text>
+<rect x="10" y="500" width="900" height="110" rx="4" fill="#c9ced4" stroke="#16181b" stroke-width="1.4"/>
+<rect x="22" y="508" width="76" height="14" rx="2" fill="#3a3e44"/>
+<text x="60.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >Y1 VÁLVULA</text>
+<rect x="122" y="508" width="76" height="14" rx="2" fill="#3a3e44"/>
+<text x="160.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >M1 RETORNO</text>
+<rect x="222" y="508" width="76" height="14" rx="2" fill="#3a3e44"/>
+<text x="260.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >M2 MOSTO</text>
+<rect x="322" y="508" width="76" height="14" rx="2" fill="#3a3e44"/>
+<text x="360.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >FS1 FLUJO</text>
+<rect x="442" y="508" width="116" height="14" rx="2" fill="#3a3e44"/>
+<text x="500.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >PT100 MASA</text>
+<rect x="622" y="508" width="156" height="14" rx="2" fill="#3a3e44"/>
+<text x="700.0" y="518" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#f4f5f7" >pH + T MOSTO</text>
+<text x="40" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >A1</text>
+<rect x="28.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="40" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M35.0 578H45.0M40 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="Y1_A1" cx="40" cy="578" r="11"/>
+<text x="80" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >A2</text>
+<rect x="68.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="80" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M75.0 578H85.0M80 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="Y1_A2" cx="80" cy="578" r="11"/>
+<text x="140" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >U1</text>
+<rect x="128.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="140" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M135.1 578H144.9M140 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="M1_U1" cx="140" cy="578" r="11"/>
+<text x="180" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >U2</text>
+<rect x="168.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="180" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M175.1 578H184.9M180 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="M1_U2" cx="180" cy="578" r="11"/>
+<text x="240" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >U1</text>
+<rect x="228.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="240" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M235.1 578H244.9M240 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="M2_U1" cx="240" cy="578" r="11"/>
+<text x="280" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >U2</text>
+<rect x="268.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="280" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M275.1 578H284.9M280 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="M2_U2" cx="280" cy="578" r="11"/>
+<text x="340" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >C</text>
+<rect x="328.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="340" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M335.1 578H344.9M340 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="FS_C" cx="340" cy="578" r="11"/>
+<text x="380" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >NA</text>
+<rect x="368.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="380" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M375.1 578H384.9M380 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="FS_NO" cx="380" cy="578" r="11"/>
+<text x="460" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >R</text>
+<rect x="448.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="460" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M455.1 578H464.9M460 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="TT_R1" cx="460" cy="578" r="11"/>
+<text x="500" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >R</text>
+<rect x="488.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="500" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M495.1 578H504.9M500 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="TT_R2" cx="500" cy="578" r="11"/>
+<text x="540" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >B</text>
+<rect x="528.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="540" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M535.0 578H545.0M540 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="TT_R3" cx="540" cy="578" r="11"/>
+<text x="640" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >pH</text>
+<rect x="628.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="640" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M635.0 578H645.0M640 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="AT_PH" cx="640" cy="578" r="11"/>
+<text x="680" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >REF</text>
+<rect x="668.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="680" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M675.0 578H685.0M680 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="AT_REF" cx="680" cy="578" r="11"/>
+<text x="720" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >T</text>
+<rect x="708.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="720" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M715.0 578H725.0M720 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="AT_T1" cx="720" cy="578" r="11"/>
+<text x="760" y="560" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b" >T</text>
+<rect x="748.0" y="566.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="760" cy="578" r="9.0" fill="url(#fermentador-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M755.0 578H765.0M760 573.0V583.0" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="AT_T2" cx="760" cy="578" r="11"/>
+</svg>

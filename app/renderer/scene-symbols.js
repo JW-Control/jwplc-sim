@@ -113,6 +113,13 @@
       }
       return undefined;
     }
+    // Comparación numérica: "out.serpentin>0.05", "out.tMasa<20".
+    const num = expr.match(/^(!?)([^<>]+)([<>])(-?[\d.]+)$/);
+    if (num) {
+      const v = Number(valueOf(num[2], ctx));
+      const r = num[3] === ">" ? v > Number(num[4]) : v < Number(num[4]);
+      return num[1] ? !r : r;
+    }
     const [path, cmp] = expr.split("=");
     const [ns, key] = path.replace(/^!/, "").split(".");
     let v =
@@ -161,11 +168,17 @@
     for (const el of root.querySelectorAll("[data-text]")) {
       // data-text="out.speed:%" muestra 0..1 como porcentaje; ":mm", un
       // largo con un decimal ("12,5 mm").
-      const [expr, fmt] = el.getAttribute("data-text").split(":");
+      // ":d1:°C" con 1 decimal y la unidad ("27,4 °C"; "—" sin valor);
+      // ":hm" horas como "8 h 05 min".
+      const [expr, fmt, unit] = el.getAttribute("data-text").split(":");
       const v = valueOf(expr, ctx);
+      const dec = /^d(\d)$/.exec(fmt ?? "");
+      const none = v === undefined || v === null || Number.isNaN(Number(v));
       el.textContent =
         fmt === "%" ? `${Math.round(Number(v ?? 0) * 100)} %` :
-        fmt === "mm" ? `${Number(v ?? 0).toFixed(1).replace(".", ",")} mm` : String(v ?? "");
+        fmt === "mm" ? `${Number(v ?? 0).toFixed(1).replace(".", ",")} mm` :
+        dec ? (none ? "—" : `${Number(v).toFixed(Number(dec[1])).replace(".", ",")}${unit ? ` ${unit}` : ""}`) :
+        fmt === "hm" ? (none ? "—" : `${Math.floor(Number(v))} h ${String(Math.floor((Number(v) % 1) * 60)).padStart(2, "0")} min`) : String(v ?? "");
     }
     for (const el of root.querySelectorAll("[data-translate]")) {
       // data-translate="out.position:0:1:x:60": valor de 0 a 1 → 0 a 60 px en x.

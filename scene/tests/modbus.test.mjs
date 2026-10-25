@@ -14,8 +14,8 @@ const bus = (extra = [], wiring = []) =>
     [
       "plc:jwplc-basic",
       "PS:power-24vdc",
-      { id: "TT1", type: "jwsim/pt100-rs485", params: { temp: 27.5 } },
-      { id: "AT1", type: "jwsim/ph-rs485", params: { ph: 4.26, temp: 26.8 } },
+      { id: "TT1", type: "jwsim/pt100-rs485", params: { sonda: "simulada", temp: 27.5 } },
+      { id: "AT1", type: "jwsim/ph-rs485", params: { sonda: "simulada", ph: 4.26, temp: 26.8 } },
       ...extra,
     ],
     [
@@ -68,7 +68,7 @@ test("no responde: CRC malo, otra dirección, otra velocidad, sin alimentación,
   s.clearFault("open:AT1.B TT1.B", ms(41));
   assert.equal(s.modbusRequest(read(2, 3, 0, 1), { t: ms(42), baud: 9600 }), null, "transmisor quemado");
   const sw = scene(
-    ["plc:jwplc-basic", "PS:power-24vdc", "TT1:pt100-rs485"],
+    ["plc:jwplc-basic", "PS:power-24vdc", { id: "TT1", type: "jwsim/pt100-rs485", params: { sonda: "simulada" } }],
     ["PS.+V1 - TT1.+", "TT1.- - PS.-V1", "plc.RS485_A - TT1.B", "plc.RS485_B - TT1.A"],
   );
   assert.equal(sw.modbusRequest(read(1, 3, 0, 1), at), null, "A y B invertidos");
@@ -98,25 +98,49 @@ test("ModbusLink: arma la trama tras 3,5 caracteres de silencio y fecha la respu
   assert.deepEqual(out.map(([, b]) => b).slice(0, 5), [1, 3, 2, 1, 19]);
 });
 
-test("transmisor que sigue la temperatura del fermentador", () => {
-  const s = scene(
-    ["plc:jwplc-basic", "PS:power-24vdc", { id: "FER1", type: "jwsim/fermentador", params: { tInicial: 23.4, valvula: "", bombaRetorno: "", bombaMosto: "" } },
-      { id: "TT1", type: "jwsim/pt100-rs485", params: { source: "FER1.tMasa" } }],
-    ["PS.+V1 - TT1.+", "TT1.- - PS.-V1", "plc.RS485_A - TT1.A", "plc.RS485_B - TT1.B"],
+// Bloque fermentador con los dos transmisores: sondas cableadas a sus bornes.
+const PROBES = [
+  "FER1.TT_R1 - TT1.R1", "FER1.TT_R2 - TT1.R2", "FER1.TT_R3 - TT1.R3",
+  "FER1.AT_PH - AT1.PH", "FER1.AT_REF - AT1.REF", "FER1.AT_T1 - AT1.T1", "FER1.AT_T2 - AT1.T2",
+];
+const plant = (probes = PROBES) =>
+  scene(
+    ["plc:jwplc-basic", "PS:power-24vdc", "TT1:pt100-rs485", "AT1:ph-rs485",
+      { id: "FER1", type: "jwsim/fermentador", params: { tInicial: 23.4, phInicial: 5.2 } }],
+    ["PS.+V1 - TT1.+", "TT1.- - PS.-V1", "PS.+V1 - AT1.+", "AT1.- - PS.-V1",
+      "plc.RS485_A - TT1.A", "plc.RS485_B - TT1.B", "TT1.A - AT1.A", "TT1.B - AT1.B", ...probes],
   );
-  assert.deepEqual(words(s.modbusRequest(read(1, 3, 0, 1), at)), [234]);
+
+test("sondas del bloque: cada transmisor mide la sonda cableada a sus bornes", () => {
+  const s = plant();
+  assert.deepEqual(words(s.modbusRequest(read(1, 3, 0, 1), at)), [234], "PT100 de la masa");
+  assert.deepEqual(words(s.modbusRequest(read(2, 3, 0, 2), at)), [520, 234], "pH y temperatura del mosto");
+  assert.equal(s.output("TT1", "sonda"), "ok");
 });
 
-// Fermentador con su válvula (electroválvula Y1) y bombas (motores M1, M2)
-// manejados a mano por pulsadores, para probar el modelo.
+test("sondas: un hilo cortado, sin cablear o cruzado se ve como sonda abierta (7FFFh)", () => {
+  const s = plant();
+  s.inject({ kind: "open", wire: "FER1.TT_R3 TT1.R3" }, ms(20));
+  assert.deepEqual(words(s.modbusRequest(read(1, 3, 0, 1), { t: ms(21), baud: 9600 })), [32767], "hilo blanco cortado");
+  assert.equal(s.output("TT1", "sonda"), "abierta");
+  s.clearFault("open:FER1.TT_R3 TT1.R3", ms(30));
+  assert.deepEqual(words(s.modbusRequest(read(1, 3, 0, 1), { t: ms(31), baud: 9600 })), [234], "reparado");
+  const cruzada = plant(PROBES.map((w) => w.replace("TT_R1 - TT1.R1", "TT_R1 - TT1.R3").replace("TT_R3 - TT1.R3", "TT_R3 - TT1.R1")));
+  assert.deepEqual(words(cruzada.modbusRequest(read(1, 3, 0, 1), at)), [32767], "rojo y blanco cruzados");
+  const sinPh = plant(PROBES.filter((w) => !w.includes("AT_PH")));
+  assert.deepEqual(words(sinPh.modbusRequest(read(2, 3, 0, 2), at)), [32767, 234], "sin el electrodo: pH abierto, temperatura sigue");
+  const otraSonda = plant(PROBES.filter((w) => !w.includes("TT_")).concat(["FER1.AT_T1 - TT1.R1", "FER1.AT_T2 - TT1.R2"]));
+  assert.deepEqual(words(otraSonda.modbusRequest(read(1, 3, 0, 1), at)), [32767], "el ATC del electrodo no es una PT100");
+});
+
+// Bloque fermentador con su válvula Y1 y sus bombas M1 y M2 (24 VDC) manejadas
+// a mano por pulsadores cableados a sus bornes, para probar el modelo.
 const fermenter = (params = {}) =>
   scene(
-    ["PS:power-24vdc", "SV:pushbutton-no", "SR:pushbutton-no", "SM:pushbutton-no", "Y1:water-valve",
-      { id: "M1", type: "jwsim/motor", params: { rating: "24VDC", accelMs: 100, stopMs: 100 } },
-      { id: "M2", type: "jwsim/motor", params: { rating: "24VDC", accelMs: 100, stopMs: 100 } },
-      { id: "FER1", type: "jwsim/fermentador", params: { terma: "fija", tTerma: 80, ...params } }],
-    ["PS.+V1 - SV.13", "SV.14 - Y1.A1", "Y1.A2 - PS.-V1", "PS.+V1 - SR.13", "SR.14 - M1.U1", "M1.U2 - PS.-V1",
-      "PS.+V1 - SM.13", "SM.14 - M2.U1", "M2.U2 - PS.-V1"],
+    ["PS:power-24vdc", "SV:pushbutton-no", "SR:pushbutton-no", "SM:pushbutton-no",
+      { id: "FER1", type: "jwsim/fermentador", params: { terma: "fija", tTerma: 80, retornoV: "24VDC", mostoV: "24VDC", ...params } }],
+    ["PS.+V1 - SV.13", "SV.14 - FER1.Y1_A1", "FER1.Y1_A2 - PS.-V1", "PS.+V1 - SR.13", "SR.14 - FER1.M1_U1", "FER1.M1_U2 - PS.-V1",
+      "PS.+V1 - SM.13", "SM.14 - FER1.M2_U1", "FER1.M2_U2 - PS.-V1"],
   );
 const min = (m) => ms(m * 60_000);
 
@@ -129,6 +153,8 @@ test("fermentador: la masa se calienta con flujo y se enfría sin él; flujostat
   s.advanceTo(min(10) + ms(2000));
   assert.equal(s.output("FER1", "flujo"), true);
   assert.equal(s.contact("FER1", "FS"), true);
+  assert.equal(s.output("FER1", "valvula"), true);
+  assert.equal(s.output("FER1", "bombaRetorno"), true);
   s.advanceTo(min(50));
   const hot = s.output("FER1", "tMasa");
   assert.ok(hot > 24 && hot < 30, `40 min de agua a 80 °C: ${hot} °C`);
@@ -164,4 +190,40 @@ test("fermentador: terma solar sin sol se enfría y deja de calentar", () => {
   s.advanceTo(min(240));
   assert.ok(s.output("FER1", "tTerma") < 35, `de noche la terma no recupera: ${s.output("FER1", "tTerma")} °C`);
   assert.ok(s.output("FER1", "tMasa") < 25, "con agua tibia la masa casi no sube");
+});
+
+test("fermentador: válvula trabada o bomba que no bombea: sin flujo; la bomba trabaja en seco", () => {
+  const s = fermenter();
+  s.act("FER1", "valvulaFalla", 1, 0n);
+  s.act("SV", "press", true, ms(1));
+  s.act("SR", "press", true, ms(1));
+  s.advanceTo(ms(5000));
+  assert.equal(s.output("FER1", "valvula"), false, "trabada cerrada aunque la bobina tenga tensión");
+  assert.equal(s.contact("FER1", "FS"), false);
+  s.act("FER1", "valvulaFalla", 0, ms(5000));
+  s.advanceTo(ms(6000));
+  assert.equal(s.contact("FER1", "FS"), true, "destrabada: hay flujo");
+  s.act("FER1", "retornoFalla", 1, ms(6000));
+  s.advanceTo(ms(40000));
+  assert.equal(s.contact("FER1", "FS"), false, "la bomba gira pero no mueve agua");
+  assert.equal(s.output("FER1", "bombaEnSeco"), true);
+});
+
+test("fermentador: con el cielo nublado la terma solar casi no se recupera", () => {
+  const sol = fermenter({ terma: "solar", tTerma: 40, horaInicio: 9 });
+  const nube = fermenter({ terma: "solar", tTerma: 40, horaInicio: 9 });
+  nube.act("FER1", "clima", 1, 0n);
+  sol.advanceTo(ms(3 * 3600_000));
+  nube.advanceTo(ms(3 * 3600_000));
+  assert.ok(sol.output("FER1", "tTerma") > nube.output("FER1", "tTerma") + 10, `${sol.output("FER1", "tTerma")} vs ${nube.output("FER1", "tTerma")}`);
+});
+
+test("fermentador: la electroválvula abre tras su demora y la NA abre sin tensión", () => {
+  const s = fermenter({ valvulaMs: 200 });
+  s.act("SV", "press", true, ms(10));
+  s.advanceTo(ms(100));
+  assert.equal(s.output("FER1", "valvula"), false);
+  s.advanceTo(ms(220));
+  assert.equal(s.output("FER1", "valvula"), true);
+  assert.equal(fermenter({ valvulaTipo: "NA" }).output("FER1", "valvula"), true);
 });

@@ -35,7 +35,41 @@
         "id": "L1",
         "type": "jwsim/power-230vac",
         "x": 40,
-        "y": 1020
+        "y": 640
+      },
+      {
+        "id": "TT1",
+        "type": "jwsim/pt100-rs485",
+        "params": {
+          "address": 1
+        },
+        "x": 860,
+        "y": 40
+      },
+      {
+        "id": "AT1",
+        "type": "jwsim/ph-rs485",
+        "params": {
+          "address": 2
+        },
+        "x": 1100,
+        "y": 40
+      },
+      {
+        "id": "HA1",
+        "type": "jwsim/buzzer",
+        "x": 860,
+        "y": 300
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Fin"
+        },
+        "x": 1060,
+        "y": 300
       },
       {
         "id": "FER1",
@@ -48,71 +82,8 @@
           "kCalef": 0.02,
           "horasFermentacion": 0.5
         },
-        "x": 900,
-        "y": 560
-      },
-      {
-        "id": "TT1",
-        "type": "jwsim/pt100-rs485",
-        "params": {
-          "address": 1,
-          "source": "FER1.tMasa"
-        },
-        "x": 900,
-        "y": 40
-      },
-      {
-        "id": "AT1",
-        "type": "jwsim/ph-rs485",
-        "params": {
-          "address": 2,
-          "sourcePh": "FER1.ph",
-          "sourceTemp": "FER1.tMosto"
-        },
-        "x": 900,
-        "y": 260
-      },
-      {
-        "id": "Y1",
-        "type": "jwsim/water-valve",
-        "x": 240,
-        "y": 620
-      },
-      {
-        "id": "M1",
-        "type": "jwsim/motor",
-        "params": {
-          "accelMs": 200,
-          "stopMs": 300
-        },
-        "x": 280,
-        "y": 1040
-      },
-      {
-        "id": "M2",
-        "type": "jwsim/motor",
-        "params": {
-          "accelMs": 200,
-          "stopMs": 300
-        },
-        "x": 540,
-        "y": 1040
-      },
-      {
-        "id": "HA1",
-        "type": "jwsim/buzzer",
-        "x": 460,
-        "y": 620
-      },
-      {
-        "id": "H1",
-        "type": "jwsim/lamp",
-        "params": {
-          "color": "rojo",
-          "label": "Fin"
-        },
-        "x": 660,
-        "y": 620
+        "x": 300,
+        "y": 640
       }
     ],
     "wiring": [
@@ -161,11 +132,39 @@
         "to": "AT1.B"
       },
       {
-        "from": "PS1.+V1",
-        "to": "FER1.FS1"
+        "from": "FER1.TT_R1",
+        "to": "TT1.R1"
       },
       {
-        "from": "FER1.FS2",
+        "from": "FER1.TT_R2",
+        "to": "TT1.R2"
+      },
+      {
+        "from": "FER1.TT_R3",
+        "to": "TT1.R3"
+      },
+      {
+        "from": "FER1.AT_PH",
+        "to": "AT1.PH"
+      },
+      {
+        "from": "FER1.AT_REF",
+        "to": "AT1.REF"
+      },
+      {
+        "from": "FER1.AT_T1",
+        "to": "AT1.T1"
+      },
+      {
+        "from": "FER1.AT_T2",
+        "to": "AT1.T2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "FER1.FS_C"
+      },
+      {
+        "from": "FER1.FS_NO",
         "to": "plc.I0_0"
       },
       {
@@ -174,10 +173,10 @@
       },
       {
         "from": "plc.Q0_0.2",
-        "to": "Y1.A1"
+        "to": "FER1.Y1_A1"
       },
       {
-        "from": "Y1.A2",
+        "from": "FER1.Y1_A2",
         "to": "PS1.-V2"
       },
       {
@@ -186,10 +185,10 @@
       },
       {
         "from": "plc.Q0_1.2",
-        "to": "M1.U1"
+        "to": "FER1.M1_U1"
       },
       {
-        "from": "M1.U2",
+        "from": "FER1.M1_U2",
         "to": "L1.N"
       },
       {
@@ -198,10 +197,10 @@
       },
       {
         "from": "plc.Q0_2.2",
-        "to": "M2.U1"
+        "to": "FER1.M2_U1"
       },
       {
-        "from": "M2.U2",
+        "from": "FER1.M2_U2",
         "to": "L1.N"
       },
       {

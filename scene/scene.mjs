@@ -138,6 +138,10 @@ export class Scene {
   injected = new Map();
   t = 0n;
   #sent = {};
+  /** @type {{ find: (x: string) => string } | null} conexiones por los cables activos (caché) */
+  #conn = null;
+  /** @type {Map<string, { dev: any, probe: import("../sdk/jwsim-device.js").ProbeSpec } | null>} sonda leída por cada entrada (caché) */
+  #probeOf = new Map();
   /** @type {ReturnType<typeof solve> | null} */
   #sol = null;
 
@@ -166,6 +170,8 @@ export class Scene {
         links: def.links?.(params) ?? [],
         reads: (def.reads?.(params) ?? []).filter((r) => r.source),
         modbus: def.modbus?.(params) ?? null,
+        probes: def.probes?.(params) ?? [],
+        probeInputs: def.probeInputs?.(params) ?? [],
         actions: {},
         wired: new Set(),
         step: /** @type {DeviceStep} */ ({}),
@@ -187,6 +193,9 @@ export class Scene {
       for (const l of [...dev.links, ...dev.reads]) {
         const i = l.source.indexOf(".");
         if (i < 0 || !this.devices.has(l.source.slice(0, i))) throw new Error(`${dev.id}: enlace a "${l.source}" inexistente`);
+      }
+      for (const pr of [...dev.probes, ...dev.probeInputs]) {
+        for (const term of pr.terminals) if (!dev.terms.has(term)) throw new Error(`${dev.def.type}: la sonda ${pr.id} usa el borne inexistente "${term}"`);
       }
     }
     // Una carga se analiza si tiene cableado algún borne propio: un común
@@ -261,6 +270,49 @@ export class Scene {
     return typeof v === "boolean" ? (v ? 1 : 0) : valueAt(v, src.stepT, t);
   }
 
+  /**
+   * Valor de la sonda cableada a una entrada de sonda: la de otro dispositivo
+   * con el mismo tipo cuyos bornes estén unidos por cables activos a los de
+   * la entrada, uno con uno y en orden. NaN si falta o se cortó algún cable,
+   * o si los bornes no coinciden: el transmisor la ve abierta.
+   */
+  #probeValue(dev, input, t) {
+    const key = `${dev.id}.${input.id}`;
+    if (!this.#probeOf.has(key)) {
+      const { find } = this.#connections();
+      const nets = input.terminals.map((x) => find(`${dev.id}.${x}`));
+      let hit = null;
+      for (const src of this.devices.values()) {
+        if (src === dev) continue;
+        for (const probe of src.probes) {
+          if (probe.kind !== input.kind || probe.terminals.length !== nets.length) continue;
+          if (probe.terminals.every((x, k) => find(`${src.id}.${x}`) === nets[k])) hit = { dev: src, probe };
+        }
+      }
+      this.#probeOf.set(key, hit);
+    }
+    const hit = this.#probeOf.get(key);
+    return hit ? this.#readValue(`${hit.dev.id}.${hit.probe.output}`, t) : NaN;
+  }
+
+  /** Bornes unidos por los cables que no están cortados (unión-búsqueda, en caché hasta cortar o reparar un cable). */
+  #connections() {
+    if (this.#conn) return this.#conn;
+    const parent = new Map();
+    const find = (x) => {
+      while (parent.has(x) && parent.get(x) !== x) x = parent.get(x);
+      return x;
+    };
+    for (const [a, b] of this.wires) {
+      if (this.injected.has(`open:${[a, b].sort().join(" ")}`)) continue;
+      const ra = find(a);
+      const rb = find(b);
+      if (ra !== rb) parent.set(ra, rb);
+    }
+    this.#conn = { find };
+    return this.#conn;
+  }
+
   /** Evalúa la escena en t hasta el punto fijo. */
   evaluate(t) {
     this.t = t;
@@ -293,6 +345,7 @@ export class Scene {
         /** @type {Record<string, number>} */
         const values = {};
         for (const r of dev.reads) values[r.id] = this.#readValue(r.source, t);
+        for (const pi of dev.probeInputs) values[pi.id] = this.#probeValue(dev, pi, t);
         // Pegado (sensor, final de carrera, pulsador): se comporta como
         // accionado (value = true) o en reposo, haga lo que haga el usuario o
         // el enlace mecánico.
@@ -426,6 +479,8 @@ export class Scene {
     }
     this.advanceTo(t);
     this.injected.set(key, { ...fault });
+    this.#conn = null;
+    this.#probeOf.clear();
     this.#log({ t, kind: "inject", type: fault.kind, device: "device" in fault ? fault.device : undefined, key, value: "value" in fault ? fault.value : undefined });
     this.evaluate(t);
     return key;
@@ -442,6 +497,8 @@ export class Scene {
     if (!this.injected.has(key)) return;
     this.advanceTo(t);
     this.injected.delete(key);
+    this.#conn = null;
+    this.#probeOf.clear();
     this.#log({ t, kind: "clear", key });
     this.evaluate(t);
   }
@@ -465,11 +522,15 @@ export class Scene {
     this.advanceTo(o.t);
     const addr = frame[0];
     const fn = frame[1];
-    const net = this.#rs485Net();
+    const { find } = this.#connections();
+    const plc = [...this.devices.values()].find((d) => d.def.type === "jwsim/jwplc-basic");
+    if (!plc) return null;
+    const busA = find(`${plc.id}.RS485_A`);
+    const busB = find(`${plc.id}.RS485_B`);
     const slaves = [...this.devices.values()].filter(
       (d) =>
         d.modbus && (addr === 0 || d.modbus.address === addr) && Math.abs(d.modbus.baud - o.baud) / d.modbus.baud < 0.03 &&
-        net.find(`${d.id}.A`) === net.find("A") && net.find(`${d.id}.B`) === net.find("B") && !this.injected.has(`burnt:${d.id}`),
+        find(`${d.id}.A`) === busA && find(`${d.id}.B`) === busB && !this.injected.has(`burnt:${d.id}`),
     );
     if (!slaves.length) return null;
     const u16 = (k) => (frame[k] << 8) | frame[k + 1];
@@ -516,27 +577,6 @@ export class Scene {
     // La escritura pudo cambiar el estado de un dispositivo.
     if (fn === 6 || fn === 16) this.evaluate(o.t);
     return out;
-  }
-
-  /** Conexiones del bus RS-485: unión de bornes por los cables activos ("A"/"B" = bornes de la placa). */
-  #rs485Net() {
-    const parent = new Map();
-    const find = (x) => {
-      while (parent.has(x) && parent.get(x) !== x) x = parent.get(x);
-      return x;
-    };
-    const union = (a, b) => {
-      const ra = find(a);
-      const rb = find(b);
-      if (ra !== rb) parent.set(ra, rb);
-    };
-    const plc = [...this.devices.values()].find((d) => d.def.type === "jwsim/jwplc-basic");
-    for (const [a, b] of this.wires) if (!this.injected.has(`open:${[a, b].sort().join(" ")}`)) union(a, b);
-    if (plc) {
-      union("A", `${plc.id}.RS485_A`);
-      union("B", `${plc.id}.RS485_B`);
-    }
-    return { find };
   }
 
   /** Rearma las fuentes disparadas y repone las cargas quemadas. */
