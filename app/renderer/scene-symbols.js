@@ -102,8 +102,17 @@
   }
 
   // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
-  // contact.<contacto>, damaged, tripped; con "!" niega, "=v" compara.
+  // contact.<contacto>, damaged, tripped; con "!" niega, "=v" compara y
+  // "a|b" toma b si a no tiene valor (p. ej. out.distance|param.distance:
+  // la salida con la simulación en marcha, el parámetro en edición).
   function valueOf(expr, ctx) {
+    if (expr.includes("|")) {
+      for (const e of expr.split("|")) {
+        const v = valueOf(e, ctx);
+        if (v !== undefined) return v;
+      }
+      return undefined;
+    }
     const [path, cmp] = expr.split("=");
     const [ns, key] = path.replace(/^!/, "").split(".");
     let v =
@@ -126,10 +135,13 @@
       if (v !== undefined) el.setAttribute("fill", LENS[v] ?? v);
     }
     for (const el of root.querySelectorAll("[data-text]")) {
-      // data-text="out.speed:%" muestra 0..1 como porcentaje.
+      // data-text="out.speed:%" muestra 0..1 como porcentaje; ":mm", un
+      // largo con un decimal ("12,5 mm").
       const [expr, fmt] = el.getAttribute("data-text").split(":");
       const v = valueOf(expr, ctx);
-      el.textContent = fmt === "%" ? `${Math.round(Number(v ?? 0) * 100)} %` : String(v ?? "");
+      el.textContent =
+        fmt === "%" ? `${Math.round(Number(v ?? 0) * 100)} %` :
+        fmt === "mm" ? `${Number(v ?? 0).toFixed(1).replace(".", ",")} mm` : String(v ?? "");
     }
     for (const el of root.querySelectorAll("[data-translate]")) {
       // data-translate="out.position:0:1:x:60": valor de 0 a 1 → 0 a 60 px en x.

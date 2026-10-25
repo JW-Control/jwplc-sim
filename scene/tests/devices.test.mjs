@@ -108,6 +108,44 @@ for (const kind of ["inductive", "photoelectric"]) {
   });
 }
 
+test("sensor inductivo: la pieza conmuta a Sn = 8 mm y suelta pasada la histéresis (8,8 mm)", () => {
+  const s = scene(
+    ["PS:power-24vdc", "B:sensor-inductive", "H:lamp"],
+    ["PS.+V1 - B.BN", "B.BU - PS.-V1", "B.BK - H.X1", "H.X2 - PS.-V1"],
+  );
+  const at = (mm, t) => {
+    s.act("B", "distance", mm, ms(t));
+    s.advanceTo(ms(t + 2));
+    return s.output("H", "lit");
+  };
+  s.advanceTo(ms(5));
+  assert.equal(s.output("B", "distance"), 20, "arranca en la distancia del parámetro");
+  assert.equal(at(12, 10), false);
+  assert.equal(at(8.4, 20), false, "acercándose: todavía fuera de Sn");
+  assert.equal(at(8, 30), true, "conmuta en Sn");
+  assert.equal(at(8.6, 40), true, "alejándose: dentro de la histéresis sigue detectando");
+  assert.equal(at(8.8, 50), true);
+  assert.equal(at(8.9, 60), false, "suelta pasado 1,1·Sn");
+  assert.equal(s.output("B", "distance"), 8.9);
+});
+
+test("sensor inductivo: distancia inicial por parámetro y pieza al frente por enlace", () => {
+  const s = scene(
+    ["PS:power-24vdc", { id: "B", type: "jwsim/sensor-inductive", params: { distance: 4 } }, "H:lamp"],
+    ["PS.+V1 - B.BN", "B.BU - PS.-V1", "B.BK - H.X1", "H.X2 - PS.-V1"],
+  );
+  s.advanceTo(ms(5));
+  assert.equal(s.output("H", "lit"), true);
+  s.act("B", "distance", 30, ms(6));
+  s.advanceTo(ms(10));
+  assert.equal(s.output("B", "distance"), 25, "se limita al recorrido");
+  assert.equal(s.output("H", "lit"), false);
+  s.act("B", "target", true, ms(11));
+  s.advanceTo(ms(15));
+  assert.equal(s.output("B", "distance"), 3, "la pieza pasa frente a la cara");
+  assert.equal(s.output("H", "lit"), true);
+});
+
 test("sensor sin alimentación o con polaridad invertida: no conmuta", () => {
   const s = scene(
     ["PS:power-24vdc", "B:sensor-inductive", "H:lamp"],

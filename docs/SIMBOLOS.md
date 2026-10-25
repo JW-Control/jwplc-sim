@@ -78,16 +78,18 @@ Las expresiones leen el estado del dispositivo:
 | `contact.<contacto>` | Contacto cerrado: `contact.13-14` |
 | `damaged`, `tripped` | Carga quemada; fuente disparada |
 | `!expr`, `expr=valor` | Negación y comparación: `!out.closed`, `param.output=npn` |
+| `expr\|expr` | La primera que tenga valor: `out.distance\|param.distance` (la salida en marcha, el parámetro en edición) |
 
 | Atributo | Efecto |
 |---|---|
 | `data-show="expr"` | El elemento se ve solo si la expresión es verdadera. |
 | `data-fill="expr"` | Pone `fill` al valor. Los nombres de color de los parámetros (`verde`, `rojo`, `amarillo`, `azul`, `blanco`, `negro`) se traducen a la paleta de lentes. |
-| `data-text="expr"` o `"expr:%"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje. |
+| `data-text="expr"`, `"expr:%"` o `"expr:mm"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje; con `:mm`, como largo con un decimal (`12,5 mm`). |
 | `data-translate="expr:v0:v1:x\|y:dist"` | Desplaza el elemento de 0 a `dist` px mientras el valor va de `v0` a `v1`. Ejemplo: `out.position:0:1:x:60` para el vástago del cilindro. |
 | `data-rotate="expr:v0:v1:a0:a1:cx:cy"` | Gira de `a0` a `a1` grados alrededor de (`cx`, `cy`). Ejemplo: `out.position:-1:1:-45:45:40:50` para la perilla de un selector. |
 | `data-spin="expr:cx:cy:vps"` | Giro continuo con la simulación alrededor de (`cx`, `cy`): con el valor 1 da `vps` vueltas por segundo de tiempo simulado; con 0 se detiene, con un valor negativo gira al revés. El ángulo se integra con el tiempo simulado (se detiene en pausa y sigue la rampa). Ejemplo: `out.speed:60:60:2` para el ventilador de un motor. |
 | `data-action="id" data-kind="momentary\|toggle\|cycle"` | Zona de clic que acciona el dispositivo con la simulación en marcha. `momentary`: activo mientras se mantiene pulsado (pulsador). `toggle`: alterna. `cycle`: recorre `data-options="0,1"`. Las acciones de cada tipo están en `dispositivos.json`. |
+| `data-action="id" data-kind="drag" data-drag="x\|y:px0:px_por_unidad:min:max"` | Pieza que se arrastra sobre un eje (acción de tipo `value`). El valor es `(posición − px0) / px_por_unidad`, limitado a `min`..`max` y redondeado a 0,1. Con la simulación en marcha manda la acción; detenida, fija el parámetro del mismo `id` (posición inicial). El elemento se mueve con su propio `data-translate`. Ejemplo: la pieza del sensor inductivo, `x:248:4:0:25` (4 px/mm desde la cara activa). |
 
 Varios atributos pueden ir en el mismo elemento.
 
@@ -134,7 +136,12 @@ Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 3 posiciones, contactor CJX2 (1NA y 1NC) y fuentes Mean Well MDR-60,
 HDR-60 y NDR-120. Las vistas de verificación están en `simbolos/vistas/`.
 
-Pendientes (todavía dibujados en código, sin escala real): red de 230 VAC,
-fin de carrera, sensores inductivo y fotoeléctrico, relé enchufable,
-electroválvula con cilindro y motor. `node scripts/export-symbols.mjs`
-los marca con `plantilla: null` en `dispositivos.json`.
+G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control):
+red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
+Telemecanique XCKJ10511 (cables con marcador y función NA/NC) y sensor
+inductivo Autonics PR18-8D (M18, Sn 8 mm), con la pieza arrastrable y la
+zona de detección (Sa, Sn e histéresis del 10 %) a escala.
+
+Pendientes (todavía dibujados en código, sin escala real): sensor
+fotoeléctrico, relé enchufable, electroválvula con cilindro y motor.
+`node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.

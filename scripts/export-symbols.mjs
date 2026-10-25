@@ -40,7 +40,7 @@ const ACTIVE = {
   "selector-2": { position: 1 },
   "selector-3": { position: 1 },
   "limit-switch": { actuated: true },
-  "sensor-inductive": { detecting: true, output: true, powered: true },
+  "sensor-inductive": { detecting: true, output: true, powered: true, distance: 5 },
   "sensor-photoelectric": { detecting: true, output: true, powered: true },
   lamp: { lit: true },
   buzzer: { sounding: true },

@@ -30,10 +30,17 @@ export interface TerminalSpec {
 export interface ActionSpec {
   id: string;
   label?: string;
-  /** momentary: activo mientras se mantiene; toggle: alterna; select: una de `options`. */
-  kind: "momentary" | "toggle" | "select";
+  /**
+   * momentary: activo mientras se mantiene; toggle: alterna; select: una de
+   * `options`; value: un número entre `min` y `max` (p. ej. la distancia de
+   * una pieza, que el símbolo arrastra con data-drag).
+   */
+  kind: "momentary" | "toggle" | "select" | "value";
   options?: (number | string)[];
   labels?: string[];
+  min?: number;
+  max?: number;
+  unit?: string;
 }
 
 /** Fuente: marca su polo positivo (L+ / L) y su retorno (M / N). */

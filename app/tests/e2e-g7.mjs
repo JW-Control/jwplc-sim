@@ -11,6 +11,9 @@
 //                 clics en los bornes (se enciende en el análisis), arrastrar un
 //                 dispositivo, quitar un cable (aviso de carga sin alimentación)
 //                 y guardar el proyecto con la escena
+//   SCENE_DRAG    la pieza del sensor inductivo B0 se arrastra: en marcha
+//                 lleva la acción "distance" a 0 mm (detecta); detenida, fija
+//                 el parámetro en 25 mm
 //   SCENE_TFT     la pantalla de la placa en la escena muestra la TFT simulada
 //   SCENE_SYMBOL  una plantilla .svg (docs/simbolos/pushbutton-no.svg) reemplaza
 //                 el símbolo de S1 con sus bornes y su color; una que no cumple
@@ -132,9 +135,27 @@ try {
   criteria.SCENE_TFT = { ok: tftLit > 200, lit_pixels: tftLit };
   log(`SCENE_TFT ${JSON.stringify(criteria.SCENE_TFT)}`);
 
-  // ---- SCENE_EDIT
+  // ---- SCENE_DRAG: la pieza del sensor inductivo se arrastra (data-drag).
+  // En marcha mueve la acción "distance"; detenida, fija el parámetro.
+  const dragBy = async (id, dx) => {
+    const c = await actCenter(id);
+    await win.mouse.move(c.x, c.y);
+    await win.mouse.down();
+    await win.mouse.move(c.x + dx / 2, c.y, { steps: 6 });
+    await win.mouse.move(c.x + dx, c.y, { steps: 6 });
+    await win.mouse.up();
+  };
+  await dragBy("B0", -1000);
+  const dragRun = await until(async () => (await devOut("B0", "distance")) === 0, 3000);
+  const detRun = await devOut("B0", "detecting");
   await win.click("#btn-stop");
   await until(async () => (await status()) === "idle", 10000);
+  await dragBy("B0", 1000);
+  const dragEdit = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "B0").params?.distance === 25), 3000);
+  criteria.SCENE_DRAG = { ok: dragRun !== null && detRun === true && !!dragEdit, running_distance_0: dragRun !== null, detecting: detRun, edit_param_25: !!dragEdit };
+  log(`SCENE_DRAG ${JSON.stringify(criteria.SCENE_DRAG)}`);
+
+  // ---- SCENE_EDIT
   await win.selectOption("#scene-add", "jwsim/lamp");
   const h = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.type === "jwsim/lamp" && d.id !== "H1")?.id));
   await t((id) => window.jwsimTest.scene.move(id, -200, 100), h);
@@ -250,7 +271,7 @@ try {
   };
   log(`SCENE_VARIANTS ${JSON.stringify(criteria.SCENE_VARIANTS)}`);
 } finally {
-  const ok = Object.values(criteria).length === 6 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 7 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_G7_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_G7_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();

@@ -712,6 +712,22 @@
     await api.sceneAct(id, action, value);
   }
 
+  // Al arrastrar se manda solo el último valor: un envío a la vez.
+  async function actLatest(id, action, value) {
+    S.actQ = { id, action, value };
+    if (S.actBusy) return;
+    S.actBusy = true;
+    try {
+      while (S.actQ) {
+        const q = S.actQ;
+        S.actQ = null;
+        await act(q.id, q.action, q.value);
+      }
+    } finally {
+      S.actBusy = false;
+    }
+  }
+
   function wirePointer() {
     const svg = $("scene-svg");
     svg.addEventListener("pointerdown", (e) => {
@@ -756,6 +772,24 @@
       if (S.wiring) {
         S.wiring = null;
         $("scene-rubber").setAttribute("d", "");
+      }
+      // Pieza arrastrable (data-kind="drag", data-drag="eje:px0:px_por_unidad:min:max"):
+      // en marcha mueve la acción; detenida, fija el parámetro del mismo nombre.
+      if (actEl?.dataset.kind === "drag" && devEl && actEl.dataset.drag) {
+        e.preventDefault();
+        const dev = devById(devEl.dataset.id);
+        const [axis, px0, ppu, min, max] = actEl.dataset.drag.split(":");
+        const action = actEl.dataset.action;
+        const cur = Number(
+          (S.running ? out(dev.id).outputs?.[action] : undefined) ?? dev.params?.[action] ?? defaultsOf(dev.type)[action] ?? 0,
+        );
+        const local = (q) => (axis === "y" ? q.y - (dev.y ?? 0) : q.x - (dev.x ?? 0));
+        S.drag = {
+          kind: "act", dev, action, px0: Number(px0), ppu: Number(ppu), min: Number(min), max: Number(max), local,
+          off: local(w) - (Number(px0) + cur * Number(ppu)), last: cur, moved: false,
+        };
+        svg.setPointerCapture(e.pointerId);
+        return;
       }
       if (actEl && devEl && S.running) {
         e.preventDefault();
@@ -813,6 +847,24 @@
         if (a) $("scene-rubber").setAttribute("d", `M${a.x} ${a.y} L${w.x} ${w.y}`);
       }
       if (!S.drag) return;
+      if (S.drag.kind === "act") {
+        const d = S.drag;
+        const raw = (d.local(w) - d.off - d.px0) / d.ppu;
+        const v = Math.round(Math.max(d.min, Math.min(d.max, raw)) * 10) / 10;
+        if (v === d.last) return;
+        d.last = v;
+        if (S.running) actLatest(d.dev.id, d.action, v);
+        else {
+          d.dev.params = { ...(d.dev.params ?? {}), [d.action]: v };
+          d.changed = true;
+          // La vista estática (analyze) se recalcula al soltar; mientras tanto
+          // la pieza sigue al puntero.
+          const sd = S.snap?.devices.find((x) => x.id === d.dev.id);
+          if (sd?.outputs && d.action in sd.outputs) sd.outputs[d.action] = v;
+          renderDevice(d.dev);
+        }
+        return;
+      }
       if (S.drag.kind === "pan") {
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
         $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
@@ -844,6 +896,12 @@
       }
     });
     svg.addEventListener("pointerup", () => {
+      if (S.drag?.kind === "act") {
+        const changedParam = S.drag.changed;
+        S.drag = null;
+        if (changedParam) changed();
+        return;
+      }
       const moved = S.drag?.moved;
       if (moved) S.dirty = true;
       S.drag = null;
