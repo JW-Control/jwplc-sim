@@ -3,30 +3,39 @@
 // Emulación de planta (G9): el PLC es maestro Modbus RTU (9600 8N1) y lee
 // dos transmisores de la escena: PT100 (dirección 1, registro 0 = °C × 10)
 // y pH con temperatura (dirección 2, registros 0 = pH × 100 y 1 = °C × 10).
-#include <JW_ModbusRTU.h>
+// Como en los ejemplos del package: el maestro JWPLC_ModbusRTU ya existe,
+// solo se arranca con la velocidad del bus.
 
-JW_RS485 rs485(Serial2, JWPLC_RS485_RX_PIN, JWPLC_RS485_TX_PIN);
-JW_ModbusRTU modbus(rs485);
+static uint16_t regs[2];
+static uint8_t sensor = 0;  // 0 = PT100, 1 = pH
+static uint32_t proximaMs = 0;
 
 void setup()
 {
     Serial.begin(115200);
-    rs485.setAutoDirection();
-    modbus.setQueuedTxEnabled(false);
-    if (!modbus.begin(247, 9600, SERIAL_8N1)) Serial.println("begin failed");
+    if (!JWPLC_ModbusRTU.begin(247, 9600, SERIAL_8N1)) Serial.println("begin failed");
 }
 
 void loop()
 {
-    uint16_t t[1] = {};
-    uint16_t a[2] = {};
-    if (modbus.readHoldingRegistersSync(1, 0, 1, t, 200))
-        Serial.printf("%lu ms T=%.1f\n", (unsigned long)millis(), (int16_t)t[0] / 10.0);
-    else
-        Serial.printf("%lu ms T FAIL %s\n", (unsigned long)millis(), modbus.lastErrorString());
-    if (modbus.readInputRegistersSync(2, 0, 2, a, 200))
-        Serial.printf("%lu ms pH=%.2f Tm=%.1f\n", (unsigned long)millis(), a[0] / 100.0, (int16_t)a[1] / 10.0);
-    else
-        Serial.printf("%lu ms pH FAIL %s\n", (unsigned long)millis(), modbus.lastErrorString());
-    delay(500);
+    JWPLC_ModbusRTU.task();
+    const unsigned long now = millis();
+
+    if (JWPLC_ModbusRTU.masterDone())
+    {
+        const bool ok = JWPLC_ModbusRTU.masterSucceeded();
+        if (sensor == 0 && ok) Serial.printf("%lu ms T=%.1f\n", now, (int16_t)regs[0] / 10.0);
+        else if (sensor == 0) Serial.printf("%lu ms T FAIL %s\n", now, JWPLC_ModbusRTU.lastErrorString());
+        else if (ok) Serial.printf("%lu ms pH=%.2f Tm=%.1f\n", now, regs[0] / 100.0, (int16_t)regs[1] / 10.0);
+        else Serial.printf("%lu ms pH FAIL %s\n", now, JWPLC_ModbusRTU.lastErrorString());
+        JWPLC_ModbusRTU.clearMasterResult();
+        sensor ^= 1;
+        if (sensor == 0) proximaMs = now + 500;
+    }
+
+    if (!JWPLC_ModbusRTU.masterBusy() && !JWPLC_ModbusRTU.masterDone() && (int32_t)(now - proximaMs) >= 0)
+    {
+        if (sensor == 0) JWPLC_ModbusRTU.requestReadHoldingRegisters(1, 0, 1, regs, 200);
+        else JWPLC_ModbusRTU.requestReadInputRegisters(2, 0, 2, regs, 200);
+    }
 }
