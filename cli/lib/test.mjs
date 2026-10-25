@@ -37,7 +37,7 @@ export function resolveSketch(spec, testFile, pkg) {
   return resolve(dirname(testFile), spec);
 }
 
-const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s", "actions", "devices"]);
+const RUN_KEYS = new Set(["until_ms", "stim", "args", "expect", "timeout_s", "actions", "devices", "faults"]);
 const TEST_KEYS = new Set(["$schema", "$comment", "name", "sketch", "runs", "state", "scene", ...RUN_KEYS]);
 const EXPECT_KEYS = new Set(["exit", "console", "console_absent", "signals", "stderr", "stderr_absent", "result", "screen", "scene"]);
 
@@ -58,6 +58,11 @@ export function loadTest(file) {
     if (!(Number(r.until_ms) > 0)) throw bad(`runs[${i}]: 'until_ms' debe ser > 0`);
     for (const k of Object.keys(r.expect ?? {})) if (!EXPECT_KEYS.has(k)) throw bad(`runs[${i}].expect: campo desconocido '${k}'`);
     if ((r.actions || r.expect?.scene) && !t.scene) throw bad(`runs[${i}]: 'actions' y 'expect.scene' requieren 'scene'`);
+    try {
+      expandFaults(r.faults, !!t.scene);
+    } catch (err) {
+      throw bad(`runs[${i}].faults: ${err.message}`);
+    }
     if (t.scene && r.expect?.screen) throw bad(`runs[${i}]: 'expect.screen' no está disponible con 'scene'`);
   });
   const rel = relative(process.cwd(), file);
@@ -66,6 +71,47 @@ export function loadTest(file) {
   // varias o se pide; si no, cada corrida arranca con la placa de fábrica.
   const shared = t.state === "shared" || runs.length > 1;
   return { file, name, sketch: t.sketch, runs, shared, scene: t.scene === undefined ? undefined : loadScene(t.scene, file) };
+}
+
+// Fallas inyectadas (gate JWSIM_G9_FAULT_INJECTION). Las de la placa se
+// vuelven estímulos u opciones del runner; las de la escena, inyecciones en
+// el motor de escena. `until_ms` quita la falla en ese instante.
+//   sd-absent              tarjeta microSD retirada (SD_CARD=0)
+//   rtc-battery            RTC sin batería: al arrancar no conservó nada
+//   rs485-noise            ruido en la línea RS-485 (rate: 0..1, seed)
+//   stuck / welded / burnt sensor o mando pegado (value), relé soldado,
+//                          carga quemada (device)
+//   open                   cable cortado (wire: "A.x B.y")
+const SCENE_FAULTS = new Set(["stuck", "welded", "burnt", "open"]);
+export function expandFaults(faults = [], hasScene = false) {
+  const out = { stim: /** @type {string[]} */ ([]), args: /** @type {string[]} */ ([]), actions: /** @type {any[]} */ ([]) };
+  if (!Array.isArray(faults)) throw new Error("debe ser una lista");
+  for (const [k, f] of faults.entries()) {
+    const at = Number(f.at_ms ?? 0);
+    const until = f.until_ms === undefined ? undefined : Number(f.until_ms);
+    if (!(at >= 0) || (until !== undefined && !(until > at))) throw new Error(`[${k}]: at_ms >= 0 y until_ms > at_ms`);
+    if (f.kind === "sd-absent") {
+      out.stim.push(`${at} SD_CARD=0`);
+      if (until !== undefined) out.stim.push(`${until} SD_CARD=1`);
+    } else if (f.kind === "rtc-battery") {
+      if (at !== 0 || until !== undefined) throw new Error(`[${k}]: rtc-battery vale para el arranque (sin at_ms ni until_ms)`);
+      out.args.push("--rtc", "sin-bateria");
+    } else if (f.kind === "rs485-noise") {
+      const rate = Number(f.rate);
+      if (!(rate > 0 && rate <= 1)) throw new Error(`[${k}]: rs485-noise necesita rate entre 0 y 1`);
+      const seed = f.seed === undefined ? 1 : Number(f.seed);
+      out.stim.push(`${at} noise uart2 ${rate} ${seed}`);
+      if (until !== undefined) out.stim.push(`${until} noise uart2 0 ${seed}`);
+    } else if (SCENE_FAULTS.has(f.kind)) {
+      if (!hasScene) throw new Error(`[${k}]: '${f.kind}' requiere 'scene'`);
+      const inj = f.kind === "open" ? { kind: "open", wire: f.wire } : { kind: f.kind, device: f.device, ...(f.value === undefined ? {} : { value: !!f.value }) };
+      out.actions.push({ at_ms: at, inject: inj });
+      if (until !== undefined) out.actions.push({ at_ms: until, clear: inj });
+    } else {
+      throw new Error(`[${k}]: falla desconocida '${f.kind}' (sd-absent, rtc-battery, rs485-noise, stuck, welded, burnt, open)`);
+    }
+  }
+  return out;
 }
 
 // Escena de una prueba: objeto en línea, archivo de escena (.json) o
@@ -95,7 +141,7 @@ async function runWithScene(exe, args, test, r) {
     launcher: exe.endsWith(".exe") && process.platform !== "win32" ? "wine" : undefined,
     scene: test.scene,
     untilNs: BigInt(Math.round(r.until_ms * 1e6)),
-    actions: (r.actions ?? []).map((a) => ({ ...a, at_ns: BigInt(Math.round(a.at_ms * 1e6)) })),
+    actions: [...(r.actions ?? []), ...expandFaults(r.faults, true).actions].map((a) => ({ ...a, at_ns: BigInt(Math.round(a.at_ms * 1e6)) })),
     // Consola fechada con precisión de 5 ms (la escena despierta al runner al menos así).
     maxStepNs: 5_000_000n,
     probes,
@@ -292,12 +338,15 @@ export async function runTest(test, { pkg, target = "native", buildRoot, record 
   if (test.shared) mkdirSync(stateDir, { recursive: true });
   let ok = true;
   for (const [i, r] of test.runs.entries()) {
-    const args = ["--until", String(r.until_ms), ...(r.args ?? [])];
-    if (r.stim !== undefined) {
-      let stim = r.stim;
+    const fx = expandFaults(r.faults, !!test.scene);
+    const args = ["--until", String(r.until_ms), ...(r.args ?? []), ...fx.args];
+    if (r.stim !== undefined || fx.stim.length) {
+      let stim = r.stim ?? [];
+      if (typeof stim === "string" && fx.stim.length) stim = readFileSync(resolve(dirname(test.file), stim), "utf8").split(/\r?\n/);
       if (Array.isArray(stim)) {
+        const lines = [...stim, ...fx.stim];
         stim = join(work, `run${i}.stim`);
-        writeFileSync(stim, r.stim.join("\n") + "\n");
+        writeFileSync(stim, lines.join("\n") + "\n");
       } else stim = resolve(dirname(test.file), stim);
       args.push("--stim", hostPath(exe, stim));
     }

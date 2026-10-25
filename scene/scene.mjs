@@ -55,8 +55,29 @@ const MAX_EVENTS = 20000;
  * @typedef {import("../sdk/jwsim-device.js").DeviceStep} DeviceStep
  * @typedef {{ id: string, type: string, version?: string, params?: Record<string, unknown>, x?: number, y?: number }} DeviceSpec
  * @typedef {{ devices: DeviceSpec[], wiring: { from: string, to: string }[] }} SceneSpec
- * @typedef {{ t: bigint, kind: "fault" | "output" | "action" | "signal" | "rearm", device?: string, key?: string, value?: unknown, message?: string, type?: string }} SceneEvent
+ * @typedef {{ t: bigint, kind: "fault" | "output" | "action" | "signal" | "rearm" | "inject" | "clear", device?: string, key?: string, value?: unknown, message?: string, type?: string }} SceneEvent
+ * @typedef {{ kind: "stuck", device: string, value?: boolean }
+ *   | { kind: "welded", device: string }
+ *   | { kind: "burnt", device: string }
+ *   | { kind: "open", wire: string }} InjectedFault
  */
+
+/**
+ * Clave de una falla inyectada: "stuck:B0", "welded:KM1", "burnt:H1",
+ * "open:A.x B.y" (los extremos del cable en orden alfabético).
+ * @param {InjectedFault} f
+ */
+export function faultKey(f) {
+  if (f.kind === "open") return `open:${wireKey(f.wire)}`;
+  return `${f.kind}:${f.device}`;
+}
+
+/** Cable por sus extremos ("PS1.+V1 KM1.13"), sin importar el orden. */
+function wireKey(w) {
+  const ends = String(w).trim().split(/\s+/);
+  if (ends.length !== 2) throw new Error(`cable "${w}": se esperan sus dos extremos separados por un espacio`);
+  return ends.sort().join(" ");
+}
 
 /** Parámetros con sus valores por defecto, validados contra la definición. */
 export function resolveParams(def, given = {}) {
@@ -112,6 +133,8 @@ export class Scene {
   warnings = [];
   /** @type {import("./netlist.mjs").Finding[]} */
   findings = [];
+  /** @type {Map<string, InjectedFault & { latched?: Record<string, boolean> }>} fallas inyectadas (G9) */
+  injected = new Map();
   t = 0n;
   #sent = {};
   /** @type {ReturnType<typeof solve> | null} */
@@ -201,16 +224,18 @@ export class Scene {
       for (const s of dev.el.sources ?? []) {
         sources.push({ ...s, id: s.id ? `${dev.id}.${s.id}` : dev.id, pos: g(s.pos), neg: g(s.neg) });
       }
+      const burnt = !allContacts && this.injected.has(`burnt:${dev.id}`);
       for (const l of dev.el.loads ?? []) {
         const id = `${dev.id}.${l.id}`;
-        if (!allContacts && this.damaged.has(id)) continue;
+        if (!allContacts && (this.damaged.has(id) || burnt)) continue;
         loads.push({ ...l, id, a: g(l.a), b: g(l.b) });
       }
       for (const [cid, [a, b]] of Object.entries(dev.el.contacts ?? {})) {
         if (allContacts || dev.step.contacts?.[cid]) switches.push({ a: g(a), b: g(b) });
       }
     }
-    return { wires: this.wires, sources, loads, switches };
+    const wires = allContacts ? this.wires : this.wires.filter(([a, b]) => !this.injected.has(`open:${[a, b].sort().join(" ")}`));
+    return { wires, sources, loads, switches };
   }
 
   #linkValue(link, t) {
@@ -244,20 +269,46 @@ export class Scene {
       for (const dev of this.devices.values()) {
         /** @type {Record<string, any>} */
         const loads = {};
+        const burnt = this.injected.has(`burnt:${dev.id}`);
         for (const l of dev.el.loads ?? []) {
           const id = `${dev.id}.${l.id}`;
-          loads[l.id] = this.damaged.has(id)
+          loads[l.id] = this.damaged.has(id) || burnt
             ? { on: false, polarity: 0, source: null, volts: 0, kind: null, issue: "damaged" }
             : sol.loads.get(id);
         }
         /** @type {Record<string, boolean>} */
         const links = {};
         for (const l of dev.links) links[l.id] = this.#linkValue(l, t);
+        // Pegado (sensor, final de carrera, pulsador): se comporta como
+        // accionado (value = true) o en reposo, haga lo que haga el usuario o
+        // el enlace mecánico.
+        let actions = dev.actions;
+        const stuck = this.injected.get(`stuck:${dev.id}`);
+        if (stuck) {
+          const on = stuck.value !== false;
+          actions = { ...dev.actions };
+          for (const a of dev.def.actions ?? []) {
+            if (a.kind === "momentary" || a.kind === "toggle") actions[a.id] = on;
+            else if (a.kind === "value") actions[a.id] = on ? a.min ?? 0 : a.max ?? 0;
+          }
+          for (const k of Object.keys(links)) links[k] = on;
+        }
         /** @type {Record<string, number>} */
         const signals = {};
         for (const s of dev.def.signals?.in ?? []) signals[s] = this.signals[s] ? 1 : 0;
         const tripped = (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id));
-        const step = dev.inst.update(t, { loads, links, actions: dev.actions, signals, wired: dev.wired, tripped }) ?? {};
+        const step = dev.inst.update(t, { loads, links, actions, signals, wired: dev.wired, tripped }) ?? {};
+        // Soldado (relé, contactor): los contactos se pegan en la primera
+        // vez que cierra y ya no abren aunque la bobina caiga.
+        const welded = this.injected.get(`welded:${dev.id}`);
+        if (welded) {
+          if (!welded.latched && step.outputs?.closed) welded.latched = { ...(step.contacts ?? {}) };
+          if (welded.latched) {
+            // El indicador mecánico sigue a los contactos, no a la bobina.
+            step.contacts = { ...welded.latched };
+            step.outputs = { ...step.outputs, closed: true };
+          }
+        }
         const sig = stable([step.contacts ?? {}, step.outputs ?? {}]);
         if (sig !== dev.sig) changed = true;
         dev.sig = sig;
@@ -336,6 +387,51 @@ export class Scene {
     this.evaluate(t);
   }
 
+  /**
+   * Inyecta una falla (G9): sensor o mando pegado, relé soldado, carga
+   * quemada (bobina o lámpara abierta) o cable cortado. Queda hasta clearFault.
+   * @param {InjectedFault} fault
+   * @param {bigint} t
+   * @returns {string} su clave
+   */
+  inject(fault, t) {
+    if (t < this.t) t = this.t;  // nunca hacia atrás
+    const key = faultKey(fault);
+    if (fault.kind === "open") {
+      const k = wireKey(fault.wire);
+      if (!this.wires.some(([a, b]) => [a, b].sort().join(" ") === k)) throw new Error(`no hay un cable entre ${k.replace(" ", " y ")}`);
+    } else {
+      const dev = this.devices.get(fault.device);
+      if (!dev) throw new Error(`dispositivo inexistente: ${fault.device}`);
+      const kinds = ["stuck", "welded", "burnt"];
+      if (!kinds.includes(fault.kind)) throw new Error(`falla desconocida: ${fault.kind} (stuck, welded, burnt u open)`);
+      if (fault.kind === "stuck" && !(dev.def.actions ?? []).some((a) => a.kind !== "select") && !dev.links.length)
+        throw new Error(`${dev.id} no tiene accionamiento que se pueda pegar`);
+      if (fault.kind === "welded" && !("closed" in (dev.step.outputs ?? {}))) throw new Error(`${dev.id} no tiene contactos que se puedan soldar`);
+      if (fault.kind === "burnt" && !(dev.el.loads ?? []).length) throw new Error(`${dev.id} no tiene una carga que se pueda quemar`);
+    }
+    this.advanceTo(t);
+    this.injected.set(key, { ...fault });
+    this.#log({ t, kind: "inject", type: fault.kind, device: "device" in fault ? fault.device : undefined, key, value: "value" in fault ? fault.value : undefined });
+    this.evaluate(t);
+    return key;
+  }
+
+  /**
+   * Quita una falla inyectada (por su clave o la misma falla).
+   * @param {string | InjectedFault} which
+   * @param {bigint} t
+   */
+  clearFault(which, t) {
+    if (t < this.t) t = this.t;
+    const key = typeof which === "string" ? which : faultKey(which);
+    if (!this.injected.has(key)) return;
+    this.advanceTo(t);
+    this.injected.delete(key);
+    this.#log({ t, kind: "clear", key });
+    this.evaluate(t);
+  }
+
   /** Rearma las fuentes disparadas y repone las cargas quemadas. */
   rearm(t) {
     if (t < this.t) t = this.t;  // nunca hacia atrás
@@ -385,6 +481,7 @@ export class Scene {
         actions: { ...dev.actions },
         damaged: (dev.el.loads ?? []).filter((l) => this.damaged.has(`${dev.id}.${l.id}`)).map((l) => l.id),
         tripped: (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id)),
+        injected: ["stuck", "welded", "burnt"].filter((k) => this.injected.has(`${k}:${dev.id}`)),
       };
     });
     // Polos de alimentación de cada borne cableado ("PS1+", "L1-"): la
@@ -400,6 +497,7 @@ export class Scene {
       warnings: this.warnings,
       findings: this.findings,
       faults: this.events.filter((e) => e.kind === "fault"),
+      injected: [...this.injected.entries()].map(([key, f]) => ({ key, ...f, latched: undefined })),
     };
   }
 

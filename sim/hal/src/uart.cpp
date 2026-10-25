@@ -72,6 +72,29 @@ void drop_sent(uart_struct_t *u, jwsim_ns_t now) {
   while (!u->tx_ends.empty() && u->tx_ends.front() <= now) u->tx_ends.pop_front();
 }
 
+// Ruido en la línea (G9): splitmix64 con la semilla de la falla.
+struct Noise {
+  double rate = 0;
+  uint64_t s = 0;
+  uint64_t corrupted = 0;
+};
+Noise g_noise[SOC_UART_NUM];
+
+uint64_t splitmix(uint64_t &s) {
+  uint64_t z = (s += 0x9E3779B97F4A7C15ULL);
+  z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+  return z ^ (z >> 31);
+}
+
+uint8_t noisy(uint8_t port, uint8_t b) {
+  Noise &n = g_noise[port];
+  if (n.rate <= 0) return b;
+  if (static_cast<double>(splitmix(n.s) >> 11) * 0x1.0p-53 >= n.rate) return b;
+  ++n.corrupted;
+  return static_cast<uint8_t>(b ^ (1u << (splitmix(n.s) & 7)));
+}
+
 void rx_push(uart_struct_t *u, uint8_t b) {
   if (timed(u) && u->rx.size() >= u->rx_buffer + kHwFifo) {
     ++u->rx_overflow;
@@ -87,6 +110,7 @@ struct RxByte {
 
 void rx_event(void *arg, jwsim_ns_t) {
   auto *e = static_cast<RxByte *>(arg);
+  e->b = noisy(e->u->num, e->b);
   rx_push(e->u, e->b);
   jwsim_trace_bytes(&e->b, 1);
   delete e;
@@ -104,8 +128,11 @@ void uart_inject(int port, const uint8_t *data, size_t len) {
   uart_struct_t *u = get(static_cast<uint8_t>(port));
   if (!u) return;
   if (!timed(u)) {
-    u->rx.insert(u->rx.end(), data, data + len);
-    jwsim_trace_bytes(data, len);
+    for (size_t i = 0; i < len; ++i) {
+      const uint8_t b = noisy(u->num, data[i]);
+      u->rx.push_back(b);
+      jwsim_trace_bytes(&b, 1);
+    }
     return;
   }
   const jwsim_ns_t now = jwsim_now(), ch = char_ns(u);
@@ -118,6 +145,14 @@ void uart_inject_at(int port, uint8_t byte, jwsim_ns_t at) {
   if (!u) return;
   jwsim_schedule_external_event(std::max(at, jwsim_now()), rx_event, new RxByte{u, byte});
 }
+void uart_set_noise(int port, double rate, uint64_t seed) {
+  if (port < 0 || port >= SOC_UART_NUM) return;
+  g_noise[port].rate = rate;
+  g_noise[port].s = seed;
+}
+
+uint64_t uart_noise_count(int port) { return port < 0 || port >= SOC_UART_NUM ? 0 : g_noise[port].corrupted; }
+
 } // namespace jwsim
 
 extern "C" {

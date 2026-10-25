@@ -100,6 +100,19 @@ void DS3232M::set_time(int64_t epoch) {
   dirty_ = true;
 }
 
+void DS3232M::power_loss() {
+  regs_.fill(0);
+  regs_[CONTROL] = 0x1C;
+  regs_[STATUS] = ST_OSF | 0x08;
+  base_epoch_ = 946684800;
+  base_t_ = jwsim_now();
+  dow_base_ = 7;
+  dow_day_ = 10957;
+  h12_ = false;
+  last_alarm_check_ = base_epoch_;
+  dirty_ = true;
+}
+
 void DS3232M::latch_time() {
   const int64_t now = now_epoch();
   const Fields f = fields_of(now);

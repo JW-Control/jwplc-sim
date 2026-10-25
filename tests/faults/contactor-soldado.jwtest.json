@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 welded: KM1 se suelda en el primer cierre. La parada corta la bobina (Q0_0 = 0), pero los polos quedan cerrados: el motor sigue girando y el auxiliar 13-14 sigue confirmando por I0_2. El firmware del ejemplo no lo vigila.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 3000,
+  "faults": [{ "kind": "welded", "device": "KM1" }],
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1100, "device": "S1", "action": "press", "value": false },
+    { "at_ms": 2500, "device": "S0", "action": "press", "value": true },
+    { "at_ms": 2600, "device": "S0", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": ["ms marcha", "ms parada"],
+    "signals": [{ "at_ms": 2800, "Q0_0": 0, "I0_2": 1 }],
+    "scene": {
+      "state": [{ "at_ms": 2800, "KM1.energized": false, "KM1.closed": true, "M1.running": true }],
+      "faults": []
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 sd-absent: la microSD se retira a los 2 s y vuelve a los 4 s. Mientras falta, el detector (GPIO39) la da ausente y la escritura falla; al volver, el sketch la inicia de nuevo y escribe.",
+  "sketch": "../sketches/g9_sd_hotplug",
+  "until_ms": 6000,
+  "faults": [{ "kind": "sd-absent", "at_ms": 2000, "until_ms": 4000 }],
+  "expect": {
+    "console": [
+      { "match": "present=1 ready=1 write=OK$", "before_ms": 2000, "min": 2 },
+      { "match": "present=0 ready=\\d write=FAIL$", "after_ms": 2000, "before_ms": 4000, "min": 3 },
+      { "match": "present=1 ready=1 write=OK$", "after_ms": 4100, "min": 2 }
+    ],
+    "console_absent": ["present=0 ready=\\d write=OK"]
+  }
+}

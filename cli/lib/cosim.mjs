@@ -26,7 +26,7 @@ export function watchedSignals(scene) {
  * @param {{
  *   exe: string, args?: string[], launcher?: string,
  *   scene: import("../../scene/scene.mjs").SceneSpec, registry?: any,
- *   actions?: { at_ns: bigint, device: string, action: string, value: unknown }[],
+ *   actions?: { at_ns: bigint, device?: string, action?: string, value?: unknown, inject?: any, clear?: any }[],
  *   untilNs: bigint, speed?: number,
  *   maxStepNs?: bigint, probes?: bigint[],
  *   onSerial?: (port: number, text: string, t_ns: number) => void,
@@ -107,7 +107,9 @@ export async function cosim(o) {
     // Acciones programadas que vencen en t.
     while (ai < actions.length && actions[ai].at_ns <= t) {
       const a = actions[ai++];
-      scene.act(a.device, a.action, a.value, t);
+      if (a.inject) scene.inject(a.inject, t);
+      else if (a.clear) scene.clearFault(a.clear, t);
+      else scene.act(a.device, a.action, a.value, t);
     }
     sendInputs(scene.takeInputChanges(), t);
     while (pi < probes.length && probes[pi] <= t) snapshots.set(probes[pi++], scene.snapshot());

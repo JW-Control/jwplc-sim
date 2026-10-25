@@ -15,6 +15,10 @@
 //   T net 0 data 48656c6c6f                 W5500: conexión, datos (hex), FIN
 //   T net 0 peer_closed | reset | timeout   del par, RST, rechazo/plazo,
 //   T net 3 udp 192.168.250.1:67 0201...    datagrama UDP
+//   T noise uart2 0.05 [semilla]  ruido en la línea (falla G9): cada byte que
+//                       llega sale con un bit invertido con esa probabilidad
+//                       (0 = sin ruido); semilla del pseudoaleatorio (1 por
+//                       defecto)
 #ifndef JWSIM_RUNNER_STIMULUS_H
 #define JWSIM_RUNNER_STIMULUS_H
 
@@ -25,7 +29,7 @@
 
 namespace jwsim::runner {
 
-enum class InputOp { Set, Force, Unforce, Uart, Net };
+enum class InputOp { Set, Force, Unforce, Uart, Net, Noise };
 
 struct InputEvent {
   jwsim_ns_t when = 0;
@@ -37,6 +41,8 @@ struct InputEvent {
   std::string net_op;  // InputOp::Net: connected, data, peer_closed, reset, timeout, udp (socket en `port`)
   uint32_t ip = 0;
   uint16_t ip_port = 0;
+  double rate = 0;    // InputOp::Noise (puerto en `port`)
+  uint64_t seed = 1;
   bool applied = false;   // ya se aplicó (para reanudar tras un reinicio)
 };
 

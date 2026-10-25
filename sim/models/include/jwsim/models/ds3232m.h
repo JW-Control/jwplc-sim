@@ -31,6 +31,10 @@ class DS3232M : public I2CTarget {
   // `epoch` en segundos desde 1970 (UTC); la hora fijada deja OSF = 0.
   void set_time(int64_t epoch);
   int64_t now_epoch() const;  // hora actual del RTC (segundos desde 1970)
+  // Falla de batería (G9): al alimentar, el chip no conservó nada, como uno
+  // nuevo (2000-01-01 00:00:00, OSF = 1, SRAM y registros en cero). Se llama
+  // después de set_storage; save() deja ese estado en rtc.bin.
+  void power_loss();
 
   void set_storage(const std::string &dir);
   bool save();

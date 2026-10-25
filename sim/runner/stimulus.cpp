@@ -30,6 +30,14 @@ void apply(void *arg, jwsim_ns_t) {
     else if (ev->net_op == "udp") eth.net_udp(ev->port, ev->ip, ev->ip_port, d, ev->data.size());
     return;
   }
+  if (ev->op == InputOp::Noise) {
+    const uint8_t rec[2] = {'Z', static_cast<uint8_t>(ev->port)};
+    jwsim_trace_bytes(rec, sizeof(rec));
+    jwsim_trace_u64(static_cast<uint64_t>(ev->rate * 1e9));
+    jwsim_trace_u64(ev->seed);
+    jwsim::uart_set_noise(ev->port, ev->rate, ev->seed);
+    return;
+  }
   if (ev->op == InputOp::Uart) {
     const uint8_t rec[2] = {'U', static_cast<uint8_t>(ev->port)};
     jwsim_trace_bytes(rec, sizeof(rec));
@@ -41,7 +49,7 @@ void apply(void *arg, jwsim_ns_t) {
     case InputOp::Set: net->drive(ev->level); break;
     case InputOp::Force: net->force(ev->level); break;
     case InputOp::Unforce: net->unforce(); break;
-    case InputOp::Uart: case InputOp::Net: break;
+    case InputOp::Uart: case InputOp::Net: case InputOp::Noise: break;
   }
   // Los forzados quedan en la traza aunque no cambien el nivel.
   if (ev->op != InputOp::Set) {
@@ -136,6 +144,16 @@ std::string parse_input(const std::string &text, InputEvent &out) {
   std::istringstream ss(text);
   std::string first, second;
   ss >> first;
+  if (first == "noise") {
+    std::string port;
+    out.op = InputOp::Noise;
+    if (!(ss >> port) || port.size() != 5 || port.compare(0, 4, "uart") != 0 || !std::isdigit(static_cast<unsigned char>(port[4])))
+      return "ruido inválido (noise uart2 <tasa> [semilla]): " + text;
+    out.port = port[4] - '0';
+    if (!(ss >> out.rate) || out.rate < 0 || out.rate > 1) return "tasa de ruido inválida (0 a 1): " + text;
+    if (!(ss >> out.seed)) out.seed = 1;
+    return "";
+  }
   if (first.rfind("uart", 0) == 0) return parse_uart(text, out);
   if (first == "net") return parse_net(text, out);
   if (first == "force" || first == "unforce") {
@@ -161,6 +179,7 @@ std::string parse_input(const std::string &text, InputEvent &out) {
 
 std::string validate_input(jwsim::boards::JwplcBasic &board, const InputEvent &ev) {
   if (ev.op == InputOp::Net) return board.ethernet() ? "" : "la placa no tiene el W5500 (--eth)";
+  if (ev.op == InputOp::Noise) return ev.port == 2 ? "" : "el ruido se aplica a la UART 2 (RS-485): uart" + std::to_string(ev.port);
   if (ev.op == InputOp::Uart) {
     if (ev.port != 0 && ev.port != 2) return "solo se recibe por la UART 0 (consola) y la 2 (RS-485): uart" + std::to_string(ev.port);
     return "";
@@ -185,6 +204,11 @@ std::string format_input(const InputEvent &ev) {
     case InputOp::Set: return ev.signal + "=" + (ev.level ? "1" : "0");
     case InputOp::Force: return "force " + ev.signal + "=" + (ev.level ? "1" : "0");
     case InputOp::Unforce: return "unforce " + ev.signal;
+    case InputOp::Noise: {
+      char buf[64];
+      std::snprintf(buf, sizeof(buf), "noise uart%d %.6g %llu", ev.port, ev.rate, static_cast<unsigned long long>(ev.seed));
+      return buf;
+    }
     case InputOp::Uart: {
       static const char *digits = "0123456789abcdef";
       std::string out = "uart" + std::to_string(ev.port) + " \"";

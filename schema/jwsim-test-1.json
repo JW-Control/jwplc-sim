@@ -68,6 +68,9 @@
     },
     "devices": {
       "$ref": "#/$defs/run/properties/devices"
+    },
+    "faults": {
+      "$ref": "#/$defs/run/properties/faults"
     }
   },
   "oneOf": [
@@ -187,6 +190,60 @@
                 ]
               }
             ]
+          }
+        },
+        "faults": {
+          "type": "array",
+          "description": "Fallas inyectadas (G9): sd-absent (microSD retirada), rtc-battery (RTC sin batería al arrancar), rs485-noise (ruido en la línea RS-485), y con escena stuck (sensor o mando pegado), welded (relé soldado), burnt (carga quemada) y open (cable cortado). until_ms quita la falla.",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "sd-absent",
+                  "rtc-battery",
+                  "rs485-noise",
+                  "stuck",
+                  "welded",
+                  "burnt",
+                  "open"
+                ]
+              },
+              "at_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "until_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "device": {
+                "type": "string",
+                "description": "stuck, welded, burnt"
+              },
+              "value": {
+                "type": "boolean",
+                "description": "stuck: true = accionado/detectando (por defecto), false = en reposo"
+              },
+              "wire": {
+                "type": "string",
+                "description": "open: los dos extremos del cable, p. ej. \"PS1.+V1 KM1.13\""
+              },
+              "rate": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1,
+                "description": "rs485-noise: probabilidad de corromper cada byte recibido"
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
           }
         }
       }

@@ -562,6 +562,21 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       inputs.push_back(ev);
       schedule_input(board, &inputs.back());
       send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
+    } else if (type == "noise") {
+      // Falla G9: ruido en la línea RS-485 ({"port":2,"rate":0.05,"seed":1};
+      // rate 0 lo quita). Entrada como las demás: se graba y se reproduce.
+      auto get = [&](const char *k, const char *d) { return f.count(k) ? f.at(k) : std::string(d); };
+      InputEvent ev;
+      std::string err = parse_input("noise uart" + get("port", "2") + " " + get("rate", "0") + " " + get("seed", "1"), ev);
+      if (err.empty()) err = validate_input(board, ev);
+      if (!err.empty()) {
+        std::fprintf(stderr, "[jwsim] noise: %s\n", err.c_str());
+        return;
+      }
+      ev.when = jwsim_now();
+      inputs.push_back(ev);
+      schedule_input(board, &inputs.back());
+      send_json("{\"type\":\"input\",\"t_ns\":" + std::to_string(ev.when) + ",\"stim\":" + quoted(format_input(ev)) + "}");
     } else if (type == "net") {
       net_on = f.count("on") && f.at("on") == "1";
     } else if (type == "net_in") {

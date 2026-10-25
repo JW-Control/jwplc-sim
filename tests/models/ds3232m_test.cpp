@@ -163,4 +163,34 @@ TEST(fila10_persistencia) {
   std::filesystem::remove_all(dir);
 }
 
+TEST(fila12_sin_bateria) {
+  const auto dir = (std::filesystem::temp_directory_path() / "jwsim_rtc_test_bat").string();
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  {
+    Fixture f;
+    f.rtc.set_storage(dir);
+    f.rtc.set_time(kT);
+    f.write({0x20, 0x5A});
+    CHECK(f.rtc.save());
+  }
+  {
+    Fixture f;
+    f.rtc.set_storage(dir);
+    f.rtc.power_loss();
+    CHECK_EQ(f.read(DS3232M::STATUS, 1)[0], 0x88);  // OSF: hora no válida
+    CHECK_EQ(f.rtc.now_epoch(), 946684800);           // 2000-01-01 00:00:00
+    CHECK_EQ(f.read(0x20, 1)[0], 0x00);               // SRAM perdida
+    advance_ms(2000);
+    CHECK_EQ(f.rtc.now_epoch(), 946684802);           // con alimentación sigue contando
+    CHECK(f.rtc.save());
+  }
+  {
+    Fixture f;
+    f.rtc.set_storage(dir);
+    CHECK_EQ(f.read(DS3232M::STATUS, 1)[0] & DS3232M::ST_OSF, DS3232M::ST_OSF);
+  }
+  std::filesystem::remove_all(dir);
+}
+
 int main() { return run_all_tests("DS3232M"); }

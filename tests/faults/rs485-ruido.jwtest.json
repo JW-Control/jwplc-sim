@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 rs485-noise: el maestro FC03 recibe las mismas respuestas del esclavo que en su prueba del ejemplo (tests/examples/JW_ModbusRTU/Master_Read_Async), pero con ruido total en la línea desde el arranque: cada byte llega con un bit invertido, ninguna lectura sale bien y el runner informa los bytes corrompidos.",
+  "sketch": "package:libraries/JW_ModbusRTU/examples/Master_Read_Async",
+  "until_ms": 7000,
+  "stim": [
+    "1200 uart2 \"\\x02\\x03\\x08\\x00\\x01\\x00\\x64\\x00\\xC8\\x01\\x2C\\x7A\\x28\"",
+    "2250 uart2 \"\\x02\\x03\\x08\\x00\\x02\\x04\\xD2\\x16\\x2E\\x00\\x07\\x25\\x46\""
+  ],
+  "faults": [{ "kind": "rs485-noise", "rate": 1, "seed": 7 }],
+  "expect": {
+    "console": [{ "match": "^READ FAIL", "min": 2 }],
+    "console_absent": ["^READ OK"],
+    "result": { "rs485_corrupted": "26" }
+  }
+}

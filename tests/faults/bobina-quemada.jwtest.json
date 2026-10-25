@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 burnt: la bobina de KM1 está abierta (quemada). Mismo síntoma que el cable cortado: KM1 no confirma y el firmware entra en falla.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 1500,
+  "faults": [{ "kind": "burnt", "device": "KM1" }],
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1050, "device": "S1", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": ["ms marcha", "FALLA KM1 sin confirmacion"],
+    "signals": [{ "at_ms": 1400, "Q0_2": 1 }],
+    "scene": { "state": [{ "at_ms": 1400, "KM1.energized": false, "H1.lit": true }], "faults": [] }
+  }
+}

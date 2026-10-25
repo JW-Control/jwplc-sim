@@ -8,7 +8,7 @@
 //         [--screen <archivo>] (imagen final de la pantalla: "JWFB", u16 ancho,
 //                               u16 alto y píxeles RGB565 little-endian)
 //         [--screen-at <ms>:<archivo>]... (la pantalla en ese instante virtual)
-//         [--rtc host|fijo:AAAA-MM-DDTHH:MM:SS] (hora del RTC al arrancar; sin
+//         [--rtc host|fijo:AAAA-MM-DDTHH:MM:SS|sin-bateria] (hora del RTC al arrancar; sin
 //                               esta opción sigue la del estado o, sin estado,
 //                               un RTC sin hora válida)
 //         [--no-eth]       (sin el W5500; por defecto está poblado como en la
@@ -274,8 +274,12 @@ int main(int argc, char **argv) {
       tm.tm_min = mi;
       tm.tm_sec = se;
       board.rtc().set_time(static_cast<int64_t>(jwsim_timegm(&tm)));
+    } else if (rtc_mode == "sin-bateria") {
+      // Falla G9: la batería del RTC está agotada, así que al alimentar la
+      // placa el chip no conservó nada (un esp_restart no pasa por acá).
+      board.rtc().power_loss();
     } else {
-      usage("--rtc admite 'host' o 'fijo:AAAA-MM-DDTHH:MM:SS'");
+      usage("--rtc admite 'host', 'fijo:AAAA-MM-DDTHH:MM:SS' o 'sin-bateria'");
     }
   }
   // Zona horaria del firmware: la del ESP32 por defecto (UTC), no la de la
@@ -398,11 +402,14 @@ int main(int argc, char **argv) {
     return s;
   };
   std::printf("JWSIM_RESULT t_end_ms=%.3f stop=%s DI=%s DO=%s trace_events=%" PRIu64 " trace_hash=0x%016" PRIx64
-              " wall_ms=%.1f rt_max_lag_ms=%.3f\n",
+              " wall_ms=%.1f rt_max_lag_ms=%.3f",
               static_cast<double>(jwsim_now()) / 1e6,
               reason == JWSIM_STOP_TIME ? "time" : reason == JWSIM_STOP_IDLE ? "idle" : "request",
               bits(board.inputs()).c_str(), bits(board.outputs()).c_str(), jwsim_trace_count(), jwsim_trace_hash(),
               wall_ms, realtime > 0.0 ? max_lag_ms : 0.0);
+  // Falla G9: bytes que el ruido corrompió en la UART 2 (solo si hubo).
+  if (const uint64_t z = jwsim::uart_noise_count(2)) std::printf(" rs485_corrupted=%" PRIu64, z);
+  std::printf("\n");
   std::fflush(stdout);
   // Las tareas del firmware nunca terminan: se sale sin destruir sus pilas.
   std::_Exit(0);

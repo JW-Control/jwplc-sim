@@ -22,11 +22,14 @@ código bajo prueba es `JW_RTC` y el runtime del core (`JWPLC_Time`).
 | 9 | SRAM 14h–FFh; el puntero vuelve de FFh a 00h | SRAM | Modelado |
 | 10 | Batería: hora, registros y SRAM se conservan entre corridas (`rtc.bin` en el directorio de estado) | Power Control | Modelado: el tiempo apagado cuenta como 0 s (reproducible) |
 | 11 | Día de semana: contador propio que avanza a medianoche; escribir la fecha no lo cambia | Timekeeping Registers | Modelado |
+| 12 | Sin batería (falla G9, `--rtc sin-bateria`): al alimentar no conserva nada; vuelve a los valores de la fila 1 y la SRAM queda en cero. Un `esp_restart` no corta la alimentación: ahí sigue | Power Control | Modelado |
 
 ## Hora de arranque
 
 `--rtc fijo:AAAA-MM-DDTHH:MM:SS` pone esa hora (OSF = 0) y es reproducible;
-`--rtc host` toma la hora local de la PC (no reproducible). Sin la opción, el
+`--rtc host` toma la hora local de la PC (no reproducible). `--rtc sin-bateria`
+simula la batería agotada: cada arranque (cada corrida) empieza como un chip
+recién alimentado aunque haya estado guardado. Sin la opción, el
 RTC sigue con la hora guardada en el estado o, sin estado, arranca sin hora
 válida como un chip nuevo. La app usa la hora local de la PC al iniciar cada
 sesión y la guarda en las grabaciones para reproducirlas igual.

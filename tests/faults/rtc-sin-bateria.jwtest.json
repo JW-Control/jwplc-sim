@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 rtc-battery: el contador de arranques vive en la NVRAM del RTC. Con batería cuenta 1 y 2; el tercer arranque es con la batería agotada (el chip no conservó nada) y vuelve a 1; con batería nueva sigue desde ahí (2).",
+  "sketch": "package:libraries/JW_RTC/examples/NvramDemo",
+  "runs": [
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 1$", "count": 1 }] } },
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 2$", "count": 1 }] } },
+    { "until_ms": 1500, "faults": [{ "kind": "rtc-battery" }], "expect": { "console": [{ "match": "^Boot counter: 1$", "count": 1 }] } },
+    { "until_ms": 1500, "expect": { "console": [{ "match": "^Boot counter: 2$", "count": 1 }] } }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 stuck: el inductivo B0 (cilindro adentro) queda pegado sin detectar desde el arranque. Con marcha el firmware nunca ve el cilindro adentro y no lo hace salir. A los 2 s se quita la falla y el ciclo arranca.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 3000,
+  "faults": [{ "kind": "stuck", "device": "B0", "value": false, "until_ms": 2000 }],
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1100, "device": "S1", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": ["ms marcha", { "match": "ms cilindro sale", "after_ms": 2000, "min": 1 }],
+    "console_absent": ["FALLA"],
+    "signals": [{ "at_ms": 1900, "Q0_0": 1, "Q0_1": 0, "I0_4": 0 }],
+    "scene": {
+      "state": [
+        { "at_ms": 1500, "B0.detecting": false, "Y1.retracted": true },
+        { "at_ms": 2005, "B0.detecting": true }
+      ],
+      "faults": []
+    }
+  }
+}

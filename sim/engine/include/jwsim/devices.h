@@ -260,6 +260,12 @@ Net &gpio(int pin);
 void uart_inject(int port, const uint8_t *data, size_t len);
 // Un byte que termina de llegar a la UART `port` en el instante `at`.
 void uart_inject_at(int port, uint8_t byte, jwsim_ns_t at);
+// Ruido en la línea (falla G9): desde ahora cada byte que llega a la UART
+// `port` sale corrupto (un bit invertido) con probabilidad `rate` (0 = sin
+// ruido). Pseudoaleatorio con `seed`: la misma corrida da los mismos bytes.
+void uart_set_noise(int port, double rate, uint64_t seed);
+// Bytes corrompidos por el ruido hasta ahora en la UART `port`.
+uint64_t uart_noise_count(int port);
 
 } // namespace jwsim
 

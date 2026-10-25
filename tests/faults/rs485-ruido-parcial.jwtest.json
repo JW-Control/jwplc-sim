@@ -1,0 +1,18 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 rs485-noise con until_ms: ruido total solo entre 1 y 2 s. La primera respuesta (1,2 s) llega corrupta y falla; la segunda (2,25 s), ya sin ruido, se lee bien.",
+  "sketch": "package:libraries/JW_ModbusRTU/examples/Master_Read_Async",
+  "until_ms": 3000,
+  "stim": [
+    "1200 uart2 \"\\x02\\x03\\x08\\x00\\x01\\x00\\x64\\x00\\xC8\\x01\\x2C\\x7A\\x28\"",
+    "2250 uart2 \"\\x02\\x03\\x08\\x00\\x02\\x04\\xD2\\x16\\x2E\\x00\\x07\\x25\\x46\""
+  ],
+  "faults": [{ "kind": "rs485-noise", "rate": 1, "at_ms": 1000, "until_ms": 2000 }],
+  "expect": {
+    "console": [
+      { "match": "^READ FAIL", "count": 1, "after_ms": 1200, "before_ms": 2250 },
+      { "match": "^READ OK \\| HR0=2 HR1=1234 HR2=5678 HR3=7$", "count": 1, "after_ms": 2250 }
+    ],
+    "result": { "rs485_corrupted": "13" }
+  }
+}

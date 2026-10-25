@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Falla G9 open: se corta el retorno de la bobina de KM1 (A2 a -V) a los 500 ms. Con marcha, KM1 no atrae, el auxiliar no confirma y el firmware entra en falla a los 100 ms (piloto H1). El análisis estático no cambia: el cable sigue en el plano.",
+  "sketch": "../sketches/g7_cosim",
+  "scene": "../scenes/g7_cosim.scene.json",
+  "until_ms": 1500,
+  "faults": [{ "kind": "open", "wire": "KM1.A2 PS1.-V2", "at_ms": 500 }],
+  "actions": [
+    { "at_ms": 1000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 1050, "device": "S1", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": ["ms marcha", "FALLA KM1 sin confirmacion"],
+    "signals": [{ "at_ms": 1400, "Q0_0": 0, "Q0_2": 1 }],
+    "scene": {
+      "state": [{ "at_ms": 1050, "KM1.energized": false }, { "at_ms": 1400, "KM1.closed": false, "H1.lit": true }],
+      "faults": [],
+      "findings": []
+    }
+  }
+}
