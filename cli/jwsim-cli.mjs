@@ -8,6 +8,7 @@
 //   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--report <archivo>]
 //   jwsim-cli parity [<ref>] [--package <dir>] [--update] [--report <archivo>]
 //   jwsim-cli matrix [--filter <texto>] [opciones de build] [--report <archivo>]
+//   jwsim-cli grade  <ejercicio> [<sketch_dir>] [--solution] [--runs N] (G9: nota por rúbrica)
 //   jwsim-cli device build|test|pack <carpeta>     (SDK de dispositivos, G7)
 //   jwsim-cli device install <tipo>[@versión] [--index <url|archivo>]
 //   jwsim-cli device list [--index <url|archivo>]
@@ -33,6 +34,7 @@ import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
 import { checkParity } from "./lib/parity.mjs";
 import { parseResult, parseTimeline, runExe } from "./lib/runner.mjs";
+import { formatGrade, gradeSketch, loadExercise } from "./lib/grade.mjs";
 import { findTests, loadTest, runTest } from "./lib/test.mjs";
 import { toolchain } from "./lib/toolchain.mjs";
 import { fetchPackageRef, packageFromDir, resolvePackageRoot } from "../scripts/fetch-package.mjs";
@@ -45,6 +47,7 @@ const USAGE = `uso:
   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
   jwsim-cli matrix [--filter texto] [opciones de build] [--json] [--report archivo]
+  jwsim-cli grade  <ejercicio.jwsim|carpeta> [<sketch_dir>] [--solution] [--runs N] [--json] [--report archivo]
   jwsim-cli device build|test|pack <carpeta> [--json]
   jwsim-cli device install <tipo>[@versión] [--index url|archivo] [--json]
   jwsim-cli device list [--index url|archivo] [--json]`;
@@ -78,6 +81,8 @@ function parse(argv) {
     else if (a === "--json") opts.json = true;
     else if (a === "--update") opts.update = true;
     else if (a === "--record") opts.record = true;
+    else if (a === "--solution") opts.solution = true;
+    else if (a === "--runs") opts.runs = Number(value(++i, a));
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -214,6 +219,39 @@ async function main() {
     code = passed === results.length ? EXIT.OK : EXIT.FAIL;
     if (!opts.json) console.log(`RESULTADO: ${passed}/${results.length} pruebas pasan`);
     emit({ package: pkgInfo(pkg), target: opts.target ?? "native", passed, failed: results.length - passed, total: results.length, tests: results });
+    return code;
+  }
+
+  // Calificación por rúbrica (G9): sin sketch, el del proyecto (la plantilla
+  // o el trabajo del alumno); --solution, la solución de referencia. Con
+  // --runs N se repite N veces y se exige la misma nota (determinismo).
+  if (cmd === "grade") {
+    if (!opts._.length) throw new CliError(EXIT.USAGE, "falta el ejercicio (.jwsim o carpeta)");
+    let ex;
+    try {
+      ex = loadExercise(opts._[0]);
+    } catch (err) {
+      throw new CliError(EXIT.USAGE, err.message);
+    }
+    const sketch = opts._[1] ? resolve(opts._[1]) : opts.solution ? ex.solution : ex.sketch;
+    if (!sketch) throw new CliError(EXIT.USAGE, opts.solution ? "el ejercicio no tiene solución de referencia" : "falta el sketch");
+    const pkg = resolvePkg(opts);
+    checkToolchain(opts);
+    const runs = Math.max(1, opts.runs || 1);
+    const grades = [];
+    let g;
+    for (let k = 0; k < runs; k++) {
+      g = await gradeSketch(ex, sketch, { pkg, target: opts.target ?? "native", buildRoot: resolve(opts.outDir ?? join(ROOT, "build", "grade")) });
+      grades.push(g.grade);
+      if (!g.ok) break;
+    }
+    const stable = new Set(grades).size === 1;
+    if (!opts.json) {
+      console.log(formatGrade(g));
+      if (runs > 1) console.log(`  ${runs} corridas: ${stable ? "misma nota en todas" : `notas distintas: ${[...new Set(grades)].join(", ")}`}`);
+    }
+    code = !g.ok ? EXIT.BUILD : stable ? EXIT.OK : EXIT.FAIL;
+    emit({ package: pkgInfo(pkg), ...g, runs, stable, grades: runs > 1 ? grades : undefined });
     return code;
   }
 

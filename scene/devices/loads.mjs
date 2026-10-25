@@ -163,7 +163,8 @@ export const motor = {
         const accel = Math.abs(goal) > Math.abs(cur) && Math.sign(goal) !== -Math.sign(cur);
         speed.step(t, goal, 1000 / Number(accel ? ctx.params.accelMs : ctx.params.stopMs));
         const seg = speed.segment(t);
-        return { outputs: { energized: w.on, speed: seg, running: seg.value !== 0 || seg.rate !== 0 }, nextEventNs: earliest(speed.next) };
+        // direction: sentido pedido por la alimentación (1, -1 en CC invertida, 0 sin tensión).
+        return { outputs: { energized: w.on, speed: seg, running: seg.value !== 0 || seg.rate !== 0, direction: goal }, nextEventNs: earliest(speed.next) };
       },
     };
   },

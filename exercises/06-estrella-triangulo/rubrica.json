@@ -1,0 +1,147 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "06-estrella-triangulo",
+  "cases": [
+    {
+      "name": "Secuencia de arranque",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con marcha cierran KM1 y KM2 (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM1.closed": true,
+            "KM2.closed": true,
+            "KM3.closed": false
+          }
+        },
+        {
+          "description": "Estrella durante 3 s",
+          "points": 1,
+          "from_ms": 1200,
+          "to_ms": 3900,
+          "always": {
+            "KM2.closed": true,
+            "KM3.closed": false
+          }
+        },
+        {
+          "description": "Pausa de al menos 50 ms con KM2 y KM3 abiertos antes del triángulo",
+          "points": 2,
+          "from_ms": 3900,
+          "to_ms": 4400,
+          "eventually": {
+            "KM1.closed": true,
+            "KM2.closed": false,
+            "KM3.closed": false
+          },
+          "for_ms": 50
+        },
+        {
+          "description": "Triángulo a los 3 s",
+          "points": 2,
+          "from_ms": 3950,
+          "to_ms": 4400,
+          "eventually": {
+            "KM3.closed": true
+          }
+        },
+        {
+          "description": "En triángulo: KM1 y KM3 cerrados, KM2 abierto",
+          "points": 2,
+          "at_ms": 5000,
+          "expect": {
+            "KM1.closed": true,
+            "KM2.closed": false,
+            "KM3.closed": true
+          }
+        },
+        {
+          "description": "KM2 y KM3 nunca cerrados a la vez",
+          "points": 3,
+          "from_ms": 0,
+          "to_ms": 6000,
+          "never": {
+            "KM2.closed": true,
+            "KM3.closed": true
+          }
+        },
+        {
+          "description": "Piloto de marcha",
+          "points": 1,
+          "at_ms": 5000,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parada en triángulo",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5100,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "En triángulo antes de la parada (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 4800,
+          "expect": {
+            "KM3.closed": true
+          }
+        },
+        {
+          "description": "Parada abre los tres contactores",
+          "points": 2,
+          "at_ms": 5200,
+          "expect": {
+            "KM1.closed": false,
+            "KM2.closed": false,
+            "KM3.closed": false
+          }
+        }
+      ]
+    }
+  ]
+}

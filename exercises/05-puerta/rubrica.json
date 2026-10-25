@@ -1,0 +1,292 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "05-puerta",
+  "cases": [
+    {
+      "name": "Apertura",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1300,
+          "device": "B2",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        }
+      ],
+      "checks": [
+        {
+          "description": "Abrir cierra KM1 (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM1.closed": true,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Baliza encendida mientras se mueve",
+          "points": 1,
+          "at_ms": 2000,
+          "expect": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "El final B1 detiene el motor",
+          "points": 2,
+          "at_ms": 2600,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Baliza apagada al detenerse",
+          "points": 1,
+          "at_ms": 2700,
+          "expect": {
+            "H1.lit": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cierre",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        }
+      ],
+      "checks": [
+        {
+          "description": "Cerrar cierra KM2 (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM2.closed": true,
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "El final B2 detiene el motor",
+          "points": 2,
+          "at_ms": 2600,
+          "expect": {
+            "KM2.closed": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Obstáculo durante el cierre",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "B3",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2000,
+          "device": "B3",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Empieza a cerrar (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM2.closed": true
+          }
+        },
+        {
+          "description": "El obstáculo detiene el cierre",
+          "points": 2,
+          "at_ms": 1900,
+          "expect": {
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Y vuelve a abrir",
+          "points": 2,
+          "at_ms": 2100,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "KM1 y KM2 nunca cerrados a la vez",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 3500,
+          "never": {
+            "KM1.closed": true,
+            "KM2.closed": true
+          }
+        },
+        {
+          "description": "Sin cortocircuito en la fuente",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 3500,
+          "no_faults": true
+        }
+      ]
+    },
+    {
+      "name": "Parada",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1300,
+          "device": "B2",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1900,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Abre (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Parada detiene el portón",
+          "points": 2,
+          "at_ms": 2000,
+          "expect": {
+            "KM1.closed": false,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Queda detenido",
+          "points": 1,
+          "from_ms": 2000,
+          "to_ms": 3000,
+          "always": {
+            "KM1.closed": false,
+            "KM2.closed": false
+          }
+        }
+      ]
+    }
+  ]
+}

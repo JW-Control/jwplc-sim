@@ -1,0 +1,189 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "08-alarma",
+  "cases": [
+    {
+      "name": "Aparece la alarma",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        }
+      ],
+      "checks": [
+        {
+          "description": "Suena la bocina (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "HA1.sounding": true
+          }
+        },
+        {
+          "description": "El piloto se enciende",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 1700,
+          "eventually": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "El piloto se apaga (parpadeo)",
+          "points": 1,
+          "from_ms": 1600,
+          "to_ms": 2300,
+          "eventually": {
+            "H1.lit": false
+          }
+        },
+        {
+          "description": "Y vuelve a encenderse",
+          "points": 1,
+          "from_ms": 2100,
+          "to_ms": 2800,
+          "eventually": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reconocimiento con la alarma presente",
+      "until_ms": 5000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Alarma activa antes de reconocer (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 2400,
+          "expect": {
+            "HA1.sounding": true
+          }
+        },
+        {
+          "description": "Reconocer calla la bocina",
+          "points": 2,
+          "at_ms": 2800,
+          "expect": {
+            "HA1.sounding": false
+          }
+        },
+        {
+          "description": "Piloto fijo mientras siga la alarma",
+          "points": 2,
+          "from_ms": 2800,
+          "to_ms": 3950,
+          "always": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Se apaga al desaparecer la alarma",
+          "points": 1,
+          "at_ms": 4200,
+          "expect": {
+            "H1.lit": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alarma que desaparece sin reconocer",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Alarma activa (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1500,
+          "expect": {
+            "HA1.sounding": true
+          }
+        },
+        {
+          "description": "Sin reconocer, la bocina sigue",
+          "points": 1,
+          "at_ms": 3000,
+          "expect": {
+            "HA1.sounding": true
+          }
+        },
+        {
+          "description": "Sin reconocer, el piloto sigue parpadeando",
+          "points": 2,
+          "from_ms": 2500,
+          "to_ms": 3400,
+          "eventually": {
+            "H1.lit": false
+          }
+        },
+        {
+          "description": "Reconocida y sin alarma, todo apagado",
+          "points": 2,
+          "at_ms": 3800,
+          "expect": {
+            "H1.lit": false,
+            "HA1.sounding": false
+          }
+        }
+      ]
+    }
+  ]
+}

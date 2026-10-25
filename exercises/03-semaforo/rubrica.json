@@ -1,0 +1,193 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "03-semaforo",
+  "cases": [
+    {
+      "name": "Ciclo verde, ámbar, rojo",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con marcha empieza en verde (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1500,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 1
+          }
+        },
+        {
+          "description": "Verde al final de sus 4 s",
+          "points": 1,
+          "at_ms": 4800,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 1
+          }
+        },
+        {
+          "description": "Ámbar a los 4 s",
+          "points": 1,
+          "from_ms": 4900,
+          "to_ms": 5150,
+          "eventually": {
+            "H1.lit": 0,
+            "H2.lit": 1,
+            "H3.lit": 0
+          }
+        },
+        {
+          "description": "Ámbar durante 1 s",
+          "points": 1,
+          "at_ms": 5500,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 1,
+            "H3.lit": 0
+          }
+        },
+        {
+          "description": "Rojo después del ámbar",
+          "points": 1,
+          "from_ms": 5900,
+          "to_ms": 6150,
+          "eventually": {
+            "H1.lit": 1,
+            "H2.lit": 0,
+            "H3.lit": 0
+          }
+        },
+        {
+          "description": "Rojo durante 4 s",
+          "points": 2,
+          "at_ms": 8000,
+          "expect": {
+            "H1.lit": 1,
+            "H2.lit": 0,
+            "H3.lit": 0
+          }
+        },
+        {
+          "description": "Vuelve a verde",
+          "points": 2,
+          "at_ms": 12000,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 1
+          }
+        },
+        {
+          "description": "Nunca rojo y ámbar a la vez",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 15000,
+          "never": {
+            "H1.lit": true,
+            "H2.lit": true
+          }
+        },
+        {
+          "description": "Nunca ámbar y verde a la vez",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 15000,
+          "never": {
+            "H2.lit": true,
+            "H3.lit": true
+          }
+        },
+        {
+          "description": "Nunca rojo y verde a la vez",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 15000,
+          "never": {
+            "H1.lit": true,
+            "H3.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parada",
+      "until_ms": 5000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "En marcha antes de la parada (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 2000,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 1
+          }
+        },
+        {
+          "description": "Parada apaga las tres luces",
+          "points": 2,
+          "at_ms": 2700,
+          "expect": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 0
+          }
+        },
+        {
+          "description": "Siguen apagadas",
+          "points": 1,
+          "from_ms": 2700,
+          "to_ms": 5000,
+          "always": {
+            "H1.lit": 0,
+            "H2.lit": 0,
+            "H3.lit": 0
+          }
+        }
+      ]
+    }
+  ]
+}

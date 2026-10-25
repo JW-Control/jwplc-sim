@@ -1,0 +1,134 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "04-bomba-niveles",
+  "cases": [
+    {
+      "name": "Llenado desde vacío",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con el tanque vacío arranca la bomba (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1200,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Piloto de tanque bajo encendido",
+          "points": 1,
+          "at_ms": 1200,
+          "expect": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Sigue llenando al pasar B1",
+          "points": 2,
+          "from_ms": 1600,
+          "to_ms": 2450,
+          "always": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Para al llegar a B2",
+          "points": 2,
+          "at_ms": 2700,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Piloto apagado sobre B1",
+          "points": 1,
+          "at_ms": 2700,
+          "expect": {
+            "H1.lit": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vaciado desde lleno",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 0,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 1500,
+          "device": "B2",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Lleno: la bomba está parada",
+          "points": 1,
+          "at_ms": 1200,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Entre B2 y B1 no arranca",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 2450,
+          "always": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Bajo B1 arranca (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 2700,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Piloto de tanque bajo",
+          "points": 1,
+          "at_ms": 2700,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    }
+  ]
+}

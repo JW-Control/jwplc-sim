@@ -1,0 +1,151 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Llenado de tanque por niveles",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/bomba_niveles/bomba_niveles.ino"
+  },
+  "exercise": {
+    "level": 2,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/bomba_niveles"
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 300,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 40,
+        "y": 60
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/limit-switch",
+        "x": 300,
+        "y": -700
+      },
+      {
+        "id": "B2",
+        "type": "jwsim/limit-switch",
+        "x": 500,
+        "y": -700
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 240,
+        "y": 620
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Tanque bajo"
+        },
+        "x": 480,
+        "y": 620
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 40,
+        "y": 1020
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "x": 240,
+        "y": 1040
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13"
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B2.13"
+      },
+      {
+        "from": "B2.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "L1.L",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "M1.U2",
+        "to": "L1.N"
+      }
+    ]
+  }
+}

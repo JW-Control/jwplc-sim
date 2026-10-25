@@ -1,0 +1,11 @@
+{
+  "$comment": "Errores típicos para el gate JWSIM_G9_AUTOGRADING: cada variante debe sacar una nota mayor que 0 y menor que 20 (la rúbrica distingue lo que está mal de lo que está bien).",
+  "variants": [
+    { "exercise": "01-marcha-parada", "sketch": "e01_sin_enclavamiento" },
+    { "exercise": "01-marcha-parada", "sketch": "e01_parada_como_na" },
+    { "exercise": "02-inversion-giro", "sketch": "e02_cambio_directo" },
+    { "exercise": "03-semaforo", "sketch": "e03_con_delay" },
+    { "exercise": "06-estrella-triangulo", "sketch": "e06_sin_pausa" },
+    { "exercise": "07-cinta-contador", "sketch": "e07_cuenta_nivel" }
+  ]
+}

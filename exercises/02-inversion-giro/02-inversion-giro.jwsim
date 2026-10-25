@@ -1,0 +1,212 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Inversión de giro con enclavamiento",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/inversion_giro/inversion_giro.ino"
+  },
+  "exercise": {
+    "level": 1,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/inversion_giro"
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 300,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 40,
+        "y": 60
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Izquierda",
+          "color": "verde"
+        },
+        "x": 300,
+        "y": -280
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Derecha",
+          "color": "verde"
+        },
+        "x": 500,
+        "y": -280
+      },
+      {
+        "id": "S0",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "label": "Parada",
+          "color": "rojo"
+        },
+        "x": 700,
+        "y": -280
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 240,
+        "y": 620
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 480,
+        "y": 620
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Marcha"
+        },
+        "x": 720,
+        "y": 620
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "params": {
+          "rating": "24VDC"
+        },
+        "x": 240,
+        "y": 1040
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.13"
+      },
+      {
+        "from": "S2.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S0.11"
+      },
+      {
+        "from": "S0.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "PS1.-V2",
+        "to": "KM1.3"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.U2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "KM2.1"
+      },
+      {
+        "from": "KM2.2",
+        "to": "M1.U2"
+      },
+      {
+        "from": "PS1.-V2",
+        "to": "KM2.3"
+      },
+      {
+        "from": "KM2.4",
+        "to": "M1.U1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "02-inversion-giro",
+  "cases": [
+    {
+      "name": "Giro a la izquierda",
+      "until_ms": 2500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con S1 cierra KM1 y no KM2 (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "at_ms": 1300,
+          "expect": {
+            "KM1.closed": true,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "El motor gira a la izquierda y queda enclavado",
+          "points": 2,
+          "from_ms": 1400,
+          "to_ms": 2500,
+          "always": {
+            "M1.direction": 1
+          }
+        },
+        {
+          "description": "El piloto acompaña al motor",
+          "points": 1,
+          "at_ms": 2400,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Giro a la derecha pasando por parada",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1900,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Parada detiene el motor",
+          "points": 1,
+          "at_ms": 2100,
+          "expect": {
+            "KM1.closed": false,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Con S2 cierra KM2 (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 2700,
+          "expect": {
+            "KM2.closed": true,
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "El motor gira a la derecha",
+          "points": 2,
+          "at_ms": 3400,
+          "expect": {
+            "M1.direction": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enclavamiento: sin cambio directo de sentido",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1600,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca a la izquierda (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1300,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "KM1 y KM2 nunca cerrados a la vez",
+          "points": 3,
+          "from_ms": 0,
+          "to_ms": 3000,
+          "never": {
+            "KM1.closed": true,
+            "KM2.closed": true
+          }
+        },
+        {
+          "description": "S2 no cambia el sentido sin pasar por parada",
+          "points": 2,
+          "at_ms": 2000,
+          "expect": {
+            "KM1.closed": true,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Sin cortocircuito en la fuente",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 3000,
+          "no_faults": true
+        }
+      ]
+    },
+    {
+      "name": "S1 y S2 pulsados a la vez",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1100,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2100,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con los dos a la vez no arranca ninguno",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 1900,
+          "always": {
+            "KM1.closed": false,
+            "KM2.closed": false
+          }
+        },
+        {
+          "description": "Sin cortocircuito en la fuente",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 3000,
+          "no_faults": true
+        },
+        {
+          "description": "Después, S2 solo arranca a la derecha (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 2300,
+          "expect": {
+            "KM2.closed": true
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,250 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "07-cinta-contador",
+  "cases": [
+    {
+      "name": "Lote de tres piezas",
+      "until_ms": 4000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2900,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Marcha arranca la cinta (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1300,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Con dos piezas sigue andando",
+          "points": 2,
+          "at_ms": 2500,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Con la tercera pieza para",
+          "points": 2,
+          "at_ms": 3000,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Piloto de lote completo",
+          "points": 2,
+          "at_ms": 3000,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Una pieza quieta cuenta una vez",
+      "until_ms": 3600,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Marcha arranca la cinta (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1300,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Una pieza quieta frente al sensor cuenta una vez",
+          "points": 2,
+          "at_ms": 2600,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Con la segunda pieza sigue andando",
+          "points": 2,
+          "at_ms": 3300,
+          "expect": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nuevo lote",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2900,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Lote completo (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 3000,
+          "expect": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Marcha empieza un lote nuevo: cinta en marcha y piloto apagado",
+          "points": 2,
+          "at_ms": 3700,
+          "expect": {
+            "KM1.closed": true,
+            "H1.lit": false
+          }
+        }
+      ]
+    }
+  ]
+}

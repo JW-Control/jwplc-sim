@@ -1,0 +1,236 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "01-marcha-parada",
+  "cases": [
+    {
+      "name": "Arranque y enclavamiento",
+      "until_ms": 2500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "En reposo el motor está parado",
+          "points": 1,
+          "at_ms": 1450,
+          "expect": {
+            "Q0_0": 0,
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Con marcha arranca el motor",
+          "points": 2,
+          "at_ms": 1580,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Sigue en marcha al soltar el pulsador",
+          "points": 3,
+          "from_ms": 1650,
+          "to_ms": 2500,
+          "always": {
+            "KM1.closed": true,
+            "M1.running": true
+          }
+        },
+        {
+          "description": "El piloto de marcha acompaña al motor",
+          "points": 1,
+          "at_ms": 2400,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parada",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca con marcha (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 1580,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Con parada se detiene",
+          "points": 2,
+          "at_ms": 2580,
+          "expect": {
+            "KM1.closed": false,
+            "H1.lit": false
+          }
+        },
+        {
+          "description": "Queda detenido al soltar la parada",
+          "points": 2,
+          "from_ms": 2650,
+          "to_ms": 3500,
+          "always": {
+            "Q0_0": 0,
+            "KM1.closed": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prioridad de la parada",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1400,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con los dos pulsados no arranca",
+          "points": 2,
+          "from_ms": 1400,
+          "to_ms": 2400,
+          "never": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Sin la parada pulsada, marcha arranca (requisito)",
+          "points": 1,
+          "prerequisite": true,
+          "at_ms": 2700,
+          "expect": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Falla segura: cable de la parada cortado",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "faults": [
+        {
+          "kind": "open",
+          "wire": "PS1.+V1 S0.11",
+          "at_ms": 2200
+        }
+      ],
+      "checks": [
+        {
+          "description": "En marcha antes del corte",
+          "points": 1,
+          "at_ms": 2150,
+          "expect": {
+            "KM1.closed": true
+          },
+          "prerequisite": true
+        },
+        {
+          "description": "Se detiene al cortarse el cable de la parada",
+          "points": 2,
+          "at_ms": 2300,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Con el cable cortado no vuelve a arrancar",
+          "points": 1,
+          "from_ms": 2300,
+          "to_ms": 3000,
+          "never": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    }
+  ]
+}
