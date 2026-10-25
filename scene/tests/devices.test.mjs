@@ -119,7 +119,7 @@ test("sensor inductivo: la pieza conmuta a Sn = 8 mm y suelta pasada la histére
     return s.output("H", "lit");
   };
   s.advanceTo(ms(5));
-  assert.equal(s.output("B", "distance"), 20, "arranca en la distancia del parámetro");
+  assert.equal(s.output("B", "distance"), 12, "arranca en la distancia del parámetro");
   assert.equal(at(12, 10), false);
   assert.equal(at(8.4, 20), false, "acercándose: todavía fuera de Sn");
   assert.equal(at(8, 30), true, "conmuta en Sn");
@@ -138,7 +138,7 @@ test("sensor inductivo: distancia inicial por parámetro y pieza al frente por e
   assert.equal(s.output("H", "lit"), true);
   s.act("B", "distance", 30, ms(6));
   s.advanceTo(ms(10));
-  assert.equal(s.output("B", "distance"), 25, "se limita al recorrido");
+  assert.equal(s.output("B", "distance"), 16, "se limita al recorrido");
   assert.equal(s.output("H", "lit"), false);
   s.act("B", "target", true, ms(11));
   s.advanceTo(ms(15));

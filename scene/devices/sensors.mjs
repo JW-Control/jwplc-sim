@@ -12,7 +12,7 @@ import { Delay, earliest, ms } from "../device-kit.mjs";
 // del 10 %: conmuta al acercarse a Sn y suelta al alejarse más de 1,1·Sn.
 // La pieza se ubica con la acción "distance" (mm, se arrastra en el símbolo)
 // o con el parámetro del mismo nombre antes de simular.
-export const INDUCTIVE = { sn: 8, sa: 5.6, hysteresis: 0.1, travel: 25, linked: 3 };
+export const INDUCTIVE = { sn: 8, sa: 5.6, hysteresis: 0.1, travel: 16, linked: 3 };
 
 /**
  * @param {"inductive" | "photoelectric"} kind
@@ -23,7 +23,7 @@ function sensor(kind) {
   const K = INDUCTIVE;
   /** @type {import("../../sdk/jwsim-device.js").ParameterSpec[]} */
   const distanceParam = inductive
-    ? [{ id: "distance", label: "Distancia de la pieza", type: "number", default: 20, unit: "mm", hint: `0 a ${K.travel} mm; detecta hasta ${K.sn} mm` }]
+    ? [{ id: "distance", label: "Distancia de la pieza", type: "number", default: 12, unit: "mm", hint: `0 a ${K.travel} mm; detecta hasta ${K.sn} mm` }]
     : [];
   /** @type {import("../../sdk/jwsim-device.js").ActionSpec[]} */
   const actions = inductive

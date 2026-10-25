@@ -19,13 +19,17 @@ Escala 4 px/mm. El cable baja por la izquierda y abre sus tres hilos con los
 colores de IEC 60947-5-2: BN (+V), BU (0 V) y BK (salida). Cada hilo lleva su
 funcion rotulada. Bocas en x = 40, 80, 120.
 
-Zona de deteccion (frente a la cara activa, a escala): de 0 a Sa = 5,6 mm la
+Area de trabajo frente a la cara activa, AMPLIADA a 16 px/mm (4 veces el
+sensor) para que se pueda manipular con el mouse: a 4 px/mm la histeresis
+mediria 3 px. La regla de abajo esta en mm reales. De 0 a Sa = 5,6 mm la
 distancia de trabajo asegurada, hasta Sn = 8 mm el limite de deteccion, y de
-8 a 8,8 mm la histeresis (10 %): una pieza que se acerca conmuta a 8 mm y la
-que se aleja suelta recien a 8,8 mm. La zona se ilumina mientras detecta.
+8 a 8,8 mm la histeresis (10 %, franja ambar): una pieza que se acerca conecta
+en 8,0 mm y la que se aleja suelta recien en 8,8 mm. La zona se ilumina
+mientras detecta; dentro de la franja, encendida o no segun de donde venga.
 
-La pieza (acero, 25 mm de alto) se arrastra sobre el eje entre 0 y 25 mm
-(accion "distance", data-drag); la cota sobre ella muestra la distancia.
+La pieza (acero) se arrastra sobre el eje entre 0 y 16 mm (accion
+"distance", data-drag, un paso de 0,1 mm = 1,6 px); la cota sobre ella
+muestra la distancia.
 
 Uso: python3 gen_sensor_inductivo_pr18.py <salida.svg>
 """
@@ -34,7 +38,7 @@ import sys
 from fam22 import F, INK, header, finish, jw_term
 
 P = "sensor-inductive"
-W, H = 400, 260
+W, H = 560, 260
 
 
 def mm(v):
@@ -44,7 +48,8 @@ def mm(v):
 CY = 80                    # eje del sensor
 R = 60                     # extremo trasero (salida del cable)
 FACE = R + mm(47)          # cara activa: x = 248
-MAXD = 25                  # recorrido de la pieza (mm)
+MAXD = 16                  # recorrido de la pieza (mm)
+ZS = 16                    # escala del area de trabajo (px/mm)
 SN, SA, HY = 8, 5.6, 0.1
 TXT = "#c9cdd3"
 
@@ -53,7 +58,7 @@ def x_from_face(d):
     return FACE - mm(d)
 
 
-p = header("Sensor inductivo Autonics PR18-8DP (M18, Sn 8 mm), vista lateral segun foto y plano del fabricante. Escala 4 px/mm.", W, H)
+p = header("Sensor inductivo Autonics PR18-8DP (M18, Sn 8 mm), vista lateral segun foto y plano del fabricante. Sensor a 4 px/mm; area de trabajo ampliada a 16 px/mm.", W, H)
 for d in (
     '<linearGradient id="PFX-cyl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d949b"/><stop offset=".18" stop-color="#f4f6f8"/><stop offset=".38" stop-color="#c3c9cf"/><stop offset=".7" stop-color="#7c848c"/><stop offset="1" stop-color="#4c5258"/></linearGradient>',
     '<linearGradient id="PFX-nut" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa1a8"/><stop offset=".3" stop-color="#eef1f3"/><stop offset=".55" stop-color="#b8bfc6"/><stop offset="1" stop-color="#5d646b"/></linearGradient>',
@@ -66,17 +71,21 @@ for d in (
 ):
     p.insert(-1, d)
 
-# ---------------------------------------------------------------- zona de deteccion
+# ---------------------------------------------------------------- area de trabajo (16 px/mm)
 ZH = mm(17)                # alto del campo: el de la cara activa
 ZT = CY - ZH / 2
+RY = 204                   # regla (bajo la pieza: los rotulos no quedan tapados)
+
+
+def zx(d):
+    return FACE + ZS * d
 
 
 def zone(on):
-    o = 1 if on else .45
+    o = 1 if on else .4
     s = [f'<g opacity="{o}">']
-    s.append(f'<path d="M{FACE} {ZT} H{FACE + mm(SA)} V{ZT + ZH} H{FACE} Z" fill="url(#PFX-zone)"/>')
-    s.append(f'<path d="M{FACE + mm(SA)} {ZT} H{FACE + mm(SN)} V{ZT + ZH} H{FACE + mm(SA)} Z" fill="#3ddc84" fill-opacity=".18"/>')
-    s.append(f'<rect x="{FACE + mm(SN)}" y="{ZT}" width="{mm(SN * HY)}" height="{ZH}" fill="url(#PFX-hys)"/>')
+    s.append(f'<rect x="{FACE}" y="{ZT}" width="{ZS * SA}" height="{ZH}" fill="url(#PFX-zone)"/>')
+    s.append(f'<rect x="{zx(SA)}" y="{ZT}" width="{ZS * (SN - SA)}" height="{ZH}" fill="#3ddc84" fill-opacity=".2"/>')
     s.append('</g>')
     return s
 
@@ -86,21 +95,27 @@ p += zone(False)
 p.append('</g><g data-show="out.detecting">')
 p += zone(True)
 p.append('</g>')
-# eje y regla: 0 en la cara activa, marcas cada 5 mm
-EX = FACE + mm(MAXD) + mm(10)
+# histeresis: franja ambar de Sn a 1,1 Sn, alta hasta la regla
+HX0, HX1 = zx(SN), zx(SN * (1 + HY))
+p.append(f'<rect x="{HX0}" y="{ZT - 6}" width="{HX1 - HX0}" height="{RY - ZT + 6}" fill="url(#PFX-hys)"/>')
+p.append(f'<line x1="{HX0}" y1="{ZT - 6}" x2="{HX0}" y2="{RY}" stroke="#3ddc84" stroke-width="1.6"/>')
+p.append(f'<line x1="{HX1}" y1="{ZT - 6}" x2="{HX1}" y2="{RY}" stroke="#f2c230" stroke-width="1.6"/>')
+p.append(f'<text x="{HX0 - 3}" y="{RY - 46}" text-anchor="end" {F} font-size="9" font-weight="700" fill="#7fe3a8">conecta 8,0</text>')
+p.append(f'<text x="{HX1 + 3}" y="{RY - 46}" {F} font-size="9" font-weight="700" fill="#f2c230">suelta 8,8</text>')
+p.append(f'<text x="{HX1 + 3}" y="{RY - 30}" {F} font-size="8" font-weight="700" fill="#f2c230">histéresis 0,8 mm</text>')
+# Sa: distancia de trabajo asegurada
+p.append(f'<line x1="{zx(SA)}" y1="{ZT + ZH}" x2="{zx(SA)}" y2="{RY}" stroke="#3ddc84" stroke-width=".9" stroke-dasharray="3 2" opacity=".8"/>')
+p.append(f'<text x="{zx(SA) - 3}" y="{RY - 30}" text-anchor="end" {F} font-size="8" font-weight="700" fill="#7fe3a8">Sa 5,6</text>')
+# eje y regla en mm reales: marca cada 1 mm, numero cada 2 mm
+EX = zx(MAXD) + mm(10) + 12
 p.append(f'<line x1="{FACE}" y1="{CY}" x2="{EX}" y2="{CY}" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>')
-RY = 172
-p.append(f'<line x1="{FACE}" y1="{RY}" x2="{FACE + mm(MAXD)}" y2="{RY}" stroke="#6b737c" stroke-width="1"/>')
+p.append(f'<line x1="{FACE}" y1="{RY}" x2="{zx(MAXD)}" y2="{RY}" stroke="#6b737c" stroke-width="1"/>')
 for d in range(0, MAXD + 1):
-    big = d % 5 == 0
-    p.append(f'<line x1="{FACE + mm(d)}" y1="{RY}" x2="{FACE + mm(d)}" y2="{RY + (6 if big else 3)}" stroke="#6b737c" stroke-width="1"/>')
+    big = d % 2 == 0
+    p.append(f'<line x1="{zx(d)}" y1="{RY}" x2="{zx(d)}" y2="{RY + (6 if big else 3)}" stroke="#6b737c" stroke-width="1"/>')
     if big:
-        p.append(f'<text x="{FACE + mm(d)}" y="{RY + 16}" text-anchor="middle" {F} font-size="8" fill="#8a9099">{d}</text>')
-p.append(f'<text x="{FACE + mm(MAXD) + 6}" y="{RY + 4}" {F} font-size="8" fill="#8a9099">mm</text>')
-for d, name in ((SA, "Sa"), (SN, "Sn")):
-    x = FACE + mm(d)
-    p.append(f'<line x1="{x}" y1="{ZT + ZH}" x2="{x}" y2="{RY}" stroke="#3ddc84" stroke-width=".8" stroke-dasharray="2 2" opacity=".7"/>')
-    p.append(f'<text x="{x}" y="{RY - 4}" text-anchor="{"end" if name == "Sa" else "start"}" dx="{-2 if name == "Sa" else 2}" {F} font-size="8" font-weight="700" fill="#7fe3a8">{name}</text>')
+        p.append(f'<text x="{zx(d)}" y="{RY + 16}" text-anchor="middle" {F} font-size="8" fill="#8a9099">{d}</text>')
+p.append(f'<text x="{zx(MAXD) + 8}" y="{RY + 4}" {F} font-size="8" fill="#8a9099">mm</text>')
 
 # ---------------------------------------------------------------- cable y bornes
 WIRES = ((40, "BN", "#8a5a2b", "+V"), (80, "BU", "#2f62d6", "0 V"), (120, "BK", "#1b1d20", "Salida"))
@@ -190,8 +205,8 @@ p += washer(x_from_face(20.5), x_from_face(18.5))
 p += nut(x_from_face(18), x_from_face(14))
 
 # ---------------------------------------------------------------- pieza metalica (se arrastra)
-PW, PH = mm(10), mm(25)
-p.append(f'<g data-translate="out.distance|param.distance:0:{MAXD}:x:{mm(MAXD)}" data-action="distance" data-kind="drag" data-drag="x:{FACE}:4:0:{MAXD}" style="cursor:ew-resize">')
+PW, PH = 24, mm(25)       # pieza de acero (alto a escala; angosta para no tapar el area)
+p.append(f'<g data-translate="out.distance|param.distance:0:{MAXD}:x:{ZS * MAXD}" data-action="distance" data-kind="drag" data-drag="x:{FACE}:{ZS}:0:{MAXD}" style="cursor:ew-resize">')
 p.append(f'<rect x="{FACE - 4}" y="{CY - PH / 2 - 18}" width="{PW + 8}" height="{PH + 22}" fill="#000" opacity="0"/>')  # zona de agarre
 p.append(f'<rect x="{FACE + 2}" y="{CY - PH / 2 + 3}" width="{PW}" height="{PH}" rx="1.5" fill="#000" opacity=".3"/>')
 p.append(f'<rect x="{FACE}" y="{CY - PH / 2}" width="{PW}" height="{PH}" rx="1.5" fill="url(#PFX-steel)" stroke="#2e3338" stroke-width="1"/>')
@@ -200,7 +215,7 @@ for k in range(3):
     y = CY - 8 + k * 8
     p.append(f'<line x1="{FACE + PW / 2 - 6}" y1="{y}" x2="{FACE + PW / 2 + 6}" y2="{y}" stroke="#4a5056" stroke-width="1"/>')
 p.append(f'<text x="{FACE + PW / 2}" y="{CY - PH / 2 - 6}" text-anchor="middle" {F} font-size="10" font-weight="700" fill="#e8eaed" '
-         f'data-text="out.distance|param.distance:mm">20,0 mm</text>')
+         f'data-text="out.distance|param.distance:mm">12,0 mm</text>')
 p.append('</g>')
 
 out = finish(p, P)

@@ -13,7 +13,7 @@
 //                 y guardar el proyecto con la escena
 //   SCENE_DRAG    la pieza del sensor inductivo B0 se arrastra: en marcha
 //                 lleva la acción "distance" a 0 mm (detecta); detenida, fija
-//                 el parámetro en 25 mm
+//                 el parámetro en 16 mm (fin del recorrido)
 //   SCENE_TFT     la pantalla de la placa en la escena muestra la TFT simulada
 //   SCENE_SYMBOL  una plantilla .svg (docs/simbolos/pushbutton-no.svg) reemplaza
 //                 el símbolo de S1 con sus bornes y su color; una que no cumple
@@ -151,8 +151,8 @@ try {
   await win.click("#btn-stop");
   await until(async () => (await status()) === "idle", 10000);
   await dragBy("B0", 1000);
-  const dragEdit = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "B0").params?.distance === 25), 3000);
-  criteria.SCENE_DRAG = { ok: dragRun !== null && detRun === true && !!dragEdit, running_distance_0: dragRun !== null, detecting: detRun, edit_param_25: !!dragEdit };
+  const dragEdit = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "B0").params?.distance === 16), 3000);
+  criteria.SCENE_DRAG = { ok: dragRun !== null && detRun === true && !!dragEdit, running_distance_0: dragRun !== null, detecting: detRun, edit_param_16: !!dragEdit };
   log(`SCENE_DRAG ${JSON.stringify(criteria.SCENE_DRAG)}`);
 
   // ---- SCENE_EDIT
