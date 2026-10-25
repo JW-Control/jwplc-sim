@@ -66,8 +66,8 @@ JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (símbolos v2: 17 de 21 plantillas; faltan f
 JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)
-JWSIM_G9_EXERCISES=IN_PROGRESS      (8 ejercicios con escena, enunciado, plantilla, solución 20/20 y rúbrica; docs/EJERCICIOS.md)
-JWSIM_G9_AUTOGRADING=IN_PROGRESS    (jwsim-cli grade y botón Calificar; 100 corridas con la misma nota y hash; 6 errores típicos con nota parcial)
+JWSIM_G9_EXERCISES=PASS             (8 ejercicios con escena, enunciado, plantilla, solución 20/20 y rúbrica; docs/EJERCICIOS.md)
+JWSIM_G9_AUTOGRADING=PASS           (jwsim-cli grade y botón Calificar; 100 corridas con la misma nota y hash; 6 errores típicos con nota parcial)
 JWSIM_G10_*=PENDING
 ```
 
