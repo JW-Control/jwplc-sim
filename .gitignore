@@ -6,5 +6,8 @@ node_modules/
 *.o
 *.a
 *.exe
-# Estado no volátil que la app guarda por proyecto al simular
+# Estado no volátil que la app guarda por proyecto al simular (y sus copias
+# para grabar y reproducir)
 *.estado/
+*.estado.inicio/
+*.estado.reproduccion/
