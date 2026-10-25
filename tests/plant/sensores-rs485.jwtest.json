@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Emulación de planta (G9): el PLC lee por Modbus RTU (9600 8N1) dos transmisores de la escena en el bus RS-485. A los 2 s la temperatura sube a 30 °C; a los 3 s la sonda del PT100 queda abierta (7FFFh = 3276,7); a los 4 s el transmisor de pH se quema y deja de responder (timeout); el PT100 sigue.",
+  "sketch": "../sketches/g9_modbus_sensores",
+  "scene": "../scenes/g9_sensores_rs485.scene.json",
+  "until_ms": 5000,
+  "actions": [
+    { "at_ms": 2000, "device": "TT1", "action": "temp", "value": 30 },
+    { "at_ms": 3000, "device": "TT1", "action": "probe", "value": 1 }
+  ],
+  "faults": [{ "kind": "burnt", "device": "AT1", "at_ms": 4000 }],
+  "expect": {
+    "console": [
+      { "match": "ms T=27\\.5$", "before_ms": 2000, "min": 2 },
+      { "match": "ms pH=4\\.26 Tm=26\\.8$", "before_ms": 2000, "min": 2 },
+      { "match": "ms T=30\\.0$", "after_ms": 2000, "before_ms": 3000, "min": 1 },
+      { "match": "ms T=3276\\.7$", "after_ms": 3000, "min": 1 },
+      { "match": "ms pH FAIL", "after_ms": 4000, "min": 1 }
+    ],
+    "console_absent": ["begin failed", "T FAIL"]
+  }
+}

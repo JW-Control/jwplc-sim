@@ -1,0 +1,15 @@
+{
+  "devices": [
+    { "id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0 },
+    { "id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 60 },
+    { "id": "TT1", "type": "jwsim/pt100-rs485", "params": { "address": 1, "temp": 27.5 }, "x": 860, "y": 40 },
+    { "id": "AT1", "type": "jwsim/ph-rs485", "params": { "address": 2, "ph": 4.26, "temp": 26.8 }, "x": 860, "y": 240 }
+  ],
+  "wiring": [
+    { "from": "PS1.+V1", "to": "plc.24VDC" }, { "from": "PS1.-V1", "to": "plc.M0" }, { "from": "PS1.-V1", "to": "plc.M1" },
+    { "from": "PS1.+V2", "to": "TT1.+" }, { "from": "TT1.-", "to": "PS1.-V2" },
+    { "from": "PS1.+V2", "to": "AT1.+" }, { "from": "AT1.-", "to": "PS1.-V2" },
+    { "from": "plc.RS485_A", "to": "TT1.A" }, { "from": "plc.RS485_B", "to": "TT1.B" },
+    { "from": "TT1.A", "to": "AT1.A" }, { "from": "TT1.B", "to": "AT1.B" }
+  ]
+}

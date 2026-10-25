@@ -469,7 +469,39 @@ instante de él, consola y fallas eléctricas. La nota (0 a 20) es
 determinista. La app lo usa desde un worker (`app/lib/grade-worker.mjs`).
 Detalle y formato en [EJERCICIOS.md](EJERCICIOS.md).
 
-## 5. Mapa de hardware del JWPLC Basic
+### 4.4 Emulación de planta: transmisores Modbus y procesos **[G9]**
+
+Para probar el firmware de un proyecto contra la planta antes de tenerla, la
+escena modela también el proceso y la instrumentación:
+
+- **Esclavos Modbus RTU en el bus RS-485.** Los dispositivos con `modbus()`
+  (SDK §2.3.2) responden al PLC, que es maestro por su UART 2. Con la escena
+  activa, la co-simulación pide `{"type":"rs485","port":2,"on":1}`: el
+  runner informa cada carácter transmitido (`uart_tx`, con su inicio y fin)
+  y corta el horizonte en el primero (razón `uart`). `scene/modbus.mjs`
+  arma la trama tras 3,5 caracteres de silencio, la escena la despacha
+  (CRC, dirección, velocidad, cableado A/B, alimentación) y la respuesta
+  vuelve como `uart_rx` con el instante de llegada de cada carácter. Las
+  fallas de §4.2 valen: transmisor quemado o cable del bus cortado (no
+  responde), sonda abierta o en corto (7FFFh / 8000h).
+- **Transmisores:** `pt100-rs485` (registro 0 = °C × 10) y `ph-rs485`
+  (0 = pH × 100, 1 = °C × 10), 9600 8N1 por defecto; siguen la salida de
+  un proceso (`source`) o se ajustan a mano.
+- **Procesos:** `fermentador` (tanque de café con serpentín: terma solar,
+  llenado y vaciado del serpentín, flujostato, bomba en seco, temperatura
+  de masa y de mosto, curva de pH) y `water-valve` (electroválvula 2/2).
+  Las magnitudes continuas se publican como segmentos para no llenar el
+  registro de eventos.
+
+Límite: la respuesta de los esclavos no queda en la grabación `.stim`; una
+sesión con transmisores se reproduce con la escena, no sin ella.
+
+Pruebas: `scene/tests/modbus.test.mjs` (tramas, excepciones, cableado,
+fallas, modelo del fermentador) y `tests/plant/` con firmware real
+(sensores por Modbus y lazo cerrado del fermentador). Proyecto para la app:
+`tests/plant/fermentador.jwsim`.
+
+
 
 Extraído del package (alpha.12, revisado con alpha.13). "Fuente" indica de dónde sale cada dato.
 

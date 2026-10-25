@@ -134,6 +134,26 @@ dispositivo. `links(params)` devuelve `[{ id, source: "Y1.position", min, max }]
 el enlace está activo mientras el valor está en `[min, max]`. Si la salida
 fuente es un segmento, la escena calcula los cruces exactos.
 
+### 2.3.1 Lecturas numéricas
+
+`reads(params)` devuelve `[{ id, source: "FER1.tMasa" }]`: en cada `update`
+el dispositivo recibe en `inputs.values[id]` el valor de esa salida (los
+booleanos como 0/1; un segmento, en el instante actual). Así un transmisor
+mide la temperatura de un proceso o un tanque lee el estado de sus válvulas
+y bombas.
+
+### 2.3.2 Esclavo Modbus RTU (bus RS-485)
+
+`modbus(params)` devuelve `{ address, baud, responseMs }` y la instancia
+implementa `modbusRead(table, start, count, t)` (`"holding"` o `"input"`;
+`undefined` = no responde, `null` = excepción 02) y, si acepta escrituras,
+`modbusWrite(start, values, t)`. El dispositivo tiene bornes `A` y `B`: la
+escena le pasa las tramas del PLC (UART 2, maestro) solo si está cableado a
+`plc.RS485_A` y `plc.RS485_B` (A con A), con la misma velocidad (8N1) y sin
+falla `burnt`. Responde con su demora y el CRC; si dos responden con la
+misma dirección, la escena registra un choque. Ejemplos:
+`scene/devices/process.mjs` (transmisores PT100 y pH) y ARCHITECTURE §4.4.
+
 ### 2.4 Señales de la placa
 
 `signals.in` lista las salidas del firmware que el dispositivo lee (las

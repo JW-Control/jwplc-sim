@@ -9,6 +9,7 @@ import { limitSwitch, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24 } from "./supplies.mjs";
 import { sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
+import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
@@ -29,6 +30,10 @@ export const builtinDevices = [
   contactor,
   solenoidValve,
   motor,
+  pt100Rs485,
+  phRs485,
+  fermenter,
+  waterValve,
 ];
 
 /** Compara versiones x.y.z. */

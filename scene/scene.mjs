@@ -16,6 +16,7 @@
 // Determinismo: sin reloj de pared ni aleatorios; los dispositivos se
 // evalúan en el orden de la escena.
 
+import { crc16 } from "./modbus.mjs";
 import { analyze, solve } from "./netlist.mjs";
 import { Registry } from "./devices/index.mjs";
 
@@ -163,6 +164,8 @@ export class Scene {
         inst,
         terms: new Set(def.terminals.map((x) => x.id)),
         links: def.links?.(params) ?? [],
+        reads: (def.reads?.(params) ?? []).filter((r) => r.source),
+        modbus: def.modbus?.(params) ?? null,
         actions: {},
         wired: new Set(),
         step: /** @type {DeviceStep} */ ({}),
@@ -181,7 +184,7 @@ export class Scene {
       }
     }
     for (const dev of this.devices.values()) {
-      for (const l of dev.links) {
+      for (const l of [...dev.links, ...dev.reads]) {
         const i = l.source.indexOf(".");
         if (i < 0 || !this.devices.has(l.source.slice(0, i))) throw new Error(`${dev.id}: enlace a "${l.source}" inexistente`);
       }
@@ -250,6 +253,14 @@ export class Scene {
     return v >= link.min && v <= link.max;
   }
 
+  /** Valor numérico de la salida de otro dispositivo en t (booleanos como 0/1). */
+  #readValue(source, t) {
+    const i = source.indexOf(".");
+    const src = this.devices.get(source.slice(0, i));
+    const v = src.step.outputs?.[source.slice(i + 1)];
+    return typeof v === "boolean" ? (v ? 1 : 0) : valueAt(v, src.stepT, t);
+  }
+
   /** Evalúa la escena en t hasta el punto fijo. */
   evaluate(t) {
     this.t = t;
@@ -279,11 +290,14 @@ export class Scene {
         /** @type {Record<string, boolean>} */
         const links = {};
         for (const l of dev.links) links[l.id] = this.#linkValue(l, t);
+        /** @type {Record<string, number>} */
+        const values = {};
+        for (const r of dev.reads) values[r.id] = this.#readValue(r.source, t);
         // Pegado (sensor, final de carrera, pulsador): se comporta como
         // accionado (value = true) o en reposo, haga lo que haga el usuario o
         // el enlace mecánico.
         let actions = dev.actions;
-        const stuck = this.injected.get(`stuck:${dev.id}`);
+        const stuck = /** @type {{ value?: boolean } | undefined} */ (this.injected.get(`stuck:${dev.id}`));
         if (stuck) {
           const on = stuck.value !== false;
           actions = { ...dev.actions };
@@ -297,7 +311,7 @@ export class Scene {
         const signals = {};
         for (const s of dev.def.signals?.in ?? []) signals[s] = this.signals[s] ? 1 : 0;
         const tripped = (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id));
-        const step = dev.inst.update(t, { loads, links, actions, signals, wired: dev.wired, tripped }) ?? {};
+        const step = dev.inst.update(t, { loads, links, values, actions, signals, wired: dev.wired, tripped }) ?? {};
         // Soldado (relé, contactor): los contactos se pegan en la primera
         // vez que cierra y ya no abren aunque la bobina caiga.
         const welded = this.injected.get(`welded:${dev.id}`);
@@ -430,6 +444,99 @@ export class Scene {
     this.injected.delete(key);
     this.#log({ t, kind: "clear", key });
     this.evaluate(t);
+  }
+
+  /** ¿Hay esclavos Modbus en la escena? (la co-simulación enlaza el bus RS-485) */
+  hasModbus() {
+    return [...this.devices.values()].some((d) => d.modbus);
+  }
+
+  /**
+   * Petición Modbus RTU del PLC por el bus RS-485 en t (G9, emulación de
+   * planta). Responde el esclavo con esa dirección que esté cableado a
+   * plc.RS485_A/B (A con A, B con B, sin cables cortados), con la misma
+   * velocidad y que no esté sin alimentación. Devuelve los bytes de la
+   * respuesta (con CRC) y la demora, o null si nadie responde.
+   * @param {number[]} frame trama completa con CRC
+   * @param {{ t: bigint, baud: number }} o
+   */
+  modbusRequest(frame, o) {
+    if (frame.length < 4 || crc16(frame.slice(0, -2)) !== (frame.at(-2) | (frame.at(-1) << 8))) return null;
+    this.advanceTo(o.t);
+    const addr = frame[0];
+    const fn = frame[1];
+    const net = this.#rs485Net();
+    const slaves = [...this.devices.values()].filter(
+      (d) =>
+        d.modbus && (addr === 0 || d.modbus.address === addr) && Math.abs(d.modbus.baud - o.baud) / d.modbus.baud < 0.03 &&
+        net.find(`${d.id}.A`) === net.find("A") && net.find(`${d.id}.B`) === net.find("B") && !this.injected.has(`burnt:${d.id}`),
+    );
+    if (!slaves.length) return null;
+    const u16 = (k) => (frame[k] << 8) | frame[k + 1];
+    const reply = (dev, pdu) => {
+      const body = [addr, ...pdu];
+      const c = crc16(body);
+      return { bytes: [...body, c & 0xff, c >> 8], delayNs: BigInt(Math.round((dev.modbus.responseMs ?? 5) * 1e6)) };
+    };
+    const exc = (dev, code) => reply(dev, [fn | 0x80, code]);
+    let out = null;
+    for (const dev of slaves) {
+      let r = null;
+      // Escritura de registros: sin modbusWrite, función no admitida (01).
+      const write = (start, vals, echo) => {
+        if (!dev.inst.modbusWrite) return exc(dev, 1);
+        const ok = dev.inst.modbusWrite(start, vals, o.t);
+        return ok === undefined ? undefined : ok ? reply(dev, echo) : exc(dev, 2);
+      };
+      if ((fn === 3 || fn === 4) && frame.length === 8) {
+        const count = u16(4);
+        if (!dev.inst.modbusRead) r = exc(dev, 1);
+        else if (count < 1 || count > 125) r = exc(dev, 3);
+        else {
+          const regs = dev.inst.modbusRead(fn === 3 ? "holding" : "input", u16(2), count, o.t);
+          if (regs === undefined) continue;  // sin alimentación: no responde
+          r = regs === null ? exc(dev, 2) : reply(dev, [fn, count * 2, ...regs.flatMap((v) => [(v >> 8) & 0xff, v & 0xff])]);
+        }
+      } else if (fn === 6 && frame.length === 8) {
+        r = write(u16(2), [u16(4)], frame.slice(1, 6));
+        if (r === undefined) continue;
+      } else if (fn === 16 && frame.length >= 9 && frame.length === 9 + frame[6]) {
+        r = write(u16(2), Array.from({ length: u16(4) }, (_, k) => u16(7 + 2 * k)), frame.slice(1, 6));
+        if (r === undefined) continue;
+      } else {
+        r = exc(dev, 1);
+      }
+      if (addr === 0) continue;  // difusión: se aplica y nadie responde
+      if (out) {
+        this.#log({ t: o.t, kind: "fault", type: "modbus-collision", device: dev.id, message: `Dos esclavos responden con la dirección ${addr} en el bus RS-485` });
+        return null;
+      }
+      out = r;
+    }
+    // La escritura pudo cambiar el estado de un dispositivo.
+    if (fn === 6 || fn === 16) this.evaluate(o.t);
+    return out;
+  }
+
+  /** Conexiones del bus RS-485: unión de bornes por los cables activos ("A"/"B" = bornes de la placa). */
+  #rs485Net() {
+    const parent = new Map();
+    const find = (x) => {
+      while (parent.has(x) && parent.get(x) !== x) x = parent.get(x);
+      return x;
+    };
+    const union = (a, b) => {
+      const ra = find(a);
+      const rb = find(b);
+      if (ra !== rb) parent.set(ra, rb);
+    };
+    const plc = [...this.devices.values()].find((d) => d.def.type === "jwsim/jwplc-basic");
+    for (const [a, b] of this.wires) if (!this.injected.has(`open:${[a, b].sort().join(" ")}`)) union(a, b);
+    if (plc) {
+      union("A", `${plc.id}.RS485_A`);
+      union("B", `${plc.id}.RS485_B`);
+    }
+    return { find };
   }
 
   /** Rearma las fuentes disparadas y repone las cargas quemadas. */

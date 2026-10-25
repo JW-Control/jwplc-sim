@@ -80,6 +80,22 @@ export interface LinkSpec {
   max: number;
 }
 
+/** Lectura numérica de la salida de otro dispositivo ("FER1.tMasa"). */
+export interface ReadSpec {
+  id: string;
+  source: string;
+}
+
+/** Esclavo Modbus RTU en el bus RS-485 de la placa (bornes A y B del dispositivo). */
+export interface ModbusSpec {
+  /** Dirección 1..247. */
+  address: number;
+  /** Velocidad en baudios; formato 8N1. Si el PLC usa otra, no responde. */
+  baud: number;
+  /** Demora entre el fin de la petición y la respuesta (ms). */
+  responseMs?: number;
+}
+
 export interface LoadState {
   on: boolean;
   /** 1: `a` en el positivo; -1: invertida; 0: sin tensión. */
@@ -95,6 +111,8 @@ export interface DeviceInputs {
   loads: Record<string, LoadState>;
   /** Enlaces mecánicos declarados en links(). */
   links: Record<string, boolean>;
+  /** Lecturas numéricas declaradas en reads() (booleanos como 0/1). */
+  values?: Record<string, number>;
   /** Acciones del usuario (pulsar, posición del selector). */
   actions: Record<string, number | boolean | string>;
   /** Señales de la placa simulada que el dispositivo declaró en signals.in. */
@@ -134,6 +152,14 @@ export interface DeviceInstance {
    * repite hasta el punto fijo. Sin reloj de pared ni aleatorios sin semilla.
    */
   update(t: Ns, inputs: DeviceInputs): DeviceStep | void;
+  /**
+   * Esclavo Modbus: registros desde `start` (tabla "holding" o "input") con el
+   * estado del último update. undefined = no responde (sin alimentación);
+   * null = dirección inexistente (excepción 02).
+   */
+  modbusRead?(table: "holding" | "input", start: number, count: number, t: Ns): number[] | null | undefined;
+  /** Escritura de registros; false = dirección inexistente (excepción 02). */
+  modbusWrite?(start: number, values: number[], t: Ns): boolean | undefined;
 }
 
 export interface DeviceDefinition {
@@ -150,6 +176,10 @@ export interface DeviceDefinition {
   /** Señales de la placa: in = salidas del firmware que lee; out = entradas que maneja. */
   signals?: { in?: string[]; out?: string[] };
   links?(params: Record<string, any>): LinkSpec[];
+  /** Lecturas numéricas de salidas de otros dispositivos. */
+  reads?(params: Record<string, any>): ReadSpec[];
+  /** Esclavo Modbus RTU en el bus RS-485 (bornes A y B). */
+  modbus?(params: Record<string, any>): ModbusSpec;
   electrical?(params: Record<string, any>): Electrical;
   create(ctx: DeviceContext): DeviceInstance;
 }

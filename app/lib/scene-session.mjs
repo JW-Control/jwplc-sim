@@ -10,6 +10,7 @@
 import { EventEmitter } from "node:events";
 
 import { watchedSignals } from "../../cli/lib/cosim.mjs";
+import { ModbusLink, uartRxMessage } from "../../scene/modbus.mjs";
 
 /** Instantánea de la escena para la interfaz (sin bigint). */
 export function wireSnapshot(snap) {
@@ -42,6 +43,8 @@ export class SceneSession extends EventEmitter {
     this.stepNs = stepNs;
     this.snapshotMs = snapshotMs;
     this.watch = watchedSignals(scene);
+    // Esclavos Modbus de la escena en el bus RS-485 (G9, emulación de planta).
+    this.link = scene.hasModbus() ? new ModbusLink(scene) : null;
     this.onMessage = (m) => this.#onMessage(m);
     runner.on("message", this.onMessage);
   }
@@ -77,6 +80,8 @@ export class SceneSession extends EventEmitter {
     let h = this.scene.t + this.stepNs;
     const ne = this.scene.nextEvent();
     if (ne !== undefined && ne < h) h = ne;
+    const le = this.link?.nextEvent();
+    if (le !== undefined && le > this.scene.t && le < h) h = le;
     this.runner.send({ type: "horizon", until_ns: String(h) });
   }
 
@@ -102,14 +107,20 @@ export class SceneSession extends EventEmitter {
       if (!this.#started) {
         this.#started = true;
         this.runner.send({ type: "scene", on: 1, watch: this.watch.join(",") });
+        if (this.link) this.runner.send({ type: "rs485", port: 2, on: 1 });
         this.#send(this.scene.boardInputs(), t);
         this.scene.takeInputChanges();
         this.#next();
       } else {
         // Reinicio (esp_restart): el proceso nuevo recibe todas las entradas.
+        if (this.link) this.runner.send({ type: "rs485", port: 2, on: 1 });
         this.#send(this.scene.boardInputs(), t);
       }
       this.#snapshot(true);
+      return;
+    }
+    if (m.type === "uart_tx") {
+      this.link?.onTx(m.bytes);
       return;
     }
     if (m.type !== "horizon") return;
@@ -128,6 +139,8 @@ export class SceneSession extends EventEmitter {
       }
     }
     this.#send(this.scene.takeInputChanges(), at);
+    const reply = this.link?.poll(at) ?? [];
+    if (reply.length) this.runner.send(uartRxMessage(2, reply));
     this.#snapshot(ops.length > 0);
     this.#next();
   }

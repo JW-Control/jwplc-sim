@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Emulación de planta (G9): lazo cerrado con el fermentador (proceso acelerado: calefacción ×8 y fermentación de 0,5 h). La masa sube de 24 a 27 °C y se mantiene entre 26,5 y 27,x; con la válvula abierta hay flujo; al cerrar, la bomba de retorno sigue 20 s y vacía el serpentín; el pH llega a 3,70 y el firmware termina el lote.",
+  "sketch": "../sketches/g9_fermentador_basico",
+  "scene": "../scenes/g9_fermentador.scene.json",
+  "until_ms": 1200000,
+  "expect": {
+    "console": [
+      { "match": "calef=1 flujo=1$", "min": 1 },
+      { "match": "ms FIN pH=3\\.(6\\d|70) T=2[67]\\.\\d$", "count": 1 }
+    ],
+    "signals": [{ "at_ms": 1199000, "Q0_0": 0, "Q0_2": 0, "Q0_3": 1, "Q0_4": 1 }],
+    "scene": {
+      "state": [
+        { "at_ms": 1199000, "HA1.sounding": true, "H1.lit": true, "FER1.bombaEnSeco": false }
+      ],
+      "faults": [],
+      "findings": []
+    }
+  }
+}

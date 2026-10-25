@@ -26,9 +26,12 @@
 //                   solo avanza hasta el horizonte que le da la escena,
 //                   {"type":"horizon","until_ns":H}, y se detiene antes si
 //                   cambia una señal vigilada, en ese instante. Responde
-//                   {"type":"horizon","t_ns","reason":"output"|"until",
+//                   {"type":"horizon","t_ns","reason":"output"|"uart"|"until",
 //                   "changes":[[señal,nivel]...]} y espera el próximo
 //                   horizonte; la escena responde con "set" y "at_ns".
+//                   Con "rs485" activo, un byte transmitido por la UART
+//                   enlazada también corta el horizonte ("uart"): los
+//                   esclavos Modbus de la escena responden a tiempo (G9).
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
@@ -332,10 +335,18 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   // enlazada con su [inicio, fin], enviados en cada volcado.
   int link_port = -1;
   std::string link_items;
+  // Con la escena (esclavos Modbus en el bus, G9): el primer carácter
+  // transmitido también corta el horizonte, para que la escena reciba la
+  // trama a tiempo y responda en el instante correcto.
+  bool scene_uart = false;
   board.set_uart_link([&](int p, uint8_t b, jwsim_ns_t start, jwsim_ns_t end) {
     if (p != link_port) return;
     if (!link_items.empty()) link_items.push_back(',');
     link_items += "[" + std::to_string(start) + "," + std::to_string(end) + "," + std::to_string(b) + "]";
+    if (scene_on && !scene_uart) {
+      scene_uart = true;
+      jwsim_request_stop();
+    }
   });
   // Red del W5500 (app/lib/net-bridge.mjs): lo que el chip envía se manda
   // en cada volcado, solo si la interfaz lo pidió.
@@ -692,13 +703,16 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       send_json(hash_json("reached") + "}");
       continue;
     }
-    if (scene_on && (!scene_changes.empty() || jwsim_now() >= scene_until)) {
-      // Horizonte alcanzado o salida vigilada cambiada: la escena decide.
-      // Antes, la consola y las señales hasta este instante.
+    if (scene_on && (!scene_changes.empty() || scene_uart || jwsim_now() >= scene_until)) {
+      // Horizonte alcanzado, salida vigilada cambiada o bytes en el bus
+      // RS-485: la escena decide. Antes, la consola, las señales y los
+      // bytes del bus hasta este instante.
       flush(true);
       const bool out = !scene_changes.empty();
+      const char *why = out ? "output" : scene_uart && jwsim_now() < scene_until ? "uart" : "until";
+      scene_uart = false;
       std::string m = "{\"type\":\"horizon\",\"t_ns\":" + std::to_string(out ? scene_t : jwsim_now()) +
-                      ",\"reason\":\"" + (out ? "output" : "until") + "\",\"changes\":[";
+                      ",\"reason\":\"" + why + "\",\"changes\":[";
       bool first = true;
       for (const auto &[name, level] : scene_changes) {
         m += (first ? "[" : ",[") + quoted(name) + "," + (level ? "1" : "0") + "]";
