@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Sensor inductivo Autonics PR18-8DP (M18, Sn 8 mm), vista lateral segun foto y plano del fabricante. Sensor a 4 px/mm; area de trabajo ampliada a 16 px/mm. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 260">
+<!-- Sensor inductivo Autonics PR18-8DP (M18, Sn 8 mm), vista lateral segun foto y plano del fabricante. Sensor a 4 px/mm; area de trabajo exagerada (escala por tramos). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 260">
 <defs>
 <linearGradient id="sensor-inductive-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
 <linearGradient id="sensor-inductive-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
@@ -22,48 +22,16 @@
 <pattern id="sensor-inductive-hys" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#f2c230" fill-opacity=".25"/><line x1="0" y1="0" x2="0" y2="4" stroke="#f2c230" stroke-width="1.6"/></pattern>
 </defs>
 <g data-show="!out.detecting">
-<g opacity="0.4">
-<rect x="248" y="46.0" width="128" height="68" fill="url(#sensor-inductive-zone)"/>
-</g>
+<g opacity="0.4"><path d="M248 46.0 L418 16.6 V143.4 L248 114.0 Z" fill="url(#sensor-inductive-zone)" stroke="#3ddc84" stroke-width="1.2" stroke-opacity=".8"/></g>
 </g><g data-show="out.detecting">
-<g opacity="1">
-<rect x="248" y="46.0" width="128" height="68" fill="url(#sensor-inductive-zone)"/>
+<g opacity="1"><path d="M248 46.0 L418 16.6 V143.4 L248 114.0 Z" fill="url(#sensor-inductive-zone)" stroke="#3ddc84" stroke-width="1.2" stroke-opacity=".8"/></g>
 </g>
-</g>
-<rect x="376" y="40.0" width="12.800000000000011" height="164.0" fill="url(#sensor-inductive-hys)"/>
-<line x1="376" y1="40.0" x2="376" y2="204" stroke="#3ddc84" stroke-width="1.6"/>
-<line x1="388.8" y1="40.0" x2="388.8" y2="204" stroke="#f2c230" stroke-width="1.6"/>
-<text x="373" y="164" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#7fe3a8">detección 8,0</text>
-<text x="391.8" y="164" font-family="sans-serif" font-size="9" font-weight="700" fill="#f2c230">histéresis 8,8</text>
-<line x1="248" y1="80" x2="556" y2="80" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>
-<line x1="248" y1="204" x2="504" y2="204" stroke="#6b737c" stroke-width="1"/>
-<line x1="248" y1="204" x2="248" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="248" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">0</text>
-<line x1="264" y1="204" x2="264" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="280" y1="204" x2="280" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="280" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">2</text>
-<line x1="296" y1="204" x2="296" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="312" y1="204" x2="312" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="312" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">4</text>
-<line x1="328" y1="204" x2="328" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="344" y1="204" x2="344" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="344" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">6</text>
-<line x1="360" y1="204" x2="360" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="376" y1="204" x2="376" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="376" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">8</text>
-<line x1="392" y1="204" x2="392" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="408" y1="204" x2="408" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="408" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">10</text>
-<line x1="424" y1="204" x2="424" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="440" y1="204" x2="440" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="440" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">12</text>
-<line x1="456" y1="204" x2="456" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="472" y1="204" x2="472" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="472" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">14</text>
-<line x1="488" y1="204" x2="488" y2="207" stroke="#6b737c" stroke-width="1"/>
-<line x1="504" y1="204" x2="504" y2="210" stroke="#6b737c" stroke-width="1"/>
-<text x="504" y="220" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#8a9099">16</text>
-<text x="512" y="208" font-family="sans-serif" font-size="8" fill="#8a9099">mm</text>
+<path d="M418 16.6 L468 8.0 V152.0 L418 143.4 Z" fill="url(#sensor-inductive-hys)" stroke="#f2c230" stroke-width="1.2"/>
+<line x1="418" y1="143.4" x2="418" y2="172" stroke="#3ddc84" stroke-width="1.2"/>
+<line x1="468" y1="152" x2="468" y2="172" stroke="#f2c230" stroke-width="1.2"/>
+<text x="414" y="168" text-anchor="end" font-family="sans-serif" font-size="10" font-weight="700" fill="#7fe3a8">detección 8,0 mm</text>
+<text x="472" y="168" font-family="sans-serif" font-size="10" font-weight="700" fill="#f2c230">histéresis 8,8 mm</text>
+<line x1="248" y1="80" x2="608" y2="80" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>
 <path d="M60 80 H42 Q30 80 30 92 V176" fill="none" stroke="#0c0d0f" stroke-width="22" stroke-linecap="round"/>
 <path d="M60 80 H42 Q30 80 30 92 V176" fill="none" stroke="#33373d" stroke-width="18" stroke-linecap="round"/>
 <path d="M23 96 V174" stroke="#5a6068" stroke-width="2" opacity=".6"/>
@@ -155,7 +123,7 @@
 <line x1="176" y1="51.9" x2="192" y2="51.9" stroke="#5d646b" stroke-width=".9"/>
 <line x1="176" y1="108.1" x2="192" y2="108.1" stroke="#5d646b" stroke-width=".9"/>
 <line x1="178" y1="30.0" x2="178" y2="130.0" stroke="#ffffff" stroke-width="1" opacity=".5"/>
-<g data-translate="out.distance|param.distance:0:16:x:256" data-action="distance" data-kind="drag" data-drag="x:248:16:0:16" style="cursor:ew-resize">
+<g data-translate="out.distance|param.distance:0,8,8.8,20:x:0,170,220,320" data-action="distance" data-kind="drag" data-drag="x:248:0,8,8.8,20:0,170,220,320" style="cursor:ew-resize">
 <rect x="244" y="12.0" width="32" height="122" fill="#000" opacity="0"/>
 <rect x="250" y="33.0" width="24" height="100" rx="1.5" fill="#000" opacity=".3"/>
 <rect x="248" y="30.0" width="24" height="100" rx="1.5" fill="url(#sensor-inductive-steel)" stroke="#2e3338" stroke-width="1"/>
@@ -163,6 +131,7 @@
 <line x1="254.0" y1="72" x2="266.0" y2="72" stroke="#4a5056" stroke-width="1"/>
 <line x1="254.0" y1="80" x2="266.0" y2="80" stroke="#4a5056" stroke-width="1"/>
 <line x1="254.0" y1="88" x2="266.0" y2="88" stroke="#4a5056" stroke-width="1"/>
+<rect x="235.0" y="11.0" width="50" height="16" rx="3" fill="#101317" fill-opacity=".85"/>
 <text x="260.0" y="24.0" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#e8eaed" data-text="out.distance|param.distance:mm">12,0 mm</text>
 </g>
 </svg>

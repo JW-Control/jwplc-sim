@@ -85,11 +85,11 @@ Las expresiones leen el estado del dispositivo:
 | `data-show="expr"` | El elemento se ve solo si la expresión es verdadera. |
 | `data-fill="expr"` | Pone `fill` al valor. Los nombres de color de los parámetros (`verde`, `rojo`, `amarillo`, `azul`, `blanco`, `negro`) se traducen a la paleta de lentes. |
 | `data-text="expr"`, `"expr:%"` o `"expr:mm"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje; con `:mm`, como largo con un decimal (`12,5 mm`). |
-| `data-translate="expr:v0:v1:x\|y:dist"` | Desplaza el elemento de 0 a `dist` px mientras el valor va de `v0` a `v1`. Ejemplo: `out.position:0:1:x:60` para el vástago del cilindro. |
+| `data-translate="expr:v0:v1:x\|y:dist"` | Desplaza el elemento de 0 a `dist` px mientras el valor va de `v0` a `v1`. Ejemplo: `out.position:0:1:x:60` para el vástago del cilindro. Por tramos, `expr:v0,v1,…:x\|y:p0,p1,…`: cada valor cae en su posición en px y entre dos se interpola; sirve para exagerar un tramo corto (la histéresis del sensor inductivo: `out.distance:0,8,8.8,20:x:0,170,220,320`). |
 | `data-rotate="expr:v0:v1:a0:a1:cx:cy"` | Gira de `a0` a `a1` grados alrededor de (`cx`, `cy`). Ejemplo: `out.position:-1:1:-45:45:40:50` para la perilla de un selector. |
 | `data-spin="expr:cx:cy:vps"` | Giro continuo con la simulación alrededor de (`cx`, `cy`): con el valor 1 da `vps` vueltas por segundo de tiempo simulado; con 0 se detiene, con un valor negativo gira al revés. El ángulo se integra con el tiempo simulado (se detiene en pausa y sigue la rampa). Ejemplo: `out.speed:60:60:2` para el ventilador de un motor. |
 | `data-action="id" data-kind="momentary\|toggle\|cycle"` | Zona de clic que acciona el dispositivo con la simulación en marcha. `momentary`: activo mientras se mantiene pulsado (pulsador). `toggle`: alterna. `cycle`: recorre `data-options="0,1"`. Las acciones de cada tipo están en `dispositivos.json`. |
-| `data-action="id" data-kind="drag" data-drag="x\|y:px0:px_por_unidad:min:max"` | Pieza que se arrastra sobre un eje (acción de tipo `value`). El valor es `(posición − px0) / px_por_unidad`, limitado a `min`..`max` y redondeado a 0,1. Con la simulación en marcha manda la acción; detenida, fija el parámetro del mismo `id` (posición inicial). El elemento se mueve con su propio `data-translate`. Ejemplo: la pieza del sensor inductivo, `x:248:16:0:16` (área de trabajo ampliada a 16 px/mm desde la cara activa: un paso de 0,1 mm son 1,6 px). |
+| `data-action="id" data-kind="drag" data-drag="x\|y:px0:px_por_unidad:min:max"` o `"x\|y:px0:v0,v1,…:p0,p1,…"` | Pieza que se arrastra sobre un eje (acción de tipo `value`). Lineal: el valor es `(posición − px0) / px_por_unidad`, limitado a `min`..`max`. Por tramos: la misma escala que su `data-translate`, desde `px0`. Se redondea a 0,1. Con la simulación en marcha manda la acción; detenida, fija el parámetro del mismo `id` (posición inicial). El elemento se mueve con su propio `data-translate`. Ejemplo: la pieza del sensor inductivo, `x:248:0,8,8.8,20:0,170,220,320`. |
 
 Varios atributos pueden ir en el mismo elemento.
 
@@ -140,9 +140,10 @@ G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control):
 red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
 Telemecanique XCKJ10511 (cables con marcador y función NA/NC) y sensor
 inductivo Autonics PR18-8D (M18, Sn 8 mm), con la pieza arrastrable y la
-zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). El área de trabajo va ampliada
-a 16 px/mm (4 veces el sensor) para que la histéresis se vea y se pueda
-manipular; la regla marca mm reales.
+zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). Como
+en EduVolt, el área de trabajo no está a escala: un cono exagerado con una
+escala por tramos para que la histéresis se vea y se pueda manipular; la
+cota sobre la pieza da la distancia real.
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
 fotoeléctrico, relé enchufable, electroválvula con cilindro y motor.

@@ -122,6 +122,30 @@
     return path.startsWith("!") ? !v : v;
   }
 
+  // Escala por tramos: los valores vs (crecientes) caen en las posiciones ps.
+  const nums = (s) => s.split(",").map(Number);
+  function piecewise(vs, ps, v) {
+    if (v <= vs[0]) return ps[0];
+    for (let i = 1; i < vs.length; i++) {
+      if (v <= vs[i]) return ps[i - 1] + ((v - vs[i - 1]) / (vs[i] - vs[i - 1] || 1)) * (ps[i] - ps[i - 1]);
+    }
+    return ps[ps.length - 1];
+  }
+
+  // data-drag="eje:px0:px_por_unidad:min:max" (lineal) o "eje:px0:v0,v1,…:p0,p1,…"
+  // (por tramos, como data-translate). dragPos: valor → px local en el eje;
+  // dragValue: px local → valor, limitado al recorrido.
+  function dragPos(spec, v) {
+    const f = spec.split(":");
+    return Number(f[1]) + (f.length === 4 ? piecewise(nums(f[2]), nums(f[3]), v) : v * Number(f[2]));
+  }
+  function dragValue(spec, px) {
+    const f = spec.split(":");
+    const x = px - Number(f[1]);
+    if (f.length === 4) return piecewise(nums(f[3]), nums(f[2]), x);
+    return Math.max(Number(f[3]), Math.min(Number(f[4]), x / Number(f[2])));
+  }
+
   function drawTemplate(tpl, st, p) {
     const ctx = { o: st.outputs ?? {}, p, st };
     const root = tpl.svg.cloneNode(true);
@@ -145,10 +169,18 @@
     }
     for (const el of root.querySelectorAll("[data-translate]")) {
       // data-translate="out.position:0:1:x:60": valor de 0 a 1 → 0 a 60 px en x.
-      const [expr, v0, v1, axis, dist] = el.getAttribute("data-translate").split(":");
-      const v = Number(valueOf(expr, ctx) ?? 0);
-      const f = Math.max(0, Math.min(1, (v - Number(v0)) / (Number(v1) - Number(v0) || 1)));
-      el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} translate(${axis === "y" ? 0 : f * Number(dist)} ${axis === "y" ? f * Number(dist) : 0})`);
+      // Por tramos: "out.distance:0,8,8.8,20:x:0,160,200,300" (cada valor → su px).
+      const f = el.getAttribute("data-translate").split(":");
+      const v = Number(valueOf(f[0], ctx) ?? 0);
+      let axis, d;
+      if (f.length === 4) {
+        axis = f[2];
+        d = piecewise(nums(f[1]), nums(f[3]), v);
+      } else {
+        axis = f[3];
+        d = Math.max(0, Math.min(1, (v - Number(f[1])) / (Number(f[2]) - Number(f[1]) || 1))) * Number(f[4]);
+      }
+      el.setAttribute("transform", `${el.getAttribute("transform") ?? ""} translate(${axis === "y" ? 0 : d} ${axis === "y" ? d : 0})`);
     }
     for (const el of root.querySelectorAll("[data-rotate]")) {
       // data-rotate="out.position:-1:1:-45:45:40:50": valor → ángulo, centro (40, 50).
@@ -440,5 +472,5 @@
   /** ¿La plantilla del dispositivo cambia con el tiempo (data-spin)? */
   const animated = (type, def, p) => !!templates.get(templateKey(type, def, p) ?? "")?.animated;
 
-  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, animated, registerTemplate, templates, warnings };
+  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, animated, registerTemplate, templates, warnings, dragPos, dragValue };
 })();

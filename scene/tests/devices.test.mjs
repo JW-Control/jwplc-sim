@@ -138,7 +138,7 @@ test("sensor inductivo: distancia inicial por parámetro y pieza al frente por e
   assert.equal(s.output("H", "lit"), true);
   s.act("B", "distance", 30, ms(6));
   s.advanceTo(ms(10));
-  assert.equal(s.output("B", "distance"), 16, "se limita al recorrido");
+  assert.equal(s.output("B", "distance"), 20, "se limita al recorrido");
   assert.equal(s.output("H", "lit"), false);
   s.act("B", "target", true, ms(11));
   s.advanceTo(ms(15));
