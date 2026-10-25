@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Fin de carrera Telemecanique XCKJ10511 (palanca de rodillo), vista frontal segun fotos y plano del fabricante. Escala 4 px/mm. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 620">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 660">
 <defs>
 <linearGradient id="limit-switch-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
 <linearGradient id="limit-switch-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
@@ -55,26 +55,34 @@
 <polygon points="101.0,552.0 90.5,570.2 69.5,570.2 59.0,552.0 69.5,533.8 90.5,533.8" fill="url(#limit-switch-nut)" stroke="#16181b" stroke-width="1"/>
 <rect x="68" y="564" width="24" height="10" rx="3" fill="#2b2e33" stroke="#16181b"/>
 <rect x="72" y="573" width="16" height="9" fill="#3a3e44" stroke="#16181b" stroke-width=".8"/>
-<path d="M75.2 582 C72.0 594 40 590 40 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
-<rect x="36" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<rect x="35" y="616" width="10" height="4" fill="#16181b"/>
-<text x="40" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">13</text>
-<circle class="jw-term" data-term="13" cx="40" cy="608" r="11"/>
-<path d="M77.6 582 C76.0 594 60 590 60 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
-<rect x="56" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<rect x="55" y="616" width="10" height="4" fill="#16181b"/>
-<text x="60" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">14</text>
-<circle class="jw-term" data-term="14" cx="60" cy="608" r="11"/>
-<path d="M82.4 582 C84.0 594 100 590 100 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
-<rect x="96" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<rect x="95" y="616" width="10" height="4" fill="#16181b"/>
-<text x="100" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">21</text>
-<circle class="jw-term" data-term="21" cx="100" cy="608" r="11"/>
-<path d="M84.8 582 C88.0 594 120 590 120 600 V612" fill="none" stroke="#5f656c" stroke-width="4"/>
-<rect x="116" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
-<rect x="115" y="616" width="10" height="4" fill="#16181b"/>
-<text x="120" y="600" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9cdd3">22</text>
-<circle class="jw-term" data-term="22" cx="120" cy="608" r="11"/>
+<path d="M75.2 582 C72.0 594 40 590 40 600 V652" fill="none" stroke="#5f656c" stroke-width="4"/>
+<rect x="32" y="604" width="16" height="15" rx="2.5" fill="#eef0f2" stroke="#8a9099" stroke-width=".8"/>
+<text x="40" y="615.5" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">13</text>
+<rect x="36" y="642" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="35" y="656" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="13" cx="40" cy="648" r="11"/>
+<path d="M77.6 582 C76.0 594 60 590 60 600 V652" fill="none" stroke="#5f656c" stroke-width="4"/>
+<rect x="52" y="604" width="16" height="15" rx="2.5" fill="#eef0f2" stroke="#8a9099" stroke-width=".8"/>
+<text x="60" y="615.5" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">14</text>
+<rect x="56" y="642" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="55" y="656" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="14" cx="60" cy="648" r="11"/>
+<path d="M82.4 582 C84.0 594 100 590 100 600 V652" fill="none" stroke="#5f656c" stroke-width="4"/>
+<rect x="92" y="604" width="16" height="15" rx="2.5" fill="#eef0f2" stroke="#8a9099" stroke-width=".8"/>
+<text x="100" y="615.5" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">21</text>
+<rect x="96" y="642" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="95" y="656" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="21" cx="100" cy="648" r="11"/>
+<path d="M84.8 582 C88.0 594 120 590 120 600 V652" fill="none" stroke="#5f656c" stroke-width="4"/>
+<rect x="112" y="604" width="16" height="15" rx="2.5" fill="#eef0f2" stroke="#8a9099" stroke-width=".8"/>
+<text x="120" y="615.5" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#16181b">22</text>
+<rect x="116" y="642" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="115" y="656" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="22" cx="120" cy="648" r="11"/>
+<path d="M40 624 V628 H60 V624" fill="none" stroke="#c9cdd3" stroke-width="1.2"/>
+<text x="28" y="631" text-anchor="end" font-family="sans-serif" font-size="10" font-weight="800" fill="#e8eaed">NA</text>
+<path d="M100 624 V628 H120 V624" fill="none" stroke="#c9cdd3" stroke-width="1.2"/>
+<text x="132" y="631" text-anchor="start" font-family="sans-serif" font-size="10" font-weight="800" fill="#e8eaed">NC</text>
 <rect x="12" y="122.0" width="136" height="106.0" rx="5" fill="url(#limit-switch-head)" stroke="#5f6469" stroke-width="1.2"/>
 <circle cx="22.0" cy="130.0" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>
 <circle cx="138.0" cy="130.0" r="2.5" fill="#8a8f94" stroke="#5f6469" stroke-width=".6"/>

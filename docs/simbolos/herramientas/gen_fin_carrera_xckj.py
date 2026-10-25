@@ -17,6 +17,9 @@ tuerca hexagonal.
 Escala 4 px/mm. Los bornes (13-14 NA, 21-22 NC) estan dentro, bajo la tapa:
 salen por la entrada Pg 13,5 de abajo en un cable de 4 hilos numerados
 (lineamientos 2.4, el borne oculto asoma). Bocas en x = 40, 60, 100, 120.
+Cada hilo lleva su marcador de cable con el numero del borne, y cada par su
+funcion (NA = normalmente abierto, NC = normalmente cerrado), para no tener
+que ir a la ficha a ver que hace cada uno.
 
 Estado (lineamientos 2.5): al accionarse, la palanca gira 25 grados alrededor
 del eje del cabezal. Palanca y rodillo son la zona de clic (accion "actuate").
@@ -32,7 +35,7 @@ def mm(v):
     return round(v * 4, 1)
 
 
-W, H = 160, 620
+W, H = 160, 660
 P = "limit-switch"
 CX = 80
 ROLL = (CX, mm(11))           # centro del rodillo
@@ -116,11 +119,17 @@ p.append(hexagon(CX, G, 21, "url(#PFX-nut)"))
 p.append(f'<rect x="{CX-12}" y="{G+12}" width="24" height="10" rx="3" fill="#2b2e33" stroke="{INK}"/>')
 p.append(f'<rect x="{CX-8}" y="{G+21}" width="16" height="9" fill="#3a3e44" stroke="{INK}" stroke-width=".8"/>')
 for x, name in ((40, "13"), (60, "14"), (100, "21"), (120, "22")):
-    p.append(f'<path d="M{CX + (x - CX) * .12:.1f} {G+30} C{CX + (x - CX) * .2:.1f} {G+42} {x} {G+38} {x} {G+48} V612" fill="none" stroke="#5f656c" stroke-width="4"/>')
-    p.append(f'<rect x="{x-4}" y="604" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="{INK}" stroke-width=".8"/>')
+    p.append(f'<path d="M{CX + (x - CX) * .12:.1f} {G+30} C{CX + (x - CX) * .2:.1f} {G+42} {x} {G+38} {x} {G+48} V652" fill="none" stroke="#5f656c" stroke-width="4"/>')
+    # marcador de cable (manguito blanco con el numero del borne)
+    p.append(f'<rect x="{x-8}" y="604" width="16" height="15" rx="2.5" fill="#eef0f2" stroke="#8a9099" stroke-width=".8"/>')
+    p.append(f'<text x="{x}" y="615.5" text-anchor="middle" {F} font-size="9" font-weight="700" fill="{INK}">{name}</text>')
+    p.append(f'<rect x="{x-4}" y="642" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="{INK}" stroke-width=".8"/>')
     p.append(f'<rect x="{x-5}" y="{H-4}" width="10" height="4" fill="#16181b"/>')
-    p.append(f'<text x="{x}" y="600" text-anchor="middle" {F} font-size="8" font-weight="700" fill="#c9cdd3">{name}</text>')
-    p.append(jw_term(name, x, 608))
+    p.append(jw_term(name, x, 648))
+# funcion de cada par: corchete bajo los marcadores y el rotulo al costado
+for (a, b), tag, tx, anc in (((40, 60), "NA", 28, "end"), ((100, 120), "NC", 132, "start")):
+    p.append(f'<path d="M{a} 624 V628 H{b} V624" fill="none" stroke="#c9cdd3" stroke-width="1.2"/>')
+    p.append(f'<text x="{tx}" y="631" text-anchor="{anc}" {F} font-size="10" font-weight="800" fill="#e8eaed">{tag}</text>')
 
 # ---- cabezal metalico (~34 mm) sobre el cuerpo, y el cubo conico del eje
 HT = mm(30.5)
