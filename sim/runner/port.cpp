@@ -469,13 +469,19 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   jwsim_ns_t base_t = jwsim_now();
   Clock::time_point base_wall = Clock::now();
   Clock::time_point last_flush = Clock::now();
+  Clock::time_point last_beat = Clock::now();
   Clock::time_point last_save = Clock::now();
   bool quit = false;
 
-  auto flush = [&](bool force) {
+  // horizon: vaciado previo a un horizonte de la escena. A máxima velocidad
+  // hay miles por segundo de pared; el estado y la pantalla, que la escena no
+  // necesita en orden, salen entonces a lo sumo cada kFlushPeriod.
+  auto flush = [&](bool force, bool horizon = false) {
     const auto now = Clock::now();
     if (!force && now - last_flush < kFlushPeriod) return;
     last_flush = now;
+    const bool beat = !horizon || now - last_beat >= kFlushPeriod;
+    if (beat) last_beat = now;
     const std::string t = std::to_string(jwsim_now());
     if (!changed.empty()) {
       std::string m = "{\"type\":\"signals\",\"t_ns\":" + t + ",\"changes\":[";
@@ -487,7 +493,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       m += "]}";
       send_json(m);
       changed.clear();
-    } else {
+    } else if (beat) {
       send_json("{\"type\":\"status\",\"t_ns\":" + t + ",\"state\":\"" + (running ? "running" : "paused") + "\"}");
     }
     // Fragmentos de UART cerrados (sin bytes nuevos desde hace un silencio).
@@ -513,7 +519,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       send_json(m);
       serial[p].erase(0, n);
     }
-    send_display(board.tft());
+    if (beat) send_display(board.tft());
   };
 
   auto hash_json = [&](const char *type) {
@@ -707,7 +713,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       // Horizonte alcanzado, salida vigilada cambiada o bytes en el bus
       // RS-485: la escena decide. Antes, la consola, las señales y los
       // bytes del bus hasta este instante.
-      flush(true);
+      flush(true, true);
       const bool out = !scene_changes.empty();
       const char *why = out ? "output" : scene_uart && jwsim_now() < scene_until ? "uart" : "until";
       scene_uart = false;

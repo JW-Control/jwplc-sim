@@ -433,8 +433,9 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   const r = new RunnerProcess();
   runner = r;
   runnerExe = exe;
-  // Los horizontes de la escena no van a la interfaz (cientos por segundo).
-  r.on("message", (m) => m.type !== "horizon" && forward("sim:message", m));
+  // Los horizontes de la escena (cientos por segundo) y los bytes del enlace
+  // Modbus son de SceneSession: no van a la interfaz.
+  r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && forward("sim:message", m));
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
     sceneSession.on("snapshot", (snap) => forward("scene:snapshot", snap));

@@ -867,7 +867,8 @@ function onMessage(m) {
       appendBus(m.items, m.dropped);
       break;
     case "serial":
-      consoleWrite(m.text.replaceAll("\r", ""));
+      // La consola es UART0; el resto (RS-485 en UART2) se ve en Buses.
+      if (!m.port) consoleWrite(m.text.replaceAll("\r", ""));
       break;
     case "restart":
       // esp_restart(): el runner relanza el firmware conservando lo externo.
