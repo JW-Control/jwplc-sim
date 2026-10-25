@@ -163,6 +163,17 @@ SDK de dispositivos e índice comunitario ([docs/SDK.md](SDK.md)):
 Códigos de salida: 0 bien; 1 falla (pruebas, compilación, firma o
 integridad); 2 uso incorrecto.
 
+### grade (G9)
+
+`jwsim-cli grade <ejercicio.jwsim|carpeta> [<sketch_dir>] [--solution] [--runs N]`
+califica un sketch con la rúbrica del ejercicio: cada caso se co-simula con
+la escena del ejercicio y cada verificación es una tabla de verdad
+temporizada sobre la traza ([EJERCICIOS.md](EJERCICIOS.md)). Sin sketch usa
+el del proyecto; `--solution`, la solución de referencia; `--runs N` repite
+y exige la misma nota. Con `--json`: `grade` (0 a 20), `score`, `max` y, por
+caso, cada verificación con `ok` y el detalle de la falla. Código de
+salida: 0, 1 si las notas difieren entre corridas, 3 si no compila.
+
 ### parity
 
 `jwsim-cli parity [<ref>]` compara un árbol del package con el simulador (gate

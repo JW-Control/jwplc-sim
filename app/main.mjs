@@ -171,6 +171,74 @@ ipcMain.handle("app:info", () => {
 
 ipcMain.handle("examples:list", () => listExamples());
 
+// ---------------------------------------------------------------- ejercicios (G9)
+const EXERCISES = join(import.meta.dirname, "..", "exercises");
+
+ipcMain.handle("exercises:list", () => {
+  if (!existsSync(EXERCISES)) return [];
+  const out = [];
+  for (const d of readdirSync(EXERCISES).sort()) {
+    const f = join(EXERCISES, d, `${d}.jwsim`);
+    if (!existsSync(f)) continue;
+    try {
+      const { project } = loadProject(f);
+      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1 });
+    } catch {
+      // un ejercicio roto no impide listar los demás
+    }
+  }
+  return out;
+});
+
+// Abre una copia del ejercicio en la carpeta de trabajo (sin la solución):
+// el alumno trabaja sobre su copia y la vuelve a abrir más tarde.
+ipcMain.handle("exercises:open", (_e, id) => {
+  if (!/^[\w.-]+$/.test(id)) throw new Error(`ejercicio inválido: ${id}`);
+  const src = join(EXERCISES, id);
+  const dst = join(workspaceDir(), "Ejercicios", id);
+  if (!existsSync(dst)) cpSync(src, dst, { recursive: true, filter: (p) => !p.slice(src.length).split(/[\\/]/).includes("solucion") });
+  return openProject(join(dst, `${id}.jwsim`));
+});
+
+// Enunciado de un proyecto de ejercicio (o null si no lo es).
+ipcMain.handle("exercise:info", (_e, file) => {
+  try {
+    const { project } = loadProject(file);
+    const ex = project.exercise;
+    if (!ex) return null;
+    const st = ex.statement ? resolve(dirname(file), ex.statement) : null;
+    return { title: project.name, level: ex.level ?? 1, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "" };
+  } catch {
+    return null;
+  }
+});
+
+let grader = null;
+let gradeSeq = 0;
+const grades = new Map();
+ipcMain.handle("exercise:grade", (_e, { file, sketchDir }) => {
+  if (!grader) {
+    grader = new Worker(new URL("./lib/grade-worker.mjs", import.meta.url));
+    grader.on("message", ({ id, log, done }) => {
+      if (log !== undefined) forward("build:log", log);
+      if (done) {
+        grades.get(id)?.(done);
+        grades.delete(id);
+      }
+    });
+    grader.on("error", (err) => {
+      for (const r of grades.values()) r({ ok: false, stage: "error", error: err.message, cases: [] });
+      grades.clear();
+      grader = null;
+    });
+  }
+  const id = ++gradeSeq;
+  return new Promise((r) => {
+    grades.set(id, r);
+    grader.postMessage({ id, project: file, sketchDir, buildRoot: join(app.getPath("userData"), "grade") });
+  });
+});
+
 ipcMain.handle("sketch:openExample", (_e, srcDir) => {
   const dst = join(workspaceDir(), basename(srcDir));
   if (!existsSync(dst)) cpSync(srcDir, dst, { recursive: true });

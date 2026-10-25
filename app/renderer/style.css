@@ -138,8 +138,14 @@ select:focus-visible {
   border-color: var(--accent);
   color: #fff;
 }
-#sel-example {
+#sel-example,
+#sel-exercise {
   max-width: 180px;
+}
+/* Las vistas del panel inferior con display propio (el envío por UART) se
+   ocultan igual que las demás. */
+.view[hidden] {
+  display: none !important;
 }
 .clock {
   margin-left: auto;
@@ -882,7 +888,8 @@ button.io.on {
   .brand > span:last-child {
     display: none;
   }
-  #sel-example {
+  #sel-example,
+  #sel-exercise {
     max-width: 130px;
   }
   .toolbar {
@@ -1350,3 +1357,42 @@ button.fault.on {
 .faults-pop p {
   margin: 0;
 }
+
+/* Ejercicios (G9) */
+.exercise {
+  overflow: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.ex-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.md h3 { font-size: 16px; margin: 4px 0 8px; }
+.md h4 { font-size: 13px; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #9aa0a6); }
+.md p, .md li { line-height: 1.5; }
+.md table { border-collapse: collapse; margin: 6px 0; }
+.md th, .md td { border: 1px solid var(--border); padding: 3px 8px; text-align: left; }
+.md code { background: rgba(255, 255, 255, 0.07); padding: 0 4px; border-radius: 3px; }
+.grade {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.grade-num { font-size: 30px; font-weight: 700; }
+.grade-num small { font-size: 14px; font-weight: 400; opacity: 0.7; }
+.grade.ok { border-color: #2fbf5a; }
+.grade.mid { border-color: #f2c230; }
+.grade.bad { border-color: #e05252; }
+.grade-case { margin: 6px 0 10px; }
+.grade-case-head { display: flex; justify-content: space-between; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
+.grade-case ul { list-style: none; padding-left: 4px; margin: 4px 0; }
+.grade-case li.ok { color: #7fe3a8; }
+.grade-case li.bad { color: #ffb3b3; }
+.grade-case li .muted { color: var(--muted, #9aa0a6); }

@@ -43,3 +43,11 @@ path = ["app/renderer/assets/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Ejercicios (G9): MIT, para que alumnos y docentes copien plantillas,
+# soluciones y rúbricas sin atar su trabajo a la GPL.
+[[annotations]]
+path = ["exercises/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 JW Control"
+SPDX-License-Identifier = "MIT"

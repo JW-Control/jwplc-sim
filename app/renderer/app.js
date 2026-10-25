@@ -96,7 +96,7 @@ function setView(view) {
     b.setAttribute("aria-selected", String(on));
   }
   for (const v of document.querySelectorAll(".view")) v.hidden = v.dataset.view !== view;
-  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C, SPI por CS y UART en vivo", watch: "E/S y variables", debug: "gdb" }[view];
+  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C, SPI por CS y UART en vivo", watch: "E/S y variables", debug: "gdb", exercise: "Enunciado y calificación" }[view];
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
 }
 
@@ -930,6 +930,7 @@ function applyProject(res) {
   for (const [signal, v] of Object.entries(state.pendingInputs ?? {})) renderSignal(signal, !!v);
   window.JwsimScene?.load(scene);
   showProjectStatus();
+  showExercise(res.file);
   if (res.migratedFrom !== null) {
     consoleWrite(`[jwsim] proyecto migrado de la versión ${res.migratedFrom} a la 1; se guardará como v1\n`, "sys");
   }
@@ -982,6 +983,97 @@ async function onExternalChange({ name, content, at }) {
   }
 }
 
+// ------------------------------------------------------------- ejercicios (G9)
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+// Markdown mínimo de los enunciados: títulos, párrafos, listas, tablas,
+// negrita y código.
+function mdToHtml(text) {
+  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const out = [];
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; ) {
+    const l = lines[i];
+    if (/^#{1,3} /.test(l)) {
+      const n = l.match(/^#+/)[0].length;
+      out.push(`<h${n + 2}>${inline(l.slice(n + 1))}</h${n + 2}>`);
+      i++;
+    } else if (/^\|/.test(l)) {
+      const rows = [];
+      while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const body = rows.filter((r) => !/^\|[\s:|-]+\|$/.test(r));
+      out.push(`<table><thead><tr>${cells(body[0]).map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${body.slice(1).map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+    } else if (/^(\d+\.|-) /.test(l)) {
+      const ordered = /^\d/.test(l);
+      const items = [];
+      while (i < lines.length && /^(\d+\.|-) /.test(lines[i])) items.push(lines[i++].replace(/^(\d+\.|-) /, ""));
+      out.push(`<${ordered ? "ol" : "ul"}>${items.map((x) => `<li>${inline(x)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`);
+    } else if (l.trim()) {
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !/^(#|\||\d+\. |- )/.test(lines[i])) para.push(lines[i++]);
+      out.push(`<p>${inline(para.join(" "))}</p>`);
+    } else i++;
+  }
+  return out.join("");
+}
+
+async function showExercise(file) {
+  const info = file ? await api.exerciseInfo(file) : null;
+  state.exercise = info ? { file } : null;
+  $("tab-exercise").hidden = !info;
+  $("grade-result").innerHTML = "";
+  $("grade-note").textContent = "";
+  if (!info) {
+    if (state.view === "exercise") setView("console");
+    return;
+  }
+  $("ex-statement").innerHTML = mdToHtml(info.statement);
+  setView("exercise");
+}
+
+function renderGrade(g) {
+  if (!g.ok) {
+    const diag = (g.diagnostics ?? []).map((d) => `<li>${esc(d.file?.split(/[\\/]/).pop() ?? "")}:${d.line}: ${esc(d.message)}</li>`).join("");
+    return `<div class="grade bad"><div class="grade-num">0<small>/20</small></div><div>${g.stage === "build" ? "El sketch no compila." : esc(g.error ?? "No se pudo calificar.")}${diag ? `<ul>${diag}</ul>` : ""}</div></div>`;
+  }
+  const cls = g.grade >= 14 ? "ok" : g.grade >= 11 ? "mid" : "bad";
+  let html = `<div class="grade ${cls}"><div class="grade-num">${String(g.grade).replace(".", ",")}<small>/20</small></div><div>${g.score} de ${g.max} puntos</div></div>`;
+  for (const c of g.cases) {
+    html += `<div class="grade-case"><div class="grade-case-head"><span>${esc(c.name)}</span><span>${c.score}/${c.max}</span></div><ul>`;
+    for (const k of c.checks) html += `<li class="${k.ok ? "ok" : "bad"}">${k.ok ? "✓" : "✗"} ${esc(k.description)} <span class="muted">(${k.ok ? k.points : 0}/${k.points})</span>${!k.ok && k.detail ? `<div class="muted">${esc(k.detail)}</div>` : ""}</li>`;
+    html += "</ul></div>";
+  }
+  return html;
+}
+
+async function gradeExercise() {
+  if (!state.exercise || !state.sketch) return;
+  await saveSketch();
+  $("btn-grade").disabled = true;
+  $("grade-note").textContent = "Calificando: compila y corre cada caso con la escena…";
+  $("grade-result").innerHTML = "";
+  try {
+    const g = await api.gradeExercise(state.exercise.file, state.sketch.dir);
+    $("grade-result").innerHTML = renderGrade(g);
+    $("grade-note").textContent = g.ok ? `Calificado en ${(g.wall_ms / 1000).toFixed(1)} s` : "";
+  } catch (err) {
+    $("grade-note").textContent = cleanError(err);
+  } finally {
+    $("btn-grade").disabled = false;
+  }
+}
+
+async function populateExercises() {
+  const sel = $("sel-exercise");
+  for (const ex of await api.listExercises()) {
+    const o = document.createElement("option");
+    o.value = ex.id;
+    o.textContent = `${ex.id.slice(0, 2)} · ${ex.title} (nivel ${ex.level})`;
+    sel.appendChild(o);
+  }
+}
+
 // ------------------------------------------------------------- arranque
 async function populateExamples() {
   const sel = $("sel-example");
@@ -1009,6 +1101,17 @@ function wireUi() {
   $("btn-new").addEventListener("click", async () => loadSketch(await api.newSketch()));
   $("btn-open").addEventListener("click", async () => loadSketch(await api.openDialog()));
   $("btn-save").addEventListener("click", saveSketch);
+  $("sel-exercise").addEventListener("change", async (e) => {
+    const id = e.target.value;
+    e.target.value = "";
+    if (!id) return;
+    try {
+      applyProject(await api.openExercise(id));
+    } catch (err) {
+      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+    }
+  });
+  $("btn-grade").addEventListener("click", gradeExercise);
   $("sel-example").addEventListener("change", async (e) => {
     const dir = e.target.value;
     e.target.value = "";
@@ -1180,6 +1283,16 @@ window.jwsimTest = {
   // Píxel de la pantalla en la vista (RGB).
   tftPixel: (x, y) => Array.from($("tft").getContext("2d").getImageData(x, y, 1, 1).data.slice(0, 3)),
   tftDataUrl: () => $("tft").toDataURL("image/png"),
+  // Ejercicios (G9): abrir por la lista, reemplazar el código del .ino
+  // principal y calificar con el botón.
+  pickExercise: async (id) => {
+    const sel = $("sel-exercise");
+    sel.value = id;
+    sel.dispatchEvent(new Event("change"));
+  },
+  setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
+  grade: () => gradeExercise(),
+  sketchDir: () => state.sketch?.dir ?? null,
 };
 
 async function main() {
@@ -1194,6 +1307,7 @@ async function main() {
   renderWatch();
   clearDebugView();
   const examples = await populateExamples();
+  populateExercises();
   // Primer arranque: el ejemplo de E/S básico del package.
   const first = examples.find((e) => e.name === "02_io_basic") ?? examples[0];
   if (first) loadSketch(await api.openExample(first.dir));

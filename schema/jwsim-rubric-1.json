@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jw-control.github.io/jwplc-sim/schema/jwsim-rubric-1.json",
+  "title": "Rúbrica de un ejercicio de JWPLC Sim (G9)",
+  "description": "Casos co-simulados con la escena del ejercicio; cada verificación es una tabla de verdad temporizada sobre la traza. La nota es 20 × puntos obtenidos / puntos totales.",
+  "type": "object",
+  "required": [
+    "cases"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "$comment": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": [
+        "name",
+        "until_ms",
+        "checks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "until_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "actions": {
+          "$ref": "jwsim-test-1.json#/$defs/run/properties/actions"
+        },
+        "faults": {
+          "$ref": "jwsim-test-1.json#/$defs/run/properties/faults"
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": [
+        "description"
+      ],
+      "additionalProperties": false,
+      "description": "Una sola de expect (con at_ms), always/never/eventually (con from_ms y to_ms), console o no_faults.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "points": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "prerequisite": {
+          "type": "boolean",
+          "description": "Requisito del caso: si falla, las demás verificaciones del caso no suman."
+        },
+        "at_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "from_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "to_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "for_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Con eventually: la condición se sostiene al menos este tiempo."
+        },
+        "expect": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Señales de la placa (Q0_k, I0_k) o salidas de equipos de la escena (\"KM1.closed\") con su valor esperado.",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "always": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Señales de la placa (Q0_k, I0_k) o salidas de equipos de la escena (\"KM1.closed\") con su valor esperado.",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "never": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Nunca se cumplen todas a la vez (enclavamientos).",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "eventually": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Señales de la placa (Q0_k, I0_k) o salidas de equipos de la escena (\"KM1.closed\") con su valor esperado.",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "console": {
+          "type": "string",
+          "description": "Expresión regular sobre las líneas de la consola."
+        },
+        "no_faults": {
+          "const": true,
+          "description": "Sin fallas eléctricas de la escena (cortocircuito, sobretensión)."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "expect",
+            "at_ms"
+          ]
+        },
+        {
+          "required": [
+            "always"
+          ]
+        },
+        {
+          "required": [
+            "never"
+          ]
+        },
+        {
+          "required": [
+            "eventually"
+          ]
+        },
+        {
+          "required": [
+            "console"
+          ]
+        },
+        {
+          "required": [
+            "no_faults"
+          ]
+        }
+      ]
+    }
+  }
+}

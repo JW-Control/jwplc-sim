@@ -21,6 +21,9 @@
         <select id="sel-example" title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">
           <option value="">Ejemplos…</option>
         </select>
+        <select id="sel-exercise" title="Abrir un ejercicio con su escena, enunciado y calificación (se copia a la carpeta de trabajo)">
+          <option value="">Ejercicios…</option>
+        </select>
         <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
       </div>
       <div class="group">
@@ -170,6 +173,7 @@
             <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses">Buses</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch">Observación</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug">Depuración</button>
+            <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
             <span class="muted" id="view-note">UART0 · 115200</span>
             <button id="btn-view-clear" class="ghost small">Limpiar</button>
           </div>
@@ -184,6 +188,14 @@
             </select>
             <button type="submit" id="btn-serial-send" disabled>Enviar</button>
           </form>
+          <div id="exercise" class="exercise view" data-view="exercise" hidden>
+            <div class="ex-tools">
+              <button id="btn-grade" title="Compila el sketch y lo corre con la escena en cada caso de la rúbrica">Calificar</button>
+              <span id="grade-note" class="muted"></span>
+            </div>
+            <div id="grade-result"></div>
+            <div id="ex-statement" class="md"></div>
+          </div>
           <div id="buses" class="buses view" data-view="buses" hidden>
             <div class="bus-tools">
               <label for="bus-filter">Mostrar</label>

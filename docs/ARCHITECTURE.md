@@ -457,6 +457,18 @@ la placa quedan en la grabación (`.stim`); las de la escena, como las
 acciones de escena, no se graban todavía.
 
 
+### 4.3 Ejercicios y calificación **[G9]**
+
+Un ejercicio es un proyecto `.jwsim` con escena, enunciado, plantilla,
+solución y una rúbrica (`schema/jwsim-rubric-1.json`). `cli/lib/grade.mjs`
+co-simula el sketch con la escena en cada caso de la rúbrica (acciones y
+fallas en instantes dados, como una prueba `.jwtest.json`) y evalúa cada
+verificación sobre la traza: valores de las señales de la placa y de las
+salidas de los equipos en un instante, durante un intervalo o en algún
+instante de él, consola y fallas eléctricas. La nota (0 a 20) es
+determinista. La app lo usa desde un worker (`app/lib/grade-worker.mjs`).
+Detalle y formato en [EJERCICIOS.md](EJERCICIOS.md).
+
 ## 5. Mapa de hardware del JWPLC Basic
 
 Extraído del package (alpha.12, revisado con alpha.13). "Fuente" indica de dónde sale cada dato.

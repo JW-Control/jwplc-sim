@@ -91,6 +91,14 @@ Periféricos (G4), modelados por registros contra sus hojas de datos:
   el PC (Modbus TCP 502 → 127.0.0.1:1502) y sus conexiones salen por la red
   del PC. `"ethernet": { "present": false }` en `simulation.peripherals`
   del proyecto lo quita.
+- **Fallas** (G9): con la simulación en marcha se inyectan desde la escena
+  (sensor o pulsador pegado, contactor soldado, bobina o lámpara quemada,
+  cable cortado) y desde el menú «Fallas» de la placa (RTC sin batería,
+  ruido en RS-485); la microSD se quita con un clic en su zócalo.
+- **Ejercicios** (G9): el menú «Ejercicios…» abre ocho ejercicios con la
+  escena cableada y el enunciado; **Calificar** corre el programa en cada
+  caso de la rúbrica y da la nota de 0 a 20 con el detalle
+  ([docs/EJERCICIOS.md](docs/EJERCICIOS.md)).
 
 Pruebas E2E de la interfaz: `cd app && npm run test:e2e` (G2),
 `npm run test:e2e:g3` (G3) y `npm run test:e2e:g4` (G4) (en Linux sin
@@ -106,6 +114,8 @@ pantalla, `xvfb-run -a npm run test:e2e`).
 - [CLI](docs/CLI.md): `jwsim-cli` sin interfaz (JSON, códigos de salida,
   pruebas `*.jwtest.json`, paridad con el package, matriz de ejemplos).
 - Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md), [G5](docs/reports/G5.md), [G7](docs/reports/G7.md), [sincronización con alpha.13](docs/reports/SYNC_ALPHA13.md).
+- [Ejercicios](docs/EJERCICIOS.md): los ocho ejercicios, la rúbrica y la
+  calificación automática.
 - [SDK de dispositivos](docs/SDK.md): dispositivos de escena en TypeScript,
   nativos en C, plantillas e índice comunitario firmado.
 

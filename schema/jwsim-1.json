@@ -4,70 +4,155 @@
   "title": "Proyecto JWPLC Sim (.jwsim) v1",
   "description": "Vincula el sketch, el proyecto OpenPLC y la HMI con la configuración de simulación. Rutas relativas al archivo .jwsim. Los campos desconocidos se conservan.",
   "type": "object",
-  "required": ["format", "version", "board", "program"],
+  "required": [
+    "format",
+    "version",
+    "board",
+    "program"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "format": { "const": "jwsim" },
-    "version": { "const": 1 },
-    "name": { "type": "string", "minLength": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "const": "jwsim"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
     "board": {
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "properties": {
-        "id": { "enum": ["jwplcbasic"] },
+        "id": {
+          "enum": [
+            "jwplcbasic"
+          ]
+        },
         "package": {
           "type": "object",
-          "properties": { "minRef": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.]+)?$" } }
+          "properties": {
+            "minRef": {
+              "type": "string",
+              "pattern": "^v\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.]+)?$"
+            }
+          }
         }
       }
     },
     "program": {
       "type": "object",
-      "required": ["kind"],
+      "required": [
+        "kind"
+      ],
       "properties": {
-        "kind": { "enum": ["arduino", "openplc"] },
-        "sketch": { "$ref": "#/$defs/relPath", "pattern": "\\.ino$" }
+        "kind": {
+          "enum": [
+            "arduino",
+            "openplc"
+          ]
+        },
+        "sketch": {
+          "$ref": "#/$defs/relPath",
+          "pattern": "\\.ino$"
+        }
       }
     },
     "links": {
       "type": "object",
       "properties": {
-        "openplc": { "$ref": "#/$defs/relPath" },
-        "hmi": { "$ref": "#/$defs/relPath" }
+        "openplc": {
+          "$ref": "#/$defs/relPath"
+        },
+        "hmi": {
+          "$ref": "#/$defs/relPath"
+        }
       }
     },
     "simulation": {
       "type": "object",
       "properties": {
-        "seed": { "type": "integer", "minimum": 0 },
-        "realtimeFactor": { "type": "number", "minimum": 0 },
-        "costModel": { "type": "string" },
-        "peripherals": { "type": "object" }
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "realtimeFactor": {
+          "type": "number",
+          "minimum": 0
+        },
+        "costModel": {
+          "type": "string"
+        },
+        "peripherals": {
+          "type": "object"
+        }
       }
     },
     "scene": {
       "type": "object",
       "properties": {
-        "inputMode": { "enum": ["toggle", "push"] },
+        "inputMode": {
+          "enum": [
+            "toggle",
+            "push"
+          ]
+        },
         "inputs": {
           "type": "object",
           "description": "Nivel inicial de las entradas de bornera (I0_0..I0_7).",
-          "patternProperties": { "^I0_[0-7]$": { "enum": [0, 1] } }
+          "patternProperties": {
+            "^I0_[0-7]$": {
+              "enum": [
+                0,
+                1
+              ]
+            }
+          }
         },
         "devices": {
           "type": "array",
           "description": "Dispositivos de la escena (G7, schema/jwsim-scene-1.json).",
           "items": {
             "type": "object",
-            "required": ["id", "type"],
+            "required": [
+              "id",
+              "type"
+            ],
             "properties": {
-              "id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" },
-              "type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$" },
-              "version": { "type": "string" },
-              "params": { "type": "object" },
-              "x": { "type": "number" },
-              "y": { "type": "number" },
-              "rotation": { "enum": [0, 90, 180, 270] }
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+              },
+              "type": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"
+              },
+              "version": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "rotation": {
+                "enum": [
+                  0,
+                  90,
+                  180,
+                  270
+                ]
+              }
             }
           }
         },
@@ -76,19 +161,83 @@
           "description": "Cables borne a borne: '<dispositivo>.<borne>'.",
           "items": {
             "type": "object",
-            "required": ["from", "to"],
-            "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "color": { "type": "string" }, "points": { "type": "array" } }
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              },
+              "points": {
+                "type": "array"
+              }
+            }
           }
         }
       }
     },
-    "exercise": { "type": "object" },
-    "stimuli": { "type": "array", "items": { "$ref": "#/$defs/relPath" } }
+    "exercise": {
+      "type": "object",
+      "description": "Proyecto de ejercicio (G9): enunciado, rúbrica de calificación automática (schema/jwsim-rubric-1.json) y solución de referencia.",
+      "required": [
+        "rubric"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Dificultad (1 = inicial)."
+        },
+        "statement": {
+          "$ref": "#/$defs/relPath",
+          "description": "Enunciado en Markdown."
+        },
+        "rubric": {
+          "$ref": "#/$defs/relPath",
+          "description": "Rúbrica (jwsim-rubric-1.json)."
+        },
+        "solution": {
+          "$ref": "#/$defs/relPath",
+          "description": "Carpeta del sketch de referencia (para docentes y para validar la rúbrica)."
+        }
+      }
+    },
+    "stimuli": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relPath"
+      }
+    }
   },
   "allOf": [
     {
-      "if": { "properties": { "program": { "properties": { "kind": { "const": "arduino" } } } } },
-      "then": { "properties": { "program": { "required": ["sketch"] } } }
+      "if": {
+        "properties": {
+          "program": {
+            "properties": {
+              "kind": {
+                "const": "arduino"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "program": {
+            "required": [
+              "sketch"
+            ]
+          }
+        }
+      }
     }
   ],
   "$defs": {
