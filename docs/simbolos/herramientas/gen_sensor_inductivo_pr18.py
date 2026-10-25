@@ -21,10 +21,10 @@ funcion rotulada. Bocas en x = 40, 80, 120.
 
 Area de trabajo frente a la cara activa, AMPLIADA a 16 px/mm (4 veces el
 sensor) para que se pueda manipular con el mouse: a 4 px/mm la histeresis
-mediria 3 px. La regla de abajo esta en mm reales. De 0 a Sa = 5,6 mm la
-distancia de trabajo asegurada, hasta Sn = 8 mm el limite de deteccion, y de
-8 a 8,8 mm la histeresis (10 %, franja ambar): una pieza que se acerca conecta
-en 8,0 mm y la que se aleja suelta recien en 8,8 mm. La zona se ilumina
+mediria 3 px. La regla de abajo esta en mm reales. Dos zonas, como en
+EduVolt: deteccion de 0 a Sn = 8 mm (verde) e histeresis de 8 a 8,8 mm (10 %,
+franja ambar): una pieza que se acerca conecta en 8,0 mm y la que se aleja
+suelta recien en 8,8 mm. La zona se ilumina
 mientras detecta; dentro de la franja, encendida o no segun de donde venga.
 
 La pieza (acero) se arrastra sobre el eje entre 0 y 16 mm (accion
@@ -50,7 +50,7 @@ R = 60                     # extremo trasero (salida del cable)
 FACE = R + mm(47)          # cara activa: x = 248
 MAXD = 16                  # recorrido de la pieza (mm)
 ZS = 16                    # escala del area de trabajo (px/mm)
-SN, SA, HY = 8, 5.6, 0.1
+SN, HY = 8, 0.1
 TXT = "#c9cdd3"
 
 
@@ -84,8 +84,7 @@ def zx(d):
 def zone(on):
     o = 1 if on else .4
     s = [f'<g opacity="{o}">']
-    s.append(f'<rect x="{FACE}" y="{ZT}" width="{ZS * SA}" height="{ZH}" fill="url(#PFX-zone)"/>')
-    s.append(f'<rect x="{zx(SA)}" y="{ZT}" width="{ZS * (SN - SA)}" height="{ZH}" fill="#3ddc84" fill-opacity=".2"/>')
+    s.append(f'<rect x="{FACE}" y="{ZT}" width="{ZS * SN}" height="{ZH}" fill="url(#PFX-zone)"/>')
     s.append('</g>')
     return s
 
@@ -100,12 +99,8 @@ HX0, HX1 = zx(SN), zx(SN * (1 + HY))
 p.append(f'<rect x="{HX0}" y="{ZT - 6}" width="{HX1 - HX0}" height="{RY - ZT + 6}" fill="url(#PFX-hys)"/>')
 p.append(f'<line x1="{HX0}" y1="{ZT - 6}" x2="{HX0}" y2="{RY}" stroke="#3ddc84" stroke-width="1.6"/>')
 p.append(f'<line x1="{HX1}" y1="{ZT - 6}" x2="{HX1}" y2="{RY}" stroke="#f2c230" stroke-width="1.6"/>')
-p.append(f'<text x="{HX0 - 3}" y="{RY - 46}" text-anchor="end" {F} font-size="9" font-weight="700" fill="#7fe3a8">conecta 8,0</text>')
-p.append(f'<text x="{HX1 + 3}" y="{RY - 46}" {F} font-size="9" font-weight="700" fill="#f2c230">suelta 8,8</text>')
-p.append(f'<text x="{HX1 + 3}" y="{RY - 30}" {F} font-size="8" font-weight="700" fill="#f2c230">histéresis 0,8 mm</text>')
-# Sa: distancia de trabajo asegurada
-p.append(f'<line x1="{zx(SA)}" y1="{ZT + ZH}" x2="{zx(SA)}" y2="{RY}" stroke="#3ddc84" stroke-width=".9" stroke-dasharray="3 2" opacity=".8"/>')
-p.append(f'<text x="{zx(SA) - 3}" y="{RY - 30}" text-anchor="end" {F} font-size="8" font-weight="700" fill="#7fe3a8">Sa 5,6</text>')
+p.append(f'<text x="{HX0 - 3}" y="{RY - 40}" text-anchor="end" {F} font-size="9" font-weight="700" fill="#7fe3a8">detección 8,0</text>')
+p.append(f'<text x="{HX1 + 3}" y="{RY - 40}" {F} font-size="9" font-weight="700" fill="#f2c230">histéresis 8,8</text>')
 # eje y regla en mm reales: marca cada 1 mm, numero cada 2 mm
 EX = zx(MAXD) + mm(10) + 12
 p.append(f'<line x1="{FACE}" y1="{CY}" x2="{EX}" y2="{CY}" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>')

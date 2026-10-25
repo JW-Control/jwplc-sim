@@ -8,11 +8,10 @@
 import { Delay, earliest, ms } from "../device-kit.mjs";
 
 // Inductivo: Autonics PR18-8D (M18 no blindado). Sn = 8 mm sobre acero
-// (pieza estándar), distancia de trabajo asegurada Sa = 5,6 mm e histéresis
-// del 10 %: conmuta al acercarse a Sn y suelta al alejarse más de 1,1·Sn.
+// (pieza estándar) e histéresis del 10 %: conmuta al acercarse a Sn y suelta al alejarse más de 1,1·Sn.
 // La pieza se ubica con la acción "distance" (mm, se arrastra en el símbolo)
 // o con el parámetro del mismo nombre antes de simular.
-export const INDUCTIVE = { sn: 8, sa: 5.6, hysteresis: 0.1, travel: 16, linked: 3 };
+export const INDUCTIVE = { sn: 8, hysteresis: 0.1, travel: 16, linked: 3 };
 
 /**
  * @param {"inductive" | "photoelectric"} kind

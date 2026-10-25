@@ -140,7 +140,7 @@ G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control):
 red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
 Telemecanique XCKJ10511 (cables con marcador y función NA/NC) y sensor
 inductivo Autonics PR18-8D (M18, Sn 8 mm), con la pieza arrastrable y la
-zona de detección (Sa, Sn e histéresis del 10 %). El área de trabajo va ampliada
+zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). El área de trabajo va ampliada
 a 16 px/mm (4 veces el sensor) para que la histéresis se vea y se pueda
 manipular; la regla marca mm reales.
 
