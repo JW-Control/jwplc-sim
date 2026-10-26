@@ -209,7 +209,7 @@ export function solve(net, tripped = new Set()) {
       const fwd = ma.has(`${s.id}+`) && mb.has(`${s.id}-`);
       const rev = ma.has(`${s.id}-`) && mb.has(`${s.id}+`);
       if (!fwd && !rev) continue;
-      st = { on: true, polarity: fwd ? 1 : -1, source: s.id, volts: s.volts, kind: s.kind };
+      st = { on: true, polarity: fwd ? 1 : -1, source: s.id, volts: s.volts, kind: /** @type {"DC" | "AC"} */ (s.kind) };
       break;
     }
     if (st.on) {
