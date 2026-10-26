@@ -38,6 +38,30 @@ test("relé térmico: falta de fase sostenida dispara 95-96 (NC) y cierra 97-98;
   assert.equal(s.output("F", "tripped"), true);
 });
 
+test("relé térmico NR2: STOP abre 95-96 sin disparar; en A se rearma solo al enfriarse", () => {
+  const s = scene(
+    ["R:power-3ph", "S:pushbutton-nc", { id: "F", type: "jwsim/overload-relay", params: { tripMs: 1000, rearme: "automático (A)", rearmeMs: 5000, range: "4-6 A", ajuste: 5 } }],
+    ["R.L1 - S.11", "S.12 - F.1", "R.L2 - F.3", "R.L3 - F.5"],
+  );
+  assert.equal(s.output("F", "ajusteTxt"), "5 A (4-6)");
+  assert.equal(s.output("F", "ajusteRel"), 0.5);
+  s.act("F", "stop", true, ms(100));
+  assert.equal(s.contact("F", "95-96"), false);
+  assert.equal(s.output("F", "tripped"), false);
+  s.act("F", "stop", false, ms(200));
+  assert.equal(s.contact("F", "95-96"), true);
+  // Falta de fase de 1 s: dispara; vuelve la fase a los 2 s y se rearma 5 s después.
+  s.act("S", "press", true, ms(1000));
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("F", "tripped"), true);
+  s.act("S", "press", false, ms(2000));
+  s.advanceTo(ms(6900));
+  assert.equal(s.output("F", "tripped"), true);
+  s.advanceTo(ms(7000));
+  assert.equal(s.output("F", "tripped"), false);
+  assert.equal(s.contact("F", "95-96"), true);
+});
+
 test("motor de dos velocidades: baja por 1U-1V-1W, alta por 2U-2V-2W y conflicto con las dos", () => {
   const s = scene(
     ["R:power-3ph", "KL:pushbutton-no", "KH:pushbutton-no", "M:motor-2v"],

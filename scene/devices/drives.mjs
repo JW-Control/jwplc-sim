@@ -21,17 +21,24 @@ export function windingRun(terms, starts) {
   return { on: false, direction: 0, faltaFase: n > 0 };
 }
 
+/** Rangos de ajuste del NR2-25 (ficha CHINT serie NR2, §4.2). */
+export const NR2_25_RANGES = ["0.63-1 A", "1-1.6 A", "1.6-2.5 A", "2.5-4 A", "4-6 A", "5.5-8 A", "7-10 A", "9-13 A", "12-18 A", "17-25 A"];
+const fmtA = (v) => `${Number(v.toFixed(2))}`.replace(".", ",");
+
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const overloadRelay = {
   type: "jwsim/overload-relay",
-  version: "1.0.0",
-  name: "Relé térmico",
+  version: "1.1.0",
+  name: "Relé térmico CHINT NR2-25",
   category: "Protección",
   description:
-    "Relé de sobrecarga térmico tripolar (CHINT NR2-25 / Schneider LRD) que se monta bajo el contactor: polos 1-2, 3-4 y 5-6, contacto auxiliar 95-96 NC (va en serie con la bobina del contactor) y 97-98 NO (señal de disparo). Dispara por falta de fase (corriente desequilibrada) después del tiempo de disparo, o con el botón TEST. Se rearma con RESET una vez quitada la causa.",
+    "Relé de sobrecarga térmico tripolar CHINT NR2-25 (clase 10A, IEC 60947-4-1) que se monta bajo el contactor: polos 1-2, 3-4 y 5-6, contactos 95-96 NC (va en serie con la bobina del contactor) y 97-98 NO (señal de disparo), separados eléctricamente. Dispara por falta de fase (corriente desequilibrada) después del tiempo de disparo, o con la lengüeta TEST. STOP abre 95-96 mientras se pulsa. RESET azul: en H el rearme es manual (pulsar RESET quitada la causa); en A se rearma solo al enfriarse. El ajuste de corriente gira el dial; el simulador todavía no modela la corriente del motor, así que no cambia el disparo.",
   parameters: [
-    { id: "range", label: "Rango", type: "enum", options: ["0.63-1 A", "1-1.6 A", "1.6-2.5 A", "2.5-4 A", "4-6 A", "5.5-8 A"], default: "2.5-4 A" },
-    { id: "tripMs", label: "Tiempo de disparo (falta de fase)", type: "number", default: 4000, unit: "ms" },
+    { id: "range", label: "Rango", type: "enum", options: NR2_25_RANGES, default: "2.5-4 A" },
+    { id: "ajuste", label: "Ajuste (dial)", type: "number", default: 3.2, unit: "A", hint: "dentro del rango; corriente nominal del motor" },
+    { id: "rearme", label: "Rearme (botón RESET)", type: "enum", options: ["manual (H)", "automático (A)"], default: "manual (H)" },
+    { id: "tripMs", label: "Tiempo de disparo (falta de fase)", type: "number", default: 4000, unit: "ms", hint: "acortado para el taller (el real llega a minutos)" },
+    { id: "rearmeMs", label: "Enfriamiento (rearme automático)", type: "number", default: 20000, unit: "ms" },
   ],
   terminals: [
     { id: "1", label: "1/L1" }, { id: "3", label: "3/L2" }, { id: "5", label: "5/L3" },
@@ -40,6 +47,7 @@ export const overloadRelay = {
   ],
   actions: [
     { id: "test", label: "TEST (disparar)", kind: "momentary" },
+    { id: "stop", label: "STOP (abre 95-96)", kind: "momentary" },
     { id: "reset", label: "RESET", kind: "momentary" },
   ],
   electrical: () => ({
@@ -47,9 +55,15 @@ export const overloadRelay = {
     contacts: { "1-2": ["1", "2"], "3-4": ["3", "4"], "5-6": ["5", "6"], "95-96": ["95", "96"], "97-98": ["97", "98"] },
   }),
   create(ctx) {
+    const p = ctx.params;
+    const [lo, hi] = String(p.range).replace(" A", "").split("-").map(Number);
+    const ajuste = Math.min(hi, Math.max(lo, Number(p.ajuste) || lo));
+    const auto = String(p.rearme).startsWith("auto");
     let tripped = false;
     /** @type {bigint | null} */
     let lossSince = null;
+    /** @type {bigint | null} */
+    let clearSince = null;   // disparado y sin causa: cuenta el enfriamiento (rearme A)
     return {
       update(t, inp) {
         const terms = inp.phases?.line?.terms ?? {};
@@ -58,13 +72,29 @@ export const overloadRelay = {
         const loss = n === 1 || n === 2;
         if (loss) lossSince ??= t;
         else lossSince = null;
-        const due = lossSince === null ? undefined : lossSince + ms(ctx.params.tripMs);
+        const due = lossSince === null ? undefined : lossSince + ms(p.tripMs);
         if (inp.actions.test || (due !== undefined && t >= due)) tripped = true;
         if (inp.actions.reset && !inp.actions.test && !loss) tripped = false;
+        // Rearme automático: quitada la causa, se rearma al enfriarse.
+        const cause = loss || !!inp.actions.test;
+        if (!tripped || cause) clearSince = null;
+        else clearSince ??= t;
+        const cool = auto && clearSince !== null ? clearSince + ms(p.rearmeMs) : undefined;
+        if (cool !== undefined && t >= cool) {
+          tripped = false;
+          clearSince = null;
+        }
         return {
-          contacts: { "1-2": true, "3-4": true, "5-6": true, "95-96": !tripped, "97-98": tripped },
-          outputs: { tripped, faltaFase: loss },
-          nextEventNs: tripped ? undefined : due,
+          contacts: { "1-2": true, "3-4": true, "5-6": true, "95-96": !tripped && !inp.actions.stop, "97-98": tripped },
+          outputs: {
+            tripped,
+            faltaFase: loss,
+            test: !!inp.actions.test,
+            stop: !!inp.actions.stop,
+            ajusteRel: hi > lo ? (ajuste - lo) / (hi - lo) : 0,
+            ajusteTxt: `${fmtA(ajuste)} A (${fmtA(lo)}-${fmtA(hi)})`,
+          },
+          nextEventNs: earliest(tripped ? undefined : due, tripped ? cool : undefined),
         };
       },
     };
