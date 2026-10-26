@@ -363,6 +363,56 @@ test("motor: rampa de arranque y de parada; en CC el sentido sigue a la polarida
   assert.equal(dc.output("M", "speed"), -1);
 });
 
+// Motor trifásico W22 220Δ/380Y en la red de 220 V: bornera U1 V1 W1 / W2 U2 V2.
+const DELTA = ["R.L1 - M.U1", "R.L1 - M.W2", "R.L2 - M.V1", "R.L2 - M.U2", "R.L3 - M.W1", "R.L3 - M.V2"];
+
+test("motor trifásico en triángulo: gira con la secuencia L1-L2-L3 y al cruzar dos fases invierte", () => {
+  const s = scene(["R:power-3ph", "M:motor-3ph"], DELTA);
+  assert.equal(s.output("M", "connection"), "triangulo");
+  assert.equal(s.output("M", "direction"), 1);
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("M", "speed"), 1);
+  // Inversión: L1 y L2 cruzadas en la bornera.
+  const r = scene(["R:power-3ph", "M:motor-3ph"], ["R.L2 - M.U1", "R.L2 - M.W2", "R.L1 - M.V1", "R.L1 - M.U2", "R.L3 - M.W1", "R.L3 - M.V2"]);
+  r.advanceTo(ms(2000));
+  assert.equal(r.output("M", "direction"), -1);
+  assert.equal(r.output("M", "speed"), -1);
+});
+
+test("motor trifásico en estrella: puente W2-U2-V2, arranca más lento (un tercio del par)", () => {
+  const s = scene(["R:power-3ph", "M:motor-3ph"], ["R.L1 - M.U1", "R.L2 - M.V1", "R.L3 - M.W1", "M.W2 - M.U2", "M.U2 - M.V2"]);
+  assert.equal(s.output("M", "connection"), "estrella");
+  s.advanceTo(ms(500));
+  const star = s.output("M", "speed");
+  const d = scene(["R:power-3ph", "M:motor-3ph"], DELTA);
+  d.advanceTo(ms(500));
+  assert.ok(star > 0 && star < d.output("M", "speed"), `estrella ${star} < triángulo ${d.output("M", "speed")}`);
+  s.advanceTo(ms(5000));
+  assert.equal(s.output("M", "speed"), 1);
+});
+
+test("motor trifásico: con una fase cortada no arranca y avisa la falta de fase", () => {
+  const s = scene(["R:power-3ph", "M:motor-3ph"], DELTA.filter((w) => !w.startsWith("R.L3")));
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("M", "faltaFase"), true);
+  assert.equal(s.output("M", "speed"), 0);
+  assert.equal(s.output("M", "connection"), "");
+});
+
+test("motor trifásico por contactor con bobina de 230 VAC entre fases", () => {
+  const s = scene(
+    ["R:power-3ph", "S:pushbutton-no", { id: "KM", type: "jwsim/contactor", params: { coil: "230VAC" } }, "M:motor-3ph"],
+    ["R.L1 - S.13", "S.14 - KM.A1", "KM.A2 - R.L2", "R.L1 - KM.1", "R.L2 - KM.3", "R.L3 - KM.5",
+      "KM.2 - M.U1", "KM.2 - M.W2", "KM.4 - M.V1", "KM.4 - M.U2", "KM.6 - M.W1", "KM.6 - M.V2"],
+  );
+  assert.equal(s.output("M", "running"), false);
+  s.act("S", "press", true, ms(0));
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("KM", "closed"), true);
+  assert.equal(s.output("M", "speed"), 1);
+  assert.deepEqual(faults(s), []);
+});
+
 test("JWPLC Basic: entrada sink, salida a relé (10 ms) y relés sin alimentación", () => {
   const s = scene(
     ["plc:jwplc-basic", "PS:power-24vdc", "S:pushbutton-no", "H:lamp"],

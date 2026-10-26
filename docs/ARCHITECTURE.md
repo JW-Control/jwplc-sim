@@ -363,6 +363,16 @@ bobina o carga que no puede energizarse con ninguna combinación ("bobina
 sin alimentación"). Las entradas sin usar de la placa no avisan: el común
 M1 compartido no cuenta como cableado propio.
 
+Trifásico: la red de 220 V entre fases (`power-3ph`) marca cada fase (L1,
+L2, L3) en su grupo. Dos fases distintas en un grupo son un cortocircuito
+entre fases; una fase unida a otra fuente, un cruce; en ambos casos la red
+dispara. Una carga de dos bornes entre dos fases recibe la tensión entre
+fases (bobina de 230 VAC entre L1 y L2, como en los tableros peruanos). Las
+cargas trifásicas (`phaseLoads`) reciben, por borne, la fase que llega y el
+nodo: con eso el motor deduce la conexión (triángulo si cada bobinado está
+entre dos fases; estrella si U2, V2 y W2 están puenteados y sin fase), el
+sentido por la secuencia en U1-V1-W1 y la falta de fase.
+
 Simplificaciones: dos cargas en serie no se energizan, porque el nodo
 intermedio no tiene polo. No hay caídas de tensión, corrientes ni
 potencias. Dos fuentes de CC con el 0 V común son válidas.
@@ -421,6 +431,7 @@ botones de la interfaz.
 |---|---|---|
 | `power-24vdc` 2.0 | +V1 +V2 −V1 −V2 (puenteados), L N PE, DCOK1-DCOK2 | Mean Well MDR-60 (por defecto, con relé DC OK), HDR-60 o NDR-120 (`model`); disparo por cortocircuito o cruce. Fuente ideal: entrega 24 V sin cablear la entrada L/N. Escenas con la 1.x (L+/M) se leen como +V1/−V1 (`migrateScene`) |
 | `power-230vac` | L/N | Red con disparo por cortocircuito o cruce |
+| `power-3ph` | L1/L2/L3 | Red trifásica de 220 V entre fases con interruptor tripolar; dispara por cortocircuito entre fases o cruce |
 | `pushbutton-no`, `pushbutton-nc`, `pushbutton-nono`, `pushbutton-nonc` | 13-14; 11-12; 13-14 + 23-24; 13-14 + 21-22 | Contactos mientras se pulsa |
 | `selector-2`, `selector-3` | 13-14/21-22, 13-14/23-24 | Posiciones 0/I e I/0/II |
 | `limit-switch` | 13-14, 21-22 | A mano o por enlace mecánico |
@@ -431,6 +442,7 @@ botones de la interfaz.
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
+| `motor-3ph` | U1 V1 W1 / W2 U2 V2 | Trifásico 220Δ/380Y (WEG W22): `connection` triángulo o estrella (en estrella arranca con un tercio del par), `direction` por la secuencia de fases, `faltaFase` con una fase cortada (no arranca) |
 
 ### 4.2 Fallas inyectadas **[G9]**
 

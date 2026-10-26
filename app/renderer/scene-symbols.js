@@ -43,6 +43,7 @@
     contactor: [160, 160, ["1", "3", "5", "13", "21", "A1"], ["2", "4", "6", "14", "22", "A2"]],
     "solenoid-valve": [200, 100, ["A1"], ["A2"]],
     motor: [120, 120, ["U1", "U2"], []],
+    "motor-3ph": [160, 140, ["U1", "V1", "W1", "W2", "U2", "V2"], []],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -446,6 +447,24 @@
           `<text class="sym-big light" x="54" y="77">M</text>` +
           (run ? `<path class="spin" d="M54 55 A16 16 0 0 1 70 71" fill="none" stroke="#37d67a" stroke-width="3" style="transform-origin:54px 71px;animation-duration:${(1 / Math.max(0.1, Math.abs(sp))).toFixed(2)}s;animation-direction:${sp < 0 ? "reverse" : "normal"}"/>` : "") +
           `<text class="sym-tag" x="60" y="${h - 2}">${Math.round(sp * 100)} %</text>` + dmg
+        );
+      }
+      case "motor-3ph": {
+        // Provisorio hasta el símbolo del WEG W22: bornera de 6 bornes,
+        // carcasa con aletas, giro con el sentido y la conexión detectada.
+        const sp = Number(o.speed ?? 0);
+        const run = !!o.running;
+        const conn = o.connection === "triangulo" ? "Δ triángulo" : o.connection === "estrella" ? "Y estrella" : "";
+        return (
+          `<rect class="dev-box" x="4" y="0" width="${w - 8}" height="34" rx="4" fill="${face}" stroke="${ink}" stroke-width="1.6"/>` +
+          terminals(type, lay) +
+          `<rect x="8" y="38" width="${w - 30}" height="80" rx="12" fill="#3f6fa0" stroke="${ink}" stroke-width="1.6"/>` +
+          Array.from({ length: 7 }, (_, i) => `<line x1="16" y1="${46 + i * 11}" x2="${w - 30}" y2="${46 + i * 11}" stroke="#335b85" stroke-width="2"/>`).join("") +
+          `<rect x="${w - 22}" y="70" width="18" height="14" fill="#aeb4bc" stroke="${ink}"/>` +
+          `<circle cx="${(w - 22) / 2 + 4}" cy="78" r="18" fill="#1d2025" stroke="${ink}"/>` +
+          `<text class="sym-big light" x="${(w - 22) / 2 + 4}" y="84">M3~</text>` +
+          (run ? `<path class="spin" d="M${(w - 22) / 2 + 4} 60 A18 18 0 0 1 ${(w - 22) / 2 + 22} 78" fill="none" stroke="#37d67a" stroke-width="3" style="transform-origin:${(w - 22) / 2 + 4}px 78px;animation-duration:${(1 / Math.max(0.1, Math.abs(sp))).toFixed(2)}s;animation-direction:${sp < 0 ? "reverse" : "normal"}"/>` : "") +
+          (o.faltaFase ? `<text class="sym-bad" x="${w / 2}" y="${h - 4}">FALTA DE FASE</text>` : `<text class="sym-tag" x="${w / 2}" y="${h - 4}">${conn}${conn ? " · " : ""}${Math.round(sp * 100)} %</text>`) + dmg
         );
       }
       case "power-24vdc": {

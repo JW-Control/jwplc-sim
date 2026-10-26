@@ -12,20 +12,28 @@ salen 2/L y 4/N. Estados (lineamientos 2.5), como el equipo: apagado o
 disparado, manijas abajo e indicador de contactos verde; en servicio,
 manijas arriba e indicador rojo.
 
-Uso: python3 gen_red230_nxb63.py <salida.svg>
+Variante 3P (red trifasica 220 V, jwsim/power-3ph): el mismo interruptor con
+tres polos (NXB-63 C16 3P, 54 mm; aqui 60 mm, viewBox 240 x 340), red de
+entrada con cables marron, negro y gris (IEC 60445: L1, L2, L3) y salidas
+2/L1, 4/L2 y 6/L3 en x = 40, 120 y 200.
+
+Uso: python3 gen_red230_nxb63.py [2p|3p] <salida.svg>
 """
 import sys
 
 from fam22 import F, INK, header, finish, jw_term
 
-W, H = 160, 340
+TRI = len(sys.argv) > 1 and sys.argv[1] == "3p"
+NP = 3 if TRI else 2
+W, H = 80 * NP, 340
 Y0, Y1 = 8, 332          # cuerpo: 81 mm
-CL, CN = 40, 120         # centro de cada polo = borne
-P = "power-230vac"
+POLES = [40 + 80 * k for k in range(NP)]   # centro de cada polo = borne
+CL, CN = POLES[0], POLES[1]
+P = "power-3ph" if TRI else "power-230vac"
 BLUE = "#2e7fd6"
 TXT = "#3a3f45"
 
-p = header("Red 230 VAC: interruptor termomagnetico 2P CHINT NXB-63 C16, vista frontal segun foto de JW Control. Escala 4 px/mm.", W, H)
+p = header(("Red trifasica 220 VAC: interruptor termomagnetico 3P" if TRI else "Red 230 VAC: interruptor termomagnetico 2P") + " CHINT NXB-63 C16, vista frontal segun foto de JW Control. Escala 4 px/mm.", W, H)
 for d in (
     '<linearGradient id="PFX-wht" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e6e8ea"/><stop offset=".1" stop-color="#fbfbfc"/><stop offset=".9" stop-color="#fbfbfc"/><stop offset="1" stop-color="#e2e5e8"/></linearGradient>',
     '<radialGradient id="PFX-boss" cx=".5" cy=".45" r=".55"><stop offset="0" stop-color="#d9dde1"/><stop offset=".72" stop-color="#eef0f2"/><stop offset="1" stop-color="#ffffff"/></radialGradient>',
@@ -46,11 +54,12 @@ def screw(cx, cy):
             f'<rect x="{cx-2.5}" y="{cy-2.5}" width="5" height="5" fill="#5b6873"/>')
 
 
-# Cuerpo: dos modulos blancos con la junta al medio.
+# Cuerpo: un modulo blanco por polo, con las juntas entre ellos.
 p.append(f'<rect x="1" y="{Y0+2}" width="{W-2}" height="{Y1-Y0}" rx="5" fill="#000" opacity=".2"/>')
-for x in (1, 81):
-    p.append(f'<rect x="{x}" y="{Y0}" width="78" height="{Y1-Y0}" rx="5" fill="url(#PFX-wht)" stroke="#9aa1a8" stroke-width="1.2"/>')
-p.append(f'<rect x="79" y="{Y0}" width="2" height="{Y1-Y0}" fill="#b9bfc5"/>')
+for k in range(NP):
+    p.append(f'<rect x="{1 + 80*k}" y="{Y0}" width="78" height="{Y1-Y0}" rx="5" fill="url(#PFX-wht)" stroke="#9aa1a8" stroke-width="1.2"/>')
+for k in range(1, NP):
+    p.append(f'<rect x="{80*k - 1}" y="{Y0}" width="2" height="{Y1-Y0}" fill="#b9bfc5"/>')
 
 # Bloques de bornes de arriba y de abajo: un escalon antes del frente.
 for y in (67, 265):
@@ -58,7 +67,8 @@ for y in (67, 265):
     p.append(f'<line x1="3" y1="{y+2}" x2="{W-3}" y2="{y+2}" stroke="#ffffff" stroke-width="1"/>')
 
 # Red de entrada (arriba): cable con terminal hasta el tornillo.
-for cx, col in ((CL, "#7a4a22"), (CN, "#2f62d6")):
+IN_COLS = ("#7a4a22", "#1b1d20", "#8a9099") if TRI else ("#7a4a22", "#2f62d6")
+for cx, col in zip(POLES, IN_COLS):
     p.append(screw(cx, 32))
     p.append(f'<rect x="{cx-4}" y="0" width="8" height="22" fill="{col}" stroke="{INK}" stroke-width=".8"/>')
     p.append(f'<rect x="{cx-5}" y="16" width="10" height="10" rx="2" fill="#c9ced5" stroke="{INK}" stroke-width=".8"/>')
@@ -66,7 +76,8 @@ for cx, col in ((CL, "#7a4a22"), (CN, "#2f62d6")):
 # Franja azul: con el logo (hueco, sin archivo oficial) en el polo izquierdo.
 p.append(f'<path d="M5 72 H68 L76 80 V94 H5 Z" fill="{BLUE}"/>')
 p.append(f'<g id="{P}-logo"></g>')
-p.append(f'<rect x="85" y="73" width="70" height="7" rx="1" fill="{BLUE}"/>')
+for k in range(1, NP):
+    p.append(f'<rect x="{5 + 80*k}" y="73" width="70" height="7" rx="1" fill="{BLUE}"/>')
 
 # Textos impresos del polo izquierdo.
 p.append(f'<text x="7" y="112" {F} font-size="12.5" fill="{TXT}">NXB-63</text>')
@@ -81,22 +92,22 @@ p.append(f'<text x="7" y="170" {F} font-size="7" fill="{TXT}">GB/T 10963.1</text
 p.append(f'<text x="57" y="162" {F} font-size="7" fill="{TXT}">↕ I ON</text>')
 p.append(f'<text x="57" y="170" {F} font-size="7" fill="{TXT}">  O OFF</text>')
 
-# Polo derecho: esquema de los dos polos (1-2 y 3-4).
-for k, (a, b) in enumerate((("1", "2"), ("3", "4"))):
-    x = 112 + 14 * k
+# Polo derecho: esquema de los polos (1-2, 3-4 y 5-6).
+for k, (a, b) in enumerate((("1", "2"), ("3", "4"), ("5", "6"))[:NP]):
+    x = 112 + 14 * k + (66 if TRI else 0)
     p.append(f'<text x="{x-5}" y="146" {F} font-size="7" fill="{TXT}">{a}</text>')
     p.append(f'<text x="{x-5}" y="170" {F} font-size="7" fill="{TXT}">{b}</text>')
     p.append(f'<path d="M{x} 148 v4 l-3 3 m3 -3 m0 0 v2 q3 2 0 4 q-3 2 0 4 v3" fill="none" stroke="{TXT}" stroke-width=".9"/>')
 
 # Indicador de posicion de contactos, uno por polo: verde abierto, rojo cerrado.
-for cx in (CL + 6, CN + 6):
+for cx in [x + 6 for x in POLES]:
     p.append(f'<rect x="{cx-6}" y="124" width="12" height="8" rx="1.2" fill="#0e2a1c"/>')
     p.append(f'<rect data-show="!out.on" x="{cx-5}" y="125" width="10" height="6" fill="#1f7a4a"/>')
     p.append(f'<rect data-show="out.on" x="{cx-5}" y="125" width="10" height="6" fill="#d23a2c"/>')
 
 # Zona de la palanca: guias blancas y manijas azules unidas por una barra.
 p.append(f'<rect x="3" y="176" width="{W-6}" height="88" fill="#eef0f2"/>')
-for cx in (CL, CN):
+for cx in POLES:
     p.append(f'<rect x="{cx-31}" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>')
     p.append(f'<rect x="{cx+20}" y="177" width="11" height="86" rx="5" fill="#fbfbfc" stroke="#cfd4d9"/>')
 
@@ -104,20 +115,20 @@ for cx in (CL, CN):
 def handle(up):
     s = []
     if up:   # en servicio: la barra arriba, el cuerpo de las manijas baja hacia el frente
-        for cx in (CL, CN):
+        for cx in POLES:
             s.append(f'<rect x="{cx-19}" y="200" width="38" height="58" rx="2" fill="url(#PFX-hdl)" stroke="#1f5ea6" stroke-width="1"/>')
             s.append(f'<rect x="{cx-19}" y="252" width="38" height="6" fill="#1e4f8a" opacity=".55"/>')
         s.append(f'<rect x="3" y="177" width="{W-6}" height="36" rx="4" fill="url(#PFX-bar)" stroke="#1f5ea6" stroke-width="1.2"/>')
         s.append(f'<line x1="8" y1="184" x2="{W-8}" y2="184" stroke="#8cc0f2" stroke-width="1"/>')
         y_slot = 179
     else:    # apagada o disparada: como en la foto, la barra abajo
-        for cx in (CL, CN):
+        for cx in POLES:
             s.append(f'<rect x="{cx-19}" y="179" width="38" height="46" rx="2" fill="url(#PFX-hdl)" stroke="#1f5ea6" stroke-width="1"/>')
             s.append(f'<rect x="{cx-19}" y="179" width="38" height="5" fill="#1e4f8a" opacity=".45"/>')
         s.append(f'<rect x="3" y="222" width="{W-6}" height="40" rx="4" fill="url(#PFX-bar)" stroke="#1f5ea6" stroke-width="1.2"/>')
         s.append(f'<line x1="8" y1="229" x2="{W-8}" y2="229" stroke="#8cc0f2" stroke-width="1"/>')
         y_slot = 251
-    for cx in (CL, CN):
+    for cx in POLES:
         s.append(f'<rect x="{cx-6}" y="{y_slot}" width="12" height="5" rx="1" fill="#163f6e"/>')
     return s
 
@@ -129,7 +140,8 @@ p += handle(False)
 p.append('</g>')
 
 # Salida (abajo): 2/L y 4/N con la boca del borne en el borde.
-for cx, num, tag, col in ((CL, "2", "L", "#7a4a22"), (CN, "4", "N", "#2f62d6")):
+OUTS = ((CL, "2", "L1", "#7a4a22"), (CN, "4", "L2", "#1b1d20"), (POLES[-1], "6", "L3", "#6b737c")) if TRI else ((CL, "2", "L", "#7a4a22"), (CN, "4", "N", "#2f62d6"))
+for cx, num, tag, col in OUTS:
     p.append(screw(cx, 305))
     p.append(f'<rect x="{cx-6}" y="{H-8}" width="12" height="8" fill="#16181b"/>')
     p.append(jw_term(tag, cx, 305))
@@ -137,5 +149,6 @@ for cx, num, tag, col in ((CL, "2", "L", "#7a4a22"), (CN, "4", "N", "#2f62d6")):
     p.append(f'<text x="{cx-28}" y="313" text-anchor="middle" {F} font-size="9" font-weight="800" fill="{col}">{tag}</text>')
 
 out = finish(p, P)
-with open(sys.argv[1] if len(sys.argv) > 1 else f"{P}.svg", "w", encoding="utf-8") as f:
+ARGS = [a for a in sys.argv[1:] if a not in ("2p", "3p")]
+with open(ARGS[0] if ARGS else f"{P}.svg", "w", encoding="utf-8") as f:
     f.write(out)

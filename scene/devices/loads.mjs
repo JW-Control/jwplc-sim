@@ -187,6 +187,74 @@ export const solenoidValve2 = {
   },
 };
 
+const WINDINGS = [["U1", "U2"], ["V1", "V2"], ["W1", "W2"]];
+const PHASE_INDEX = { L1: 0, L2: 1, L3: 2 };
+
+/**
+ * Conexión de un motor trifásico según la fase y el nodo de cada borne:
+ * triángulo (cada bobinado entre dos fases distintas), estrella (U2, V2 y W2
+ * puenteados y sin fase, con una fase distinta en U1, V1 y W1) o nada.
+ * faltaFase: algún bobinado con tensión pero faltan fases para girar.
+ */
+export function motorConnection(terms) {
+  const ph = (t) => terms[t]?.phase ?? null;
+  const starts = WINDINGS.map(([a]) => ph(a));
+  const three = new Set(starts.filter(Boolean)).size === 3;
+  const delta = WINDINGS.every(([a, b]) => ph(a) && ph(b) && ph(a) !== ph(b));
+  const starNet = terms.U2?.net;
+  const star = !delta && WINDINGS.every(([, b]) => !ph(b) && terms[b]?.net === starNet);
+  const powered = WINDINGS.some(([a, b]) => (ph(a) && ph(b) && ph(a) !== ph(b)) || (star && ph(a)));
+  let connection = "";
+  if (three && delta) connection = "triangulo";
+  else if (three && star) connection = "estrella";
+  // Secuencia en U1, V1, W1: L1-L2-L3 (o rotada) gira a derechas.
+  const direction = connection ? ((PHASE_INDEX[starts[1]] - PHASE_INDEX[starts[0]] + 3) % 3 === 1 ? 1 : -1) : 0;
+  return { connection, direction, faltaFase: powered && !connection };
+}
+
+/** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
+export const motor3ph = {
+  type: "jwsim/motor-3ph",
+  version: "1.0.0",
+  name: "Motor trifásico",
+  category: "Actuadores",
+  description:
+    "Motor de inducción trifásico 220Δ/380Y (WEG W22) con bornera U1 V1 W1 / W2 U2 V2. En la red de 220 V va en triángulo; en estrella arranca con un tercio del par. La secuencia de fases fija el sentido (cruzar dos fases lo invierte). Con una fase cortada no arranca (falta de fase).",
+  parameters: [
+    { id: "accelMs", label: "Arranque en triángulo", type: "number", default: 500, unit: "ms" },
+    { id: "stopMs", label: "Parada (inercia)", type: "number", default: 1500, unit: "ms" },
+  ],
+  terminals: [{ id: "U1" }, { id: "V1" }, { id: "W1" }, { id: "W2" }, { id: "U2" }, { id: "V2" }],
+  electrical: () => ({ phaseLoads: [{ id: "motor", terminals: ["U1", "V1", "W1", "W2", "U2", "V2"] }] }),
+  create(ctx) {
+    const speed = new Ramp(0);
+    return {
+      update(t, inp) {
+        const st = inp.phases?.motor;
+        const c = st && !st.damaged ? motorConnection(st.terms) : { connection: "", direction: 0, faltaFase: false };
+        const goal = c.direction;
+        const cur = speed.at(t);
+        const accel = Math.abs(goal) > Math.abs(cur) && Math.sign(goal) !== -Math.sign(cur);
+        // En estrella cada bobinado recibe 220/√3 V: un tercio del par, arranque tres veces más lento.
+        const accelMs = Number(ctx.params.accelMs) * (c.connection === "estrella" ? 3 : 1);
+        speed.step(t, goal, 1000 / (accel ? accelMs : Number(ctx.params.stopMs)));
+        const seg = speed.segment(t);
+        return {
+          outputs: {
+            energized: !!c.connection || c.faltaFase,
+            connection: c.connection,
+            faltaFase: c.faltaFase,
+            speed: seg,
+            running: seg.value !== 0 || seg.rate !== 0,
+            direction: goal,
+          },
+          nextEventNs: earliest(speed.next),
+        };
+      },
+    };
+  },
+};
+
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const motor = {
   type: "jwsim/motor",

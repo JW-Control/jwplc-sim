@@ -58,3 +58,21 @@ export const power230 = {
   electrical: () => ({ sources: [{ id: "", pos: "L", neg: "N", kind: "AC", volts: 230 }] }),
   create: () => ({ update: (_t, inp) => ({ outputs: { on: !inp.tripped } }) }),
 };
+
+/** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
+export const power3ph = {
+  type: "jwsim/power-3ph",
+  version: "1.0.0",
+  name: "Red trifásica 220 VAC",
+  category: "Alimentación",
+  description:
+    "Red trifásica de 220 V entre fases, 60 Hz (L1, L2, L3), con interruptor automático tripolar. Dos fases unidas son un cortocircuito y la protección dispara. Entre dos fases alimenta cargas de 230 VAC (bobinas, pilotos).",
+  parameters: [],
+  terminals: [
+    { id: "L1", label: "L1 (fase R)" },
+    { id: "L2", label: "L2 (fase S)" },
+    { id: "L3", label: "L3 (fase T)" },
+  ],
+  electrical: () => ({ sources: [{ id: "", kind: "AC3", volts: 220, phases: { L1: "L1", L2: "L2", L3: "L3" } }] }),
+  create: () => ({ update: (_t, inp) => ({ outputs: { on: !inp.tripped } }) }),
+};

@@ -26,12 +26,20 @@
 //                ninguna combinación de contactos: un extremo no llega a un
 //                polo de alimentación (bobina sin retorno, borne sin cablear)
 //
+// Trifásico (red de 220 V entre fases): la fuente marca cada fase (L1, L2,
+// L3) en su grupo. Dos fases distintas en un grupo son un cortocircuito entre
+// fases; una fase unida a otra fuente, un cruce. Una carga de dos bornes entre
+// dos fases distintas recibe la tensión entre fases (bobina de 230 VAC entre
+// L1 y L2). phaseOf(borne) dice qué fase llega a un borne: así los
+// dispositivos trifásicos (motor) deducen conexión y secuencia.
+//
 // Simplificaciones (documentadas en ARCHITECTURE §4.1): dos cargas en serie
 // no se energizan (el nodo intermedio no tiene polo); no hay caídas de
 // tensión, corrientes ni potencia; CA y CC no se mezclan.
 
 /**
- * @typedef {{ id: string, pos: string, neg: string, kind: "DC" | "AC", volts: number }} Source
+ * @typedef {{ id: string, pos?: string, neg?: string, kind: "DC" | "AC" | "AC3", volts: number,
+ *   phases?: { L1: string, L2: string, L3: string } }} Source  AC3: sin pos/neg, volts entre fases
  * @typedef {{ id: string, a: string, b: string, rating: string, polar?: boolean, coil?: boolean }} Load
  * @typedef {{ a: string, b: string }} Switch
  * @typedef {{
@@ -40,6 +48,8 @@
  * }} LoadState
  * @typedef {{ type: string, source?: string, sources?: string[], load?: string, terminals?: string[], message: string }} Finding
  */
+
+const PHASES = ["L1", "L2", "L3"];
 
 /** "24VDC" → { kind: "DC", volts: 24 }; "230VAC" → { kind: "AC", volts: 230 }. */
 export function parseRating(rating) {
@@ -90,6 +100,10 @@ function group(net, disabled) {
   };
   for (const s of net.sources) {
     if (disabled.has(s.id)) continue;
+    if (s.phases) {
+      for (const [ph, term] of Object.entries(s.phases)) mark(term, `${s.id}~${ph}`);
+      continue;
+    }
     mark(s.pos, `${s.id}+`);
     mark(s.neg, `${s.id}-`);
   }
@@ -106,7 +120,8 @@ function members(uf, g, terms) {
  * @param {{ wires: [string, string][], sources: Source[], switches: Switch[], loads: Load[] }} net
  * @param {Set<string>} [tripped]  fuentes ya disparadas (la escena las recuerda)
  * @returns {{ loads: Map<string, LoadState>, faults: Finding[], warnings: Finding[], tripped: Set<string>,
- *             groupOf: (term: string) => string, poles: (term: string) => string[] }}
+ *             groupOf: (term: string) => string, poles: (term: string) => string[],
+ *             phaseOf: (term: string) => { source: string, phase: string, volts: number } | null }}
  */
 export function solve(net, tripped = new Set()) {
   const disabled = new Set(tripped);
@@ -115,7 +130,7 @@ export function solve(net, tripped = new Set()) {
   const terms = new Set();
   for (const [a, b] of net.wires) terms.add(a).add(b);
   for (const s of net.switches) terms.add(s.a).add(s.b);
-  for (const s of net.sources) terms.add(s.pos).add(s.neg);
+  for (const s of net.sources) for (const t of s.phases ? Object.values(s.phases) : [s.pos, s.neg]) terms.add(t);
   for (const l of net.loads) terms.add(l.a).add(l.b);
   const byId = new Map(net.sources.map((s) => [s.id, s]));
 
@@ -125,9 +140,23 @@ export function solve(net, tripped = new Set()) {
     const trip = new Set();
     for (const [grp, ms] of g.marks) {
       for (const m of ms) {
-        if (!m.endsWith("+")) continue;
-        const id = m.slice(0, -1);
-        if (ms.has(`${id}-`)) {
+        // Polos "vivos": el positivo de una fuente o una fase de la red trifásica.
+        const ph = m.indexOf("~");
+        if (!m.endsWith("+") && ph < 0) continue;
+        const id = ph < 0 ? m.slice(0, -1) : m.slice(0, ph);
+        const sameSource = [...ms].filter((x) => x !== m && x.startsWith(`${id}~`));
+        if (ph >= 0 && sameSource.length) {
+          if (!trip.has(id)) {
+            trip.add(id);
+            const fases = [m, ...sameSource].map((x) => x.slice(ph + 1)).sort();
+            faults.push({
+              type: "short",
+              source: id,
+              terminals: members(g.uf, grp, terms),
+              message: `Cortocircuito entre fases en ${id}: ${fases.join(" y ")} quedan unidas (${members(g.uf, grp, terms).join(", ")})`,
+            });
+          }
+        } else if (ph < 0 && ms.has(`${id}-`)) {
           trip.add(id);
           faults.push({
             type: "short",
@@ -136,7 +165,8 @@ export function solve(net, tripped = new Set()) {
             message: `Cortocircuito en ${id}: ${byId.get(id).pos} y ${byId.get(id).neg} quedan unidos (${members(g.uf, grp, terms).join(", ")})`,
           });
         }
-        const others = [...ms].map((x) => x.slice(0, -1)).filter((o) => o !== id);
+        const srcOf = (x) => (x.includes("~") ? x.slice(0, x.indexOf("~")) : x.slice(0, -1));
+        const others = [...ms].map(srcOf).filter((o) => o !== id);
         if (others.length) {
           const all = [id, ...new Set(others)].sort();
           for (const o of all) trip.add(o);
@@ -168,6 +198,14 @@ export function solve(net, tripped = new Set()) {
     let st = { on: false, polarity: 0, source: null, volts: 0, kind: null };
     for (const s of net.sources) {
       if (disabled.has(s.id)) continue;
+      if (s.phases) {
+        // Entre dos fases distintas: la tensión entre fases, en alterna.
+        const pa = PHASES.find((p) => ma.has(`${s.id}~${p}`));
+        const pb = PHASES.find((p) => mb.has(`${s.id}~${p}`));
+        if (!pa || !pb || pa === pb) continue;
+        st = { on: true, polarity: 1, source: s.id, volts: s.volts, kind: "AC" };
+        break;
+      }
       const fwd = ma.has(`${s.id}+`) && mb.has(`${s.id}-`);
       const rev = ma.has(`${s.id}-`) && mb.has(`${s.id}+`);
       if (!fwd && !rev) continue;
@@ -201,7 +239,17 @@ export function solve(net, tripped = new Set()) {
   }
   const groupOf = (t) => g.uf.find(t);
   const poles = (t) => [...(g.marks.get(g.uf.find(t)) ?? [])].sort();
-  return { loads, faults, warnings, tripped: disabled, groupOf, poles };
+  /** Fase de la red trifásica que llega a un borne, o null. */
+  const phaseOf = (t) => {
+    for (const m of g.marks.get(g.uf.find(t)) ?? []) {
+      const i = m.indexOf("~");
+      if (i < 0) continue;
+      const source = m.slice(0, i);
+      return { source, phase: m.slice(i + 1), volts: byId.get(source).volts };
+    }
+    return null;
+  };
+  return { loads, faults, warnings, tripped: disabled, groupOf, poles, phaseOf };
 }
 
 /**
@@ -226,13 +274,14 @@ export function analyze(net, wired, skip) {
     const ok = net.sources.some((s) => {
       const ma = g.marks.get(g.uf.find(l.a)) ?? new Set();
       const mb = g.marks.get(g.uf.find(l.b)) ?? new Set();
+      if (s.phases) return PHASES.some((p) => ma.has(`${s.id}~${p}`)) && PHASES.some((p) => mb.has(`${s.id}~${p}`));
       return (ma.has(`${s.id}+`) && mb.has(`${s.id}-`)) || (ma.has(`${s.id}-`) && mb.has(`${s.id}+`));
     });
     if (ok) continue;
     const why = [];
     for (const t of [l.a, l.b]) {
       if (wired && !wired.has(t)) why.push(`${t} sin cablear`);
-      else if (!has(t, "+") && !has(t, "-")) why.push(`${t} no llega a ningún polo de alimentación`);
+      else if (!has(t, "+") && !has(t, "-") && !PHASES.some((p) => has(t, `~${p}`))) why.push(`${t} no llega a ningún polo de alimentación`);
     }
     if (!why.length) why.push(`${l.a} y ${l.b} no llegan a los dos polos de una misma fuente`);
     out.push({

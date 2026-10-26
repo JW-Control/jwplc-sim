@@ -87,6 +87,14 @@ Un dispositivo declara:
 
 - **fuentes** (`sources`): un polo positivo (`L+`/`L`) y un retorno
   (`M`/`N`), en CC o CA;
+- **red trifásica** (`kind: "AC3"`, `phases: { L1, L2, L3 }`, `volts` entre
+  fases): marca cada fase; una carga de dos bornes entre dos fases recibe
+  la tensión entre fases.
+- **cargas trifásicas** (`phaseLoads: [{ id, terminals }]`): en `update()`,
+  `inp.phases[id].terms[borne]` da la fase que llega (`L1`/`L2`/`L3` o
+  `null`) y el nodo (`net`; dos bornes puenteados comparten nodo), y
+  `inp.phases[id].volts` la tensión entre fases. Ejemplo: `motor-3ph`
+  (`motorConnection()` en `scene/devices/loads.mjs`).
 - **cargas** (`loads`): se energizan si un extremo está en el positivo y el
   otro en el retorno de la misma fuente. `rating` es la tensión nominal
   (`24VDC`, `230VAC`). Con más tensión la carga se quema y queda fuera hasta

@@ -384,7 +384,7 @@
     }
     if ("closed" in o) opts.push({ kind: "welded", label: "Contactos soldados" });
     const short = dev.type.split("/")[1];
-    const burnt = { lamp: "Lámpara quemada", buzzer: "Zumbador quemado", relay: "Bobina cortada", contactor: "Bobina cortada", "solenoid-valve": "Bobina cortada", "solenoid-valve-2": "Bobinas cortadas", motor: "Bobinado abierto" }[short] ??
+    const burnt = { lamp: "Lámpara quemada", buzzer: "Zumbador quemado", relay: "Bobina cortada", contactor: "Bobina cortada", "solenoid-valve": "Bobina cortada", "solenoid-valve-2": "Bobinas cortadas", motor: "Bobinado abierto", "motor-3ph": "Bobinado abierto" }[short] ??
       (short?.startsWith("sensor-") ? "Sensor dañado" : null);
     if (burnt) opts.push({ kind: "burnt", label: burnt });
     return opts;
@@ -679,7 +679,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "power-24vdc": "PS", "power-230vac": "L" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-3ph": "M", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 

@@ -43,14 +43,29 @@ export interface ActionSpec {
   unit?: string;
 }
 
-/** Fuente: marca su polo positivo (L+ / L) y su retorno (M / N). */
+/**
+ * Fuente: marca su polo positivo (L+ / L) y su retorno (M / N). La red
+ * trifásica ("AC3") no tiene pos/neg: marca cada fase y `volts` es la tensión
+ * entre fases.
+ */
 export interface SourceSpec {
   /** "" si el dispositivo tiene una sola fuente. */
   id: string;
-  pos: string;
-  neg: string;
-  kind: "DC" | "AC";
+  pos?: string;
+  neg?: string;
+  kind: "DC" | "AC" | "AC3";
   volts: number;
+  phases?: { L1: string; L2: string; L3: string };
+}
+
+/**
+ * Carga trifásica (motor): la escena dice qué fase de la red llega a cada
+ * borne y a qué nodo pertenece (dos bornes puenteados comparten nodo), y el
+ * dispositivo deduce la conexión (estrella o triángulo) y la secuencia.
+ */
+export interface PhaseLoadSpec {
+  id: string;
+  terminals: string[];
 }
 
 /** Carga entre dos bornes: se energiza con un extremo en el positivo y el otro en el retorno de una misma fuente. */
@@ -70,6 +85,7 @@ export interface Electrical {
   loads?: LoadSpec[];
   /** Todos los contactos posibles: id → [borne, borne]. Cuáles están cerrados lo dice DeviceStep.contacts. */
   contacts?: Record<string, [string, string]>;
+  phaseLoads?: PhaseLoadSpec[];
 }
 
 /** Enlace mecánico: activo mientras la salida `source` ("Y1.position") está en [min, max]. */
@@ -132,9 +148,20 @@ export interface LoadState {
   issue?: "overvoltage" | "undervoltage" | "polarity" | "damaged";
 }
 
+/** Estado de una carga trifásica: por borne, la fase (o null) y su nodo. */
+export interface PhaseLoadState {
+  terms: Record<string, { phase: "L1" | "L2" | "L3" | null; net: string }>;
+  /** Tensión entre fases de la red que llega (0 si ninguna). */
+  volts: number;
+  /** Quemada (falla inyectada o sobretensión): sin fases. */
+  damaged?: boolean;
+}
+
 export interface DeviceInputs {
   /** Estado de cada carga declarada en electrical(). */
   loads: Record<string, LoadState>;
+  /** Estado de cada carga trifásica declarada en electrical().phaseLoads. */
+  phases?: Record<string, PhaseLoadState>;
   /** Enlaces mecánicos declarados en links(). */
   links: Record<string, boolean>;
   /** Lecturas numéricas declaradas en reads() (booleanos como 0/1) y sondas de probeInputs() (NaN: abierta). */

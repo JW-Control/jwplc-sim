@@ -199,3 +199,34 @@ test("determinismo: la misma escena y acciones dan la misma secuencia de eventos
   };
   assert.equal(run(), run());
 });
+
+// ---------------------------------------------------------------- trifásico
+const R3 = { id: "R", kind: "AC3", volts: 220, phases: { L1: "R.L1", L2: "R.L2", L3: "R.L3" } };
+
+test("trifásico: bobina de 230 VAC entre dos fases se energiza con 220 V", () => {
+  const r = solve({
+    wires: [["R.L1", "K.A1"], ["K.A2", "R.L2"]],
+    sources: [R3],
+    switches: [],
+    loads: [{ id: "K", a: "K.A1", b: "K.A2", rating: "230VAC", coil: true }],
+  });
+  assert.equal(r.loads.get("K").on, true);
+  assert.equal(r.loads.get("K").volts, 220);
+  assert.equal(r.loads.get("K").kind, "AC");
+  assert.deepEqual(r.faults, []);
+  assert.deepEqual(r.phaseOf("K.A1"), { source: "R", phase: "L1", volts: 220 });
+  assert.equal(r.phaseOf("K.X"), null);
+});
+
+test("trifásico: dos fases unidas son un cortocircuito y la red dispara", () => {
+  const r = solve({ wires: [["R.L1", "X.1"], ["X.1", "R.L3"]], sources: [R3], switches: [], loads: [] });
+  assert.deepEqual(r.faults.map((f) => f.type), ["short"]);
+  assert.match(r.faults[0].message, /Cortocircuito entre fases en R: L1 y L3/);
+  assert.ok(r.tripped.has("R"));
+});
+
+test("trifásico: una fase unida al +24 V es un cruce de alimentaciones", () => {
+  const r = solve({ wires: [["R.L2", "PS.+V1"]], sources: [R3, PS], switches: [], loads: [] });
+  assert.deepEqual(r.faults.map((f) => f.type), ["cross"]);
+  assert.deepEqual(r.faults[0].sources, ["PS", "R"]);
+});

@@ -234,7 +234,9 @@ export class Scene {
     for (const dev of this.devices.values()) {
       const g = (term) => `${dev.id}.${term}`;
       for (const s of dev.el.sources ?? []) {
-        sources.push({ ...s, id: s.id ? `${dev.id}.${s.id}` : dev.id, pos: g(s.pos), neg: g(s.neg) });
+        const id = s.id ? `${dev.id}.${s.id}` : dev.id;
+        if (s.phases) sources.push({ ...s, id, phases: { L1: g(s.phases.L1), L2: g(s.phases.L2), L3: g(s.phases.L3) } });
+        else sources.push({ ...s, id, pos: g(s.pos), neg: g(s.neg) });
       }
       const burnt = !allContacts && this.injected.has(`burnt:${dev.id}`);
       for (const l of dev.el.loads ?? []) {
@@ -339,6 +341,19 @@ export class Scene {
             ? { on: false, polarity: 0, source: null, volts: 0, kind: null, issue: "damaged" }
             : sol.loads.get(id);
         }
+        // Cargas trifásicas: fase y nodo de cada borne.
+        /** @type {Record<string, any>} */
+        const phases = {};
+        for (const pl of dev.el.phaseLoads ?? []) {
+          const terms = {};
+          let volts = 0;
+          for (const term of pl.terminals) {
+            const ph = burnt ? null : sol.phaseOf(`${dev.id}.${term}`);
+            if (ph) volts = ph.volts;
+            terms[term] = { phase: ph ? ph.phase : null, net: sol.groupOf(`${dev.id}.${term}`) };
+          }
+          phases[pl.id] = burnt ? { terms, volts: 0, damaged: true } : { terms, volts };
+        }
         /** @type {Record<string, boolean>} */
         const links = {};
         for (const l of dev.links) links[l.id] = this.#linkValue(l, t);
@@ -364,7 +379,7 @@ export class Scene {
         const signals = {};
         for (const s of dev.def.signals?.in ?? []) signals[s] = this.signals[s] ? 1 : 0;
         const tripped = (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id));
-        const step = dev.inst.update(t, { loads, links, values, actions, signals, wired: dev.wired, tripped }) ?? {};
+        const step = dev.inst.update(t, { loads, phases, links, values, actions, signals, wired: dev.wired, tripped }) ?? {};
         // Soldado (relé, contactor): los contactos se pegan en la primera
         // vez que cierra y ya no abren aunque la bobina caiga.
         const welded = this.injected.get(`welded:${dev.id}`);
@@ -475,7 +490,7 @@ export class Scene {
       if (fault.kind === "stuck" && !(dev.def.actions ?? []).some((a) => a.kind !== "select") && !dev.links.length)
         throw new Error(`${dev.id} no tiene accionamiento que se pueda pegar`);
       if (fault.kind === "welded" && !("closed" in (dev.step.outputs ?? {}))) throw new Error(`${dev.id} no tiene contactos que se puedan soldar`);
-      if (fault.kind === "burnt" && !(dev.el.loads ?? []).length) throw new Error(`${dev.id} no tiene una carga que se pueda quemar`);
+      if (fault.kind === "burnt" && !(dev.el.loads ?? []).length && !(dev.el.phaseLoads ?? []).length) throw new Error(`${dev.id} no tiene una carga que se pueda quemar`);
     }
     this.advanceTo(t);
     this.injected.set(key, { ...fault });
