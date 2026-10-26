@@ -77,6 +77,7 @@ Las expresiones leen el estado del dispositivo:
 | `param.<parámetro>` | Parámetro: `param.color`, `param.coil`, `param.label`… |
 | `contact.<contacto>` | Contacto cerrado: `contact.13-14` |
 | `damaged`, `tripped` | Carga quemada; fuente disparada |
+| `wired.<borne>` | El borne tiene un cable en la escena (sin cable no tiene valor, así `wired.SG+\|wired.SG-` es verdadero con cualquiera de los dos). Sirve para dibujar el cable interno de un borne solo cuando se usa. |
 | `!expr`, `expr=valor` | Negación y comparación: `!out.closed`, `param.output=npn` |
 | `expr>n`, `expr<n` | Comparación numérica: `out.serpentin>0.05`, `!out.tMasa<20` |
 | `expr\|expr` | La primera que tenga valor: `out.distance\|param.distance` (la salida en marcha, el parámetro en edición) |
@@ -189,19 +190,22 @@ azul con la ranura en A o H, banderín naranja de disparo en la ventana y
 aviso de falta de fase.
 
 Variador Delta VFD-EL (`gen_vfd_el.py`, 26/10/2026, según el manual del
-VFD-EL y la foto del producto): estructura A de 72 x 174 mm a 4 px/mm en un
-viewBox de 360 x 700. Arriba R/L1, S/L2, T/L3 (sin tornillo en el modelo
-monofásico) y tierra; el teclado con los colores reales (RUN verde, STOP/RESET
-rojo, ▲▼ y MODE grises, ENTER azul), la pantalla de 7 segmentos de 4 dígitos
+VFD-EL, la foto del producto y el cableado de referencia de JW Control):
+estructura A de 72 x 174 mm a 4 px/mm, a la derecha de un viewBox de 580 x
+700. Arriba R/L1, S/L2, T/L3 (sin tornillo en el modelo monofásico) y
+tierra; el teclado con los colores reales (RUN verde, STOP/RESET rojo, ▲▼ y
+MODE grises, ENTER azul), la pantalla de 7 segmentos de 4 dígitos
 (`data-seg`), los LED RUN FWD REV y STOP y el potenciómetro con su escala en
 arco (se arrastra en vertical); la abertura con los conmutadores NPN/PNP y
 AVI/ACI, la bornera de control verde en dos filas escalonadas, el relé RA RB
-RC y el puerto RS-485; abajo U/T1 V/T2 W/T3, + y - y la barra de tierra.
-Como la bornera de control está en medio del frente con un paso de 5 mm, de
-cada borne sale un cable con marcador que baja entre los bornes de potencia
-hasta el borde inferior (como el fin de carrera XCKJ); el RS-485 sale por un
-cable de red azul a una bornera SG+ SG- a la derecha. +24V, 10V, AVI, AFM y
-ACM no tienen cable (modo NPN, sin entradas analógicas).
+RC y el puerto RS-485, subidos para dejar paso al cableado; abajo U/T1 V/T2
+W/T3, + y - y la barra de tierra. Los puntos de conexión de la bornera de
+control están fuera del cuerpo, abajo a la izquierda, uno a continuación del
+otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM SG+ SG-). El cable interno de
+cada borne (baja, corre a la izquierda por su carril y baja por el costado,
+sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
+escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+
+amarillo y SG- azul. 10V, AVI, AFM y ACM no se conectan.
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
 fotoeléctrico, relé enchufable y motor monofásico.

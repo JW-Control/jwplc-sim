@@ -504,11 +504,14 @@
     }
     g.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     g.classList.toggle("selected", S.sel?.kind === "device" && S.sel.id === dev.id);
-    const st = { ...out(dev.id), id: dev.id };
+    // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
+    const pre = `${dev.id}.`;
+    const wired = [...new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]).filter((e) => e.startsWith(pre)).map((e) => e.slice(pre.length)))].sort();
+    const st = { ...out(dev.id), id: dev.id, wired };
     // Un símbolo con giro (data-spin) se redibuja en cada instante simulado.
     const pp = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
-    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms]);
+    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     tg?.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;

@@ -2,8 +2,9 @@
 
 Medidas del manual del VFD-EL (§1.3: estructura A 72 x 174 mm) y del dibujo
 de la estructura A (§1.1.4); colores de la foto del producto y del teclado
-(§3.1). El cuerpo (288 x 696 px) va en un viewBox de 360 x 700: el margen de
-la derecha lleva la bornera del cable RS-485.
+(§3.1). El cuerpo (288 x 696 px) va a la derecha de un viewBox de 580 x 700:
+el margen de la izquierda lleva los puntos de conexión de la bornera de
+control (cableado de referencia de JW Control, 26/10/2026).
 
   arriba:  R/L1 S/L2 (T/L3 sin tornillo: modelo monofásico) y tierra
   teclado: logo, pantalla de 7 segmentos de 4 dígitos (data-seg con out.lcd),
@@ -11,15 +12,17 @@ la derecha lleva la bornera del cable RS-485.
            vertical) y las teclas RUN, ▲, MODE, STOP/RESET, ▼, ENTER
   abertura: conmutadores NPN/PNP y AVI/ACI, bornera de control en dos filas
            escalonadas (24V MI1 MI3 MI5 10V AVI / MI2 MI4 MI6 DCM AFM ACM),
-           relé RA RB RC y el puerto RS-485 (RJ-45)
+           relé RA RB RC y el puerto RS-485 (RJ-45), subidos para dejar paso
+           al cableado
   abajo:   U/T1 V/T2 W/T3, + y - (bus de CC) y la barra de tierra
 
-Los bornes de control están en el medio del frente, con un paso de 5 mm: como
-en el fin de carrera XCKJ, de cada uno sale un cable con marcador que baja
-entre los bornes de potencia hasta el borde inferior, donde se conecta (cx
-múltiplo de 20). El RS-485 sale por un cable de red azul a una bornera SG+ SG-.
-Sin cable propio: +24V, 10V, AVI, AFM y ACM (modo NPN, sin entradas
-analógicas en el simulador).
+Cableado de control: el punto de conexión de cada borne está fuera del cuerpo,
+abajo a la izquierda, uno a continuación del otro (RA RB RC +24V MI2 MI1 MI4
+MI3 MI6 MI5 DCM SG+ SG-). El cable interno (baja del borne, corre a la
+izquierda por su carril y baja por el costado sin cruzarse con los demás)
+solo se dibuja si el borne tiene un cable en la escena (data-show con
+wired.<borne>). El RS-485 sale del RJ-45 como par trenzado SG+ (amarillo) y
+SG- (azul). 10V, AVI, AFM y ACM no se conectan (sin entradas analógicas).
 
 Uso: gen_vfd_el.py <salida.svg>
 """
@@ -31,8 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fam22 import header, finish, jw_term, INK, F
 
 OUT = sys.argv[1]
-W, H = 360, 700
-OX, OY = 36, 2            # esquina del cuerpo
+W, H = 580, 700
+OX, OY = 276, 2           # esquina del cuerpo (U/T1 y R/L1 caen en múltiplos de 20)
 BW, BH = 288, 696         # 72 x 174 mm
 
 
@@ -80,7 +83,7 @@ def slot_screw(cx, cy, r=6.0):
 p.append(f'<path d="M{OX} {Y(17)}V{OY+8}Q{OX} {OY} {OX+8} {OY}H{OX+BW-8}Q{OX+BW} {OY} {OX+BW} {OY+8}V{Y(17)}Z" fill="url(#PFX-house)"/>')
 p.append(f'<circle cx="{X(6.5)}" cy="{Y(4.6)}" r="8" fill="#2a2c2f" stroke="#1a1b1d"/>')        # agujero de fijación
 p.append(f'<circle cx="{X(64)}" cy="{Y(6.8)}" r="9" fill="#1d1f22"/><circle cx="{X(64)}" cy="{Y(6.8)}" r="5" fill="#0f1012"/>')
-for t, lab, cx in (("R", "R/L1", 100), ("S", "S/L2", 140), (None, "T/L3", 180), ("PE", "⏚", 220)):
+for t, lab, cx in (("R", "R/L1", X(16)), ("S", "S/L2", X(26)), (None, "T/L3", X(36)), ("PE", "⏚", X(46))):
     p.append(f'<rect x="{cx-16}" y="{OY}" width="32" height="{Y(16.5)-OY}" rx="3" fill="#4b4e52" stroke="#2a2c2f" stroke-width="1"/>')
     p.append(f'<text x="{cx}" y="{Y(4.2)}" text-anchor="middle" {F} font-size="{12 if t == "PE" else 8}" font-weight="800" fill="#d6d9dc">{lab}</text>')
     if t:
@@ -178,33 +181,37 @@ p.append(keycap("enter", C3[0], R2[0], C3[1], R2[1], "ent", "ENTER", "#f2f8fd", 
 
 # ---------------------------------------------------------------- abertura de control
 p.append(f'<rect x="{X(2.9)}" y="{Y(77.6)}" width="{X(69.1)-X(2.9)}" height="{Y(133.5)-Y(77.6)}" rx="3" fill="#4f5256" stroke="#2c2e31" stroke-width="1"/>')
-p.append(f'<rect x="{X(2.9)}" y="{Y(90)}" width="{X(16.5)-X(2.9)}" height="{Y(112.7)-Y(90)}" rx="2" fill="#6a6d71" stroke="#2c2e31"/>')
+p.append(f'<rect x="{X(2.9)}" y="{Y(73.5)}" width="{X(16.5)-X(2.9)}" height="{Y(96.2)-Y(73.5)}" rx="2" fill="#6a6d71" stroke="#2c2e31"/>')
 # conmutadores NPN/PNP y AVI/ACI
 for x0, top, bot, lft in ((21.6, "NPN", "PNP", True), (31.7, "AVI", "ACI", False)):
-    p.append(f'<rect x="{X(x0)}" y="{Y(99)}" width="15" height="31" rx="1.5" fill="#2f3135"/><rect x="{X(x0)+3}" y="{Y(99)+3}" width="9" height="12" rx="1" fill="#e6e8ea"/>')
+    p.append(f'<rect x="{X(x0)}" y="{Y(82.5)}" width="15" height="31" rx="1.5" fill="#2f3135"/><rect x="{X(x0)+3}" y="{Y(82.5)+3}" width="9" height="12" rx="1" fill="#e6e8ea"/>')
     tx = X(x0) - 3 if lft else X(x0) + 18
     anc = "end" if lft else "start"
-    p.append(f'<text x="{tx}" y="{Y(101.4)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{top}</text>')
-    p.append(f'<text x="{tx}" y="{Y(106.2)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{bot}</text>')
+    p.append(f'<text x="{tx}" y="{Y(84.9)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{top}</text>')
+    p.append(f'<text x="{tx}" y="{Y(89.7)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{bot}</text>')
 
 UP = [("+24V", "24V", 20.0), ("MI1", "MI1", 25.2), ("MI3", "MI3", 30.4), ("MI5", "MI5", 35.6), (None, "10V", 40.8), (None, "AVI", 46.0)]
 LO = [("MI2", "MI2", 22.9), ("MI4", "MI4", 28.1), ("MI6", "MI6", 33.3), ("DCM", "DCM", 38.5), (None, "AFM", 43.7), (None, "ACM", 48.9)]
 RL = [("RA", "RA", 5.9), ("RB", "RB", 10.9), ("RC", "RC", 15.9)]
-YU, YL, YR = Y(112.5), Y(122.4), Y(123.5)
+YU, YL, YR = Y(96.0), Y(105.9), Y(107.0)
 # bloques verdes enchufables
-p.append(f'<rect x="{X(17.5)}" y="{Y(108.6)}" width="{X(48.6)-X(17.5)}" height="{Y(115.8)-Y(108.6)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
-p.append(f'<rect x="{X(20.4)}" y="{Y(118.6)}" width="{X(51.5)-X(20.4)}" height="{Y(126.6)-Y(118.6)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
-p.append(f'<rect x="{X(3.4)}" y="{Y(119.8)}" width="{X(18.4)-X(3.4)}" height="{Y(127.2)-Y(119.8)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
+p.append(f'<rect x="{X(17.5)}" y="{Y(92.1)}" width="{X(48.6)-X(17.5)}" height="{Y(99.3)-Y(92.1)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
+p.append(f'<rect x="{X(20.4)}" y="{Y(102.1)}" width="{X(51.5)-X(20.4)}" height="{Y(110.1)-Y(102.1)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
+p.append(f'<rect x="{X(3.4)}" y="{Y(103.3)}" width="{X(18.4)-X(3.4)}" height="{Y(110.7)-Y(103.3)}" rx="1.5" fill="url(#PFX-grn)" stroke="#4f7a36" stroke-width="1"/>')
 for row, yy in ((UP, YU), (LO, YL), (RL, YR)):
     for t, lab, mm in row:
         p.append(slot_screw(X(mm), yy, 7.2 if row is RL else 6.4))
 # rótulos de la bornera (como en el manual: arriba la fila superior, abajo la inferior)
 for t, lab, mm in UP:
-    p.append(f'<text x="{X(mm)}" y="{Y(107.6)}" text-anchor="middle" {F} font-size="5.6" font-weight="800" fill="#e7eaed">{lab}</text>')
+    p.append(f'<text x="{X(mm)}" y="{Y(91.1)}" text-anchor="middle" {F} font-size="5.6" font-weight="800" fill="#e7eaed">{lab}</text>')
 # puerto RS-485 (RJ-45)
-p.append(f'<rect x="{X(51.9)}" y="{Y(114.6)}" width="{X(68.2)-X(51.9)}" height="{Y(127.4)-Y(114.6)}" rx="2" fill="url(#PFX-rj)" stroke="#3a3d41" stroke-width="1"/>')
-p.append(f'<rect x="{X(54.5)}" y="{Y(117.8)}" width="{X(65.6)-X(54.5)}" height="{Y(125.6)-Y(117.8)}" rx="1" fill="#1b1d20"/>')
-p.append(f'<text x="{X(60)}" y="{Y(116.9)}" text-anchor="middle" {F} font-size="5.5" font-weight="800" fill="#2b2e33">RS-485</text>')
+p.append(f'<rect x="{X(51.9)}" y="{Y(98.1)}" width="{X(68.2)-X(51.9)}" height="{Y(110.9)-Y(98.1)}" rx="2" fill="url(#PFX-rj)" stroke="#3a3d41" stroke-width="1"/>')
+p.append(f'<rect x="{X(54.5)}" y="{Y(101.3)}" width="{X(65.6)-X(54.5)}" height="{Y(109.1)-Y(101.3)}" rx="1" fill="#1b1d20"/>')
+p.append(f'<text x="{X(60)}" y="{Y(100.4)}" text-anchor="middle" {F} font-size="5.5" font-weight="800" fill="#2b2e33">RS-485</text>')
+for t, lab, mm in LO:
+    p.append(f'<text x="{X(mm)}" y="{YL+13}" text-anchor="middle" {F} font-size="5.6" font-weight="800" fill="#e7eaed">{lab}</text>')
+for t, lab, mm in RL:
+    p.append(f'<text x="{X(mm)}" y="{YR+15}" text-anchor="middle" {F} font-size="6" font-weight="800" fill="#e7eaed">{lab}</text>')
 # borde de la tapa inferior y ventilación
 p.append(f'<rect x="{X(2.9)}" y="{Y(129.4)}" width="{X(69.1)-X(2.9)}" height="{Y(133.5)-Y(129.4)}" fill="#64676b"/>')
 for k in range(10):
@@ -212,7 +219,7 @@ for k in range(10):
 
 # ---------------------------------------------------------------- abajo: motor, bus de CC y tierra
 p.append(f'<rect x="{OX+1}" y="{Y(141.2)}" width="{BW-2}" height="{Y(174)-Y(141.2)-1}" fill="url(#PFX-house)"/>')
-OUTS = [("U", "U/T1", 100), ("V", "V/T2", 140), ("W", "W/T3", 180), (None, "+", 220), (None, "−", 260)]
+OUTS = [("U", "U/T1", X(16)), ("V", "V/T2", X(26)), ("W", "W/T3", X(36)), (None, "+", X(46)), (None, "−", X(56))]
 for t, lab, cx in OUTS:
     p.append(f'<rect x="{cx-14}" y="{Y(142.6)}" width="28" height="{Y(159.8)-Y(142.6)}" rx="3" fill="#4b4e52" stroke="#2a2c2f" stroke-width="1"/>')
     p.append(screw(cx, Y(145.8), 8.5))
@@ -229,42 +236,66 @@ for mm in (19, 40):
 # muesca de fijación abajo a la derecha
 p.append(f'<path d="M{X(60)} {OY+BH}V{Y(164)}a7 7 0 0 1 14 0V{OY+BH}" fill="#2a2c2f"/>')
 
-# ---------------------------------------------------------------- cables de control con marcador
-# Cada borne de control baja a su lugar en el borde inferior: vertical hasta su
-# nivel en la tapa, horizontal hasta su columna (entre los bornes de potencia) y
-# vertical hasta el borde. Columnas libres: 20…80, 120, 160, 200, 240, 280, 300.
-LEADS = [("RA", 5.9, YR, 20), ("RB", 10.9, YR, 40), ("RC", 15.9, YR, 60), ("MI2", 22.9, YL, 80),
-         ("MI1", 25.2, YU, 120), ("MI4", 28.1, YL, 160), ("MI3", 30.4, YU, 200), ("MI6", 33.3, YL, 240),
-         ("MI5", 35.6, YU, 280), ("DCM", 38.5, YL, 300)]
-COLS = {"RA": "#d6d9dc", "RB": "#d6d9dc", "RC": "#d6d9dc", "DCM": "#2f6fd6"}
-nleft = sum(1 for _, mm, _, col in LEADS if col < X(mm))
-for k, (t, mm, ys, col) in enumerate(LEADS):
-    sx = X(mm)
-    # niveles: los que van a la izquierda bajan más cuanto más a la derecha están; los de la derecha, al revés
-    left = col < sx
-    i_left = [l for l in LEADS if l[3] < X(l[1])].index((t, mm, ys, col)) if left else None
-    lvl = Y(130.0) + (i_left * 4.2 if left else (len(LEADS) - 1 - k) * 4.2 + nleft * 0)
-    lvl = min(lvl, Y(140.6))
-    c = COLS.get(t, "#e9d36b" if t.startswith("MI") else "#d6d9dc")
-    d = f"M{sx:.1f} {ys:.1f}V{lvl:.1f}H{col}V{H}"
-    p.append(f'<path d="{d}" fill="none" stroke="#111" stroke-width="4.4" stroke-linejoin="round" opacity=".55"/>')
-    p.append(f'<path d="{d}" fill="none" stroke="{c}" stroke-width="2.6" stroke-linejoin="round"/>')
-    # marcador con el nombre del borne, antes del borde
-    p.append(f'<rect x="{col-9}" y="{H-31}" width="18" height="12" rx="2" fill="#f4f1e2" stroke="#6b6a5e" stroke-width=".8"/>')
-    p.append(f'<text x="{col}" y="{H-22}" text-anchor="middle" {F} font-size="{6 if len(t) > 2 else 6.5}" font-weight="800" fill="#2b2a24">{t}</text>')
-    p.append(jw_term(t, col, H - 10))
+# ---------------------------------------------------------------- cableado de control (solo si el borne tiene cable)
+# Orden por la posición del borne (de izquierda a derecha): carril más alto y
+# salida más a la izquierda para el primero; así ningún cable cruza a otro.
+LEADS = [("RA", 5.9, YR), ("RB", 10.9, YR), ("RC", 15.9, YR), ("+24V", 20.0, YU), ("MI2", 22.9, YL), ("MI1", 25.2, YU),
+         ("MI4", 28.1, YL), ("MI3", 30.4, YU), ("MI6", 33.3, YL), ("MI5", 35.6, YU), ("DCM", 38.5, YL)]
+COLOR = {"RA": "#d6d9dc", "RB": "#d6d9dc", "RC": "#d6d9dc", "+24V": "#d63a3a", "DCM": "#2f6fd6"}
+LANE0, LANE = Y(111.4), 5.0
+EXIT = lambda k: 20 + 20 * k
 
-# ---------------------------------------------------------------- RS-485: cable de red a la bornera SG+ SG-
-RJX, RJY = X(60), Y(126.4)
-p.append(f'<path d="M{RJX} {RJY}V{Y(131)}H330V{H-46}" fill="none" stroke="#111" stroke-width="7" stroke-linejoin="round" opacity=".5"/>')
-p.append(f'<path d="M{RJX} {RJY}V{Y(131)}H330V{H-46}" fill="none" stroke="#2f7fd6" stroke-width="5" stroke-linejoin="round"/>')
-p.append(f'<rect x="{RJX-7}" y="{RJY-6}" width="14" height="10" rx="1.5" fill="#cfe3f7" stroke="#2b5d96"/>')
-p.append(f'<rect x="312" y="{H-50}" width="44" height="40" rx="3" fill="#3a3d41" stroke="{INK}" stroke-width="1"/>')
-p.append(f'<text x="334" y="{H-40}" text-anchor="middle" {F} font-size="6" font-weight="800" fill="#d6d9dc">RS-485</text>')
-for t, cx in (("SG+", 320), ("SG-", 340)):
-    p.append(slot_screw(cx, H - 22, 6.2))
-    p.append(f'<text x="{cx}" y="{H-31}" text-anchor="middle" {F} font-size="5.5" font-weight="800" fill="#e9ebee">{t}</text>')
-    p.append(jw_term(t, cx, H - 22))
+
+def marker(t, col):
+    return (f'<rect x="{col-9}" y="{H-31}" width="18" height="12" rx="2" fill="#f4f1e2" stroke="#6b6a5e" stroke-width=".8"/>'
+            f'<text x="{col}" y="{H-22}" text-anchor="middle" {F} font-size="{5.6 if len(t) > 3 else 6.2}" font-weight="800" fill="#2b2a24">{t}</text>')
+
+
+for k, (t, mm, ys) in enumerate(LEADS):
+    sx, lane, col = X(mm), LANE0 + k * LANE, EXIT(k)
+    c = COLOR.get(t, "#e9d36b")
+    d = f"M{sx:.1f} {ys:.1f}V{lane:.1f}H{col}V{H}"
+    p.append(f'<g data-show="wired.{t}">'
+             f'<path d="{d}" fill="none" stroke="#111" stroke-width="4.2" stroke-linejoin="round" opacity=".5"/>'
+             f'<path d="{d}" fill="none" stroke="{c}" stroke-width="2.6" stroke-linejoin="round"/>'
+             f'<circle cx="{sx:.1f}" cy="{ys:.1f}" r="2.6" fill="{c}" stroke="#111" stroke-width=".8"/>{marker(t, col)}</g>')
+for k, (t, mm, ys) in enumerate(LEADS):
+    p.append(jw_term(t, EXIT(k), H - 10))
+
+# RS-485: par trenzado desde el RJ-45 (SG+ amarillo, SG- azul).
+kp = len(LEADS)
+c1, c2 = EXIT(kp), EXIT(kp + 1)
+mid = (c1 + c2) / 2
+lane = LANE0 + kp * LANE + 3
+path = [(X(60), Y(110.9)), (X(60), lane), (mid, lane), (mid, H - 40)]
+
+
+def twisted(sign, amp=3.0, per=24.0):
+    """Hebra del par: la línea media con un vaivén senoidal (sign = ±1)."""
+    pts, s0 = [], 0.0
+    for (x0, y0), (x1, y1) in zip(path, path[1:]):
+        L = math.hypot(x1 - x0, y1 - y0)
+        nx, ny = -(y1 - y0) / L, (x1 - x0) / L
+        n = max(2, int(L / 2))
+        for i in range(n):
+            u = i / n
+            o = sign * amp * math.sin(2 * math.pi * (s0 + u * L) / per)
+            pts.append((x0 + (x1 - x0) * u + nx * o, y0 + (y1 - y0) * u + ny * o))
+        s0 += L
+    pts.append(path[-1])
+    return "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
+
+
+p.append('<g data-show="wired.SG+|wired.SG-">')
+for sign, col, colr in ((1, c1, "#f2cf1d"), (-1, c2, "#2f8be0")):
+    d = twisted(sign) + f" L{col} {H-30}V{H}"
+    p.append(f'<path d="{d}" fill="none" stroke="#111" stroke-width="3.8" stroke-linejoin="round" opacity=".45"/>'
+             f'<path d="{d}" fill="none" stroke="{colr}" stroke-width="2.4" stroke-linejoin="round"/>')
+p.append(f'<rect x="{X(60)-7}" y="{Y(110.9)-5}" width="14" height="9" rx="1.5" fill="#cfe3f7" stroke="#2b5d96"/>')
+p.append(marker("SG+", c1) + marker("SG-", c2) + '</g>')
+p.append(jw_term("SG+", c1, H - 10))
+p.append(jw_term("SG-", c2, H - 10))
+
 
 # aviso de referencia sin modelar (AVI/ACI)
 p.append(f'<g data-show="out.aviso"><rect x="{X(3.2)}" y="{Y(78.4)}" width="{X(68.8)-X(3.2)}" height="14" rx="3" fill="#ffd400" stroke="#8a6d00"/>'

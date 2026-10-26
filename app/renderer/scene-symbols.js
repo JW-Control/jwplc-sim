@@ -46,7 +46,7 @@
     "motor-3ph": [160, 140, ["U1", "V1", "W1", "PE"], []],
     "motor-2v": [200, 140, ["1U", "1V", "1W", "2U", "2V", "2W", "PE"], []],
     "overload-relay": [160, 160, ["1", "3", "5", "95", "97"], ["2", "4", "6", "96", "98"]],
-    "vfd-el": [360, 220, ["R", "S", "PE"], ["RA", "RB", "RC", "MI2", "U", "MI1", "V", "MI4", "W", "MI3", "MI6", "MI5", "DCM", "+24V", "SG+", "SG-"]],
+    "vfd-el": [580, 220, ["R", "S", "PE"], ["RA", "RB", "RC", "+24V", "MI2", "MI1", "MI4", "MI3", "MI6", "MI5", "DCM", "SG+", "SG-", "U", "V", "W"]],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -155,7 +155,9 @@
     const [ns, key] = path.replace(/^!/, "").split(".");
     let v =
       ns === "out" ? ctx.o[key] : ns === "param" ? ctx.p[key] : ns === "contact" ? ctx.st.contacts?.[key] :
-      ns === "damaged" ? !!ctx.st.damaged?.length : ns === "tripped" ? !!ctx.st.tripped : undefined;
+      ns === "damaged" ? !!ctx.st.damaged?.length : ns === "tripped" ? !!ctx.st.tripped :
+      // wired.<borne>: hay un cable en ese borne (sin cable: sin valor, para "a|b").
+      ns === "wired" ? (ctx.wired.has(key) ? true : undefined) : undefined;
     if (cmp !== undefined) v = String(v) === cmp;
     return path.startsWith("!") ? !v : v;
   }
@@ -202,7 +204,7 @@
   }
 
   function drawTemplate(tpl, st, p) {
-    const ctx = { o: st.outputs ?? {}, p, st };
+    const ctx = { o: st.outputs ?? {}, p, st, wired: new Set(st.wired ?? []) };
     const root = tpl.svg.cloneNode(true);
     for (const el of root.querySelectorAll(".jw-term")) el.setAttribute("opacity", "0");
     for (const el of root.querySelectorAll("[data-show]")) {
