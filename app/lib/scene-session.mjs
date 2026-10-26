@@ -3,8 +3,11 @@
 // Co-simulación interactiva placa ↔ escena en la app (G7). Mismo lazo de
 // horizontes que cli/lib/cosim.mjs (ARCHITECTURE §6.6), pero dirigido por
 // los mensajes del runner y con las acciones del usuario: un clic en un
-// pulsador se aplica en el próximo horizonte (a lo sumo `stepNs` de tiempo
-// virtual después), fechado en ese instante. Las entradas que la escena manda
+// pulsador se aplica en el próximo horizonte, fechado en ese instante. Los
+// horizontes miden `stepNs` de tiempo virtual a ×1 y se alargan con la
+// velocidad (cada uno es una ida y vuelta con el runner, que en la app cuesta
+// milisegundos de pared); una acción del usuario corta el horizonte en curso
+// ("yield") para aplicarse enseguida. Las entradas que la escena manda
 // a la placa pasan por "set", así quedan en la grabación de la sesión (G3) y
 // la reproducción da el mismo hash sin la escena.
 import { EventEmitter } from "node:events";
@@ -31,6 +34,9 @@ export class SceneSession extends EventEmitter {
   #queue = [];
   #timer = null;
   #started = false;
+  #speed = 1;
+  #running = false;   // horizonte pedido y sin respuesta del runner
+  #yielded = false;
 
   /**
    * @param {import("./sim-port.mjs").RunnerProcess} runner
@@ -49,22 +55,43 @@ export class SceneSession extends EventEmitter {
     runner.on("message", this.onMessage);
   }
 
+  /** Velocidad pedida al runner (0 = la máxima): fija el largo de los horizontes. */
+  setSpeed(speed) {
+    this.#speed = Number(speed) >= 0 ? Number(speed) : 1;
+  }
+
+  /** Largo del horizonte: `stepNs` a ×1 o menos, proporcional por encima y 1 s virtual a la máxima. */
+  spanNs() {
+    const k = this.#speed > 0 ? Math.max(1, this.#speed) : 100;
+    return this.stepNs * BigInt(Math.round(k));
+  }
+
   /** Acción del usuario (se aplica en el próximo horizonte). */
   act(device, action, value) {
-    this.#queue.push({ device, action, value });
+    this.#enqueue({ device, action, value });
   }
 
   rearm() {
-    this.#queue.push({ rearm: true });
+    this.#enqueue({ rearm: true });
   }
 
   /** Falla inyectada (G9): stuck, welded, burnt u open (ver Scene.inject). */
   inject(fault) {
-    this.#queue.push({ inject: fault });
+    this.#enqueue({ inject: fault });
   }
 
   clearFault(key) {
-    this.#queue.push({ clear: key });
+    this.#enqueue({ clear: key });
+  }
+
+  #enqueue(op) {
+    this.#queue.push(op);
+    // Con horizontes largos, el runner corta el actual en el instante en que
+    // recibe el pedido; a ×1 el próximo horizonte llega en ≤ stepNs.
+    if (this.#running && !this.#yielded && this.spanNs() > this.stepNs) {
+      this.#yielded = true;
+      this.runner.send({ type: "yield" });
+    }
   }
 
   stop() {
@@ -77,11 +104,13 @@ export class SceneSession extends EventEmitter {
   }
 
   #next() {
-    let h = this.scene.t + this.stepNs;
+    let h = this.scene.t + this.spanNs();
     const ne = this.scene.nextEvent();
     if (ne !== undefined && ne < h) h = ne;
     const le = this.link?.nextEvent();
     if (le !== undefined && le > this.scene.t && le < h) h = le;
+    this.#running = true;
+    this.#yielded = false;
     this.runner.send({ type: "horizon", until_ns: String(h) });
   }
 
@@ -124,6 +153,7 @@ export class SceneSession extends EventEmitter {
       return;
     }
     if (m.type !== "horizon") return;
+    this.#running = false;
     const at = BigInt(m.t_ns);
     if (m.reason === "output") this.scene.setSignals(Object.fromEntries(m.changes), at);
     else this.scene.advanceTo(at);

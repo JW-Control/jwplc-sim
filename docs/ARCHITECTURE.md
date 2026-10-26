@@ -627,8 +627,15 @@ Implementación:
   Nada depende del reloj de pared: el hash de traza es el mismo con
   cualquier tamaño de horizonte (verificado en G7).
 - **App** (`app/lib/scene-session.mjs`). Horizonte máximo de 10 ms
-  virtuales: un clic en un pulsador se aplica en el próximo horizonte,
-  fechado en ese instante. Las entradas que manda la escena pasan por
+  virtuales a ×1, proporcional a la velocidad por encima (100 ms a ×10) y
+  de 1 s a la máxima: cada horizonte es una ida y vuelta por la IPC de la
+  app (milisegundos de pared), así que horizontes fijos de 10 ms topaban
+  ×10 y la máxima en ×2–3. Un clic en un pulsador manda `yield`, que corta
+  el horizonte en curso, y se aplica en ese horizonte, fechado en ese
+  instante. A ×1 el runner no reancla su reloj de pared en cada horizonte:
+  la demora de la escena se recupera en los tramos siguientes (antes se
+  perdía y ×1 corría al 70–80 % con 2–4 ms de ida y vuelta). Las entradas
+  que manda la escena pasan por
   `set`, quedan en la grabación de la sesión (G3) y la reproducción da el
   mismo hash sin la escena.
 - **Dispositivos nativos** (SDK, `sim/runner/native_device.cpp`). Corren
@@ -686,6 +693,7 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 | runner→UI | `fatal` | API no soportada, `esp_restart`, assert, crash |
 | UI→runner | `scene` | **[G7]** `{on, watch}`: co-simulación con la escena; el runner solo avanza hasta el horizonte |
 | ambos | `horizon` | **[G7]** UI→runner `{until_ns}`; runner→UI `{t_ns, reason: output\|until, changes}` (§6.6) |
+| UI→runner | `yield` | corta el horizonte en curso en el instante actual (acción del usuario en la escena, §6.6) |
 
 Implementado en G2 **[G2]**: `hello` (placa y nivel de cada señal), `run`
 con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,

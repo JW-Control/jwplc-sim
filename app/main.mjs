@@ -577,6 +577,7 @@ ipcMain.handle("scene:rearm", () => {
 });
 
 ipcMain.handle("sim:command", (_e, msg) => {
+  if (msg?.type === "run" && msg.speed !== undefined) sceneSession?.setSpeed(msg.speed);
   runner?.send(msg);
   return !!runner;
 });

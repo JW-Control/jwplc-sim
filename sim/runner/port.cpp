@@ -32,6 +32,9 @@
 //                   Con "rs485" activo, un byte transmitido por la UART
 //                   enlazada también corta el horizonte ("uart"): los
 //                   esclavos Modbus de la escena responden a tiempo (G9).
+//                 {"type":"yield"} corta el horizonte en curso en el instante
+//                   actual ("until"): una acción del usuario en la escena se
+//                   aplica sin esperar el resto de un horizonte largo.
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
@@ -632,8 +635,12 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
     } else if (type == "horizon") {
       scene_until = f.count("until_ns") ? static_cast<jwsim_ns_t>(std::strtoull(f.at("until_ns").c_str(), nullptr, 10)) : 0;
       scene_wait = false;
-      base_t = jwsim_now();
-      base_wall = Clock::now();
+      // El ancla de pared (base_t, base_wall) no se mueve: el tiempo que la
+      // escena tardó en responder se recupera en los tramos siguientes. Si se
+      // reanclara en cada horizonte, esa demora se perdería cada 10 ms
+      // virtuales (con 3 ms de ida y vuelta, ×1 corría al 77 %).
+    } else if (type == "yield") {
+      if (scene_on && !scene_wait && scene_until > jwsim_now()) scene_until = jwsim_now();
     } else if (type == "rs485") {
       link_port = f.count("on") && f.at("on") == "1" ? (f.count("port") ? std::atoi(f.at("port").c_str()) : 2) : -1;
     } else if (type == "uart_rx") {
