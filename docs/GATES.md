@@ -63,7 +63,8 @@ JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones co
 JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)
 JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
                                     (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
-JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (símbolos v2: 17 de 21 plantillas; faltan fotoeléctrico, relé, electroválvula y motor)
+JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (símbolos v2: 18 de 21 plantillas; electroválvula Airtac 4V210 + MBL20 propuesta 26/10,
+                                     por aprobar; faltan fotoeléctrico, relé y motor)
 JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)

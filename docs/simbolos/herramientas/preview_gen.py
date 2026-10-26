@@ -11,10 +11,13 @@ COL = {"verde": "#2fbf5a", "rojo": "#e2342b", "amarillo": "#f2c230", "azul": "#2
 JS = """(()=>{const COL=%s;
 document.querySelectorAll('.case').forEach(c=>{
  const st=JSON.parse(c.dataset.st);
- const ev=e=>{if(e.startsWith('!'))return !ev(e.slice(1)); if(e.includes('=')){const[a,b]=e.split('=');return String(st[a])===b;} return st[e];};
+ const ev=e=>{if(e.startsWith('!'))return !ev(e.slice(1)); if(e.includes('=')){const[a,b]=e.split('=');return String(st[a])===b;} if(e.includes('>')){const[a,b]=e.split('>');return Number(st[a])>Number(b);} if(e.includes('<')){const[a,b]=e.split('<');return Number(st[a])<Number(b);} return st[e];};
  c.querySelectorAll('[data-show]').forEach(n=>{if(!ev(n.dataset.show))n.style.display='none'});
  c.querySelectorAll('[data-fill]').forEach(n=>n.setAttribute('fill',COL[ev(n.dataset.fill)]||ev(n.dataset.fill)));
  c.querySelectorAll('[data-text]').forEach(n=>n.textContent=ev(n.dataset.text));
+ c.querySelectorAll('[data-translate]').forEach(n=>{const[e,v0,v1,ax,d]=n.dataset.translate.split(':');
+   const v=Number(ev(e)||0),t=Math.max(0,Math.min(1,(v-v0)/(v1-v0))),k=Number(d)*t;
+   n.setAttribute('transform',ax==='x'?`translate(${k} 0)`:`translate(0 ${k})`);});
  c.querySelectorAll('[data-rotate]').forEach(n=>{const[e,v0,v1,a0,a1,cx,cy]=n.dataset.rotate.split(':');
    const v=Number(ev(e)||0),t=(v-v0)/(v1-v0),a=Number(a0)+(a1-a0)*Math.max(0,Math.min(1,t));
    n.setAttribute('transform',`rotate(${a} ${cx} ${cy})`);});

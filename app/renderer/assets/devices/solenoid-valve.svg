@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Electrovalvula Airtac 4V210-08 (5/2 monoestable, conector DIN) con cilindro Airtac MBL20x100-CA, vista frontal segun fotos y catalogos del fabricante. Escala de campo 2 px/mm. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380">
+<defs>
+<linearGradient id="solenoid-valve-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="solenoid-valve-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="solenoid-valve-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="solenoid-valve-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="solenoid-valve-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="solenoid-valve-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="solenoid-valve-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="solenoid-valve-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="solenoid-valve-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="solenoid-valve-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="solenoid-valve-alu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa1a8"/><stop offset=".2" stop-color="#f1f3f5"/><stop offset=".45" stop-color="#d3d8dd"/><stop offset=".8" stop-color="#a7aeb5"/><stop offset="1" stop-color="#6e757c"/></linearGradient>
+<linearGradient id="solenoid-valve-bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9b0b6"/><stop offset=".25" stop-color="#eceff2"/><stop offset=".55" stop-color="#d7dbdf"/><stop offset=".85" stop-color="#b0b6bc"/><stop offset="1" stop-color="#80878e"/></linearGradient>
+<linearGradient id="solenoid-valve-rod" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7b838b"/><stop offset=".3" stop-color="#ffffff"/><stop offset=".55" stop-color="#c4cad0"/><stop offset="1" stop-color="#5f666d"/></linearGradient>
+<linearGradient id="solenoid-valve-nut" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f969d"/><stop offset=".3" stop-color="#e9ecef"/><stop offset=".6" stop-color="#b3bac1"/><stop offset="1" stop-color="#5d646b"/></linearGradient>
+<linearGradient id="solenoid-valve-blkv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3c4046"/><stop offset=".3" stop-color="#25282c"/><stop offset="1" stop-color="#101113"/></linearGradient>
+<linearGradient id="solenoid-valve-plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f1ec"/><stop offset="1" stop-color="#d9dad3"/></linearGradient>
+<linearGradient id="solenoid-valve-din" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a5f66" stop-opacity=".92"/><stop offset=".5" stop-color="#2e3237" stop-opacity=".88"/><stop offset="1" stop-color="#1a1c1f" stop-opacity=".95"/></linearGradient>
+<linearGradient id="solenoid-valve-brz" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a6a3a"/><stop offset=".4" stop-color="#d2b27a"/><stop offset="1" stop-color="#7a5a2c"/></linearGradient>
+<radialGradient id="solenoid-valve-led" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6d8"/><stop offset=".4" stop-color="#ffb020"/><stop offset="1" stop-color="#ffb020" stop-opacity="0"/></radialGradient>
+<radialGradient id="solenoid-valve-soot" cx=".5" cy=".55" r=".6"><stop offset="0" stop-color="#140f0b" stop-opacity=".92"/><stop offset=".6" stop-color="#2a2019" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<pattern id="solenoid-valve-sint" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#b8955c"/><circle cx="1" cy="1" r=".7" fill="#7a5a2c"/><circle cx="2.4" cy="2.2" r=".5" fill="#e0c48f"/></pattern>
+</defs>
+<g data-translate="out.position:0:1:x:200">
+<rect x="222" y="48" width="280" height="16" fill="url(#solenoid-valve-rod)" stroke="#4b5157" stroke-width=".9"/>
+<line x1="463.0" y1="49" x2="464.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="465.5" y1="49" x2="467.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="468.0" y1="49" x2="469.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="470.5" y1="49" x2="472.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="473.0" y1="49" x2="474.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="475.5" y1="49" x2="477.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="478.0" y1="49" x2="479.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="480.5" y1="49" x2="482.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="483.0" y1="49" x2="484.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="485.5" y1="49" x2="487.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="488.0" y1="49" x2="489.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="490.5" y1="49" x2="492.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="493.0" y1="49" x2="494.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="495.5" y1="49" x2="497.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="498.0" y1="49" x2="499.6" y2="63" stroke="#59606a" stroke-width=".8"/>
+<line x1="500.5" y1="49" x2="502.1" y2="63" stroke="#59606a" stroke-width=".8"/>
+<rect x="500" y="49" width="2" height="14" fill="#8f969d"/>
+<rect x="466" y="41.0" width="12" height="30" rx="1.5" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".9"/>
+<line x1="466" y1="47.6" x2="478" y2="47.6" stroke="#5d646b" stroke-width=".8"/>
+<line x1="466" y1="64.4" x2="478" y2="64.4" stroke="#5d646b" stroke-width=".8"/>
+</g>
+<rect x="422" y="34" width="52" height="44" fill="url(#solenoid-valve-rod)" stroke="#4b5157" stroke-width=".9"/>
+<line x1="438.0" y1="35" x2="440.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="441.0" y1="35" x2="443.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="444.0" y1="35" x2="446.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="447.0" y1="35" x2="449.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="450.0" y1="35" x2="452.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="453.0" y1="35" x2="455.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="456.0" y1="35" x2="458.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="459.0" y1="35" x2="461.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="462.0" y1="35" x2="464.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="465.0" y1="35" x2="467.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="468.0" y1="35" x2="470.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<line x1="471.0" y1="35" x2="473.0" y2="77" stroke="#5d646b" stroke-width=".9"/>
+<rect x="424" y="22.6" width="14" height="66.8" rx="2" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width="1"/>
+<line x1="424" y1="39.3" x2="438" y2="39.3" stroke="#5d646b" stroke-width=".9"/>
+<line x1="424" y1="72.7" x2="438" y2="72.7" stroke="#5d646b" stroke-width=".9"/>
+<rect x="82" y="29.0" width="31.0" height="54" rx="3" fill="url(#solenoid-valve-alu)" stroke="#4f565c" stroke-width="1"/>
+<line x1="84" y1="33.0" x2="111.0" y2="33.0" stroke="#fff" stroke-width="1.4" opacity=".7"/>
+<rect x="391.0" y="29.0" width="31.0" height="54" rx="3" fill="url(#solenoid-valve-alu)" stroke="#4f565c" stroke-width="1"/>
+<line x1="393.0" y1="33.0" x2="420.0" y2="33.0" stroke="#fff" stroke-width="1.4" opacity=".7"/>
+<rect x="111.0" y="31.0" width="282.0" height="50" fill="url(#solenoid-valve-bar)" stroke="#5d646b" stroke-width="1"/>
+<line x1="118.0" y1="32.0" x2="118.0" y2="80.0" stroke="#8f969d" stroke-width="1.6"/>
+<line x1="386.0" y1="32.0" x2="386.0" y2="80.0" stroke="#8f969d" stroke-width="1.6"/>
+<rect x="192.0" y="41" width="120" height="30" rx="1.5" fill="#fbfbfb" stroke="#c9cdd2" stroke-width=".7"/>
+<text x="198.0" y="53" font-family="sans-serif" font-size="11" font-weight="900" font-style="italic" fill="#1f5fc8">AirTAC</text>
+<text x="248.0" y="53" font-family="sans-serif" font-size="8" font-weight="700" fill="#38b2a6">CYLINDER</text>
+<text x="198.0" y="66" font-family="sans-serif" font-size="7.5" fill="#2b2f35">MODEL: MBL20X100CA</text>
+<rect x="40" y="38" width="44" height="36" rx="2" fill="url(#solenoid-valve-rod)" stroke="#4b5157" stroke-width=".9"/>
+<line x1="66.0" y1="39" x2="68.0" y2="73" stroke="#5d646b" stroke-width=".9"/>
+<line x1="69.0" y1="39" x2="71.0" y2="73" stroke="#5d646b" stroke-width=".9"/>
+<line x1="72.0" y1="39" x2="74.0" y2="73" stroke="#5d646b" stroke-width=".9"/>
+<line x1="75.0" y1="39" x2="77.0" y2="73" stroke="#5d646b" stroke-width=".9"/>
+<line x1="78.0" y1="39" x2="80.0" y2="73" stroke="#5d646b" stroke-width=".9"/>
+<circle cx="52" cy="56" r="8" fill="#1d2023" stroke="#4b5157" stroke-width="1"/>
+<circle cx="50.5" cy="54.5" r="5" fill="#2f3439"/>
+<line x1="30" y1="56" x2="40" y2="56" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>
+<path d="M163.0 196 L163.0 144.0 Q163.0 132 151.0 132.0 L109.0 132.0 Q97.0 132 97.0 120.0 L97.0 62" fill="none" stroke="#1a3a66" stroke-width="14" stroke-linejoin="round"/>
+<g data-show="out.energized"><path d="M163.0 196 L163.0 144.0 Q163.0 132 151.0 132.0 L109.0 132.0 Q97.0 132 97.0 120.0 L97.0 62" fill="none" stroke="#1f6fe0" stroke-width="11" stroke-linejoin="round"/><path d="M163.0 196 L163.0 144.0 Q163.0 132 151.0 132.0 L109.0 132.0 Q97.0 132 97.0 120.0 L97.0 62" fill="none" stroke="#9cc7ff" stroke-width="2" stroke-dasharray="10 8" stroke-linejoin="round"/></g>
+<g data-show="!out.energized"><path d="M163.0 196 L163.0 144.0 Q163.0 132 151.0 132.0 L109.0 132.0 Q97.0 132 97.0 120.0 L97.0 62" fill="none" stroke="#7fa6d6" stroke-width="11" stroke-linejoin="round"/></g>
+<path d="M163.0 196 L163.0 144.0 Q163.0 132 151.0 132.0 L109.0 132.0 Q97.0 132 97.0 120.0 L97.0 62" fill="none" stroke="#ffffff" stroke-width="1.6" opacity=".35" transform="translate(-3 0)" stroke-linejoin="round"/>
+<path d="M206 196 L206.0 124.0 Q206 112 218.0 112.0 L395.0 112.0 Q407.0 112 407.0 100.0 L407.0 62" fill="none" stroke="#1a3a66" stroke-width="14" stroke-linejoin="round"/>
+<g data-show="!out.energized"><path d="M206 196 L206.0 124.0 Q206 112 218.0 112.0 L395.0 112.0 Q407.0 112 407.0 100.0 L407.0 62" fill="none" stroke="#1f6fe0" stroke-width="11" stroke-linejoin="round"/><path d="M206 196 L206.0 124.0 Q206 112 218.0 112.0 L395.0 112.0 Q407.0 112 407.0 100.0 L407.0 62" fill="none" stroke="#9cc7ff" stroke-width="2" stroke-dasharray="10 8" stroke-linejoin="round"/></g>
+<g data-show="!!out.energized"><path d="M206 196 L206.0 124.0 Q206 112 218.0 112.0 L395.0 112.0 Q407.0 112 407.0 100.0 L407.0 62" fill="none" stroke="#7fa6d6" stroke-width="11" stroke-linejoin="round"/></g>
+<path d="M206 196 L206.0 124.0 Q206 112 218.0 112.0 L395.0 112.0 Q407.0 112 407.0 100.0 L407.0 62" fill="none" stroke="#ffffff" stroke-width="1.6" opacity=".35" transform="translate(-3 0)" stroke-linejoin="round"/>
+<path d="M184 294 V380" fill="none" stroke="#1a3a66" stroke-width="14" stroke-linejoin="round"/>
+<path d="M184 294 V380" fill="none" stroke="#1f6fe0" stroke-width="11"/><path d="M184 294 V380" fill="none" stroke="#9cc7ff" stroke-width="2" stroke-dasharray="10 8"/>
+<circle cx="97.0" cy="56" r="10" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width="1"/><circle cx="97.0" cy="56" r="7" fill="#2f86e8" stroke="#16467e" stroke-width="1"/><circle cx="97.0" cy="56" r="3.5" fill="#0d2c55"/>
+<circle cx="407.0" cy="56" r="10" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width="1"/><circle cx="407.0" cy="56" r="7" fill="#2f86e8" stroke="#16467e" stroke-width="1"/><circle cx="407.0" cy="56" r="3.5" fill="#0d2c55"/>
+<rect x="122" y="214" width="234" height="70" rx="4" fill="#000" opacity=".25"/>
+<rect x="120" y="212" width="14" height="66" rx="3" fill="url(#solenoid-valve-blkv)" stroke="#000" stroke-width="1"/>
+<circle cx="124" cy="276" r="3.2" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".7"/>
+<rect x="130" y="210" width="106" height="70" fill="url(#solenoid-valve-plate)" stroke="#8f948c" stroke-width="1"/>
+<rect x="220" y="211" width="12" height="6" fill="#c9cbc4"/>
+<text x="163.0" y="221" text-anchor="middle" font-family="serif" font-size="8" fill="#2b2f35">A</text>
+<text x="206" y="221" text-anchor="middle" font-family="serif" font-size="8" fill="#2b2f35">B</text>
+<circle cx="184.5" cy="218" r="2.6" fill="#9aa0a6" stroke="#3f454b" stroke-width=".6"/>
+<text x="136" y="234" font-family="sans-serif" font-size="11" font-weight="900" font-style="italic" fill="#1f5fc8">AirTAC</text>
+<text x="191" y="233" font-family="serif" font-size="6.5" fill="#1f5fc8">VALVE</text>
+<line x1="135" y1="238" x2="228" y2="238" stroke="#e46a2c" stroke-width="1.2"/>
+<text x="136" y="247" font-family="serif" font-size="7" fill="#2b2f35">Model: 4V210-08</text>
+<text x="136" y="256" font-family="serif" font-size="6" fill="#2b2f35">0.15~0.8MPa</text>
+<g stroke="#2b2f35" stroke-width=".7" fill="none"><rect x="192" y="249" width="11" height="7"/><rect x="203" y="249" width="11" height="7"/><path d="M192 252.5l-2 -2l-2 4l-2 -4l-1 2"/><rect x="214" y="250.5" width="5" height="4"/><path d="M194 256l7 -7M205 249l7 7M205 256l7 -7"/></g>
+<text x="137" y="276" text-anchor="middle" font-family="serif" font-size="8" fill="#2b2f35">R</text>
+<text x="184" y="276" text-anchor="middle" font-family="serif" font-size="8" fill="#2b2f35">P</text>
+<text x="230.0" y="276" text-anchor="middle" font-family="serif" font-size="8" fill="#2b2f35">S</text>
+<circle cx="174" cy="264" r="3.4" fill="#4b5057" stroke="#2b2f35" stroke-width=".6"/>
+<circle cx="194" cy="264" r="3.4" fill="#4b5057" stroke="#2b2f35" stroke-width=".6"/>
+<rect x="236" y="210" width="46" height="70" fill="url(#solenoid-valve-blkv)" stroke="#000" stroke-width="1"/>
+<rect x="247" y="204" width="10" height="7" rx="2" fill="#e8262c" stroke="#7a1014" stroke-width=".8"/>
+<rect x="249" y="205" width="4" height="2" rx="1" fill="#ff8a8e" opacity=".8"/>
+<rect x="279" y="208" width="5" height="74" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".7"/>
+<rect x="284" y="208" width="70" height="74" rx="5" fill="url(#solenoid-valve-blkv)" stroke="#000" stroke-width="1"/>
+<rect x="352" y="231.0" width="12" height="28" rx="3" fill="#202326" stroke="#000" stroke-width=".8"/>
+<line x1="354" y1="234.0" x2="363" y2="234.0" stroke="#4b5057" stroke-width="1.2"/>
+<line x1="354" y1="239.5" x2="363" y2="239.5" stroke="#4b5057" stroke-width="1.2"/>
+<line x1="354" y1="245.0" x2="363" y2="245.0" stroke="#4b5057" stroke-width="1.2"/>
+<line x1="354" y1="250.5" x2="363" y2="250.5" stroke="#4b5057" stroke-width="1.2"/>
+<line x1="354" y1="256.0" x2="363" y2="256.0" stroke="#4b5057" stroke-width="1.2"/>
+<g data-show="param.coil=24VDC">
+<text transform="translate(334 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">DC24V  3.0W</text>
+<text transform="translate(323 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">Voltage range:</text>
+<text transform="translate(312 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">DC21.6V~26.4V</text>
+<text transform="translate(301 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">100%ED</text>
+</g>
+<g data-show="param.coil=230VAC">
+<text transform="translate(334 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">AC220V  4.5VA</text>
+<text transform="translate(323 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">Voltage range:</text>
+<text transform="translate(312 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">AC187V~253V</text>
+<text transform="translate(301 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">50/60Hz</text>
+</g>
+<text transform="translate(290 214) rotate(90)" font-family="sans-serif" font-size="8" font-weight="700" fill="#e8eaed">IP65</text>
+<text x="294" y="274" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="700" fill="#e8eaed">CE</text>
+<rect x="284" y="146" width="66" height="68" rx="5" fill="url(#solenoid-valve-din)" stroke="#0b0c0e" stroke-width="1"/>
+<rect x="292" y="154" width="50" height="46" rx="4" fill="none" stroke="#6b7179" stroke-width="1.2" opacity=".8"/>
+<text x="317.0" y="178" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="900" font-style="italic" fill="#777d85" opacity=".9">AirTAC</text>
+<line x1="300" y1="162" x2="334" y2="162" stroke="#6b7179" stroke-width="1.2" opacity=".7"/>
+<line x1="300" y1="166" x2="334" y2="166" stroke="#6b7179" stroke-width="1.2" opacity=".7"/>
+<line x1="300" y1="190" x2="334" y2="190" stroke="#6b7179" stroke-width="1.2" opacity=".7"/>
+<g data-show="!out.energized"><circle cx="298" cy="202" r="3" fill="#5a3a12" stroke="#000" stroke-width=".5"/></g>
+<g data-show="out.energized"><circle cx="298" cy="202" r="13" fill="url(#solenoid-valve-led)"/><circle cx="298" cy="202" r="3.2" fill="#ffd36b"/><rect x="286" y="148" width="62" height="62" rx="4" fill="#ffb020" opacity=".12"/></g>
+<rect x="348" y="153" width="18" height="26" rx="3" fill="url(#solenoid-valve-blkv)" stroke="#000" stroke-width="1"/>
+<rect x="364" y="155" width="12" height="22" rx="4" fill="#202326" stroke="#000" stroke-width="1"/>
+<line x1="366.0" y1="156" x2="366.0" y2="176" stroke="#3c4046" stroke-width="1"/>
+<line x1="368.6" y1="156" x2="368.6" y2="176" stroke="#3c4046" stroke-width="1"/>
+<line x1="371.2" y1="156" x2="371.2" y2="176" stroke="#3c4046" stroke-width="1"/>
+<line x1="373.8" y1="156" x2="373.8" y2="176" stroke="#3c4046" stroke-width="1"/>
+<g data-show="damaged"><ellipse cx="318.0" cy="224.0" rx="54.0" ry="74.0" fill="url(#solenoid-valve-soot)"/><path d="M294 150 q8 10 0 18 q-6 8 4 16" fill="none" stroke="#120c08" stroke-width="3" opacity=".8"/><text x="318.0" y="298" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#e05a4a">BOBINA CORTADA</text></g>
+<rect x="155.0" y="204" width="16" height="6" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".8"/>
+<rect x="154.0" y="196" width="18" height="8" rx="1.5" fill="#2f86e8" stroke="#16467e" stroke-width=".9"/>
+<rect x="198" y="204" width="16" height="6" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".8"/>
+<rect x="197" y="196" width="18" height="8" rx="1.5" fill="#2f86e8" stroke="#16467e" stroke-width=".9"/>
+<rect x="176" y="280" width="16" height="6" fill="url(#solenoid-valve-nut)" stroke="#3f454b" stroke-width=".8"/>
+<rect x="175" y="286" width="18" height="8" rx="1.5" fill="#2f86e8" stroke="#16467e" stroke-width=".9"/>
+<rect x="140" y="280" width="12" height="5" fill="url(#solenoid-valve-brz)" stroke="#5a4020" stroke-width=".7"/>
+<rect x="138" y="285" width="16" height="6" rx="1" fill="url(#solenoid-valve-brz)" stroke="#5a4020" stroke-width=".7"/>
+<path d="M137 291 H155 V314 Q146 320 137 314 Z" fill="url(#solenoid-valve-sint)" stroke="#5a4020" stroke-width=".8"/>
+<rect x="215.0" y="280" width="12" height="5" fill="url(#solenoid-valve-brz)" stroke="#5a4020" stroke-width=".7"/>
+<rect x="213.0" y="285" width="16" height="6" rx="1" fill="url(#solenoid-valve-brz)" stroke="#5a4020" stroke-width=".7"/>
+<path d="M212.0 291 H230.0 V314 Q221.0 320 212.0 314 Z" fill="url(#solenoid-valve-sint)" stroke="#5a4020" stroke-width=".8"/>
+<text x="196" y="370" font-family="sans-serif" font-size="9" font-weight="700" fill="#4a90e2">P · aire 0,15–0,8 MPa</text>
+<path d="M376 166 L384.0 166.0 Q400 166 400.0 182.0 L400 300" fill="none" stroke="#0c0d0f" stroke-width="13" stroke-linecap="round"/>
+<path d="M376 166 L384.0 166.0 Q400 166 400.0 182.0 L400 300" fill="none" stroke="#33373d" stroke-width="9" stroke-linecap="round"/>
+<path d="M398.0 300 C400 318 420 308 420 330 V366" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M398.0 300 C400 318 420 308 420 330 V366" fill="none" stroke="#1b1d20" stroke-width="3.4"/>
+<rect x="414" y="328" width="12" height="10" rx="2" fill="#f4f5f7" stroke="#8a9099" stroke-width=".6"/>
+<text x="420" y="336" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">1</text>
+<rect x="416" y="356" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="415" y="376" width="10" height="4" fill="#16181b"/>
+<text x="428" y="352" font-family="sans-serif" font-size="10" font-weight="800" fill="#e8eaed">A1</text>
+<circle class="jw-term" data-term="A1" cx="420" cy="362" r="11"/>
+<path d="M402.0 300 C400 318 460 308 460 330 V366" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M402.0 300 C400 318 460 308 460 330 V366" fill="none" stroke="#1b1d20" stroke-width="3.4"/>
+<rect x="454" y="328" width="12" height="10" rx="2" fill="#f4f5f7" stroke="#8a9099" stroke-width=".6"/>
+<text x="460" y="336" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">2</text>
+<rect x="456" y="356" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="455" y="376" width="10" height="4" fill="#16181b"/>
+<text x="468" y="352" font-family="sans-serif" font-size="10" font-weight="800" fill="#e8eaed">A2</text>
+<circle class="jw-term" data-term="A2" cx="460" cy="362" r="11"/>
+<rect x="389" y="294" width="22" height="8" rx="2" fill="#0c0d0f"/>
+</svg>
