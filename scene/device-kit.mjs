@@ -91,6 +91,14 @@ export class Ramp {
     this.rate = Math.sign(goal - v) * speed;
     this.tEnd = t + BigInt(Math.ceil((Math.abs(goal - v) / speed) * 1e9));
   }
+  /** Fija el valor en t, quieta (p. ej. el motor que sigue a la frecuencia de un variador). */
+  set(t, v) {
+    this.v0 = v;
+    this.t0 = t;
+    this.goal = v;
+    this.rate = 0;
+    this.tEnd = null;
+  }
   /** Segmento publicado en t: valor y pendiente (0 al llegar). */
   segment(t) {
     const moving = this.tEnd !== null && t < this.tEnd;

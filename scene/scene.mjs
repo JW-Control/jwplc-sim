@@ -235,8 +235,21 @@ export class Scene {
       const g = (term) => `${dev.id}.${term}`;
       for (const s of dev.el.sources ?? []) {
         const id = s.id ? `${dev.id}.${s.id}` : dev.id;
-        if (s.phases) sources.push({ ...s, id, phases: { L1: g(s.phases.L1), L2: g(s.phases.L2), L3: g(s.phases.L3) } });
-        else sources.push({ ...s, id, pos: g(s.pos), neg: g(s.neg) });
+        // Fuente controlada (salida de un variador): el dispositivo la
+        // enciende, le da frecuencia e invierte la secuencia (L2 <-> L3).
+        const dyn = dev.step.sources?.[s.id ?? ""];
+        // En el análisis estático (todos los contactos) cuenta como encendida.
+        if (s.controlled && !dyn?.on && !allContacts) continue;
+        if (s.phases) {
+          const rev = !!dyn?.reverse;
+          const hz = dyn?.hz;
+          sources.push({
+            ...s,
+            id,
+            phases: { L1: g(s.phases.L1), L2: g(rev ? s.phases.L3 : s.phases.L2), L3: g(rev ? s.phases.L2 : s.phases.L3) },
+            ...(hz ? { hz: { value: valueAt(hz, dev.stepT, this.t), rate: hz.rate ?? 0, goal: hz.goal ?? valueAt(hz, dev.stepT, this.t) } } : {}),
+          });
+        } else sources.push({ ...s, id, pos: g(s.pos), neg: g(s.neg) });
       }
       const burnt = !allContacts && this.injected.has(`burnt:${dev.id}`);
       for (const l of dev.el.loads ?? []) {
@@ -347,12 +360,18 @@ export class Scene {
         for (const pl of dev.el.phaseLoads ?? []) {
           const terms = {};
           let volts = 0;
+          let hz = null;
+          let controlled = false;
           for (const term of pl.terminals) {
             const ph = burnt ? null : sol.phaseOf(`${dev.id}.${term}`);
-            if (ph) volts = ph.volts;
+            if (ph) {
+              volts = ph.volts;
+              hz = ph.hz ?? hz;
+              controlled ||= ph.controlled;
+            }
             terms[term] = { phase: ph ? ph.phase : null, net: sol.groupOf(`${dev.id}.${term}`) };
           }
-          phases[pl.id] = burnt ? { terms, volts: 0, damaged: true } : { terms, volts };
+          phases[pl.id] = burnt ? { terms, volts: 0, damaged: true } : { terms, volts, hz, controlled };
         }
         /** @type {Record<string, boolean>} */
         const links = {};
@@ -545,7 +564,7 @@ export class Scene {
     const slaves = [...this.devices.values()].filter(
       (d) =>
         d.modbus && (addr === 0 || d.modbus.address === addr) && Math.abs(d.modbus.baud - o.baud) / d.modbus.baud < 0.03 &&
-        find(`${d.id}.A`) === busA && find(`${d.id}.B`) === busB && !this.injected.has(`burnt:${d.id}`),
+        find(`${d.id}.${d.modbus.a ?? "A"}`) === busA && find(`${d.id}.${d.modbus.b ?? "B"}`) === busB && !this.injected.has(`burnt:${d.id}`),
     );
     if (!slaves.length) return null;
     const u16 = (k) => (frame[k] << 8) | frame[k + 1];

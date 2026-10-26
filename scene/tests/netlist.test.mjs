@@ -214,7 +214,7 @@ test("trifásico: bobina de 230 VAC entre dos fases se energiza con 220 V", () =
   assert.equal(r.loads.get("K").volts, 220);
   assert.equal(r.loads.get("K").kind, "AC");
   assert.deepEqual(r.faults, []);
-  assert.deepEqual(r.phaseOf("K.A1"), { source: "R", phase: "L1", volts: 220 });
+  assert.deepEqual(r.phaseOf("K.A1"), { source: "R", phase: "L1", volts: 220, hz: null, controlled: false });
   assert.equal(r.phaseOf("K.X"), null);
 });
 

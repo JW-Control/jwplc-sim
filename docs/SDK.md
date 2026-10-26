@@ -90,6 +90,11 @@ Un dispositivo declara:
 - **red trifásica** (`kind: "AC3"`, `phases: { L1, L2, L3 }`, `volts` entre
   fases): marca cada fase; una carga de dos bornes entre dos fases recibe
   la tensión entre fases.
+- **fuentes controladas** (`controlled: true`): solo existen mientras el
+  dispositivo las enciende con `DeviceStep.sources[id] = { on, hz, reverse }`
+  (salida de un variador: frecuencia como `{ value, rate, goal }` y la
+  secuencia invertida para girar atrás). Ejemplo: `vfd-ms300` en
+  `scene/devices/drives.mjs`;
 - **cargas trifásicas** (`phaseLoads: [{ id, terminals }]`): en `update()`,
   `inp.phases[id].terms[borne]` da la fase que llega (`L1`/`L2`/`L3` o
   `null`) y el nodo (`net`; dos bornes puenteados comparten nodo), y

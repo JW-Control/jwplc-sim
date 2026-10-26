@@ -39,7 +39,8 @@
 
 /**
  * @typedef {{ id: string, pos?: string, neg?: string, kind: "DC" | "AC" | "AC3", volts: number,
- *   phases?: { L1: string, L2: string, L3: string } }} Source  AC3: sin pos/neg, volts entre fases
+ *   phases?: { L1: string, L2: string, L3: string }, hz?: { value: number, rate: number, goal: number },
+ *   controlled?: boolean }} Source  AC3: sin pos/neg, volts entre fases; hz: frecuencia (salida de un variador)
  * @typedef {{ id: string, a: string, b: string, rating: string, polar?: boolean, coil?: boolean }} Load
  * @typedef {{ a: string, b: string }} Switch
  * @typedef {{
@@ -121,7 +122,8 @@ function members(uf, g, terms) {
  * @param {Set<string>} [tripped]  fuentes ya disparadas (la escena las recuerda)
  * @returns {{ loads: Map<string, LoadState>, faults: Finding[], warnings: Finding[], tripped: Set<string>,
  *             groupOf: (term: string) => string, poles: (term: string) => string[],
- *             phaseOf: (term: string) => { source: string, phase: string, volts: number } | null }}
+ *             phaseOf: (term: string) => { source: string, phase: string, volts: number,
+ *               hz: { value: number, rate: number, goal: number } | null, controlled: boolean } | null }}
  */
 export function solve(net, tripped = new Set()) {
   const disabled = new Set(tripped);
@@ -245,7 +247,8 @@ export function solve(net, tripped = new Set()) {
       const i = m.indexOf("~");
       if (i < 0) continue;
       const source = m.slice(0, i);
-      return { source, phase: m.slice(i + 1), volts: byId.get(source).volts };
+      const src = byId.get(source);
+      return { source, phase: m.slice(i + 1), volts: src.volts, hz: src.hz ?? null, controlled: !!src.controlled };
     }
     return null;
   };

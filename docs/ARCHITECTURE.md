@@ -371,7 +371,12 @@ fases (bobina de 230 VAC entre L1 y L2, como en los tableros peruanos). Las
 cargas trifásicas (`phaseLoads`) reciben, por borne, la fase que llega y el
 nodo: con eso el motor deduce la conexión (triángulo si cada bobinado está
 entre dos fases; estrella si U2, V2 y W2 están puenteados y sin fase), el
-sentido por la secuencia en U1-V1-W1 y la falta de fase.
+sentido por la secuencia en U1-V1-W1 y la falta de fase. Una fuente puede
+ser **controlada** por su dispositivo (`controlled`, la salida de un
+variador): solo existe en el netlist mientras el dispositivo la enciende
+(`DeviceStep.sources`), con su frecuencia (valor, pendiente y objetivo de
+la rampa) y la secuencia invertida para el giro atrás. El motor alimentado
+por ella sigue esa frecuencia (60 Hz = velocidad nominal).
 
 Simplificaciones: dos cargas en serie no se energizan, porque el nodo
 intermedio no tiene polo. No hay caídas de tensión, corrientes ni
@@ -442,6 +447,9 @@ botones de la interfaz.
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
+| `overload-relay` | 1-2, 3-4, 5-6, 95-96 NC, 97-98 NO | Relé térmico (CHINT NR2 / Schneider LRD): dispara por falta de fase después de `tripMs` o con TEST; RESET con las tres fases |
+| `motor-2v` | 1U 1V 1W, 2U 2V 2W, PE | Trifásico de dos velocidades con bobinados independientes (lavado/centrifugado de la JWPLC Laundry): `velocidad` baja o alta, `rpm`, `conflicto` con los dos bobinados energizados (no gira) |
+| `vfd-ms300` | R S T, U V W, PE; MI1-MI7, DCM, +24V; RA RB RC; SG+ SG- | Variador Delta MS300 (entrada 1F 220 V): MI1/MI2 marcha adelante/atrás, MI3-MI5 multivelocidad (8 velocidades), MI6 falla externa EF, MI7 reset; rampas; relé de falla, en marcha o frecuencia alcanzada; Modbus RTU 2000h control, 2001h frecuencia × 100, 2002h reset, 2100h-2104h estado. Teclas STOP y RESET |
 | `motor-3ph` | U1 V1 W1 PE (+ W2 U2 V2) | Trifásico 220Δ/380Y (WEG W22). Parámetro `bornera`: triángulo o estrella con chapas internas (contactos siempre cerrados; solo se cablean U1, V1, W1 y PE) o «6 cables» para un arranque estrella-triángulo con contactores. En el inspector se elige con un dibujo de la placa de bornes; al ocultar bornes se quitan sus cables. Salidas `connection` (en estrella, un tercio del par), `direction` por la secuencia de fases y `faltaFase` (no arranca) |
 
 ### 4.2 Fallas inyectadas **[G9]**

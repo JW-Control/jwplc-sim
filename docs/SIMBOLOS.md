@@ -172,6 +172,15 @@ marcador amarillo; bornes A-1/A-2 abajo a la izquierda y A+1/A+2 a la
 derecha. Las mangueras siguen a `out.spoolA` (la corredera recuerda la
 posición entre pulsos).
 
+Motores trifásicos (propuesta del 26/10/2026, medidas aproximadas hasta
+tener el catálogo de WEG): `gen_motor_frontal.py` dibuja el WEG W22 IEC 80
+visto desde el ventilador, a 2 px/mm, con las aspas girando detrás de la
+rejilla (`data-spin` con `out.speed`), la caja de bornes con la placa de
+datos y los cables con marcador. Variantes: `motor-3ph` (U1 V1 W1 PE),
+`motor-3ph__6cables` (siete bornes) y `motor-2v` (1U…2W y PE). El relé
+térmico y el variador Delta MS300 siguen dibujados en código hasta tener
+sus fotos.
+
 Pendientes (todavía dibujados en código, sin escala real): sensor
-fotoeléctrico, relé enchufable y motor.
+fotoeléctrico, relé enchufable, motor monofásico, relé térmico y variador.
 `node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.

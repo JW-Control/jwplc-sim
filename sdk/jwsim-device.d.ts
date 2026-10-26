@@ -56,6 +56,20 @@ export interface SourceSpec {
   kind: "DC" | "AC" | "AC3";
   volts: number;
   phases?: { L1: string; L2: string; L3: string };
+  /**
+   * Fuente controlada por el propio dispositivo (salida de un variador):
+   * apagada salvo que DeviceStep.sources la encienda.
+   */
+  controlled?: boolean;
+}
+
+/** Estado de una fuente controlada en un instante. */
+export interface SourceState {
+  on: boolean;
+  /** Frecuencia de salida (Hz): valor, pendiente (Hz/s) y objetivo de la rampa. */
+  hz?: { value: number; rate: number; goal: number };
+  /** Secuencia invertida (L2 y L3 cruzadas): el motor gira al revés. */
+  reverse?: boolean;
 }
 
 /**
@@ -136,6 +150,9 @@ export interface ModbusSpec {
   baud: number;
   /** Demora entre el fin de la petición y la respuesta (ms). */
   responseMs?: number;
+  /** Bornes del bus (por defecto "A" y "B"; el MS300 los llama SG+ y SG-). */
+  a?: string;
+  b?: string;
 }
 
 export interface LoadState {
@@ -153,6 +170,10 @@ export interface PhaseLoadState {
   terms: Record<string, { phase: "L1" | "L2" | "L3" | null; net: string }>;
   /** Tensión entre fases de la red que llega (0 si ninguna). */
   volts: number;
+  /** Frecuencia de la fuente si la da un variador (null: red de 60 Hz). */
+  hz?: { value: number; rate: number; goal: number } | null;
+  /** Alimentada por una fuente controlada (variador): sigue su frecuencia. */
+  controlled?: boolean;
   /** Quemada (falla inyectada o sobretensión): sin fases. */
   damaged?: boolean;
 }
@@ -185,6 +206,8 @@ export interface Segment {
 export interface DeviceStep {
   /** Contactos cerrados (los que faltan quedan abiertos). */
   contacts?: Record<string, boolean>;
+  /** Estado de las fuentes controladas (id de la fuente → estado). */
+  sources?: Record<string, SourceState>;
   /** Salidas observables y mecánicas; las señales de signals.out van a la placa. */
   outputs?: Record<string, number | boolean | string | Segment>;
   /** Próximo evento propio (temporizador, fin de rampa). */

@@ -44,6 +44,9 @@
     "solenoid-valve": [200, 100, ["A1"], ["A2"]],
     motor: [120, 120, ["U1", "U2"], []],
     "motor-3ph": [160, 140, ["U1", "V1", "W1", "PE"], []],
+    "motor-2v": [200, 140, ["1U", "1V", "1W", "2U", "2V", "2W", "PE"], []],
+    "overload-relay": [160, 160, ["1", "3", "5", "95", "97"], ["2", "4", "6", "96", "98"]],
+    "vfd-ms300": [340, 220, ["R", "S", "T", "U", "V", "W", "PE"], ["MI1", "MI2", "MI3", "MI4", "MI5", "MI6", "MI7", "DCM", "+24V", "RA", "RB", "RC", "SG+", "SG-"]],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -500,6 +503,39 @@
           `<text class="sym-big light" x="${(w - 22) / 2 + 4}" y="84">M3~</text>` +
           (run ? `<path class="spin" d="M${(w - 22) / 2 + 4} 60 A18 18 0 0 1 ${(w - 22) / 2 + 22} 78" fill="none" stroke="#37d67a" stroke-width="3" style="transform-origin:${(w - 22) / 2 + 4}px 78px;animation-duration:${(1 / Math.max(0.1, Math.abs(sp))).toFixed(2)}s;animation-direction:${sp < 0 ? "reverse" : "normal"}"/>` : "") +
           (o.faltaFase ? `<text class="sym-bad" x="${w / 2}" y="${h - 4}">FALTA DE FASE</text>` : `<text class="sym-tag" x="${w / 2}" y="${h - 4}">${conn}${conn ? " · " : ""}${Math.round(sp * 100)} %</text>`) + dmg
+        );
+      }
+      case "overload-relay": {
+        // Provisorio hasta el símbolo del CHINT NR2-25: módulo con los polos,
+        // indicador de disparo, perilla de ajuste y botones TEST / RESET.
+        const tr = !!o.tripped;
+        return (
+          module(w, h) + band(w, 28, 26, "#3a3f46") + terminals(type, lay) +
+          `<text class="sym-big light" x="${cx}" y="46">NR2-25 · ${esc(p.range ?? "")}</text>` +
+          `<circle cx="40" cy="${cy}" r="14" fill="#e8eaed" stroke="${ink}"/><path d="M40 ${cy} L50 ${cy - 8}" stroke="${ink}" stroke-width="2"/>` +
+          `<rect x="64" y="${cy - 10}" width="32" height="20" rx="3" fill="${tr ? "#e0392b" : "#2fbf5a"}" stroke="${ink}"/>` +
+          `<text class="sym-tag light" x="80" y="${cy + 4}">${tr ? "DISP." : "OK"}</text>` +
+          `<g class="act" data-action="test" data-kind="momentary"><rect x="104" y="${cy - 18}" width="44" height="16" rx="3" fill="#c94b2c"/><text class="sym-tag light" x="126" y="${cy - 6}">TEST</text></g>` +
+          `<g class="act" data-action="reset" data-kind="momentary"><rect x="104" y="${cy + 2}" width="44" height="16" rx="3" fill="#2f62d6"/><text class="sym-tag light" x="126" y="${cy + 14}">RESET</text></g>` +
+          (o.faltaFase ? `<text class="sym-bad" x="${cx}" y="${h - 34}">FALTA DE FASE</text>` : "")
+        );
+      }
+      case "vfd-ms300": {
+        // Provisorio hasta el símbolo del Delta MS300: frente con la pantalla
+        // de 5 dígitos, LED RUN/STOP/FWD/REV y teclas STOP y RESET.
+        const run = !!o.running;
+        const led = (x, on, col, t) => `<circle cx="${x}" cy="118" r="5" fill="${on ? col : "#2a2d31"}" stroke="${ink}"/><text class="sym-tag light" x="${x}" y="134">${t}</text>`;
+        return (
+          `<rect class="dev-box" x="20" y="22" width="${w - 40}" height="${h - 44}" rx="8" fill="#e9ebee" stroke="${ink}" stroke-width="1.6"/>` +
+          `<rect x="20" y="22" width="${w - 40}" height="26" rx="8" fill="#1d2a3a"/>` +
+          `<text class="sym-big light" x="${cx}" y="40">DELTA · MS300</text>` +
+          terminals(type, lay) +
+          `<rect x="${cx - 80}" y="58" width="160" height="40" rx="4" fill="#0b1a10" stroke="${ink}"/>` +
+          `<text x="${cx}" y="87" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="${o.fault ? "#ff5a4a" : "#3ddc84"}">${esc(o.display ?? "")}</text>` +
+          led(cx - 75, run, "#3ddc84", "RUN") + led(cx - 25, o.powered && !run, "#e0392b", "STOP") +
+          led(cx + 25, run && o.direction > 0, "#3ddc84", "FWD") + led(cx + 75, run && o.direction < 0, "#3ddc84", "REV") +
+          `<g class="act" data-action="stop" data-kind="momentary"><rect x="${cx - 70}" y="146" width="60" height="22" rx="4" fill="#c94b2c"/><text class="sym-tag light" x="${cx - 40}" y="161">STOP</text></g>` +
+          `<g class="act" data-action="reset" data-kind="momentary"><rect x="${cx + 10}" y="146" width="60" height="22" rx="4" fill="#3a3f46"/><text class="sym-tag light" x="${cx + 40}" y="161">RESET</text></g>`
         );
       }
       case "power-24vdc": {

@@ -245,12 +245,21 @@ export const motor3ph = {
         const st = inp.phases?.motor;
         const c = st && !st.damaged ? motorConnection(st.terms) : { connection: "", direction: 0, faltaFase: false };
         const goal = c.direction;
-        const cur = speed.at(t);
-        const accel = Math.abs(goal) > Math.abs(cur) && Math.sign(goal) !== -Math.sign(cur);
-        // En estrella cada bobinado recibe 220/√3 V: un tercio del par, arranque tres veces más lento.
-        const accelMs = Number(ctx.params.accelMs) * (c.connection === "estrella" ? 3 : 1);
-        speed.step(t, goal, 1000 / (accel ? accelMs : Number(ctx.params.stopMs)));
-        const seg = speed.segment(t);
+        let seg;
+        if (st?.controlled && st.hz && c.connection) {
+          // Alimentado por un variador: la velocidad sigue a la frecuencia
+          // (60 Hz = nominal), con la rampa del variador.
+          const k = c.direction / 60;
+          speed.set(t, st.hz.value * k);
+          seg = { value: st.hz.value * k, rate: st.hz.rate * k };
+        } else {
+          const cur = speed.at(t);
+          const accel = Math.abs(goal) > Math.abs(cur) && Math.sign(goal) !== -Math.sign(cur);
+          // En estrella cada bobinado recibe 220/√3 V: un tercio del par, arranque tres veces más lento.
+          const accelMs = Number(ctx.params.accelMs) * (c.connection === "estrella" ? 3 : 1);
+          speed.step(t, goal, 1000 / (accel ? accelMs : Number(ctx.params.stopMs)));
+          seg = speed.segment(t);
+        }
         return {
           contacts: bridges,
           outputs: {
