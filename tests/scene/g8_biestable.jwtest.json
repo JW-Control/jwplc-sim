@@ -1,0 +1,23 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Electroválvula biestable: con pulsos de 100 ms el cilindro completa la carrera (memoria de la corredera) y cicla tres veces con los fines de carrera.",
+  "sketch": "../sketches/g8_biestable",
+  "scene": "../scenes/g8_biestable.scene.json",
+  "until_ms": 4000,
+  "expect": {
+    "console": [
+      "ms pulso A+",
+      "ms fin del pulso",
+      { "match": "pulso A-, ciclo \\d+", "count": 3 }
+    ],
+    "scene": {
+      "state": [
+        { "at_ms": 400, "Y1.retracted": true },
+        { "at_ms": 1000, "Y1.coilPlus": false, "Y1.spoolA": true, "Y1.extended": false },
+        { "at_ms": 3900, "Y1.retracted": true, "Y1.spoolA": false, "Y1.coilMinus": false }
+      ],
+      "faults": [],
+      "findings": []
+    }
+  }
+}

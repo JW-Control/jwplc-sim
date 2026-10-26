@@ -429,6 +429,7 @@ botones de la interfaz.
 | `relay` | A1-A2, 11-12-14, 21-22-24 | Conmutados; atraque 8 ms, caída 4 ms |
 | `contactor` | A1-A2, 1-2/3-4/5-6, 13-14 o 21-22 | Auxiliar 13-14 NA (`aux` 10, CJX2-0910) o 21-22 NC (`aux` 01, CJX2-0901); atraque 20 ms, caída 10 ms |
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
+| `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 
 ### 4.2 Fallas inyectadas **[G9]**

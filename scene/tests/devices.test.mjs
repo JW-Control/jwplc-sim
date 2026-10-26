@@ -21,7 +21,7 @@ test("registro: los 16 dispositivos con tipo, versión, bornes y parámetros vá
     for (const p of d.parameters ?? []) if (p.type === "enum") assert.ok(p.options.includes(p.default), `${d.type}.${p.id}`);
   }
   for (const t of ["pushbutton-no", "pushbutton-nc", "selector-2", "selector-3", "limit-switch", "sensor-inductive",
-    "sensor-photoelectric", "lamp", "buzzer", "relay", "contactor", "solenoid-valve", "motor"]) {
+    "sensor-photoelectric", "lamp", "buzzer", "relay", "contactor", "solenoid-valve", "solenoid-valve-2", "motor"]) {
     assert.ok(r.get(`jwsim/${t}`), t);
   }
   assert.throws(() => r.get("jwsim/contactor", "2.0.0"), /no está instalado/);
@@ -305,6 +305,42 @@ test("electroválvula: carrera de 500 ms al salir y 400 ms al volver", () => {
   assert.ok(Math.abs(s.output("Y", "position") - 0.5) < 1e-9);
   s.advanceTo(ms(1000));
   assert.equal(s.output("Y", "retracted"), true);
+});
+
+test("electroválvula biestable: un pulso en A+ la saca y queda; un pulso en A- la entra", () => {
+  const s = scene(
+    ["PS:power-24vdc", "SP:pushbutton-no", "SM:pushbutton-no", "Y:solenoid-valve-2"],
+    ["PS.+V1 - SP.13", "SP.14 - Y.A+1", "Y.A+2 - PS.-V1", "PS.+V1 - SM.13", "SM.14 - Y.A-1", "Y.A-2 - PS.-V1"],
+  );
+  assert.equal(s.output("Y", "retracted"), true);
+  // Pulso de 50 ms en A+: sale los 500 ms completos aunque la bobina se apague.
+  s.act("SP", "press", true, ms(0));
+  assert.equal(s.output("Y", "coilPlus"), true);
+  s.act("SP", "press", false, ms(50));
+  assert.equal(s.output("Y", "coilPlus"), false);
+  s.advanceTo(ms(250));
+  assert.ok(Math.abs(s.output("Y", "position") - 0.5) < 1e-9);
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("Y", "extended"), true);
+  assert.equal(s.output("Y", "spoolA"), true);
+  // Las dos bobinas a la vez: la corredera no se mueve.
+  s.act("SP", "press", true, ms(2100));
+  s.act("SM", "press", true, ms(2100));
+  s.advanceTo(ms(2600));
+  assert.equal(s.output("Y", "extended"), true);
+  s.act("SP", "press", false, ms(2700));
+  // Queda solo A-: entra en 400 ms y sigue adentro al soltar.
+  s.advanceTo(ms(3100));
+  assert.equal(s.output("Y", "retracted"), true);
+  s.act("SM", "press", false, ms(3200));
+  s.advanceTo(ms(5000));
+  assert.equal(s.output("Y", "retracted"), true);
+  assert.equal(s.output("Y", "spoolA"), false);
+});
+
+test("electroválvula biestable: arranca con la corredera donde dice el parámetro", () => {
+  const s = scene([{ id: "Y", type: "jwsim/solenoid-valve-2", params: { start: "afuera" } }], []);
+  assert.equal(s.output("Y", "extended"), true);
 });
 
 test("motor: rampa de arranque y de parada; en CC el sentido sigue a la polaridad", () => {

@@ -1,0 +1,25 @@
+{
+  "$comment": "Electroválvula 5/2 biestable Y1 (Airtac 4V220 + MBL20x100): bobina A+ por Q0_0 y A- por Q0_1 (relés de la placa), fines de carrera B1 (afuera) a I0_0 y B0 (adentro) a I0_1.",
+  "devices": [
+    { "id": "plc", "type": "jwsim/jwplc-basic", "x": 300, "y": 0 },
+    { "id": "PS1", "type": "jwsim/power-24vdc", "x": 40, "y": 60 },
+    { "id": "Y1", "type": "jwsim/solenoid-valve-2", "params": { "strokeMs": 500, "returnMs": 400 }, "x": 300, "y": 640 },
+    { "id": "B1", "type": "jwsim/limit-switch", "params": { "source": "Y1.position", "min": 1, "max": 1 }, "x": 900, "y": -320 },
+    { "id": "B0", "type": "jwsim/limit-switch", "params": { "source": "Y1.position", "min": 0, "max": 0 }, "x": 1100, "y": -320 }
+  ],
+  "wiring": [
+    { "from": "PS1.+V1", "to": "plc.24VDC" },
+    { "from": "PS1.-V1", "to": "plc.M0" },
+    { "from": "PS1.-V1", "to": "plc.M1" },
+    { "from": "PS1.+V2", "to": "B1.13" },
+    { "from": "B1.14", "to": "plc.I0_0" },
+    { "from": "PS1.+V2", "to": "B0.13" },
+    { "from": "B0.14", "to": "plc.I0_1" },
+    { "from": "PS1.+V1", "to": "plc.Q0_0.1" },
+    { "from": "plc.Q0_0.2", "to": "Y1.A+1" },
+    { "from": "Y1.A+2", "to": "PS1.-V2" },
+    { "from": "PS1.+V1", "to": "plc.Q0_1.1" },
+    { "from": "plc.Q0_1.2", "to": "Y1.A-1" },
+    { "from": "Y1.A-2", "to": "PS1.-V2" }
+  ]
+}

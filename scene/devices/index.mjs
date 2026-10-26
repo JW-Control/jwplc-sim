@@ -4,7 +4,7 @@
 // Biblioteca de dispositivos de la escena (propuesta v0.1, gate
 // JWSIM_G7_DEVICE_LIBRARY) y registro por tipo y versión.
 
-import { buzzer, contactor, lamp, motor, relay, solenoidValve } from "./loads.mjs";
+import { buzzer, contactor, lamp, motor, relay, solenoidValve, solenoidValve2 } from "./loads.mjs";
 import { limitSwitch, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3 } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24 } from "./supplies.mjs";
@@ -29,6 +29,7 @@ export const builtinDevices = [
   relay,
   contactor,
   solenoidValve,
+  solenoidValve2,
   motor,
   pt100Rs485,
   phRs485,

@@ -156,7 +156,7 @@ se dibujan porque son los que se llevan a los transmisores.
 Propuesta del 26/10/2026, por aprobar: electroválvula Airtac 4V210-08
 (5/2 monoestable, conector DIN) con cilindro Airtac MBL20x100-CA, según fotos
 y catálogos de Airtac entregados por JW Control
-(`simbolos/herramientas/gen_electrovalvula_4v210.py`). Primer equipo de campo
+(`simbolos/herramientas/gen_electrovalvula_4v2.py 4v210`). Primer equipo de campo
 a la escala reducida de 2 px/mm (lineamientos 2.3): cilindro arriba con los
 puertos al frente, válvula abajo, mangueras A al puerto trasero y B al
 delantero (la que tiene presión, azul intenso), silenciadores en R y S y
@@ -164,6 +164,13 @@ alimentación por P. El conector DIN va girado 180° para que el cable baje a
 A1/A2 sin cruzar las mangueras. Estados: LED del conector, vástago con
 `data-translate` (100 mm = 200 px) y bobina cortada con hollín; los textos
 de la bobina siguen a `param.coil`.
+Escala de campo aprobada por JW Control el 26/10/2026. Variante biestable
+(`jwsim/solenoid-valve-2`, mismo generador con `4v220`): Airtac 4V220-08 de
+171 mm con una bobina en cada extremo, A− a la izquierda (P→B, entra) y A+ a
+la derecha (P→A, sale), cada una con su conector, su LED y su cable con
+marcador amarillo; bornes A-1/A-2 abajo a la izquierda y A+1/A+2 a la
+derecha. Las mangueras siguen a `out.spoolA` (la corredera recuerda la
+posición entre pulsos).
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
 fotoeléctrico, relé enchufable y motor.

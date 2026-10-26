@@ -34,7 +34,7 @@ Si un dibujo nuevo cae en alguno de estos errores, hay que rehacerlo.
 ### 2.3 Escala y grilla
 - **4 px = 1 mm** (20 px de grilla = 5 mm). Referencia: la placa JWPLC Basic mide unos 123 mm = 484 px.
 - Se usan las medidas de la ficha y se redondean a la grilla. **Si hay conflicto, gana la alineación de los bornes con la grilla**, para que los cables queden rectos, aunque la medida se aparte 1–2 mm.
-- Hay **dos escalas**: los equipos de tablero van a 1:1 con la placa, y los de campo (cilindros, motores) a una escala reducida fija, siempre la misma, sin perder proporciones: **2 px = 1 mm** (propuesta del 26/10/2026 con la electroválvula y el cilindro Airtac; a 4 px/mm un cilindro de 100 mm de carrera mediría el doble que la placa). Los sensores de campo chicos (inductivo, fin de carrera) quedaron a 4 px/mm.
+- Hay **dos escalas**: los equipos de tablero van a 1:1 con la placa, y los de campo (cilindros, motores) a una escala reducida fija, siempre la misma, sin perder proporciones: **2 px = 1 mm** (aprobada el 26/10/2026 con la electroválvula y el cilindro Airtac; a 4 px/mm un cilindro de 100 mm de carrera mediría el doble que la placa). Los sensores de campo chicos (inductivo, fin de carrera) quedaron a 4 px/mm.
 - El cuerpo puede no llenar el viewBox. Por ejemplo, el contactor tiene un cuerpo de 180 px dentro de un viewBox de 200 para que A1 y A2 caigan en x=20 y x=180.
 
 ### 2.4 Bornes

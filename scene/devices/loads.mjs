@@ -138,6 +138,56 @@ export const solenoidValve = {
 };
 
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
+export const solenoidValve2 = {
+  type: "jwsim/solenoid-valve-2",
+  version: "1.0.0",
+  name: "Electroválvula 5/2 biestable con cilindro",
+  category: "Actuadores",
+  description:
+    "Electroválvula 5/2 de doble solenoide (con memoria) y cilindro de doble efecto. Un pulso en A+ (A+1/A+2) pasa la corredera a P→A y el cilindro sale; un pulso en A- (A-1/A-2) la pasa a P→B y entra. Sin bobinas, o con las dos a la vez, la corredera queda donde estaba. position va de 0 (adentro) a 1 (afuera) en el tiempo de carrera.",
+  parameters: [
+    { id: "coil", label: "Bobinas", type: "enum", options: RATINGS, default: "24VDC" },
+    { id: "strokeMs", label: "Carrera de salida", type: "number", default: 500, unit: "ms" },
+    { id: "returnMs", label: "Carrera de retorno", type: "number", default: 400, unit: "ms" },
+    { id: "start", label: "Corredera al arrancar", type: "enum", options: ["adentro", "afuera"], default: "adentro" },
+  ],
+  terminals: [{ id: "A+1" }, { id: "A+2" }, { id: "A-1" }, { id: "A-2" }],
+  electrical: (p) => ({
+    loads: [
+      { id: "coilPlus", a: "A+1", b: "A+2", rating: String(p.coil), coil: true },
+      { id: "coilMinus", a: "A-1", b: "A-2", rating: String(p.coil), coil: true },
+    ],
+  }),
+  create(ctx) {
+    const out = ctx.params.start === "afuera";
+    let spoolA = out;
+    const pos = new Ramp(out ? 1 : 0);
+    return {
+      update(t, inp) {
+        const plus = inp.loads.coilPlus.on;
+        const minus = inp.loads.coilMinus.on;
+        // Memoria: solo una bobina sola mueve la corredera.
+        if (plus && !minus) spoolA = true;
+        else if (minus && !plus) spoolA = false;
+        pos.step(t, spoolA ? 1 : 0, 1000 / Number(spoolA ? ctx.params.strokeMs : ctx.params.returnMs));
+        const seg = pos.segment(t);
+        return {
+          outputs: {
+            coilPlus: plus,
+            coilMinus: minus,
+            spoolA,
+            position: seg,
+            extended: seg.value >= 1 && seg.rate === 0,
+            retracted: seg.value <= 0 && seg.rate === 0,
+          },
+          nextEventNs: earliest(pos.next),
+        };
+      },
+    };
+  },
+};
+
+/** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const motor = {
   type: "jwsim/motor",
   version: "1.0.0",
