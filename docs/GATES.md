@@ -28,8 +28,8 @@ JWSIM_G1_HAL_CORE=PASS              (alpha.13: 119/131 compilan, 0 fallas inespe
 JWSIM_G1_TCA6424A_MODEL=PASS        (14 tests, Linux y Windows)
 JWSIM_G1_DETERMINISM=PASS           (5 sketches × 100 corridas; mismo hash en Windows)
 JWSIM_G1_SPEED_X10=PASS             (C4 26/10: modo interactivo a ×1 = 1,000 con escena y 3 ms de latencia)
-JWSIM_G1_PACKAGE_EXAMPLES_IO=PENDING (tablas de verdad PASS; calibración requiere medición en placa:
-                                     tests/sketches/calibracion_loop, simulador 455 k / 177 k vueltas por s)
+JWSIM_G1_PACKAGE_EXAMPLES_IO=PASS    (tablas de verdad; calibración 26/10 contra un JWPLC Basic real con
+                                     tests/sketches/calibracion_loop: error 0,9 %, 2,3 % y 1,1 %)
 JWSIM_G2_SPLIT_UI=PASS              (Windows CI: arranque 2,6 s; pestañas Sketch, Placa, Consola, Buses)
 JWSIM_G2_LOCAL_COMPILE=PASS         (Windows CI: incremental 1,2 s; toolchain incluido; prototipos)
 JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
@@ -90,7 +90,7 @@ JWSIM_G10_*=PENDING
 | `JWSIM_G1_TCA6424A_MODEL` | Tests del modelo independientes del firmware, uno por fila de `MODEL.md` (valores POR, mapa de registros, AI=0/1, polaridad, INT, RESET, Input de solo lectura, duración I2C), en Windows y Linux. Puntos "verificar" cerrados o documentados como sin impacto en el package. | `node scripts/test-models.mjs [--target windows]`. |
 | `JWSIM_G1_DETERMINISM` | 100 corridas de cada sketch de referencia (01_empty, 02_io_basic, 03_autoload_contract, start_stop_8io, isr_gpio) con su `.stim` → un único hash por sketch; el `.exe` de Windows produce el mismo hash. | `node scripts/gate-g1-determinism.mjs` (compara Windows si hay MinGW-w64 GCC y wine). |
 | `JWSIM_G1_SPEED_X10` | C1: sin factor, ≥ ×20 del tiempo real (02_io_basic y start_stop_8io, 60 s virtuales). C2: `--realtime 10` durante 60 s virtuales con atraso acumulado ≤ 1 %. C3: pausar congela `millis()` (sin saltos entre líneas consecutivas tras una pausa de 5 s de pared). C4: modo interactivo de la app (`--port stdio`) a ×1, sin escena, con escena y con 3 ms de latencia emulada por horizonte: tiempo virtual / pared = 1 ± 2 % durante 10 s. | `node scripts/gate-g1-speed.mjs`; medición suelta: `node scripts/medir-velocidad.mjs <exe> [--scene …] [--speed …] [--latencia ms]`. |
-| `JWSIM_G1_PACKAGE_EXAMPLES_IO` | Tablas de verdad: `01.DigitalIO_Basic`, `DigitalIO_BlockMirror`, `JWPLC_IO_BlockMirror` (espejo DI→DO), `DigitalIO_BlockRead` y `06.Runtime_Cache_Status` (consola refleja DI), `DigitalIO_BlockWrite` (secuencia 0x88→0x11→0x00 cada 1000 ms ± 25 ms). Calibración: periodo de scan simulado vs. profiler H3E.0B en un JWPLC Basic real con error < 10 % (**requiere medición en placa**). | `node scripts/gate-g1-examples-io.mjs` + informe de calibración. |
+| `JWSIM_G1_PACKAGE_EXAMPLES_IO` | Tablas de verdad: `01.DigitalIO_Basic`, `DigitalIO_BlockMirror`, `JWPLC_IO_BlockMirror` (espejo DI→DO), `DigitalIO_BlockRead` y `06.Runtime_Cache_Status` (consola refleja DI), `DigitalIO_BlockWrite` (secuencia 0x88→0x11→0x00 cada 1000 ms ± 25 ms). Calibración: vueltas de `loop()` por segundo de `tests/sketches/calibracion_loop` (vacío, 5 `digitalWrite` a Q0, `JWPLC_ModbusRTU.task()`) contra la medición en un JWPLC Basic real (`tests/hardware/calibracion_loop.placa.json`) con error < 10 % en cada caso. | `node scripts/gate-g1-examples-io.mjs`. |
 
 ## G2 — Editor integrado
 
