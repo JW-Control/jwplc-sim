@@ -1396,3 +1396,32 @@ button.fault.on {
 .grade-case li.ok { color: #7fe3a8; }
 .grade-case li.bad { color: #ffb3b3; }
 .grade-case li .muted { color: var(--muted, #9aa0a6); }
+/* Bornera del motor trifásico: tres placas de bornes con sus chapas. */
+.bornera-pick {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+.bornera-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  padding: 3px 2px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bornera-opt.on {
+  border-color: var(--accent);
+}
+.bornera-opt:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

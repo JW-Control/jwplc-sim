@@ -442,7 +442,7 @@ botones de la interfaz.
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
-| `motor-3ph` | U1 V1 W1 / W2 U2 V2 | Trifásico 220Δ/380Y (WEG W22): `connection` triángulo o estrella (en estrella arranca con un tercio del par), `direction` por la secuencia de fases, `faltaFase` con una fase cortada (no arranca) |
+| `motor-3ph` | U1 V1 W1 PE (+ W2 U2 V2) | Trifásico 220Δ/380Y (WEG W22). Parámetro `bornera`: triángulo o estrella con chapas internas (contactos siempre cerrados; solo se cablean U1, V1, W1 y PE) o «6 cables» para un arranque estrella-triángulo con contactores. En el inspector se elige con un dibujo de la placa de bornes; al ocultar bornes se quitan sus cables. Salidas `connection` (en estrella, un tercio del par), `direction` por la secuencia de fases y `faltaFase` (no arranca) |
 
 ### 4.2 Fallas inyectadas **[G9]**
 

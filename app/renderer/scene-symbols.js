@@ -43,7 +43,7 @@
     contactor: [160, 160, ["1", "3", "5", "13", "21", "A1"], ["2", "4", "6", "14", "22", "A2"]],
     "solenoid-valve": [200, 100, ["A1"], ["A2"]],
     motor: [120, 120, ["U1", "U2"], []],
-    "motor-3ph": [160, 140, ["U1", "V1", "W1", "W2", "U2", "V2"], []],
+    "motor-3ph": [160, 140, ["U1", "V1", "W1", "PE"], []],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -65,6 +65,33 @@
   const templates = new Map();
   const warnings = [];
   const spins = new Map(); // ángulo de cada data-spin por dispositivo
+
+  /**
+   * Placa de bornes de un motor trifásico (U1 V1 W1 arriba, W2 U2 V2 abajo)
+   * con las chapas de la conexión: triángulo (verticales), estrella (una
+   * horizontal abajo) o «6 cables» (sin chapas). Como en los esquemas de
+   * taller: bobinado U rojo, V azul y W magenta.
+   */
+  function motorBornera(mode, { x = 0, y = 0, w = 120, h = 90 } = {}) {
+    const cols = [x + w * 0.2, x + w * 0.5, x + w * 0.8];
+    const yt = y + h * 0.3, yb = y + h * 0.75, r = Math.min(w, h) * 0.075;
+    const top = ["U1", "V1", "W1"], bot = ["W2", "U2", "V2"];
+    const dot = { U1: "#e0392b", U2: "#e0392b", V1: "#2f62d6", V2: "#2f62d6", W1: "#c03bd0", W2: "#c03bd0" };
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="#c9ced5" stroke="#2a3a8a" stroke-width="${Math.max(1, r * 0.45)}"/>`;
+    const plate = "#f0b7a0";
+    if (mode === "triangulo") for (const c of cols) s += `<rect x="${c - r * 1.6}" y="${yt - r * 1.6}" width="${r * 3.2}" height="${yb - yt + r * 3.2}" rx="${r * 1.6}" fill="${plate}" stroke="#8a4b33" stroke-width="${r * 0.25}"/>`;
+    if (mode === "estrella") s += `<rect x="${cols[0] - r * 1.6}" y="${yb - r * 1.6}" width="${cols[2] - cols[0] + r * 3.2}" height="${r * 3.2}" rx="${r * 1.6}" fill="${plate}" stroke="#8a4b33" stroke-width="${r * 0.25}"/>`;
+    const stud = (cx, cy, t) =>
+      `<circle cx="${cx}" cy="${cy}" r="${r * 1.25}" fill="#e8c63a" stroke="#6b5a12" stroke-width="${r * 0.2}"/><circle cx="${cx}" cy="${cy}" r="${r * 0.6}" fill="${dot[t]}"/>`;
+    top.forEach((t, i) => (s += stud(cols[i], yt, t)));
+    bot.forEach((t, i) => (s += stud(cols[i], yb, t)));
+    if (h >= 60) {
+      const fs = Math.max(7, h * 0.11);
+      top.forEach((t, i) => (s += `<text x="${cols[i] - r * 1.4}" y="${yt - r * 1.9}" font-size="${fs}" text-anchor="end" fill="#1b1e22" font-family="sans-serif">${t}</text>`));
+      bot.forEach((t, i) => (s += `<text x="${cols[i] - r * 1.4}" y="${yb + r * 1.9 + fs * 0.8}" font-size="${fs}" text-anchor="end" fill="#1b1e22" font-family="sans-serif">${t}</text>`));
+    }
+    return s;
+  }
 
   function registerTemplate(type, text) {
     const doc = new DOMParser().parseFromString(text, "image/svg+xml");
@@ -249,6 +276,12 @@
       bottom = ids.slice(top.length);
       w = Math.max(120, (Math.max(top.length, bottom.length) + 1) * GRID);
       h = 120;
+    }
+    // Motor trifásico: con «6 cables» salen también W2, U2 y V2; con chapas,
+    // solo U1, V1, W1 y PE.
+    if (short === "motor-3ph" && p?.bornera === "6 cables") {
+      w = 200;
+      top = ["U1", "V1", "W1", "W2", "U2", "V2", "PE"];
     }
     const terms = {};
     if (short === "solenoid-valve") {
@@ -452,6 +485,8 @@
       case "motor-3ph": {
         // Provisorio hasta el símbolo del WEG W22: bornera de 6 bornes,
         // carcasa con aletas, giro con el sentido y la conexión detectada.
+        // La placa de bornes muestra las chapas de la bornera.
+        const box = motorBornera(String(p.bornera ?? "triangulo"), { x: w - 54, y: 40, w: 50, h: 40 });
         const sp = Number(o.speed ?? 0);
         const run = !!o.running;
         const conn = o.connection === "triangulo" ? "Δ triángulo" : o.connection === "estrella" ? "Y estrella" : "";
@@ -460,7 +495,7 @@
           terminals(type, lay) +
           `<rect x="8" y="38" width="${w - 30}" height="80" rx="12" fill="#3f6fa0" stroke="${ink}" stroke-width="1.6"/>` +
           Array.from({ length: 7 }, (_, i) => `<line x1="16" y1="${46 + i * 11}" x2="${w - 30}" y2="${46 + i * 11}" stroke="#335b85" stroke-width="2"/>`).join("") +
-          `<rect x="${w - 22}" y="70" width="18" height="14" fill="#aeb4bc" stroke="${ink}"/>` +
+          `<rect x="${w - 22}" y="90" width="18" height="14" fill="#aeb4bc" stroke="${ink}"/>` + box +
           `<circle cx="${(w - 22) / 2 + 4}" cy="78" r="18" fill="#1d2025" stroke="${ink}"/>` +
           `<text class="sym-big light" x="${(w - 22) / 2 + 4}" y="84">M3~</text>` +
           (run ? `<path class="spin" d="M${(w - 22) / 2 + 4} 60 A18 18 0 0 1 ${(w - 22) / 2 + 22} 78" fill="none" stroke="#37d67a" stroke-width="3" style="transform-origin:${(w - 22) / 2 + 4}px 78px;animation-duration:${(1 / Math.max(0.1, Math.abs(sp))).toFixed(2)}s;animation-direction:${sp < 0 ? "reverse" : "normal"}"/>` : "") +
@@ -504,5 +539,5 @@
   /** ¿La plantilla del dispositivo cambia con el tiempo (data-spin)? */
   const animated = (type, def, p) => !!templates.get(templateKey(type, def, p) ?? "")?.animated;
 
-  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, animated, registerTemplate, templates, warnings, dragPos, dragValue };
+  window.JwsimSymbols = { GRID, SCREW_INSET, layout, draw, templateKey, animated, registerTemplate, templates, warnings, dragPos, dragValue, motorBornera };
 })();

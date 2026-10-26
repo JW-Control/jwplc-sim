@@ -189,6 +189,12 @@ export const solenoidValve2 = {
 
 const WINDINGS = [["U1", "U2"], ["V1", "V2"], ["W1", "W2"]];
 const PHASE_INDEX = { L1: 0, L2: 1, L3: 2 };
+/** Chapas de la bornera de un motor trifásico según la conexión (bornes de 6 en 2 filas: U1 V1 W1 / W2 U2 V2). */
+export const MOTOR_BRIDGES = {
+  triangulo: { "U1-W2": ["U1", "W2"], "V1-U2": ["V1", "U2"], "W1-V2": ["W1", "V2"] },
+  estrella: { "W2-U2": ["W2", "U2"], "U2-V2": ["U2", "V2"] },
+  "6 cables": {},
+};
 
 /**
  * Conexión de un motor trifásico según la fase y el nodo de cada borne:
@@ -219,15 +225,21 @@ export const motor3ph = {
   name: "Motor trifásico",
   category: "Actuadores",
   description:
-    "Motor de inducción trifásico 220Δ/380Y (WEG W22) con bornera U1 V1 W1 / W2 U2 V2. En la red de 220 V va en triángulo; en estrella arranca con un tercio del par. La secuencia de fases fija el sentido (cruzar dos fases lo invierte). Con una fase cortada no arranca (falta de fase).",
+    "Motor de inducción trifásico 220Δ/380Y (WEG W22). La bornera (U1 V1 W1 / W2 U2 V2) se arma con chapas en triángulo (la conexión de la red de 220 V) o en estrella, y entonces solo se cablean U1, V1, W1 y PE; con «6 cables» salen los seis bornes para un arranque estrella-triángulo con contactores. En estrella arranca con un tercio del par. La secuencia de fases fija el sentido (cruzar dos fases lo invierte). Con una fase cortada no arranca (falta de fase).",
   parameters: [
+    { id: "bornera", label: "Bornera", type: "enum", options: ["triangulo", "estrella", "6 cables"], default: "triangulo" },
     { id: "accelMs", label: "Arranque en triángulo", type: "number", default: 500, unit: "ms" },
     { id: "stopMs", label: "Parada (inercia)", type: "number", default: 1500, unit: "ms" },
   ],
-  terminals: [{ id: "U1" }, { id: "V1" }, { id: "W1" }, { id: "W2" }, { id: "U2" }, { id: "V2" }],
-  electrical: () => ({ phaseLoads: [{ id: "motor", terminals: ["U1", "V1", "W1", "W2", "U2", "V2"] }] }),
+  terminals: [{ id: "U1" }, { id: "V1" }, { id: "W1" }, { id: "W2" }, { id: "U2" }, { id: "V2" }, { id: "PE", label: "PE (tierra)" }],
+  electrical: (p) => ({
+    phaseLoads: [{ id: "motor", terminals: ["U1", "V1", "W1", "W2", "U2", "V2"] }],
+    // Chapas de la bornera: contactos siempre cerrados.
+    contacts: MOTOR_BRIDGES[String(p.bornera)] ?? {},
+  }),
   create(ctx) {
     const speed = new Ramp(0);
+    const bridges = Object.fromEntries(Object.keys(MOTOR_BRIDGES[String(ctx.params.bornera)] ?? {}).map((k) => [k, true]));
     return {
       update(t, inp) {
         const st = inp.phases?.motor;
@@ -240,6 +252,7 @@ export const motor3ph = {
         speed.step(t, goal, 1000 / (accel ? accelMs : Number(ctx.params.stopMs)));
         const seg = speed.segment(t);
         return {
+          contacts: bridges,
           outputs: {
             energized: !!c.connection || c.faltaFase,
             connection: c.connection,

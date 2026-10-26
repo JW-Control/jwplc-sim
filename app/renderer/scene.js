@@ -60,7 +60,8 @@
     // Una plantilla por variante (p. ej. el modelo de la fuente): la caché va por plantilla.
     const def = S.defs.get(t);
     const p = { ...defaultsOf(t), ...(dev.params ?? {}) };
-    const key = window.JwsimSymbols.templateKey(t, def, p) ?? t;
+    // El motor trifásico cambia de bornes con la bornera.
+    const key = window.JwsimSymbols.templateKey(t, def, p) ?? (t === "jwsim/motor-3ph" ? `${t}#${p.bornera}` : t);
     if (!layouts.has(key)) {
       const lay = window.JwsimSymbols.layout(t, def, p);
       const terms = {};
@@ -598,6 +599,17 @@
           const v = dev.params?.[p.id] ?? p.default;
           const dis = S.running ? "disabled" : "";
           let input;
+          if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
+            // Placa de bornes con sus chapas: se elige con un clic.
+            const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
+            html += `<div class="insp-sub">${esc(p.label)}</div><div class="bornera-pick">`;
+            for (const o of p.options) {
+              html += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
+                `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
+            }
+            html += `</div>`;
+            continue;
+          }
           if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
           else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
           else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
@@ -747,6 +759,21 @@
   }
 
   // La escena cambió (edición): se vuelve a analizar en t = 0.
+  /**
+   * Cambia un parámetro. Si el cambio oculta bornes (la bornera del motor
+   * pasa de «6 cables» a chapas), se quitan los cables que llegaban a ellos.
+   */
+  function setParam(dev, id, value) {
+    dev.params = { ...(dev.params ?? {}), [id]: value };
+    const def = S.defs.get(dev.type);
+    const lay = window.JwsimSymbols.layout(dev.type, def, { ...defaultsOf(dev.type), ...dev.params });
+    const gone = (end) => end.startsWith(`${dev.id}.`) && !(end.slice(dev.id.length + 1) in lay.terms);
+    const before = S.spec.wiring.length;
+    S.spec.wiring = S.spec.wiring.filter((w) => !gone(w.from) && !gone(w.to));
+    if (S.spec.wiring.length !== before) S.sel = { kind: "device", id: dev.id };
+    changed();
+  }
+
   function changed() {
     S.dirty = true;
     clearTimeout(S.analyzeTimer);
@@ -998,8 +1025,13 @@
       if (!id || S.sel?.kind !== "device") return;
       const dev = devById(S.sel.id);
       const p = S.defs.get(dev.type).parameters.find((x) => x.id === id);
-      dev.params = { ...(dev.params ?? {}), [id]: p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value };
-      changed();
+      setParam(dev, id, p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value);
+    });
+    // Selectores gráficos de parámetros (bornera del motor trifásico).
+    $("scene-inspector").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-setparam]");
+      if (!b || b.disabled || S.sel?.kind !== "device") return;
+      setParam(devById(S.sel.id), b.dataset.setparam, b.dataset.value);
     });
     // Fallas (G9): en marcha el inspector se redibuja con cada instantánea;
     // con pointerdown el botón responde aunque se reemplace antes de soltar.
