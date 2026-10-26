@@ -6,3 +6,4 @@ index/jwsim_index.json.sig -text
 sdk/examples/** text eol=lf
 sdk/native/** text eol=lf
 index/src/** text eol=lf
+*.bat text eol=crlf

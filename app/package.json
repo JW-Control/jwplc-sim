@@ -3,6 +3,8 @@
   "productName": "JWPLC Sim",
   "version": "0.2.0",
   "description": "Simulador de escritorio del JWPLC Basic",
+  "author": "JW Control <jw.control.peru@gmail.com>",
+  "homepage": "https://github.com/JW-Control/jwplc-sim",
   "license": "GPL-3.0-or-later",
   "private": true,
   "type": "module",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "electron": "44.6.0",
+    "electron-builder": "26.17.0",
     "playwright": "1.63.0"
   }
 }

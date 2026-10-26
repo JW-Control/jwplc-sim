@@ -20,6 +20,17 @@ import { RunnerProcess } from "./lib/sim-port.mjs";
 import { Registry, builtinDevices } from "../scene/devices/index.mjs";
 import { Scene } from "../scene/scene.mjs";
 
+// Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
+// lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
+// "datos" dentro de su carpeta, no en el perfil del usuario.
+if (app.isPackaged && process.platform === "win32") {
+  const dir = dirname(process.execPath);
+  if (!readdirSync(dir).some((f) => /^Uninstall .*\.exe$/i.test(f))) {
+    app.setPath("userData", join(dir, "datos"));
+    process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
+  }
+}
+
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
 const TEMPLATE = `// Sketch nuevo para JWPLC Basic.
 // Las entradas I0_0..I0_7 y salidas Q0_0..Q0_7 se manejan con la API del core.

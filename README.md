@@ -31,6 +31,28 @@ faltan, instala las dependencias de la app y la abre. Solo usa `node`: no
 depende de cómo la terminal resuelve `npm` (ver abajo). `--setup` prepara
 sin abrir.
 
+En Windows, **`JWPLC Sim.bat`** (en la raíz) hace lo mismo con doble clic:
+abre la app desde esta copia del repositorio, con los cambios locales.
+
+### Instalador y portable (Windows)
+
+**`Generar instalador.bat`** (o `node scripts/dist.mjs`) arma en
+`build\dist\`:
+
+- `JWPLC-Sim-<versión>-instalador.exe`: instalador por usuario (en
+  `%LOCALAPPDATA%\Programs`, sin pedir administrador), con accesos en el
+  escritorio y el menú Inicio;
+- `JWPLC-Sim-<versión>-portable.zip`: la misma app en una carpeta; se
+  descomprime donde se quiera (también en un USB) y se abre `JWPLC Sim.exe`.
+  Guarda sus datos en `datos\` dentro de la carpeta.
+
+Los dos llevan el package fijado, las dependencias de terceros y el
+toolchain GCC: compilan sin red ni Node.js en la PC. El workflow
+*Instalador y portable (Windows)* (`.github/workflows/dist-windows.yml`) los
+genera en GitHub Actions, a pedido y con cada tag `v*`.
+`node scripts/dist.mjs --dir` arma solo la carpeta (en Linux, la versión de
+Linux) para probar.
+
 **Windows: "¿Cómo desea abrir este archivo?" al escribir `npm`.** Pasa
 cuando la variable `PATHEXT` tiene una entrada vacía (un `;` de más, que
 dejan algunos instaladores): PowerShell toma el archivo `npm` sin extensión

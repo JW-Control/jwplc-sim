@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 JW Control
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Instalador (NSIS, por usuario) y portable (.zip) de JWPLC Sim para Windows,
+# con el package fijado, las dependencias de terceros y el toolchain GCC
+# incluidos (la app compila sin red). A pedido, con cada tag v* y cuando
+# cambia la configuración del empaquetado.
+name: Instalador y portable (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+    paths:
+      - scripts/dist.mjs
+      - app/package.json
+      - .github/workflows/dist-windows.yml
+
+jobs:
+  dist:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Caché del package, terceros y toolchain
+        uses: actions/cache@v4
+        with:
+          path: .jwsim
+          key: jwsim-${{ runner.os }}-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      - name: Instalador y portable
+        run: node scripts/dist.mjs
+
+      - name: Instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: JWPLC-Sim-instalador
+          path: build/dist/*-instalador.exe
+          compression-level: 0
+
+      - name: Portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: JWPLC-Sim-portable
+          path: build/dist/*-portable.zip
+          compression-level: 0
