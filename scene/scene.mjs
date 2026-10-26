@@ -561,17 +561,20 @@ export class Scene {
     if (!plc) return null;
     const busA = find(`${plc.id}.RS485_A`);
     const busB = find(`${plc.id}.RS485_B`);
-    const slaves = [...this.devices.values()].filter(
-      (d) =>
-        d.modbus && (addr === 0 || d.modbus.address === addr) && Math.abs(d.modbus.baud - o.baud) / d.modbus.baud < 0.03 &&
-        find(`${d.id}.${d.modbus.a ?? "A"}`) === busA && find(`${d.id}.${d.modbus.b ?? "B"}`) === busB && !this.injected.has(`burnt:${d.id}`),
-    );
+    // La dirección y la velocidad pueden cambiar en marcha (teclado del variador).
+    const cfg = (d) => ({ ...d.modbus, ...(d.inst.modbusConfig?.() ?? {}) });
+    const slaves = [...this.devices.values()].filter((d) => {
+      if (!d.modbus) return false;
+      const m = cfg(d);
+      return (addr === 0 || m.address === addr) && Math.abs(m.baud - o.baud) / m.baud < 0.03 &&
+        find(`${d.id}.${m.a ?? "A"}`) === busA && find(`${d.id}.${m.b ?? "B"}`) === busB && !this.injected.has(`burnt:${d.id}`);
+    });
     if (!slaves.length) return null;
     const u16 = (k) => (frame[k] << 8) | frame[k + 1];
     const reply = (dev, pdu) => {
       const body = [addr, ...pdu];
       const c = crc16(body);
-      return { bytes: [...body, c & 0xff, c >> 8], delayNs: BigInt(Math.round((dev.modbus.responseMs ?? 5) * 1e6)) };
+      return { bytes: [...body, c & 0xff, c >> 8], delayNs: BigInt(Math.round((cfg(dev).responseMs ?? 5) * 1e6)) };
     };
     const exc = (dev, code) => reply(dev, [fn | 0x80, code]);
     let out = null;
@@ -581,7 +584,8 @@ export class Scene {
       const write = (start, vals, echo) => {
         if (!dev.inst.modbusWrite) return exc(dev, 1);
         const ok = dev.inst.modbusWrite(start, vals, o.t);
-        return ok === undefined ? undefined : ok ? reply(dev, echo) : exc(dev, 2);
+        // true: eco; false: dirección inválida (02); un número: ese código de excepción.
+        return ok === undefined ? undefined : ok === true ? reply(dev, echo) : exc(dev, typeof ok === "number" ? ok : 2);
       };
       if ((fn === 3 || fn === 4) && frame.length === 8) {
         const count = u16(4);

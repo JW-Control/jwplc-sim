@@ -101,6 +101,9 @@ Un dispositivo declara:
   los de `keep`) y `DeviceStep.params` devuelve los parámetros que el propio
   equipo reprogramó (teclado, Modbus) para que la app los guarde en la
   escena. Ejemplo: `vfd-el`;
+- **esclavos Modbus configurables**: `modbusWrite` puede devolver un código
+  de excepción (3: valor fuera de rango) y `modbusConfig()` la dirección o la
+  velocidad que el equipo cambió en marcha (teclado del variador);
 - **cargas trifásicas** (`phaseLoads: [{ id, terminals }]`): en `update()`,
   `inp.phases[id].terms[borne]` da la fase que llega (`L1`/`L2`/`L3` o
   `null`) y el nodo (`net`; dos bornes puenteados comparten nodo), y

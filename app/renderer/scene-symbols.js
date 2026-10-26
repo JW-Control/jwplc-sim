@@ -46,7 +46,7 @@
     "motor-3ph": [160, 140, ["U1", "V1", "W1", "PE"], []],
     "motor-2v": [200, 140, ["1U", "1V", "1W", "2U", "2V", "2W", "PE"], []],
     "overload-relay": [160, 160, ["1", "3", "5", "95", "97"], ["2", "4", "6", "96", "98"]],
-    "vfd-el": [300, 220, ["R", "S", "PE", "RA", "RB", "RC", "SG+", "SG-"], ["U", "V", "W", "MI1", "MI2", "MI3", "MI4", "MI5", "MI6", "DCM", "+24V"]],
+    "vfd-el": [360, 220, ["R", "S", "PE"], ["RA", "RB", "RC", "MI2", "U", "MI1", "V", "MI4", "W", "MI3", "MI6", "MI5", "DCM", "+24V", "SG+", "SG-"]],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -184,6 +184,23 @@
     return Math.max(Number(f[3]), Math.min(Number(f[4]), x / Number(f[2])));
   }
 
+  // Caracteres de 7 segmentos (a arriba, b-c derecha, d abajo, e-f izquierda, g centro).
+  const SEG7 = {
+    0: "abcdef", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg", 5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcdfg",
+    A: "abcefg", b: "cdefg", C: "adef", c: "deg", d: "bcdeg", E: "adefg", F: "aefg", G: "acdef", H: "bcefg", h: "cefg",
+    I: "ef", i: "c", J: "bcde", L: "def", n: "ceg", o: "cdeg", O: "abcdef", P: "abefg", q: "abcfg", r: "eg", S: "acdfg",
+    t: "defg", U: "bcdef", u: "cde", v: "cde", y: "bcdfg", Y: "bcdfg", Z: "abdeg", "-": "g", "_": "d", " ": "",
+  };
+  function segCells(text, n) {
+    const cells = [];
+    for (const ch of text) {
+      if (ch === "." && cells.length && !cells.at(-1).includes("p")) cells[cells.length - 1] += "p";
+      else cells.push(ch === "." ? "p" : SEG7[ch] ?? SEG7[ch.toUpperCase()] ?? SEG7[ch.toLowerCase()] ?? "");
+    }
+    while (cells.length < n) cells.unshift("");
+    return cells.slice(-n);
+  }
+
   function drawTemplate(tpl, st, p) {
     const ctx = { o: st.outputs ?? {}, p, st };
     const root = tpl.svg.cloneNode(true);
@@ -210,6 +227,19 @@
         fmt === "mm" ? `${Number(v ?? 0).toFixed(1).replace(".", ",")} mm` :
         dec ? (none ? "—" : `${Number(v).toFixed(Number(dec[1])).replace(".", ",")}${unit ? ` ${unit}` : ""}`) :
         fmt === "hm" ? (none ? "—" : `${Math.floor(Number(v))} h ${String(Math.floor((Number(v) % 1) * 60)).padStart(2, "0")} min`) : String(v ?? "");
+    }
+    for (const el of root.querySelectorAll("[data-seg]")) {
+      // data-seg="out.lcd:4": pantalla de 7 segmentos de N dígitos (texto
+      // alineado a la derecha; el punto se suma al dígito anterior). Cada
+      // segmento lleva data-s="<dígito><a-g|p>" y se pinta con data-on/data-off.
+      const [expr, n] = el.getAttribute("data-seg").split(":");
+      const cells = segCells(String(valueOf(expr, ctx) ?? ""), Number(n));
+      const on = el.getAttribute("data-on") ?? "#ff3b26";
+      const off = el.getAttribute("data-off") ?? "#2a0c08";
+      for (const sg of el.querySelectorAll("[data-s]")) {
+        const k = sg.getAttribute("data-s");
+        sg.setAttribute("fill", cells[Number(k.slice(0, -1))]?.includes(k.slice(-1)) ? on : off);
+      }
     }
     for (const el of root.querySelectorAll("[data-translate]")) {
       // data-translate="out.position:0:1:x:60": valor de 0 a 1 → 0 a 60 px en x.

@@ -251,8 +251,13 @@ export interface DeviceInstance {
    * null = dirección inexistente (excepción 02).
    */
   modbusRead?(table: "holding" | "input", start: number, count: number, t: Ns): number[] | null | undefined;
-  /** Escritura de registros; false = dirección inexistente (excepción 02). */
-  modbusWrite?(start: number, values: number[], t: Ns): boolean | undefined;
+  /**
+   * Escritura de registros; false = dirección inexistente (excepción 02); un
+   * número = ese código de excepción (03: valor fuera de rango).
+   */
+  modbusWrite?(start: number, values: number[], t: Ns): boolean | number | undefined;
+  /** Dirección, velocidad o demora que el equipo cambió en marcha (teclado); pisa a `modbus()`. */
+  modbusConfig?(): Partial<ModbusSpec>;
 }
 
 export interface DeviceDefinition {

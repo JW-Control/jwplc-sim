@@ -87,6 +87,7 @@ Las expresiones leen el estado del dispositivo:
 | `data-fill="expr"` | Pone `fill` al valor. Los nombres de color de los parámetros (`verde`, `rojo`, `amarillo`, `azul`, `blanco`, `negro`) se traducen a la paleta de lentes. |
 | `data-text="expr"`, `"expr:%"`, `"expr:mm"`, `"expr:dN:unidad"` o `"expr:hm"` | Reemplaza el texto; con `:%`, un valor de 0 a 1 se muestra como porcentaje; con `:mm`, como largo con un decimal (`12,5 mm`); con `:d1:°C`, con N decimales y la unidad (`27,4 °C`; sin valor, `—`); con `:hm`, horas como `8 h 05 min`. |
 | `data-translate="expr:v0:v1:x\|y:dist"` | Desplaza el elemento de 0 a `dist` px mientras el valor va de `v0` a `v1`. Ejemplo: `out.position:0:1:x:60` para el vástago del cilindro. Por tramos, `expr:v0,v1,…:x\|y:p0,p1,…`: cada valor cae en su posición en px y entre dos se interpola; sirve para exagerar un tramo corto (la histéresis del sensor inductivo: `out.distance:0,8,8.8,20:x:0,170,220,320`). |
+| `data-seg="expr:N"` | Pantalla de 7 segmentos de N dígitos: el texto (`out.lcd`) se alinea a la derecha y el punto se suma al dígito anterior («F60.0», «01.09»). Cada segmento es un elemento con `data-s="<dígito><a-g o p>"` (`0a` … `3p`; a arriba, b-c derecha, d abajo, e-f izquierda, g centro, p punto) y se pinta con `data-on` o `data-off` del grupo. Ejemplo: el variador VFD-EL. |
 | `data-rotate="expr:v0:v1:a0:a1:cx:cy"` | Gira de `a0` a `a1` grados alrededor de (`cx`, `cy`). Ejemplo: `out.position:-1:1:-45:45:40:50` para la perilla de un selector. |
 | `data-spin="expr:cx:cy:vps"` | Giro continuo con la simulación alrededor de (`cx`, `cy`): con el valor 1 da `vps` vueltas por segundo de tiempo simulado; con 0 se detiene, con un valor negativo gira al revés. El ángulo se integra con el tiempo simulado (se detiene en pausa y sigue la rampa). Ejemplo: `out.speed:60:60:2` para el ventilador de un motor. |
 | `data-action="id" data-kind="momentary\|toggle\|cycle"` | Zona de clic que acciona el dispositivo con la simulación en marcha. `momentary`: activo mientras se mantiene pulsado (pulsador). `toggle`: alterna. `cycle`: recorre `data-options="0,1"`. Las acciones de cada tipo están en `dispositivos.json`. |
@@ -187,13 +188,20 @@ CJX2; dial azul que gira con el ajuste, lengüeta TEST, STOP rojo, RESET
 azul con la ranura en A o H, banderín naranja de disparo en la ventana y
 aviso de falta de fase.
 
-Variador Delta VFD-EL (`gen_vfd_el.py`, propuesta del 26/10/2026, medidas
-aproximadas del armazón A hasta tener el manual y fotos): pantalla LED con
-los indicadores F/H/U, LEDs RUN STOP FWD REV, seis teclas accionables y la
-perilla de frecuencia (`data-kind="drag"` vertical con `data-rotate`). Los
-bornes de control, que en el equipo están bajo la tapa inferior, se
-reparten arriba (R S PE, RA RB RC, SG+ SG-) y abajo (U V W, MI1-MI6, DCM,
-+24V) para cablear el plano.
+Variador Delta VFD-EL (`gen_vfd_el.py`, 26/10/2026, según el manual del
+VFD-EL y la foto del producto): estructura A de 72 x 174 mm a 4 px/mm en un
+viewBox de 360 x 700. Arriba R/L1, S/L2, T/L3 (sin tornillo en el modelo
+monofásico) y tierra; el teclado con los colores reales (RUN verde, STOP/RESET
+rojo, ▲▼ y MODE grises, ENTER azul), la pantalla de 7 segmentos de 4 dígitos
+(`data-seg`), los LED RUN FWD REV y STOP y el potenciómetro con su escala en
+arco (se arrastra en vertical); la abertura con los conmutadores NPN/PNP y
+AVI/ACI, la bornera de control verde en dos filas escalonadas, el relé RA RB
+RC y el puerto RS-485; abajo U/T1 V/T2 W/T3, + y - y la barra de tierra.
+Como la bornera de control está en medio del frente con un paso de 5 mm, de
+cada borne sale un cable con marcador que baja entre los bornes de potencia
+hasta el borde inferior (como el fin de carrera XCKJ); el RS-485 sale por un
+cable de red azul a una bornera SG+ SG- a la derecha. +24V, 10V, AVI, AFM y
+ACM no tienen cable (modo NPN, sin entradas analógicas).
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
 fotoeléctrico, relé enchufable y motor monofásico.

@@ -11,10 +11,13 @@ COL = {"verde": "#2fbf5a", "rojo": "#e2342b", "amarillo": "#f2c230", "azul": "#2
 JS = """(()=>{const COL=%s;
 document.querySelectorAll('.case').forEach(c=>{
  const st=JSON.parse(c.dataset.st);
- const ev=e=>{if(e.startsWith('!'))return !ev(e.slice(1)); if(e.includes('=')){const[a,b]=e.split('=');return String(st[a])===b;} if(e.includes('>')){const[a,b]=e.split('>');return Number(st[a])>Number(b);} if(e.includes('<')){const[a,b]=e.split('<');return Number(st[a])<Number(b);} return st[e];};
+ const ev=e=>{if(e.includes('|')){for(const x of e.split('|')){const v=ev(x);if(v!==undefined)return v;}return undefined;} if(e.startsWith('!'))return !ev(e.slice(1)); if(e.includes('=')){const[a,b]=e.split('=');return String(st[a])===b;} if(e.includes('>')){const[a,b]=e.split('>');return Number(st[a])>Number(b);} if(e.includes('<')){const[a,b]=e.split('<');return Number(st[a])<Number(b);} return st[e];};
  c.querySelectorAll('[data-show]').forEach(n=>{if(!ev(n.dataset.show))n.style.display='none'});
  c.querySelectorAll('[data-fill]').forEach(n=>n.setAttribute('fill',COL[ev(n.dataset.fill)]||ev(n.dataset.fill)));
  c.querySelectorAll('[data-text]').forEach(n=>n.textContent=ev(n.dataset.text));
+ const S7={0:'abcdef',1:'bc',2:'abdeg',3:'abcdg',4:'bcfg',5:'acdfg',6:'acdefg',7:'abc',8:'abcdefg',9:'abcdfg',A:'abcefg',b:'cdefg',C:'adef',c:'deg',d:'bcdeg',E:'adefg',F:'aefg',H:'bcefg',L:'def',n:'ceg',o:'cdeg',P:'abefg',r:'eg',S:'acdfg',t:'defg',U:'bcdef',u:'cde','-':'g',' ':''};
+ c.querySelectorAll('[data-seg]').forEach(n=>{const[e,k]=n.dataset.seg.split(':');const cs=[];for(const ch of String(ev(e)??'')){if(ch==='.'&&cs.length&&!cs[cs.length-1].includes('p'))cs[cs.length-1]+='p';else cs.push(ch==='.'?'p':(S7[ch]??''));}while(cs.length<+k)cs.unshift('');const cc=cs.slice(-k);
+   n.querySelectorAll('[data-s]').forEach(g=>{const d=+g.dataset.s.slice(0,-1),q=g.dataset.s.slice(-1);g.setAttribute('fill',(cc[d]||'').includes(q)?(n.dataset.on||'#ff3b26'):(n.dataset.off||'#2a0c08'));});});
  c.querySelectorAll('[data-translate]').forEach(n=>{const[e,v0,v1,ax,d]=n.dataset.translate.split(':');
    const v=Number(ev(e)||0),t=Math.max(0,Math.min(1,(v-v0)/(v1-v0))),k=Number(d)*t;
    n.setAttribute('transform',ax==='x'?`translate(${k} 0)`:`translate(0 ${k})`);});

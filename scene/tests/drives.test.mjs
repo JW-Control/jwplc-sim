@@ -87,7 +87,9 @@ test("motor de dos velocidades: baja por 1U-1V-1W, alta por 2U-2V-2W y conflicto
 // Variador Delta VFD-EL: entrada 230 VAC por R-S, motor en triángulo en U-V-W
 // y pulsadores entre MI y DCM (NPN).
 const preset = (id) => vfdEl.presets.find((p) => p.id === id).params;
-const VFD = (params = {}) => ({ id: "VF", type: "jwsim/vfd-el", params });
+// Sin el bloqueo del inicio de fábrica (02.05 = 1), salvo en su prueba: las
+// escenas dan la orden en t = 0, el mismo instante en que se energizan.
+const VFD = (params = {}) => ({ id: "VF", type: "jwsim/vfd-el", params: { "02-05": "0: deshabilitado", ...params } });
 const vfdScene = (params, extra = [], extraWires = []) =>
   scene(
     ["N:power-230vac", VFD(params), "M:motor-3ph", "S1:pushbutton-no", "S2:pushbutton-no", "S3:pushbutton-no", "S6:pushbutton-no", { id: "H", type: "jwsim/lamp", params: { rating: "230VAC" } }, ...extra],
@@ -103,11 +105,10 @@ const tap = (s, key, t) => {
 };
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg ?? ""} ${a} != ${b}`);
 
-test("VFD-EL plantilla multivelocidad: MI1 marcha con rampa, MI3 velocidad 1, MI2 invierte pasando por 0", () => {
+test("VFD-EL plantilla multivelocidad: MI1 opera con rampa, MI3 velocidad 1, MI2 invierte pasando por 0", () => {
   const s = vfdScene({ ...preset("multivelocidad"), "01-09": 2, "01-10": 2, pot: 50 });
   assert.equal(s.output("VF", "powered"), true);
-  assert.equal(s.output("VF", "lcd"), "30.00", "F = perilla al 50 % de 60 Hz");
-  assert.equal(s.output("VF", "modo"), "F");
+  assert.equal(s.output("VF", "lcd"), "F30.0", "F = potenciómetro al 50 % de 60 Hz");
   s.act("S1", "press", true, ms(0));
   s.advanceTo(ms(500));
   near(s.output("VF", "hz"), 15, "rampa 0-60 Hz en 2 s");
@@ -116,7 +117,7 @@ test("VFD-EL plantilla multivelocidad: MI1 marcha con rampa, MI3 velocidad 1, MI
   assert.equal(s.output("VF", "hz"), 30);
   s.act("S3", "press", true, ms(2000));
   s.advanceTo(ms(4000));
-  assert.equal(s.output("VF", "hz"), 10, "05-00 = 10 Hz");
+  assert.equal(s.output("VF", "hz"), 10, "05.00 = 10 Hz");
   s.act("S1", "press", false, ms(4000));
   s.act("S2", "press", true, ms(4000));
   s.advanceTo(ms(6000));
@@ -126,72 +127,97 @@ test("VFD-EL plantilla multivelocidad: MI1 marcha con rampa, MI3 velocidad 1, MI
   assert.deepEqual(faults(s), []);
 });
 
-test("VFD-EL de fábrica: AVI sin modelar da 0 Hz; se programa 02-00 = 4 con el teclado y queda en la escena", () => {
+/** Selección de parámetros: MODE hasta GG.NN y ▲ hasta el código. */
+function gotoParam(s, code, t) {
+  for (let i = 0; i < 5; i++) tap(s, "mode", t + i * 100);
+  t += 500;
+  while (s.output("VF", "lcd") !== code) {
+    tap(s, "up", t);
+    t += 100;
+    if (t > 60000) throw new Error(`no llega a ${code}`);
+  }
+  return t;
+}
+
+test("VFD-EL de fábrica: bornes y AVI (0 Hz); se programa 02.00 = 4 con el teclado y queda en la escena", () => {
   const s = vfdScene({ pot: 100, "01-09": 1, "01-10": 1 });
   assert.match(s.output("VF", "aviso"), /AVI/);
+  assert.equal(s.output("VF", "lcd"), "F0.00");
   tap(s, "run", 0);
-  s.advanceTo(ms(1000));
+  s.advanceTo(ms(500));
+  assert.equal(s.output("VF", "running"), false, "02.01 = 1: el teclado no da la operación");
+  s.act("S1", "press", true, ms(500));
+  s.advanceTo(ms(1500));
   assert.equal(s.output("VF", "hz"), 0);
-  assert.equal(s.output("VF", "running"), true, "en marcha a 0 Hz");
-  tap(s, "stop", 1000);
-  // MODE: F → H → Frd → grupos ("00-"); ▲▲ → "02-"; ENTER → "02-00"; ENTER → valor.
-  for (const [i, k] of ["mode", "mode", "mode"].entries()) tap(s, k, 1100 + i * 100);
-  assert.equal(s.output("VF", "lcd"), "00-");
-  tap(s, "up", 1400);
-  tap(s, "up", 1500);
-  assert.equal(s.output("VF", "lcd"), "02-");
-  tap(s, "enter", 1600);
-  assert.equal(s.output("VF", "lcd"), "02-00");
-  tap(s, "enter", 1700);
+  s.act("S1", "press", false, ms(1500));
+  // MODE: F → H → A → U → Frd → selección (00.02); ▲ hasta 02.00; ENTER; ▲▲▲ hasta 4; ENTER.
+  tap(s, "mode", 1600);
+  assert.equal(s.output("VF", "lcd"), "H0.00");
+  tap(s, "mode", 1700);
+  assert.equal(s.output("VF", "lcd"), "A0.0");
+  tap(s, "mode", 1800);
+  assert.equal(s.output("VF", "lcd"), "U0.00");
+  tap(s, "mode", 1900);
+  assert.equal(s.output("VF", "lcd"), "Frd");
+  tap(s, "mode", 2000);
+  assert.equal(s.output("VF", "lcd"), "00.02");
+  let t = 2100;
+  for (let n = 0; s.output("VF", "lcd") !== "02.00" && n < 200; n++) tap(s, "up", (t += 100));
+  tap(s, "enter", (t += 100));
   assert.equal(s.output("VF", "lcd"), "1");
-  for (let i = 0; i < 3; i++) tap(s, "up", 1800 + i * 100);
+  for (let i = 0; i < 3; i++) tap(s, "up", (t += 100));
   assert.equal(s.output("VF", "lcd"), "4");
-  tap(s, "enter", 2200);
+  tap(s, "enter", (t += 100));
   assert.equal(s.output("VF", "lcd"), "End");
-  s.advanceTo(ms(3300));
-  assert.equal(s.output("VF", "lcd"), "02-00");
+  s.advanceTo(ms((t += 1100)));
+  assert.equal(s.output("VF", "lcd"), "02.00");
   const saved = s.snapshot().devices.find((d) => d.id === "VF").params;
-  assert.equal(saved["02-00"], "4: perilla del teclado");
+  assert.equal(saved["02-00"], "4: potenciómetro del teclado");
   assert.equal(saved["01-09"], 1);
-  // MODE vuelve a los grupos y a F; RUN arranca a la frecuencia de la perilla.
-  tap(s, "mode", 3400);
-  tap(s, "mode", 3500);
-  assert.equal(s.output("VF", "lcd"), "60.00");
-  tap(s, "run", 3600);
-  s.advanceTo(ms(5000));
+  tap(s, "mode", (t += 100));   // de la selección vuelve a F
+  assert.equal(s.output("VF", "lcd"), "F60.0");
+  s.act("S1", "press", true, ms((t += 100)));
+  s.advanceTo(ms((t += 1500)));
   assert.equal(s.output("VF", "hz"), 60);
   assert.equal(s.output("VF", "aviso"), "");
 });
 
-test("VFD-EL: ▲ sostenido repite y acelera el cambio de un valor", () => {
+test("VFD-EL: ▲ sostenido repite y acelera; MODE sale sin guardar; un valor fuera de rango da Err", () => {
   const s = vfdScene({});
-  for (let i = 0; i < 3; i++) tap(s, "mode", i * 100);
-  tap(s, "up", 300);                 // "01-"
-  tap(s, "enter", 400);              // "01-00"
-  for (let i = 0; i < 3; i++) tap(s, "up", 500 + i * 100);  // 01-09 (índice 3: 00, 01, 02, 09)
-  assert.equal(s.output("VF", "lcd"), "01-09");
-  tap(s, "enter", 800);
+  let t = gotoParam(s, "01.09", 0);
+  tap(s, "enter", (t += 100));
   assert.equal(s.output("VF", "lcd"), "10.0");
-  s.act("VF", "up", true, ms(1000));
+  t += 200;
+  s.act("VF", "up", true, ms(t));
   assert.equal(s.output("VF", "lcd"), "10.1");
-  s.advanceTo(ms(1400));
+  s.advanceTo(ms(t + 400));
   assert.equal(s.output("VF", "lcd"), "10.1", "espera 0,5 s antes de repetir");
-  s.advanceTo(ms(2400));
-  // Repite cada 0,1 s desde 1,5 s: 10 pasos de 0,1 → 11,1; con más de 1,5 s
-  // sostenida, de a 1,0 (2,5 s: 11,2; 2,6 s: 12,2; 2,7 s: 13,2).
+  // Repite cada 0,1 s desde 0,5 s: 10 pasos de 0,1 hasta 1,4 s; desde 1,6 s, de a 1,0.
+  s.advanceTo(ms(t + 1400));
   assert.equal(s.output("VF", "lcd"), "11.1");
-  s.advanceTo(ms(2700));
+  s.advanceTo(ms(t + 1700));
   assert.equal(s.output("VF", "lcd"), "13.2");
-  s.act("VF", "up", false, ms(2700));
-  s.advanceTo(ms(3000));
-  assert.equal(s.output("VF", "lcd"), "13.2");
-  tap(s, "mode", 3000);              // sale sin guardar
-  assert.equal(s.output("VF", "lcd"), "01-09");
-  tap(s, "enter", 3100);
-  assert.equal(s.output("VF", "lcd"), "10.0");
+  s.act("VF", "up", false, ms(t + 1700));
+  tap(s, "mode", (t += 1800));
+  assert.equal(s.output("VF", "lcd"), "01.09");
+  tap(s, "enter", (t += 100));
+  assert.equal(s.output("VF", "lcd"), "10.0", "no se guardó");
+  tap(s, "mode", (t += 100));
+  // 00.02 = 1 (solo lectura): cualquier otro parámetro da Err.
+  for (let n = 0; s.output("VF", "lcd") !== "00.02" && n < 200; n++) tap(s, "up", (t += 100));
+  tap(s, "enter", (t += 100));
+  tap(s, "up", (t += 100));
+  tap(s, "enter", (t += 100));
+  assert.equal(s.output("VF", "lcd"), "End");
+  s.advanceTo(ms((t += 1100)));
+  for (let n = 0; s.output("VF", "lcd") !== "01.09" && n < 200; n++) tap(s, "up", (t += 100));
+  tap(s, "enter", (t += 100));
+  tap(s, "up", (t += 100));
+  tap(s, "enter", (t += 100));
+  assert.equal(s.output("VF", "lcd"), "Err");
 });
 
-test("VFD-EL: falla externa EF (MI6 = 14) corta la salida, relé de falla, STOP/RESET rearma y pide nueva marcha", () => {
+test("VFD-EL: falla externa EF (MI6 = 14) corta la salida, relé de falla, STOP/RESET rearma y pide nueva orden", () => {
   const s = vfdScene({ ...preset("bornes"), "04-08": "14: falla externa (EF)", pot: 100, "01-09": 1, "01-10": 1 }, [], ["N.L - VF.RC", "VF.RA - H.X1", "H.X2 - N.N"]);
   s.act("S1", "press", true, ms(0));
   s.advanceTo(ms(2000));
@@ -200,13 +226,12 @@ test("VFD-EL: falla externa EF (MI6 = 14) corta la salida, relé de falla, STOP/
   s.act("S6", "press", true, ms(2000));
   assert.equal(s.output("VF", "fault"), "EF");
   assert.equal(s.output("VF", "lcd"), "EF");
-  assert.equal(s.output("VF", "running"), false);
-  assert.equal(s.output("H", "lit"), true, "RA-RC cierra con falla (03-00 = 8)");
+  assert.equal(s.output("VF", "running"), false, "02.02 = 0: EF para libre");
+  assert.equal(s.output("H", "lit"), true, "RA-RC cierra con falla (03.00 = 8)");
   s.advanceTo(ms(5000));
   assert.ok(s.output("M", "speed") < 1, "el motor frena por inercia");
-  // RESET con la causa presente: sigue en falla.
   tap(s, "stop", 5000);
-  assert.equal(s.output("VF", "fault"), "EF");
+  assert.equal(s.output("VF", "fault"), "EF", "con la causa presente no rearma");
   s.act("S6", "press", false, ms(5200));
   tap(s, "stop", 5300);
   assert.equal(s.output("VF", "fault"), "");
@@ -218,12 +243,27 @@ test("VFD-EL: falla externa EF (MI6 = 14) corta la salida, relé de falla, STOP/
   assert.equal(s.output("VF", "hz"), 60);
 });
 
-test("VFD-EL 3 hilos: MI1 marcha con un pulso, MI3 (NC) para", () => {
+test("VFD-EL: bloqueo del inicio (02.05 = 1): con MI1 cerrado al energizar no arranca hasta dar la orden de nuevo", () => {
   const s = scene(
-    ["N:power-230vac", VFD({ ...preset("tres-hilos"), pot: 50, "01-09": 1, "01-10": 1 }), "M:motor-3ph", "S1:pushbutton-no", "S0:pushbutton-nc"],
+    ["N:power-230vac", "Q:pushbutton-no", VFD({ ...preset("bornes"), "02-05": "1: habilitado", pot: 100, "01-09": 1 }), "M:motor-3ph", "S1:pushbutton-no"],
+    ["N.L - Q.13", "Q.14 - VF.R", "N.N - VF.S", "VF.U - M.U1", "VF.V - M.V1", "VF.W - M.W1", "VF.DCM - S1.13", "S1.14 - VF.MI1"],
+  );
+  s.act("S1", "press", true, ms(0));
+  s.act("Q", "press", true, ms(100));
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("VF", "powered"), true);
+  assert.equal(s.output("VF", "running"), false);
+  s.act("S1", "press", false, ms(2000));
+  s.act("S1", "press", true, ms(2100));
+  s.advanceTo(ms(3500));
+  assert.equal(s.output("VF", "hz"), 60);
+});
+
+test("VFD-EL 3 cables: MI1 opera con un pulso, MI3 (NC) para", () => {
+  const s = scene(
+    ["N:power-230vac", VFD({ ...preset("tres-cables"), pot: 50, "01-09": 1, "01-10": 1 }), "M:motor-3ph", "S1:pushbutton-no", "S0:pushbutton-nc"],
     ["N.L - VF.R", "N.N - VF.S", "VF.U - M.U1", "VF.V - M.V1", "VF.W - M.W1", "VF.DCM - S1.13", "S1.14 - VF.MI1", "VF.DCM - S0.11", "S0.12 - VF.MI3"],
   );
-  tap(s, "run", 0);  // el teclado no manda con 02-01 = 1
   s.act("S1", "press", true, ms(100));
   s.act("S1", "press", false, ms(300));
   s.advanceTo(ms(2000));
@@ -235,35 +275,67 @@ test("VFD-EL 3 hilos: MI1 marcha con un pulso, MI3 (NC) para", () => {
   assert.equal(s.output("VF", "running"), false);
 });
 
-test("VFD-EL por Modbus RTU: parámetros 0GNNh, 2001h frecuencia, 2000h marcha y sentido, 2103h", () => {
+test("VFD-EL motopotenciómetro: MI3 (UP) sube 02.11 según la rampa mientras se mantiene", () => {
+  const s = vfdScene({ ...preset("motopot") });
+  s.act("S1", "press", true, ms(0));
+  s.act("S3", "press", true, ms(0));
+  s.advanceTo(ms(2000));
+  s.act("S3", "press", false, ms(2000));
+  near(s.output("VF", "fRef"), 12, "6 Hz/s (60 Hz en 10 s) durante 2 s");
+  s.advanceTo(ms(5000));
+  near(s.output("VF", "hz"), 12);
+  assert.equal(s.snapshot().devices.find((d) => d.id === "VF").params["02-11"], 12, "la frecuencia queda en 02.11");
+});
+
+test("VFD-EL por Modbus RTU: parámetros GGNNH, 2001H, 2000H, monitoreo, excepciones y pérdida de comunicación", () => {
   const s = scene(
     ["N:power-230vac", VFD({ ...preset("modbus"), "09-00": 3 }), "M:motor-3ph", "plc:jwplc-basic"],
     ["N.L - VF.R", "N.N - VF.S", "VF.U - M.U1", "VF.V - M.V1", "VF.W - M.W1", "plc.RS485_A - VF.SG+", "plc.RS485_B - VF.SG-"],
   );
   const req = (bytes, t) => s.modbusRequest(withCrc(bytes), { t: ms(t), baud: 9600 });
-  // 01-09 = 2,0 s y 01-10 = 1,0 s (décimas); se lee 02-00 = 3.
+  // 01.09 = 2,0 s y 01.10 = 1,0 s (décimas); se lee 02.00 = 3.
   assert.ok(req([3, 6, 0x01, 0x09, 0x00, 20], 0));
   assert.ok(req([3, 6, 0x01, 0x0a, 0x00, 10], 5));
   assert.deepEqual(req([3, 3, 0x02, 0x00, 0x00, 0x01], 8).bytes.slice(0, 5), [3, 3, 2, 0, 3]);
-  // 2001h = 45,00 Hz y 2000h = marcha + adelante (0x12).
+  // 2001H = 45,00 Hz y 2000H = operar + adelante (0x12).
   assert.ok(req([3, 6, 0x20, 0x01, 0x11, 0x94], 10));
   assert.ok(req([3, 6, 0x20, 0x00, 0x00, 0x12], 20));
-  s.advanceTo(ms(3000));
+  s.advanceTo(ms(2000));
   assert.equal(s.output("VF", "hz"), 45);
-  assert.deepEqual(req([3, 3, 0x21, 0x03, 0x00, 0x01], 3000).bytes.slice(0, 5), [3, 3, 2, 0x11, 0x94], "2103h = 4500");
-  const st = req([3, 3, 0x21, 0x01, 0x00, 0x01], 3000).bytes;
-  assert.equal(((st[3] << 8) | st[4]) & 0b11, 0b11, "2101h: en marcha");
-  req([3, 6, 0x20, 0x00, 0x00, 0x22], 3000);
-  s.advanceTo(ms(7000));
+  assert.deepEqual(req([3, 3, 0x21, 0x02, 0x00, 0x02], 2000).bytes.slice(0, 7), [3, 3, 4, 0x11, 0x94, 0x11, 0x94], "2102H F y 2103H H");
+  const st = req([3, 3, 0x21, 0x01, 0x00, 0x01], 2000).bytes;
+  assert.equal(((st[3] << 8) | st[4]) & 0b11, 0b11, "2101H: operando");
+  assert.equal(((st[3] << 8) | st[4]) >> 10 & 1, 1, "2101H bit 10: comando por comunicación");
+  req([3, 6, 0x20, 0x00, 0x00, 0x22], 2000);
+  s.advanceTo(ms(5000));
   assert.equal(s.output("VF", "hz"), -45);
-  req([3, 6, 0x20, 0x00, 0x00, 0x01], 7000);
-  s.advanceTo(ms(9000));
+  req([3, 6, 0x20, 0x00, 0x00, 0x01], 5000);
+  s.advanceTo(ms(6500));
   assert.equal(s.output("VF", "hz"), 0);
   assert.equal(s.snapshot().devices.find((d) => d.id === "VF").params["01-09"], 2, "lo escrito por Modbus queda en la escena");
-  // Parámetro inexistente o fuera de rango: excepción.
-  assert.equal(req([3, 6, 0x10, 0x00, 0x00, 0x01], 9000).bytes[1], 0x86);
-  assert.equal(req([3, 6, 0x01, 0x09, 0x00, 0x00], 9000).bytes[1], 0x86, "01-09 = 0,0 s fuera de rango");
-  // En ASCII (09-04 = 0) no contesta a tramas RTU.
-  assert.ok(req([3, 6, 0x09, 0x04, 0x00, 0x00], 9100));
-  assert.ok(!req([3, 3, 0x21, 0x00, 0x00, 0x01], 9200)?.bytes?.length);
+  // Excepciones: dirección inexistente (02) y valor fuera de rango (03), con CExx en la pantalla.
+  assert.deepEqual(req([3, 6, 0x10, 0x00, 0x00, 0x01], 6500).bytes.slice(0, 3), [3, 0x86, 2]);
+  assert.deepEqual(req([3, 6, 0x01, 0x09, 0x00, 0x00], 6600).bytes.slice(0, 3), [3, 0x86, 3]);
+  s.advanceTo(ms(6700));
+  assert.equal(s.output("VF", "lcd"), "CE03");
+  // EF por 2002H bit 0: 2100H = 8 y Pr.06.08 = 8; reset con bit 1.
+  req([3, 6, 0x20, 0x02, 0x00, 0x01], 8000);
+  assert.equal(s.output("VF", "fault"), "EF");
+  assert.deepEqual(req([3, 3, 0x21, 0x00, 0x00, 0x01], 8000).bytes.slice(3, 5), [0, 8]);
+  assert.deepEqual(req([3, 3, 0x06, 0x08, 0x00, 0x01], 8000).bytes.slice(3, 5), [0, 8]);
+  req([3, 6, 0x20, 0x02, 0x00, 0x02], 8100);
+  assert.equal(s.output("VF", "fault"), "");
+  // Sin comunicación 3 s (09.03) con 09.02 = 1: CE10 y para en rampa.
+  req([3, 6, 0x20, 0x00, 0x00, 0x12], 9000);
+  s.advanceTo(ms(11000));
+  assert.equal(s.output("VF", "hz"), 45);
+  s.advanceTo(ms(12100));
+  assert.equal(s.output("VF", "lcd"), "CE10");
+  s.advanceTo(ms(14000));
+  assert.equal(s.output("VF", "hz"), 0);
+  // La dirección cambia en marcha (09.00 = 5) y en ASCII (09.04 = 0) no contesta a RTU.
+  assert.ok(req([3, 6, 0x09, 0x00, 0x00, 0x05], 14000));
+  assert.equal(req([3, 3, 0x21, 0x00, 0x00, 0x01], 14100), null);
+  assert.ok(req([5, 6, 0x09, 0x04, 0x00, 0x00], 14200));
+  assert.equal(req([5, 3, 0x21, 0x00, 0x00, 0x01], 14300), null);
 });
