@@ -2,18 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Instalador (NSIS, por usuario) y portable (.zip) de JWPLC Sim para Windows,
 # con el package fijado, las dependencias de terceros y el toolchain GCC
-# incluidos (la app compila sin red). A pedido, con cada tag v* y cuando
-# cambia la configuración del empaquetado.
+# incluidos (la app compila sin red). A pedido y con cada tag v*.
 name: Instalador y portable (Windows)
 
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
-    paths:
-      - scripts/dist.mjs
-      - app/package.json
-      - .github/workflows/dist-windows.yml
 
 jobs:
   dist:
