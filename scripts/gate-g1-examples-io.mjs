@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Gate JWSIM_G1_PACKAGE_EXAMPLES_IO: ejemplos de E/S del package, sin
 // modificar, contra tablas de verdad (tests/poc/io_patterns.stim).
-// La calibración de costos contra el profiler H3E.0B en un JWPLC Basic real
-// queda PENDING hasta contar con la medición en placa.
+// Calibración: vueltas de loop() por segundo de tests/sketches/calibracion_loop
+// en el simulador contra la medición en un JWPLC Basic real
+// (tests/hardware/calibracion_loop.placa.json), error < 10 % en cada caso.
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildSketch } from "../cli/lib/build.mjs";
@@ -107,17 +109,27 @@ for (const name of ["01.DigitalIO_Basic", "DigitalIO_BlockMirror", "JWPLC_IO_Blo
   const okPeriod = periods.every((d) => Math.abs(d - 1000) <= 25);
   criteria["DigitalIO_BlockWrite"] = { pass: okSeq && okPeriod, sequence: values.map(hex), periods_ms: [...new Set(periods)] };
 }
-criteria.calibration_h3e0b = {
-  pass: null,
-  note: "PENDING: requiere medir el periodo de scan con el profiler H3E.0B en un JWPLC Basic real y ajustar jwsim_cost_model (error < 10 %).",
-};
+{
+  // Calibración del modelo de costos contra la placa.
+  const board = JSON.parse(readFileSync(join(ROOT, "tests", "hardware", "calibracion_loop.placa.json"), "utf8"));
+  const { exe } = await buildSketch(join(ROOT, "tests", "sketches", "calibracion_loop"), { target, log: () => {} });
+  const r = runExe(exe, ["--until", "31000", "--no-eth"]);
+  const sim = {};
+  for (const m of r.stdout.matchAll(/CAL caso=(\d) vueltas_por_s=(\d+)/g)) (sim[m[1]] ??= []).push(Number(m[2]));
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const cases = Object.keys(board.muestras).map((k) => {
+    const b = avg(board.muestras[k]);
+    const s = avg((sim[k] ?? []).slice(1));
+    return { caso: Number(k), placa: Math.round(b), simulador: Math.round(s), error_pct: +((Math.abs(s - b) / b) * 100).toFixed(1) };
+  });
+  criteria.calibration_loop = { pass: cases.every((c) => c.error_pct < 10), cases };
+}
 
-const truthTables = printCriteria("JWSIM_G1_PACKAGE_EXAMPLES_IO", criteria, ` (${target}; calibración pendiente)`);
+const pass = printCriteria("JWSIM_G1_PACKAGE_EXAMPLES_IO", criteria, ` (${target})`);
 writeReport(`JWSIM_G1_PACKAGE_EXAMPLES_IO-${target}`, {
   gate: "JWSIM_G1_PACKAGE_EXAMPLES_IO",
   target,
-  truth_tables: truthTables ? "PASS" : "FAIL",
-  calibration: "PENDING",
+  result: pass ? "PASS" : "FAIL",
   criteria,
 });
-process.exit(truthTables ? 0 : 1);
+process.exit(pass ? 0 : 1);

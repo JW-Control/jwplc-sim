@@ -1,0 +1,10 @@
+{
+  "$comment": "Medición en un JWPLC Basic real de tests/sketches/calibracion_loop (monitor serie, 26/10/2026, package v2.1.0-alpha.14/HmiDesigner/main @ eddee62e). Vueltas de loop() por segundo, una muestra por segundo (se descarta la primera de cada caso).",
+  "fecha": "2026-10-26",
+  "placa": "JWPLC Basic (COM4, JW Control)",
+  "muestras": {
+    "0": [153560, 153558, 153610, 153722, 153588, 153752],
+    "1": [18258, 18239, 18188, 18181, 18185, 18205, 18316, 18195, 18225],
+    "2": [15563, 15555, 15560, 15565, 15560, 15564, 15641, 15566, 15585, 15556, 15569, 15661, 15585, 15565, 15553, 15566, 15552, 15643, 15562, 15556, 15655]
+  }
+}

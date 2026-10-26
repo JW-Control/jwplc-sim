@@ -560,12 +560,24 @@ más un cuanto de 10 µs. Desfase máximo entre núcleos: un cuanto + un costo.
 
 ### 6.3 Costos
 
-`jwsim_cost_model` asigna tiempo virtual a operaciones del HAL
-(`taskYIELD` 2 µs, acceso GPIO 100 ns, `millis` 50 ns, llamada HAL 100 ns,
-operación de semáforo 200 ns). Los buses cobran su duración eléctrica real
-(I2C: 9 bits/byte + START/STOP a la frecuencia configurada; SPI: 8 bits/byte).
-Los valores se calibran en G1 contra mediciones del JWPLC Basic real (el
-package ya tiene el profiler H3E.0B en `main.cpp`, reutilizable para esto).
+`jwsim_cost_model` asigna tiempo virtual a operaciones del HAL:
+`taskYIELD` (y cada vuelta de `loopTask`) 5,06 µs, `millis` 1 µs,
+operación de semáforo 2,7 µs, llamada de `HardwareSerial`
+(available/read/write: mutex de la UART + driver) 8,8 µs, acceso GPIO
+100 ns y llamada genérica al HAL 100 ns. Los buses cobran su duración
+eléctrica real (I2C: 9 bits/byte + START/STOP a la frecuencia configurada;
+SPI: 8 bits/byte).
+
+Calibración (26/10/2026): `tests/sketches/calibracion_loop` cuenta las
+vueltas de `loop()` por segundo con `loop()` vacío, con 5 `digitalWrite` a
+Q0 y con `JWPLC_ModbusRTU.task()`. En un JWPLC Basic real dio 153,6 k,
+18,2 k y 15,56 k (`tests/hardware/calibracion_loop.placa.json`); con los
+costos de arriba el simulador queda a menos de 3 % en los tres casos
+(criterio del gate G1_PACKAGE_EXAMPLES_IO). Antes, con costos estimados, el
+simulador daba 455 k, 177 k y 176 k vueltas: ejecutaba hasta 11 veces más
+vueltas de las reales y un `loop()` libre corría solo a ×15–×20. GPIO y la
+llamada genérica al HAL siguen sin medición. `JWSIM_COSTS="sem_op=2700,…"`
+reemplaza costos al correr, para calibrar sin recompilar.
 
 ### 6.4 Scan: el mismo del firmware
 

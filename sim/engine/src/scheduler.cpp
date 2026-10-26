@@ -115,23 +115,54 @@ struct Sched {
   uint64_t trace_count = 0;
 };
 
-// Costos por defecto (ESP32 @240 MHz, orden de magnitud). Se calibran en G1.
+// Costos por defecto (ESP32 @240 MHz). task_yield, millis_call, sem_op y
+// uart_call calibrados el 26/10/2026 con tests/sketches/calibracion_loop en
+// un JWPLC Basic (vueltas de loop() por segundo: vacío 153,6 k; con 5
+// digitalWrite a Q0 18,2 k; con JWPLC_ModbusRTU.task() 15,56 k). gpio_access
+// y hal_call siguen siendo estimaciones (sin medición).
 constexpr jwsim_cost_model DEFAULT_COSTS = {
-    /*task_yield*/ 2 * JWSIM_NS_PER_US,
+    /*task_yield*/ 5060,
     /*gpio_access*/ 100,
-    /*millis_call*/ 50,
+    /*millis_call*/ 1000,
     /*hal_call*/ 100,
-    /*sem_op*/ 200,
+    /*sem_op*/ 2700,
+    /*uart_call*/ 8800,
 };
 
 // S() se llama en cada operación del firmware: tras la primera vez es una
 // lectura de puntero que el compilador integra.
 Sched *g_sched = nullptr;
 
+// JWSIM_COSTS="sem_op=1500,task_yield=6000": reemplaza costos (ns) para
+// calibrar contra la placa (tests/sketches/calibracion_loop).
+void apply_cost_env(jwsim_cost_model &c) {
+  const char *env = std::getenv("JWSIM_COSTS");
+  if (!env) return;
+  const std::string v = env;
+  for (size_t i = 0; i < v.size();) {
+    const size_t comma = std::min(v.find(',', i), v.size());
+    const std::string kv = v.substr(i, comma - i);
+    const size_t eq = kv.find('=');
+    if (eq != std::string::npos) {
+      const std::string k = kv.substr(0, eq);
+      const jwsim_ns_t ns = std::strtoull(kv.c_str() + eq + 1, nullptr, 10);
+      if (k == "task_yield") c.task_yield = ns;
+      else if (k == "gpio_access") c.gpio_access = ns;
+      else if (k == "millis_call") c.millis_call = ns;
+      else if (k == "hal_call") c.hal_call = ns;
+      else if (k == "sem_op") c.sem_op = ns;
+      else if (k == "uart_call") c.uart_call = ns;
+      else std::fprintf(stderr, "[jwsim] JWSIM_COSTS: costo desconocido %s\n", k.c_str());
+    }
+    i = comma + 1;
+  }
+}
+
 __attribute__((noinline)) Sched &S_init() {
   static Sched s = [] {
     Sched init;
     init.costs = DEFAULT_COSTS;
+    apply_cost_env(init.costs);
     return init;
   }();
   g_sched = &s;

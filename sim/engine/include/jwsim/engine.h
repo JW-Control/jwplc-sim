@@ -148,6 +148,7 @@ typedef struct jwsim_cost_model {
   jwsim_ns_t millis_call;     // millis()/micros()
   jwsim_ns_t hal_call;        // llamada genérica al HAL
   jwsim_ns_t sem_op;          // operación de semáforo/mutex sin bloqueo
+  jwsim_ns_t uart_call;       // available/read/write de HardwareSerial (mutex de la UART + driver)
 } jwsim_cost_model;
 
 jwsim_cost_model *jwsim_costs(void);

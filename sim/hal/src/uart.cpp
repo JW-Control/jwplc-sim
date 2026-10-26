@@ -187,9 +187,16 @@ void uartGetEventQueue(uart_t *, QueueHandle_t *q) {
   if (q) *q = nullptr;   // eventos de UART (onReceive) llegan en G4
 }
 
-uint32_t uartAvailable(uart_t *u) { return u ? static_cast<uint32_t>(u->rx.size()) : 0; }
+// Como en arduino-esp32 3.x, cada llamada toma el mutex de la UART y
+// consulta el driver: uart_call (calibrado en la placa) la cubre.
+uint32_t uartAvailable(uart_t *u) {
+  if (!u) return 0;
+  jwsim_cpu(jwsim_costs()->uart_call);
+  return static_cast<uint32_t>(u->rx.size());
+}
 uint32_t uartAvailableForWrite(uart_t *u) {
   if (!u) return 0;
+  jwsim_cpu(jwsim_costs()->uart_call);
   if (!timed(u)) return kHwFifo;
   drop_sent(u, jwsim_now());
   const size_t cap = kHwFifo + u->tx_buffer;
@@ -203,7 +210,7 @@ size_t uartReadBytes(uart_t *u, uint8_t *buffer, size_t size, uint32_t) {
     buffer[n++] = u->rx.front();
     u->rx.pop_front();
   }
-  jwsim_cpu(jwsim_costs()->hal_call);
+  jwsim_cpu(jwsim_costs()->uart_call);
   return n;
 }
 
@@ -213,7 +220,11 @@ uint8_t uartRead(uart_t *u) {
   return c;
 }
 
-uint8_t uartPeek(uart_t *u) { return (u && !u->rx.empty()) ? u->rx.front() : 0; }
+uint8_t uartPeek(uart_t *u) {
+  if (!u) return 0;
+  jwsim_cpu(jwsim_costs()->uart_call);
+  return u->rx.empty() ? 0 : u->rx.front();
+}
 
 void uartWriteBuf(uart_t *u, const uint8_t *data, size_t len) {
   if (!u || !len) return;
@@ -221,7 +232,7 @@ void uartWriteBuf(uart_t *u, const uint8_t *data, size_t len) {
   jwsim_trace_bytes(hdr, sizeof(hdr));
   jwsim_trace_bytes(data, len);
   jwsim::board().uart_tx(u->num, data, len);
-  jwsim_cpu(jwsim_costs()->hal_call);
+  jwsim_cpu(jwsim_costs()->uart_call);
   if (!timed(u)) return;
   const jwsim_ns_t ch = char_ns(u);
   const size_t cap = kHwFifo + u->tx_buffer;
