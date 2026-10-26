@@ -65,8 +65,8 @@ JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma váli
                                     (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
 JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (símbolos v2: 18 de 21 plantillas; electroválvula Airtac 4V210 + MBL20 y su variante
                                      biestable 4V220 (26/10, escala de campo 2 px/mm aprobada); motores WEG W22 de frente con
-                                     giro (3ph, 3ph 6 cables, 2 velocidades: propuesta por aprobar); térmico NR2 y variador
-                                     MS300 en código; faltan fotoeléctrico y relé enchufable)
+                                     giro (aprobados); térmico CHINT NR2-25 según su ficha y variador Delta VFD-EL
+                                     programable (propuesta, medidas aproximadas); faltan fotoeléctrico y relé enchufable)
 JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)

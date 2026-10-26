@@ -660,6 +660,8 @@ export class Scene {
         outputs,
         contacts: { ...(dev.step.contacts ?? {}) },
         actions: { ...dev.actions },
+        // Parámetros que el propio equipo reprogramó (teclado, Modbus).
+        ...(dev.step.params ? { params: { ...dev.step.params } } : {}),
         damaged: (dev.el.loads ?? []).filter((l) => this.damaged.has(`${dev.id}.${l.id}`)).map((l) => l.id),
         tripped: (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id)),
         injected: ["stuck", "welded", "burnt"].filter((k) => this.injected.has(`${k}:${dev.id}`)),

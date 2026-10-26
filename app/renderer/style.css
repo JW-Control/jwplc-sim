@@ -1425,3 +1425,47 @@ button.fault.on {
   opacity: 0.6;
   cursor: default;
 }
+/* Plantillas de taller (variador) y grupos de parámetros plegables. */
+.preset-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+.preset-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 6px;
+  text-align: left;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.preset-opt span {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.preset-opt.on {
+  border-color: var(--accent);
+}
+.preset-opt:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.insp-group {
+  margin: 2px 0;
+  border-top: 1px solid var(--border);
+}
+.insp-group > summary {
+  padding: 4px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.insp-row.wide {
+  grid-template-columns: 1fr;
+  gap: 2px;
+}

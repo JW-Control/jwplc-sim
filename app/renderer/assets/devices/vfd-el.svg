@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Variador Delta VFD-EL (VFD007EL21A, 0,75 kW, 1F 230 V). Vista frontal. Escala 4 px/mm (medidas aproximadas). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 580">
+<defs>
+<linearGradient id="vfdel-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="vfdel-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="vfdel-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="vfdel-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="vfdel-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="vfdel-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="vfdel-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="vfdel-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="vfdel-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="vfdel-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="vfdel-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9dcdf"/><stop offset=".12" stop-color="#eef0f2"/><stop offset=".88" stop-color="#eceef0"/><stop offset="1" stop-color="#cfd3d7"/></linearGradient>
+<linearGradient id="vfdel-pad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3f45"/><stop offset="1" stop-color="#25292e"/></linearGradient>
+<linearGradient id="vfdel-key" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d646c"/><stop offset="1" stop-color="#3e444b"/></linearGradient>
+<radialGradient id="vfdel-knob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#9aa1a9"/><stop offset=".6" stop-color="#5d646c"/><stop offset="1" stop-color="#2f3439"/></radialGradient>
+<linearGradient id="vfdel-tb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3f44"/><stop offset="1" stop-color="#202327"/></linearGradient>
+</defs>
+<rect x="13" y="10" width="280" height="568" rx="8" fill="#000" opacity=".22"/>
+<rect x="10" y="6" width="280" height="568" rx="8" fill="url(#vfdel-body)" stroke="#16181b" stroke-width="1.6"/>
+<rect x="11" y="6" width="278" height="40" rx="7" fill="url(#vfdel-tb)"/>
+<circle cx="20" cy="24" r="9.5" fill="#15171a"/><circle cx="20" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M15.5 24H24.5M20 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="R" cx="20" cy="24" r="11"/>
+<rect x="15" y="3" width="10" height="4" fill="#000"/>
+<circle cx="60" cy="24" r="9.5" fill="#15171a"/><circle cx="60" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M55.5 24H64.5M60 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="S" cx="60" cy="24" r="11"/>
+<rect x="55" y="3" width="10" height="4" fill="#000"/>
+<circle cx="100" cy="24" r="9.5" fill="#15171a"/><circle cx="100" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M95.5 24H104.5M100 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="PE" cx="100" cy="24" r="11"/>
+<rect x="95" y="3" width="10" height="4" fill="#000"/>
+<circle cx="140" cy="24" r="9.5" fill="#15171a"/><circle cx="140" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M135.5 24H144.5M140 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="RA" cx="140" cy="24" r="11"/>
+<rect x="135" y="3" width="10" height="4" fill="#000"/>
+<circle cx="180" cy="24" r="9.5" fill="#15171a"/><circle cx="180" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M175.5 24H184.5M180 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="RB" cx="180" cy="24" r="11"/>
+<rect x="175" y="3" width="10" height="4" fill="#000"/>
+<circle cx="220" cy="24" r="9.5" fill="#15171a"/><circle cx="220" cy="24" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M215.5 24H224.5M220 19.5V28.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="RC" cx="220" cy="24" r="11"/>
+<rect x="215" y="3" width="10" height="4" fill="#000"/>
+<circle cx="260" cy="24" r="8.5" fill="#15171a"/><circle cx="260" cy="24" r="6.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M256.1 24H263.9M260 20.1V27.9" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="SG+" cx="260" cy="24" r="11"/>
+<rect x="255" y="3" width="10" height="4" fill="#000"/>
+<circle cx="280" cy="24" r="8.5" fill="#15171a"/><circle cx="280" cy="24" r="6.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M276.1 24H283.9M280 20.1V27.9" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="SG-" cx="280" cy="24" r="11"/>
+<rect x="275" y="3" width="10" height="4" fill="#000"/>
+<text x="20" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">R/L1</text>
+<text x="60" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">S/L2</text>
+<text x="100" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#2f8f3a">PE</text>
+<text x="140" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">RA</text>
+<text x="180" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">RB</text>
+<text x="220" y="58" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">RC</text>
+<text x="260" y="58" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#3d4248">SG+</text>
+<text x="280" y="58" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#3d4248">SG-</text>
+<text x="200" y="70" text-anchor="middle" font-family="sans-serif" font-size="6.5" fill="#6b7178">RELÉ · RS-485</text>
+<path d="M28 96l9 -16l9 16z" fill="none" stroke="#1e5bb8" stroke-width="2.6" stroke-linejoin="round"/>
+<text x="51" y="96" font-family="sans-serif" font-size="15" font-weight="900" font-style="italic" fill="#1e5bb8" letter-spacing=".5">DELTA</text>
+<text x="272" y="96" text-anchor="end" font-family="sans-serif" font-size="12" font-weight="800" fill="#5b6168">VFD-EL</text>
+<rect x="24" y="106" width="252" height="258" rx="12" fill="url(#vfdel-pad)" stroke="#111" stroke-width="1.4"/>
+<rect x="38" y="120" width="224" height="62" rx="5" fill="#0b0b0c" stroke="#000" stroke-width="1.2"/>
+<rect x="76" y="126" width="178" height="50" rx="2" fill="#160707"/>
+<text x="54" y="136" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#3a1410">F</text>
+<text data-show="out.modo=F" x="54" y="136" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#ff3b26">F</text>
+<text x="54" y="154" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#3a1410">H</text>
+<text data-show="out.modo=H" x="54" y="154" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#ff3b26">H</text>
+<text x="54" y="172" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#3a1410">U</text>
+<text data-show="out.modo=U" x="54" y="172" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#ff3b26">U</text>
+<text data-text="out.lcd" x="248" y="167" text-anchor="end" font-family="monospace" font-size="42" font-weight="700" fill="#ff3b26" letter-spacing="2"></text>
+<circle cx="66" cy="196" r="4.5" fill="#1a1c1f" stroke="#000" stroke-width=".8"/>
+<circle data-show="out.ledRun" cx="66" cy="196" r="4.5" fill="#3be35e"/>
+<circle data-show="out.ledRun" cx="66" cy="196" r="9" fill="#3be35e" opacity=".25"/>
+<text x="66" y="214" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#d5d9de">RUN</text>
+<circle cx="122" cy="196" r="4.5" fill="#1a1c1f" stroke="#000" stroke-width=".8"/>
+<circle data-show="out.ledStop" cx="122" cy="196" r="4.5" fill="#ff3b30"/>
+<circle data-show="out.ledStop" cx="122" cy="196" r="9" fill="#ff3b30" opacity=".25"/>
+<text x="122" y="214" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#d5d9de">STOP</text>
+<circle cx="178" cy="196" r="4.5" fill="#1a1c1f" stroke="#000" stroke-width=".8"/>
+<circle data-show="out.ledFwd" cx="178" cy="196" r="4.5" fill="#3be35e"/>
+<circle data-show="out.ledFwd" cx="178" cy="196" r="9" fill="#3be35e" opacity=".25"/>
+<text x="178" y="214" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#d5d9de">FWD</text>
+<circle cx="234" cy="196" r="4.5" fill="#1a1c1f" stroke="#000" stroke-width=".8"/>
+<circle data-show="out.ledRev" cx="234" cy="196" r="4.5" fill="#3be35e"/>
+<circle data-show="out.ledRev" cx="234" cy="196" r="9" fill="#3be35e" opacity=".25"/>
+<text x="234" y="214" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#d5d9de">REV</text>
+<g data-action="run" data-kind="momentary"><rect x="31.0" y="238.0" width="66" height="36" rx="6" fill="#111"/><rect data-show="!out.k_run" x="31.0" y="236.0" width="66" height="36" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_run" x="31.0" y="238.0" width="66" height="36" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="64" y="259.32" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="800" fill="#6ff08b">RUN</text></g>
+<g data-action="stop" data-kind="momentary"><rect x="203.0" y="238.0" width="66" height="36" rx="6" fill="#111"/><rect data-show="!out.k_stop" x="203.0" y="236.0" width="66" height="36" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_stop" x="203.0" y="238.0" width="66" height="36" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="236" y="258.96" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#ff7b70">STOP</text></g>
+<text x="236" y="283" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="700" fill="#ff9d95">RESET</text>
+<g data-action="mode" data-kind="momentary"><rect x="31.0" y="311.0" width="50" height="34" rx="6" fill="#111"/><rect data-show="!out.k_mode" x="31.0" y="309.0" width="50" height="34" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_mode" x="31.0" y="311.0" width="50" height="34" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="56" y="330.42" text-anchor="middle" font-family="sans-serif" font-size="9.5" font-weight="800" fill="#eef1f4">MODE</text></g>
+<g data-action="up" data-kind="momentary"><rect x="93.0" y="311.0" width="50" height="34" rx="6" fill="#111"/><rect data-show="!out.k_up" x="93.0" y="309.0" width="50" height="34" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_up" x="93.0" y="311.0" width="50" height="34" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="118" y="332.04" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="800" fill="#eef1f4">▲</text></g>
+<g data-action="down" data-kind="momentary"><rect x="157.0" y="311.0" width="50" height="34" rx="6" fill="#111"/><rect data-show="!out.k_down" x="157.0" y="309.0" width="50" height="34" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_down" x="157.0" y="311.0" width="50" height="34" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="182" y="332.04" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="800" fill="#eef1f4">▼</text></g>
+<g data-action="enter" data-kind="momentary"><rect x="219.0" y="311.0" width="50" height="34" rx="6" fill="#111"/><rect data-show="!out.k_enter" x="219.0" y="309.0" width="50" height="34" rx="6" fill="url(#vfdel-key)" stroke="#16191c" stroke-width="1"/><rect data-show="out.k_enter" x="219.0" y="311.0" width="50" height="34" rx="6" fill="#30353b" stroke="#16191c" stroke-width="1"/><text x="244" y="330.24" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#eef1f4">ENTER</text></g>
+<line x1="128.1" y1="275.9" x2="124.5" y2="279.5" stroke="#aeb4bb" stroke-width="1.6"/>
+<line x1="120.5" y1="263.6" x2="115.8" y2="265.1" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="119.4" y1="249.2" x2="114.4" y2="248.4" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="124.9" y1="235.8" x2="120.9" y2="232.8" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="135.9" y1="226.4" x2="133.7" y2="221.9" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="150.0" y1="223.0" x2="150.0" y2="218.0" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="164.1" y1="226.4" x2="166.3" y2="221.9" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="175.1" y1="235.8" x2="179.1" y2="232.8" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="180.6" y1="249.2" x2="185.6" y2="248.4" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="179.5" y1="263.6" x2="184.2" y2="265.1" stroke="#aeb4bb" stroke-width="1"/>
+<line x1="171.9" y1="275.9" x2="175.5" y2="279.5" stroke="#aeb4bb" stroke-width="1.6"/>
+<text x="120" y="290" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#aeb4bb">MIN</text>
+<text x="180" y="290" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#aeb4bb">MAX</text>
+<g data-action="pot" data-kind="drag" data-drag="y:0:-1.2:0:100">
+<circle cx="150" cy="254" r="28" fill="#000" opacity="0"/>
+<g data-rotate="out.pot|param.pot:0:100:-135:135:150:254">
+<circle cx="150" cy="256" r="25" fill="#111"/>
+<circle cx="150" cy="254" r="25" fill="url(#vfdel-knob)" stroke="#16191c" stroke-width="1.2"/>
+<line x1="150.0" y1="232.0" x2="150.0" y2="229.0" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="158.4" y1="233.7" x2="159.6" y2="230.9" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="165.6" y1="238.4" x2="167.7" y2="236.3" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="170.3" y1="245.6" x2="173.1" y2="244.4" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="172.0" y1="254.0" x2="175.0" y2="254.0" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="170.3" y1="262.4" x2="173.1" y2="263.6" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="165.6" y1="269.6" x2="167.7" y2="271.7" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="158.4" y1="274.3" x2="159.6" y2="277.1" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="150.0" y1="276.0" x2="150.0" y2="279.0" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="141.6" y1="274.3" x2="140.4" y2="277.1" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="134.4" y1="269.6" x2="132.3" y2="271.7" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="129.7" y1="262.4" x2="126.9" y2="263.6" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="128.0" y1="254.0" x2="125.0" y2="254.0" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="129.7" y1="245.6" x2="126.9" y2="244.4" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="134.4" y1="238.4" x2="132.3" y2="236.3" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="141.6" y1="233.7" x2="140.4" y2="230.9" stroke="#2b3035" stroke-width="1.4"/>
+<line x1="150" y1="248" x2="150" y2="233" stroke="#f4f6f8" stroke-width="3" stroke-linecap="round"/>
+</g></g>
+<rect x="40" y="384" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="40" y="394" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="40" y="404" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="40" y="414" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="40" y="424" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="40" y="434" width="220" height="4" rx="2" fill="#c4c8cd"/>
+<rect x="44" y="448" width="212" height="52" rx="3" fill="#f8f9fa" stroke="#b4b9bf" stroke-width="1"/>
+<text x="54" y="464" font-family="sans-serif" font-size="10" font-weight="800" fill="#2b2f35">VFD007EL21A</text>
+<text x="54" y="478" font-family="sans-serif" font-size="7.5" fill="#4a5058">0,75 kW · entrada 1F 200-240 V 50/60 Hz</text>
+<text x="54" y="490" font-family="sans-serif" font-size="7.5" fill="#4a5058">salida 3F 0-240 V · 0,1-600 Hz · 4,2 A</text>
+<g data-show="out.aviso"><rect x="30" y="368" width="240" height="14" rx="3" fill="#ffd400" stroke="#8a6d00"/><text x="150" y="378" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#2b2200">02-00 = AVI/ACI: sin modelar (0 Hz)</text></g>
+<rect x="11" y="530" width="278" height="44" rx="7" fill="url(#vfdel-tb)"/>
+<circle cx="20" cy="554" r="9.5" fill="#15171a"/><circle cx="20" cy="554" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M15.5 554H24.5M20 549.5V558.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="U" cx="20" cy="554" r="11"/>
+<rect x="15" y="573" width="10" height="4" fill="#000"/>
+<text x="20" y="524" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">U/T1</text>
+<circle cx="60" cy="554" r="9.5" fill="#15171a"/><circle cx="60" cy="554" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M55.5 554H64.5M60 549.5V558.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="V" cx="60" cy="554" r="11"/>
+<rect x="55" y="573" width="10" height="4" fill="#000"/>
+<text x="60" y="524" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">V/T2</text>
+<circle cx="100" cy="554" r="9.5" fill="#15171a"/><circle cx="100" cy="554" r="7.5" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M95.5 554H104.5M100 549.5V558.5" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="W" cx="100" cy="554" r="11"/>
+<rect x="95" y="573" width="10" height="4" fill="#000"/>
+<text x="100" y="524" text-anchor="middle" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#3d4248">W/T3</text>
+<circle cx="140" cy="554" r="8.2" fill="#15171a"/><circle cx="140" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M136.3 554H143.7M140 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI1" cx="140" cy="554" r="11"/>
+<rect x="135" y="573" width="10" height="4" fill="#000"/>
+<text x="140" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI1</text>
+<circle cx="160" cy="554" r="8.2" fill="#15171a"/><circle cx="160" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M156.3 554H163.7M160 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI2" cx="160" cy="554" r="11"/>
+<rect x="155" y="573" width="10" height="4" fill="#000"/>
+<text x="160" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI2</text>
+<circle cx="180" cy="554" r="8.2" fill="#15171a"/><circle cx="180" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M176.3 554H183.7M180 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI3" cx="180" cy="554" r="11"/>
+<rect x="175" y="573" width="10" height="4" fill="#000"/>
+<text x="180" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI3</text>
+<circle cx="200" cy="554" r="8.2" fill="#15171a"/><circle cx="200" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M196.3 554H203.7M200 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI4" cx="200" cy="554" r="11"/>
+<rect x="195" y="573" width="10" height="4" fill="#000"/>
+<text x="200" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI4</text>
+<circle cx="220" cy="554" r="8.2" fill="#15171a"/><circle cx="220" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M216.3 554H223.7M220 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI5" cx="220" cy="554" r="11"/>
+<rect x="215" y="573" width="10" height="4" fill="#000"/>
+<text x="220" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI5</text>
+<circle cx="240" cy="554" r="8.2" fill="#15171a"/><circle cx="240" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M236.3 554H243.7M240 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="MI6" cx="240" cy="554" r="11"/>
+<rect x="235" y="573" width="10" height="4" fill="#000"/>
+<text x="240" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">MI6</text>
+<circle cx="260" cy="554" r="8.2" fill="#15171a"/><circle cx="260" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M256.3 554H263.7M260 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="DCM" cx="260" cy="554" r="11"/>
+<rect x="255" y="573" width="10" height="4" fill="#000"/>
+<text x="260" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">DCM</text>
+<circle cx="280" cy="554" r="8.2" fill="#15171a"/><circle cx="280" cy="554" r="6.2" fill="url(#vfdel-scr)" stroke="#16181b" stroke-width="1"/><path d="M276.3 554H283.7M280 550.3V557.7" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="+24V" cx="280" cy="554" r="11"/>
+<rect x="275" y="573" width="10" height="4" fill="#000"/>
+<text x="280" y="525" text-anchor="middle" font-family="sans-serif" font-size="6.4" font-weight="700" fill="#3d4248">+24V</text>
+<path d="M132 510H272" stroke="#9aa0a6" stroke-width="1"/>
+<text x="202" y="507" text-anchor="middle" font-family="sans-serif" font-size="6.5" fill="#6b7178">ENTRADAS (NPN: a DCM)</text>
+</svg>

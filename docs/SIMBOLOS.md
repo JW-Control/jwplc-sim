@@ -177,10 +177,24 @@ tener el catálogo de WEG): `gen_motor_frontal.py` dibuja el WEG W22 IEC 80
 visto desde el ventilador, a 2 px/mm, con las aspas girando detrás de la
 rejilla (`data-spin` con `out.speed`), la caja de bornes con la placa de
 datos y los cables con marcador. Variantes: `motor-3ph` (U1 V1 W1 PE),
-`motor-3ph__6cables` (siete bornes) y `motor-2v` (1U…2W y PE). El relé
-térmico y el variador Delta MS300 siguen dibujados en código hasta tener
-sus fotos.
+`motor-3ph__6cables` (siete bornes) y `motor-2v` (1U…2W y PE). Motor
+aprobado por JW Control el 26/10/2026.
+
+Relé térmico CHINT NR2-25 (`gen_termico_nr2.py`, 26/10/2026): medidas y
+colores de la ficha CHINT serie NR2 (45 mm de ancho, 4 px/mm), pines 1/3/5
+en x = 40, 80, 120 para que calcen bajo los bornes 2/4/6 del contactor
+CJX2; dial azul que gira con el ajuste, lengüeta TEST, STOP rojo, RESET
+azul con la ranura en A o H, banderín naranja de disparo en la ventana y
+aviso de falta de fase.
+
+Variador Delta VFD-EL (`gen_vfd_el.py`, propuesta del 26/10/2026, medidas
+aproximadas del armazón A hasta tener el manual y fotos): pantalla LED con
+los indicadores F/H/U, LEDs RUN STOP FWD REV, seis teclas accionables y la
+perilla de frecuencia (`data-kind="drag"` vertical con `data-rotate`). Los
+bornes de control, que en el equipo están bajo la tapa inferior, se
+reparten arriba (R S PE, RA RB RC, SG+ SG-) y abajo (U V W, MI1-MI6, DCM,
++24V) para cablear el plano.
 
 Pendientes (todavía dibujados en código, sin escala real): sensor
-fotoeléctrico, relé enchufable, motor monofásico, relé térmico y variador.
+fotoeléctrico, relé enchufable y motor monofásico.
 `node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.

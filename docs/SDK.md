@@ -93,8 +93,14 @@ Un dispositivo declara:
 - **fuentes controladas** (`controlled: true`): solo existen mientras el
   dispositivo las enciende con `DeviceStep.sources[id] = { on, hz, reverse }`
   (salida de un variador: frecuencia como `{ value, rate, goal }` y la
-  secuencia invertida para girar atrás). Ejemplo: `vfd-ms300` en
-  `scene/devices/drives.mjs`;
+  secuencia invertida para girar atrás). Ejemplo: `vfd-el` en
+  `scene/devices/vfd-el.mjs`;
+- **equipos programables**: `ParameterSpec.group` agrupa los parámetros en
+  el inspector (plegables), `presets` ofrece plantillas de taller
+  (`{ id, label, description, params, keep }`: fábrica + `params`, sin tocar
+  los de `keep`) y `DeviceStep.params` devuelve los parámetros que el propio
+  equipo reprogramó (teclado, Modbus) para que la app los guarde en la
+  escena. Ejemplo: `vfd-el`;
 - **cargas trifásicas** (`phaseLoads: [{ id, terminals }]`): en `update()`,
   `inp.phases[id].terms[borne]` da la fase que llega (`L1`/`L2`/`L3` o
   `null`) y el nodo (`net`; dos bornes puenteados comparten nodo), y

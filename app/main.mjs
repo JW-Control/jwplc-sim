@@ -511,6 +511,7 @@ ipcMain.handle("scene:devices", async () =>
     category: d.category ?? "Otros",
     description: d.description ?? "",
     parameters: d.parameters ?? [],
+    presets: d.presets ?? [],
     terminals: d.terminals,
     actions: d.actions ?? [],
     installed: installedDevices().some((x) => x.type === d.type),

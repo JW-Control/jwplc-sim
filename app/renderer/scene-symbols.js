@@ -46,7 +46,7 @@
     "motor-3ph": [160, 140, ["U1", "V1", "W1", "PE"], []],
     "motor-2v": [200, 140, ["1U", "1V", "1W", "2U", "2V", "2W", "PE"], []],
     "overload-relay": [160, 160, ["1", "3", "5", "95", "97"], ["2", "4", "6", "96", "98"]],
-    "vfd-ms300": [340, 220, ["R", "S", "T", "U", "V", "W", "PE"], ["MI1", "MI2", "MI3", "MI4", "MI5", "MI6", "MI7", "DCM", "+24V", "RA", "RB", "RC", "SG+", "SG-"]],
+    "vfd-el": [300, 220, ["R", "S", "PE", "RA", "RB", "RC", "SG+", "SG-"], ["U", "V", "W", "MI1", "MI2", "MI3", "MI4", "MI5", "MI6", "DCM", "+24V"]],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
   };
@@ -520,22 +520,18 @@
           (o.faltaFase ? `<text class="sym-bad" x="${cx}" y="${h - 34}">FALTA DE FASE</text>` : "")
         );
       }
-      case "vfd-ms300": {
-        // Provisorio hasta el símbolo del Delta MS300: frente con la pantalla
-        // de 5 dígitos, LED RUN/STOP/FWD/REV y teclas STOP y RESET.
-        const run = !!o.running;
+      case "vfd-el": {
+        // Respaldo si falta vfd-el.svg: frente con la pantalla y los LED.
         const led = (x, on, col, t) => `<circle cx="${x}" cy="118" r="5" fill="${on ? col : "#2a2d31"}" stroke="${ink}"/><text class="sym-tag light" x="${x}" y="134">${t}</text>`;
         return (
-          `<rect class="dev-box" x="20" y="22" width="${w - 40}" height="${h - 44}" rx="8" fill="#e9ebee" stroke="${ink}" stroke-width="1.6"/>` +
-          `<rect x="20" y="22" width="${w - 40}" height="26" rx="8" fill="#1d2a3a"/>` +
-          `<text class="sym-big light" x="${cx}" y="40">DELTA · MS300</text>` +
+          `<rect class="dev-box" x="10" y="22" width="${w - 20}" height="${h - 44}" rx="8" fill="#2e3237" stroke="${ink}" stroke-width="1.6"/>` +
+          `<text class="sym-big light" x="${cx}" y="44">DELTA · VFD-EL</text>` +
           terminals(type, lay) +
-          `<rect x="${cx - 80}" y="58" width="160" height="40" rx="4" fill="#0b1a10" stroke="${ink}"/>` +
-          `<text x="${cx}" y="87" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="${o.fault ? "#ff5a4a" : "#3ddc84"}">${esc(o.display ?? "")}</text>` +
-          led(cx - 75, run, "#3ddc84", "RUN") + led(cx - 25, o.powered && !run, "#e0392b", "STOP") +
-          led(cx + 25, run && o.direction > 0, "#3ddc84", "FWD") + led(cx + 75, run && o.direction < 0, "#3ddc84", "REV") +
-          `<g class="act" data-action="stop" data-kind="momentary"><rect x="${cx - 70}" y="146" width="60" height="22" rx="4" fill="#c94b2c"/><text class="sym-tag light" x="${cx - 40}" y="161">STOP</text></g>` +
-          `<g class="act" data-action="reset" data-kind="momentary"><rect x="${cx + 10}" y="146" width="60" height="22" rx="4" fill="#3a3f46"/><text class="sym-tag light" x="${cx + 40}" y="161">RESET</text></g>`
+          `<rect x="${cx - 80}" y="58" width="160" height="40" rx="4" fill="#120606" stroke="${ink}"/>` +
+          `<text x="${cx}" y="87" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="#ff3b26">${esc(o.lcd ?? "")}</text>` +
+          led(cx - 75, o.ledRun, "#3ddc84", "RUN") + led(cx - 25, o.ledStop, "#e0392b", "STOP") +
+          led(cx + 25, o.ledFwd, "#3ddc84", "FWD") + led(cx + 75, o.ledRev, "#3ddc84", "REV") +
+          ["run", "stop", "mode", "enter", "up", "down"].map((k, i) => `<g class="act" data-action="${k}" data-kind="momentary"><rect x="${cx - 135 + i * 46}" y="146" width="42" height="22" rx="4" fill="#4b5158"/><text class="sym-tag light" x="${cx - 114 + i * 46}" y="161">${{ run: "RUN", stop: "STOP", mode: "MODE", enter: "ENTER", up: "▲", down: "▼" }[k]}</text></g>`).join("")
         );
       }
       case "power-24vdc": {

@@ -19,6 +19,18 @@ export interface ParameterSpec {
   options?: unknown[];
   unit?: string;
   hint?: string;
+  /** Grupo del inspector ("01 Básicos"): los parámetros seguidos con el mismo grupo se muestran juntos. */
+  group?: string;
+}
+
+/** Plantilla de taller: parámetros que la app aplica de una vez sobre los de fábrica. */
+export interface PresetSpec {
+  id: string;
+  label: string;
+  description?: string;
+  params: Record<string, unknown>;
+  /** Parámetros que la plantilla no toca (posición de una perilla); los demás vuelven a fábrica. */
+  keep?: string[];
 }
 
 export interface TerminalSpec {
@@ -150,7 +162,7 @@ export interface ModbusSpec {
   baud: number;
   /** Demora entre el fin de la petición y la respuesta (ms). */
   responseMs?: number;
-  /** Bornes del bus (por defecto "A" y "B"; el MS300 los llama SG+ y SG-). */
+  /** Bornes del bus (por defecto "A" y "B"; el VFD-EL los llama SG+ y SG-). */
   a?: string;
   b?: string;
 }
@@ -212,6 +224,11 @@ export interface DeviceStep {
   outputs?: Record<string, number | boolean | string | Segment>;
   /** Próximo evento propio (temporizador, fin de rampa). */
   nextEventNs?: Ns;
+  /**
+   * Parámetros que el propio equipo reprogramó (teclado, Modbus): la app los
+   * guarda en la escena, como la memoria del equipo real.
+   */
+  params?: Record<string, unknown>;
 }
 
 export interface DeviceContext {
@@ -247,6 +264,8 @@ export interface DeviceDefinition {
   category?: string;
   description?: string;
   parameters?: ParameterSpec[];
+  /** Plantillas de taller (configuraciones típicas) que el inspector ofrece. */
+  presets?: PresetSpec[];
   terminals: TerminalSpec[];
   actions?: ActionSpec[];
   /** Señales de la placa: in = salidas del firmware que lee; out = entradas que maneja. */

@@ -43,6 +43,7 @@
     staticPoles: {}, // polos del último análisis sin simular (color automático de cables)
     boardTerms: {}, // borne -> [x, y] en la placa escalada
     drag: null,
+    openGroups: new Set(),   // grupos de parámetros desplegados en el inspector
     wiring: null, // { from, x, y }
     rendered: new Map(), // id -> firma del estado dibujado
     analyzeTimer: null,
@@ -385,7 +386,7 @@
     }
     if ("closed" in o) opts.push({ kind: "welded", label: "Contactos soldados" });
     const short = dev.type.split("/")[1];
-    const burnt = { lamp: "Lámpara quemada", buzzer: "Zumbador quemado", relay: "Bobina cortada", contactor: "Bobina cortada", "solenoid-valve": "Bobina cortada", "solenoid-valve-2": "Bobinas cortadas", motor: "Bobinado abierto", "motor-3ph": "Bobinado abierto", "motor-2v": "Bobinado abierto", "vfd-ms300": "Variador dañado" }[short] ??
+    const burnt = { lamp: "Lámpara quemada", buzzer: "Zumbador quemado", relay: "Bobina cortada", contactor: "Bobina cortada", "solenoid-valve": "Bobina cortada", "solenoid-valve-2": "Bobinas cortadas", motor: "Bobinado abierto", "motor-3ph": "Bobinado abierto", "motor-2v": "Bobinado abierto", "vfd-el": "Variador dañado" }[short] ??
       (short?.startsWith("sensor-") ? "Sensor dañado" : null);
     if (burnt) opts.push({ kind: "burnt", label: burnt });
     return opts;
@@ -595,9 +596,25 @@
         const st = out(dev.id);
         html += `<div class="insp-title">${esc(dev.id)} <span class="muted">${esc(def.name)} · ${esc(def.type)}@${esc(def.version)}</span></div>`;
         html += `<p class="insp-desc">${esc(def.description)}</p>`;
+        // Plantillas de taller: dejan el equipo listo para un uso típico.
+        if (def.presets?.length) {
+          html += `<div class="insp-sub">Plantillas de taller</div><div class="preset-pick">`;
+          for (const pr of def.presets) {
+            const on = presetMatches(dev, def, pr);
+            html += `<button class="preset-opt${on ? " on" : ""}" data-preset="${esc(pr.id)}" ${S.running ? "disabled" : ""}><b>${esc(pr.label)}</b><span>${esc(pr.description ?? "")}</span></button>`;
+          }
+          html += `</div>`;
+        }
+        let group = null;
         for (const p of def.parameters) {
           const v = dev.params?.[p.id] ?? p.default;
           const dis = S.running ? "disabled" : "";
+          // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
+          if ((p.group ?? null) !== group) {
+            if (group !== null) html += `</details>`;
+            group = p.group ?? null;
+            if (group !== null) html += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
+          }
           let input;
           if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
             // Placa de bornes con sus chapas: se elige con un clic.
@@ -613,8 +630,10 @@
           if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
           else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
           else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
-          html += `<label class="insp-row"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${input}</label>`;
+          const wide = p.type === "enum" && p.options.some((o) => String(o).length > 16);
+          html += `<label class="insp-row${wide ? " wide" : ""}"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${input}</label>`;
         }
+        if (group !== null) html += `</details>`;
         const vals = Object.entries(st.outputs ?? {});
         if (vals.length) {
           // El estado cambia con cada instantánea: va en su propio contenedor
@@ -691,7 +710,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-ms300": "VF", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
@@ -771,6 +790,19 @@
     const before = S.spec.wiring.length;
     S.spec.wiring = S.spec.wiring.filter((w) => !gone(w.from) && !gone(w.to));
     if (S.spec.wiring.length !== before) S.sel = { kind: "device", id: dev.id };
+    changed();
+  }
+
+  /** La plantilla describe los parámetros actuales (los demás, de fábrica). */
+  function presetMatches(dev, def, pr) {
+    const keep = new Set(pr.keep ?? []);
+    return def.parameters.every((p) => keep.has(p.id) || String(dev.params?.[p.id] ?? p.default) === String(pr.params[p.id] ?? p.default));
+  }
+
+  /** Aplica una plantilla: fábrica + sus parámetros (conserva los de `keep`). */
+  function applyPreset(dev, def, pr) {
+    const kept = Object.fromEntries((pr.keep ?? []).filter((k) => dev.params?.[k] !== undefined).map((k) => [k, dev.params[k]]));
+    dev.params = { ...kept, ...pr.params };
     changed();
   }
 
@@ -1027,6 +1059,24 @@
       const p = S.defs.get(dev.type).parameters.find((x) => x.id === id);
       setParam(dev, id, p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value);
     });
+    $("scene-inspector").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-preset]");
+      if (!b || b.disabled || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      const def = S.defs.get(dev.type);
+      const pr = def.presets?.find((x) => x.id === b.dataset.preset);
+      if (pr) applyPreset(dev, def, pr);
+    });
+    $("scene-inspector").addEventListener(
+      "toggle",
+      (e) => {
+        const d = e.target;
+        if (!d.classList?.contains("insp-group")) return;
+        if (d.open) S.openGroups.add(d.dataset.group);
+        else S.openGroups.delete(d.dataset.group);
+      },
+      true,
+    );
     // Selectores gráficos de parámetros (bornera del motor trifásico).
     $("scene-inspector").addEventListener("click", (e) => {
       const b = e.target.closest("[data-setparam]");
@@ -1252,6 +1302,15 @@
         if (typeof d.outputs?.closed !== "boolean") continue;
         const prev = S.snap?.devices.find((x) => x.id === d.id)?.outputs?.closed;
         if (prev !== undefined && prev !== d.outputs.closed) window.JwsimSound?.click(d.type === "jwsim/contactor" ? "contactor" : "relay", d.outputs.closed);
+      }
+      // Lo que el equipo reprogramó (teclado o Modbus del variador) queda en la escena.
+      for (const d of snap.devices) {
+        if (!d.params) continue;
+        const dev = devById(d.id);
+        if (dev && Object.entries(d.params).some(([k, v]) => dev.params?.[k] !== v)) {
+          dev.params = { ...(dev.params ?? {}), ...d.params };
+          S.dirty = true;
+        }
       }
       S.snap = snap;
       render();

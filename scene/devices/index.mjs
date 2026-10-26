@@ -10,7 +10,8 @@ import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24, power3ph } from "./supplies.mjs";
 import { sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
 import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
-import { motor2v, overloadRelay, vfdMs300 } from "./drives.mjs";
+import { motor2v, overloadRelay } from "./drives.mjs";
+import { vfdEl } from "./vfd-el.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
@@ -36,7 +37,7 @@ export const builtinDevices = [
   motor3ph,
   motor2v,
   overloadRelay,
-  vfdMs300,
+  vfdEl,
   pt100Rs485,
   phRs485,
   fermenter,
