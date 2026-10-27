@@ -57,6 +57,8 @@ export const VFD_EL_PARAMS = [
   { code: "02-04", name: "Control de dirección", def: 0, options: ["0: adelante y atrás", "1: atrás deshabilitado", "2: adelante deshabilitado"] },
   { code: "02-05", name: "Bloqueo del inicio (al energizar)", def: 1,
     options: ["0: deshabilitado", "1: habilitado", "2: deshabilitado (cambia con 02.01)", "3: habilitado (cambia con 02.01)"] },
+  { code: "02-06", name: "Pérdida de la señal ACI (4-20 mA)", def: 1,
+    options: ["0: desacelerar hasta 0 Hz", "1: parada libre y falla AErr", "2: seguir con la última frecuencia"] },
   { code: "02-07", name: "Modo UP/DOWN (MI = 10/11)", def: 0,
     options: ["0: como las teclas ▲▼ (0,01 Hz por pulso)", "1: según la rampa 01.09/01.10", "2: velocidad constante (02.08)", "3: por pulso (02.08)"] },
   { code: "02-08", name: "Paso UP/DOWN", unit: "Hz", dec: 2, min: 0.01, max: 10, def: 0.01 },
@@ -75,6 +77,14 @@ export const VFD_EL_PARAMS = [
   { code: "04-07", name: "MI5", def: 3, options: MI_FUNCS },
   { code: "04-08", name: "MI6", def: 4, options: MI_FUNCS },
   { code: "04-09", name: "Contacto NA/NC (bit 0 = MI1 … bit 5 = MI6; 1 = NC)", dec: 0, min: 0, max: 63, def: 0 },
+  { code: "04-11", name: "Tensión mínima de AVI", unit: "V", dec: 1, min: 0, max: 10, def: 0 },
+  { code: "04-12", name: "Frecuencia en la mínima de AVI", unit: "%", dec: 1, min: 0, max: 100, def: 0 },
+  { code: "04-13", name: "Tensión máxima de AVI", unit: "V", dec: 1, min: 0, max: 10, def: 10 },
+  { code: "04-14", name: "Frecuencia en la máxima de AVI", unit: "%", dec: 1, min: 0, max: 100, def: 100 },
+  { code: "04-15", name: "Corriente mínima de ACI", unit: "mA", dec: 1, min: 0, max: 20, def: 4 },
+  { code: "04-16", name: "Frecuencia en la mínima de ACI", unit: "%", dec: 1, min: 0, max: 100, def: 0 },
+  { code: "04-17", name: "Corriente máxima de ACI", unit: "mA", dec: 1, min: 0, max: 20, def: 20 },
+  { code: "04-18", name: "Frecuencia en la máxima de ACI", unit: "%", dec: 1, min: 0, max: 100, def: 100 },
   ...Array.from({ length: 15 }, (_, i) => ({
     code: `05-${String(i).padStart(2, "0")}`, ...(i === 0 ? { group: "05 Multivelocidad" } : {}),
     name: `Velocidad ${i + 1}`, unit: "Hz", dec: 2, min: 0, max: 600, def: 0,
@@ -121,11 +131,15 @@ const toScene = (p, n) => (p.options ? p.options.find((o) => codeOf(o) === n) ??
 
 /** Plantillas de taller: parámetros que cambian respecto de fábrica. */
 export const VFD_EL_PRESETS = [
-  { id: "fabrica", label: "Valores de fábrica", description: "Como sale de la caja: marcha por bornes (MI1 adelante, MI2 atrás) y frecuencia por AVI 0-10 V (en el simulador AVI no está modelada: 0 Hz).", params: {} },
+  { id: "fabrica", label: "Valores de fábrica", description: "Como sale de la caja: marcha por bornes (MI1 adelante, MI2 atrás) y frecuencia por AVI 0-10 V (potenciómetro externo en 10V-AVI-ACM o una señal de 0-10 V en AVI-ACM; Sw2 en AVI).", params: {} },
   { id: "teclado", label: "Teclado y potenciómetro", description: "RUN y STOP/RESET del teclado; el potenciómetro fija la frecuencia (0 a 60 Hz). El sentido se elige en la pantalla Frd/rEu con ▲▼.",
     params: { "02-00": 4, "02-01": 0 } },
   { id: "bornes", label: "Marcha por bornes + potenciómetro", description: "2 cables: MI1 adelante/parar, MI2 atrás/parar (selectores o salidas del PLC a DCM); el potenciómetro fija la frecuencia; relé de falla en RA-RC.",
     params: { "02-00": 4, "02-01": 1 } },
+  { id: "avi-pot", label: "Potenciómetro externo (AVI 0-10 V)", description: "MI1 adelante, MI2 atrás; la frecuencia la fija un potenciómetro de 5 kΩ en 10V (extremo), AVI (cursor) y ACM (extremo), o una señal de 0-10 V en AVI-ACM. Sw2 en AVI.",
+    params: { "02-00": 1, "02-01": 1 }, sw2: "AVI" },
+  { id: "aci", label: "Señal 4-20 mA (ACI)", description: "MI1 adelante, MI2 atrás; la frecuencia la fija una señal de 4-20 mA en AVI (+) y ACM (-) con Sw2 en ACI: 4 mA = 0 Hz, 20 mA = 60 Hz. Bajo 2 mA (lazo abierto) para libre con la falla AErr (02.06 = 1).",
+    params: { "02-00": 2, "02-01": 1 }, sw2: "ACI" },
   { id: "multivelocidad", label: "Multivelocidad por PLC", description: "MI1/MI2 marcha y sentido; MI3-MI5 eligen las velocidades 1 a 7 (10, 20, 30, 40, 50, 55 y 60 Hz); sin ninguna, el potenciómetro. MI6 reset. Rampas de 5 s.",
     params: { "02-00": 4, "02-01": 1, "04-08": 5, "05-00": 10, "05-01": 20, "05-02": 30, "05-03": 40, "05-04": 50, "05-05": 55, "05-06": 60, "01-09": 5, "01-10": 5 } },
   { id: "tres-cables", label: "Marcha/paro con pulsadores (3 cables)", description: "MI1 operar (pulsador NA), MI3 parar (pulsador NC), MI2 sentido; el potenciómetro fija la frecuencia.",
@@ -137,7 +151,9 @@ export const VFD_EL_PRESETS = [
 ];
 
 /** Códigos de falla del registro 2100H y de Pr.06.08 (manual, Lista de direcciones). */
-export const VFD_EL_FAULTS = { EF: 8 };
+export const VFD_EL_FAULTS = { EF: 8, AErr: 32 };
+/** Posiciones del conmutador Sw2 (AVI/ACI) junto a la bornera de control. */
+const SW2 = { AVI: "AVI (0-10 V)", ACI: "ACI (4-20 mA)" };
 
 const MI = ["MI1", "MI2", "MI3", "MI4", "MI5", "MI6"];
 const KEYS = ["run", "stop", "mode", "enter", "up", "down"];
@@ -153,7 +169,7 @@ const PAGES = ["F", "H", "A", "U", "dir", "sel"];
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const vfdEl = {
   type: "jwsim/vfd-el",
-  version: "1.2.0",
+  version: "1.3.0",
   name: "Variador Delta VFD-EL",
   category: "Actuadores",
   description:
@@ -168,16 +184,18 @@ export const vfdEl = {
         : { type: /** @type {const} */ ("number"), default: p.def, unit: p.unit, hint: `${p.min} a ${p.max}` }),
     })),
     { id: "pot", label: "Potenciómetro del teclado", group: "Teclado", type: "number", default: 0, unit: "%", hint: "0 a 100; se gira en el símbolo" },
+    { id: "sw2", label: "Conmutador Sw2 (entrada AVI)", group: "Teclado", type: "enum", options: Object.values(SW2), default: SW2.AVI },
   ],
   presets: VFD_EL_PRESETS.map((pr) => ({
-    id: pr.id, label: pr.label, description: pr.description, keep: ["pot"],
-    params: Object.fromEntries(Object.entries(pr.params).map(([k, n]) => [k, toScene(BY_CODE.get(k), n)])),
+    id: pr.id, label: pr.label, description: pr.description, keep: pr.sw2 ? ["pot"] : ["pot", "sw2"],
+    params: { ...Object.fromEntries(Object.entries(pr.params).map(([k, n]) => [k, toScene(BY_CODE.get(k), n)])), ...(pr.sw2 ? { sw2: SW2[pr.sw2] } : {}) },
   })),
   terminals: [
     { id: "R", label: "R/L1" }, { id: "S", label: "S/L2" }, { id: "PE", label: "PE (tierra)" },
     { id: "U", label: "U/T1" }, { id: "V", label: "V/T2" }, { id: "W", label: "W/T3" },
     { id: "RA", label: "RA (NA)" }, { id: "RB", label: "RB (NC)" }, { id: "RC", label: "RC (común)" },
     { id: "+24V" }, ...MI.map((id) => ({ id })), { id: "DCM", label: "DCM (común)" },
+    { id: "+10V", label: "10V (potenciómetro, 3 mA)" }, { id: "AVI", label: "AVI (0-10 V o 4-20 mA según Sw2)" }, { id: "ACM", label: "ACM (común analógico)" },
     { id: "SG+", label: "SG+ (RS-485)" }, { id: "SG-", label: "SG- (RS-485)" },
   ],
   actions: [
@@ -205,6 +223,14 @@ export const vfdEl = {
     ],
     contacts: { "RA-RC": ["RA", "RC"], "RB-RC": ["RB", "RC"] },
   }),
+  // Entrada analógica AVI: potenciómetro externo (10V, cursor en AVI, ACM)
+  // conectado en cualquier sentido, o una señal de 0-10 V o 4-20 mA en AVI (+) y ACM (-).
+  probeInputs: () => [
+    { id: "pot", kind: "pot", terminals: ["+10V", "AVI", "ACM"] },
+    { id: "potInv", kind: "pot", terminals: ["ACM", "AVI", "+10V"] },
+    { id: "volts", kind: "0-10V", terminals: ["AVI", "ACM"] },
+    { id: "mA", kind: "4-20mA", terminals: ["AVI", "ACM"] },
+  ],
   // Corriente de salida: la del motor conectado a U/T1 V/T2 W/T3.
   currentSensors: () => [{ id: "out", terminals: ["U", "V", "W"] }],
   create(ctx) {
@@ -247,6 +273,11 @@ export const vfdEl = {
     let last = { fRef: 0, rev: false, going: false, outOn: false, fOut: 0, amps: 0 };
 
     const fmax = () => P["01-00"];
+    const sw2Aci = String(ctx.params.sw2).startsWith("ACI");
+    let lastAciF = 0;   // 02.06 = 2: la última frecuencia con ACI sana
+    /** @type {bigint | null} */
+    let aciLostSince = null;
+    const ACI_LOSS_MS = 100;   // filtro de la detección de pérdida de ACI
     const startPage = () => ["F", "H", "A", "U", "dir"][P["00-03"]] ?? "F";
     const flash = (t, text) => {
       msg = text;
@@ -381,13 +412,40 @@ export const vfdEl = {
         prevKeys = keys;
         pot = Math.max(0, Math.min(100, Number(inp.actions.pot ?? pot)));
 
+        // Entrada AVI según Sw2: tensión (47 kΩ) o corriente (250 Ω). El
+        // potenciómetro externo da 10 V × posición (al revés si se invierten
+        // sus extremos); una señal del tipo equivocado satura o no se lee.
+        const fs = P["02-00"];
+        const v = inp.values ?? {};
+        const ok = (/** @type {number | undefined} */ x) => typeof x === "number" && Number.isFinite(x);
+        const sigV = ok(v.pot) ? 10 * v.pot : ok(v.potInv) ? 10 * (1 - v.potInv) : ok(v.volts) ? v.volts : NaN;
+        const sigMa = ok(v.mA) ? v.mA : NaN;
+        const aviV = sw2Aci ? 0 : ok(sigV) ? Math.min(10, Math.max(0, sigV)) : ok(sigMa) ? 10 : 0;
+        const aciMa = sw2Aci && ok(sigMa) ? Math.min(20, Math.max(0, sigMa)) : 0;
+        let avisoAn = "";
+        if (!sw2Aci && ok(sigMa)) avisoAn = "Sw2 en AVI y señal de 4-20 mA: AVI satura en 10 V";
+        if (sw2Aci && ok(sigV)) avisoAn = "Sw2 en ACI: AVI no lee una tensión";
+        if (powered && fs === 1 && sw2Aci) avisoAn = "02.00 = AVI pero Sw2 está en ACI";
+        if (powered && fs === 2 && !sw2Aci) avisoAn = "02.00 = ACI pero Sw2 está en AVI";
+        // Pérdida de ACI (bajo 2 mA o lazo abierto) con 02.00 = 2: 02.06 decide.
+        const aciLost = powered && fs === 2 && aciMa < 2;
+        if (aciLost) aciLostSince ??= t;
+        else aciLostSince = null;
+        const aciDue = aciLostSince !== null && P["02-06"] === 1 && !fault ? aciLostSince + ms(ACI_LOSS_MS) : undefined;
+        if (aciDue !== undefined && t >= aciDue) {
+          fault = "AErr";
+          for (let i = 12; i > 8; i--) P[`06-${String(i).padStart(2, "0")}`] = P[`06-${String(i - 1).padStart(2, "0")}`];
+          P["06-08"] = VFD_EL_FAULTS.AErr;
+        }
+        if (aciLost && P["02-06"] !== 1) avisoAn = "AErr: se perdió la señal ACI (02.06)";
+
         // Fallas: EF (MI = 14 o 2002H bit 0); reset por la tecla, MI = 5 o 2002H bit 1.
         if ((fn(14) || mb.ef) && fault !== "EF") {
           fault = "EF";
           for (let i = 12; i > 8; i--) P[`06-${String(i).padStart(2, "0")}`] = P[`06-${String(i - 1).padStart(2, "0")}`];
           P["06-08"] = VFD_EL_FAULTS.EF;
         }
-        if ((fnEdge(5) || resetKey || mb.reset) && !fn(14) && !mb.ef) fault = "";
+        if ((fnEdge(5) || resetKey || mb.reset) && !fn(14) && !mb.ef && !(fault === "AErr" && aciLost)) fault = "";
         mb.reset = false;
 
         // UP/DOWN por las entradas (02.07).
@@ -466,10 +524,15 @@ export const vfdEl = {
 
         // Frecuencia: 02.00, multivelocidad (05.00-05.14) y JOG (01.15); límites 01.07/01.08 y Fmin 01.05.
         const step = (fn(1) ? 1 : 0) + (fn(2) ? 2 : 0) + (fn(3) ? 4 : 0) + (fn(4) ? 8 : 0);
-        const fs = P["02-00"];
         const potF = (fmax() * Math.max(0, Math.min(100, (pot * P["04-02"]) / 100 + P["04-00"]))) / 100;
-        const master = fs === 0 ? P["02-11"] : fs === 3 ? P["02-12"] : fs === 4 ? potF : 0;
-        const aviso = powered && (fs === 1 || fs === 2) ? "02.00 = AVI/ACI: entrada analógica no modelada (0 Hz)" : "";
+        // AVI 04.11-04.14 y ACI 04.15-04.18: dos puntos (señal, % de 01.00) y recorte en los extremos.
+        const scale = (x, x0, f0, x1, f1) => (x1 === x0 ? f0 : f0 + (f1 - f0) * Math.min(1, Math.max(0, (x - x0) / (x1 - x0))));
+        const aviF = (fmax() * scale(aviV, P["04-11"], P["04-12"], P["04-13"], P["04-14"])) / 100;
+        let aciF = (fmax() * scale(aciMa, P["04-15"], P["04-16"], P["04-17"], P["04-18"])) / 100;
+        if (aciLost) aciF = P["02-06"] === 2 ? lastAciF : 0;
+        else lastAciF = aciF;
+        const master = fs === 0 ? P["02-11"] : fs === 1 ? aviF : fs === 2 ? aciF : fs === 3 ? P["02-12"] : potF;
+        const aviso = powered ? avisoAn : "";
         let fRef = jog ? P["01-15"] : step > 0 ? P[`05-${String(step - 1).padStart(2, "0")}`] : master;
         fRef = Math.min(fRef, fmax(), (fmax() * P["01-07"]) / 100);
         const fCmd = Math.max(fRef, (fmax() * P["01-08"]) / 100);
@@ -484,7 +547,7 @@ export const vfdEl = {
         const time = jog ? P[up2 ? "01-13" : "01-14"] : up2 ? P[r2 ? "01-11" : "01-09"] : P[r2 ? "01-12" : "01-10"];
         const stopFree = P["02-02"] === 1 || P["02-02"] === 3;
         const efRamp = P["02-02"] >= 2;
-        const coast = !powered || bb || coastComm || (!!fault && !efRamp) || (!going && !fault && stopFree);
+        const coast = !powered || bb || coastComm || (!!fault && !(fault === "EF" && efRamp)) || (!going && !fault && stopFree);
         if (coast) hz.set(t, 0);   // salida cortada: el motor sigue por inercia
         else hz.step(t, goal, fmax() / Math.max(0.01, time));
         const seg = hz.segment(t);
@@ -521,6 +584,8 @@ export const vfdEl = {
             hz: { value: seg.value, rate: seg.rate },
             fRef: fCmd,
             corriente: Math.round(amps * 100) / 100,
+            avi: Math.round(aviV * 100) / 100,
+            aci: Math.round(aciMa * 100) / 100,
             direction: rev ? -1 : outOn ? 1 : 0,
             fault,
             lcd: display(going, seg),
@@ -536,7 +601,7 @@ export const vfdEl = {
           ...(edits || pot !== pot0
             ? { params: { ...Object.fromEntries(STORED.map((p) => [p.code, toScene(p, P[p.code])])), pot } }
             : {}),
-          nextEventNs: earliest(hz.next, msgUntil ?? undefined, hold?.next, updn?.next, commDue),
+          nextEventNs: earliest(hz.next, msgUntil ?? undefined, hold?.next, updn?.next, commDue, aciDue !== undefined && t < aciDue ? aciDue : undefined),
         };
       },
       modbusConfig: () => ({ address: P["09-00"], baud: BAUDS[P["09-01"]] ?? 9600, responseMs: Math.max(1, 2 * P["09-07"]) }),

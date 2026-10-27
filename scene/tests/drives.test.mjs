@@ -270,6 +270,69 @@ test("VFD-EL: la página A muestra la corriente del motor; acelerando pide más 
   assert.equal(s.output("VF", "lcd"), "A0.00");
 });
 
+test("VFD-EL AVI: potenciómetro externo en 10V-AVI-ACM fija la frecuencia; con 1 y 3 cruzados, al revés", () => {
+  const pot = { id: "RP", type: "jwsim/potentiometer", params: { posicion: 25 } };
+  let s = vfdScene({ ...preset("avi-pot"), "01-09": 1, "01-10": 1 }, [pot], ["RP.3 - VF.+10V", "RP.2 - VF.AVI", "RP.1 - VF.ACM"]);
+  assert.equal(s.output("VF", "avi"), 2.5);
+  assert.equal(s.output("VF", "lcd"), "F15.0", "2,5 V de 10 V = 25 % de 60 Hz");
+  s.act("S1", "press", true, ms(0));
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("VF", "hz"), 15);
+  s.act("RP", "pos", 80, ms(1000));
+  s.advanceTo(ms(3000));
+  assert.equal(s.output("VF", "hz"), 48);
+  // 04.11-04.14: 2 V = 10 %, 8 V = 90 % ⇒ 5 V da 50 % y 9 V recorta a 90 %.
+  s = vfdScene({ ...preset("avi-pot"), "04-11": 2, "04-12": 10, "04-13": 8, "04-14": 90 }, [{ ...pot, params: { posicion: 50 } }],
+    ["RP.1 - VF.+10V", "RP.2 - VF.AVI", "RP.3 - VF.ACM"]);
+  assert.equal(s.output("VF", "lcd"), "F30.0", "cruzado: 50 % sigue siendo 5 V");
+  s.act("RP", "pos", 10, ms(10));
+  assert.equal(s.output("VF", "avi"), 9, "cruzado: perilla al 10 % da 9 V");
+  assert.equal(s.output("VF", "lcd"), "F54.0", "recorta en 04.14 = 90 %");
+  assert.deepEqual(faults(s), []);
+});
+
+test("VFD-EL ACI: calibrador 4-20 mA con Sw2 en ACI; lazo abierto da AErr (02.06 = 1) y RESET con la señal de vuelta", () => {
+  const cal = { id: "CAL", type: "jwsim/signal-source", params: { modo: "4-20 mA", valor: 50 } };
+  const s = vfdScene({ ...preset("aci"), "01-09": 1, "01-10": 1 }, [cal], ["CAL.+ - VF.AVI", "CAL.- - VF.ACM"]);
+  assert.equal(s.output("CAL", "texto"), "12.00 mA");
+  assert.equal(s.output("VF", "aci"), 12);
+  assert.equal(s.output("VF", "lcd"), "F30.0");
+  s.act("S1", "press", true, ms(0));
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("VF", "hz"), 30);
+  // Se corta el cable del +: lazo abierto.
+  const cut = s.inject({ kind: "open", wire: "CAL.+ VF.AVI" }, ms(1000));
+  assert.equal(s.output("VF", "fault"), "", "filtro de 100 ms");
+  s.advanceTo(ms(1100));
+  assert.equal(s.output("VF", "fault"), "AErr");
+  assert.equal(s.output("VF", "lcd"), "AErr");
+  assert.equal(s.output("VF", "running"), false, "parada libre");
+  const req = (k) => tap(s, "stop", k);
+  req(1150);
+  assert.equal(s.output("VF", "fault"), "AErr", "sin señal no se borra");
+  s.clearFault(cut, ms(1200));
+  req(1300);
+  assert.equal(s.output("VF", "fault"), "");
+  // La falla corta la orden: se da de nuevo.
+  s.act("S1", "press", false, ms(1400));
+  s.act("S1", "press", true, ms(1500));
+  s.advanceTo(ms(3000));
+  assert.equal(s.output("VF", "hz"), 30);
+});
+
+test("VFD-EL: Sw2 en AVI con 4-20 mA satura en 10 V y avisa; 02.06 = 2 sigue con la última frecuencia", () => {
+  const cal = { id: "CAL", type: "jwsim/signal-source", params: { modo: "4-20 mA", valor: 25 } };
+  let s = vfdScene({ ...preset("avi-pot") }, [cal], ["CAL.+ - VF.AVI", "CAL.- - VF.ACM"]);
+  assert.equal(s.output("VF", "avi"), 10);
+  assert.match(s.output("VF", "aviso"), /satura/);
+  s = vfdScene({ ...preset("aci"), "02-06": "2: seguir con la última frecuencia" }, [cal], ["CAL.+ - VF.AVI", "CAL.- - VF.ACM"]);
+  assert.equal(s.output("VF", "lcd"), "F15.0", "8 mA = 25 %");
+  s.inject({ kind: "open", wire: "CAL.- VF.ACM" }, ms(100));
+  assert.equal(s.output("VF", "fault"), "");
+  assert.equal(s.output("VF", "lcd"), "F15.0");
+  assert.match(s.output("VF", "aviso"), /AErr/);
+});
+
 /** Selección de parámetros: MODE hasta GG.NN y ▲ hasta el código. */
 function gotoParam(s, code, t) {
   for (let i = 0; i < 5; i++) tap(s, "mode", t + i * 100);
@@ -282,9 +345,9 @@ function gotoParam(s, code, t) {
   return t;
 }
 
-test("VFD-EL de fábrica: bornes y AVI (0 Hz); se programa 02.00 = 4 con el teclado y queda en la escena", () => {
+test("VFD-EL de fábrica: bornes y AVI sin cablear (0 Hz); se programa 02.00 = 4 con el teclado y queda en la escena", () => {
   const s = vfdScene({ pot: 100, "01-09": 1, "01-10": 1 });
-  assert.match(s.output("VF", "aviso"), /AVI/);
+  assert.equal(s.output("VF", "avi"), 0);
   assert.equal(s.output("VF", "lcd"), "F0.00");
   tap(s, "run", 0);
   s.advanceTo(ms(500));

@@ -2,7 +2,7 @@
 
 Medidas del manual del VFD-EL (§1.3: estructura A 72 x 174 mm) y del dibujo
 de la estructura A (§1.1.4); colores de la foto del producto y del teclado
-(§3.1). El cuerpo (288 x 696 px) va a la derecha de un viewBox de 580 x 700:
+(§3.1). El cuerpo (288 x 696 px) va a la derecha de un viewBox de 640 x 700:
 el margen de la izquierda lleva los puntos de conexión de la bornera de
 control (cableado de referencia de JW Control, 26/10/2026).
 
@@ -10,7 +10,7 @@ control (cableado de referencia de JW Control, 26/10/2026).
   teclado: logo, pantalla de 7 segmentos de 4 dígitos (data-seg con out.lcd),
            LED RUN FWD REV y STOP, potenciómetro (acción pot, se arrastra en
            vertical) y las teclas RUN, ▲, MODE, STOP/RESET, ▼, ENTER
-  abertura: conmutadores NPN/PNP y AVI/ACI, bornera de control en dos filas
+  abertura: conmutadores NPN/PNP y Sw2 AVI/ACI (param.sw2), bornera de control en dos filas
            escalonadas (24V MI1 MI3 MI5 10V AVI / MI2 MI4 MI6 DCM AFM ACM),
            relé RA RB RC y el puerto RS-485 (RJ-45), subidos para dejar paso
            al cableado
@@ -18,11 +18,11 @@ control (cableado de referencia de JW Control, 26/10/2026).
 
 Cableado de control: el punto de conexión de cada borne está fuera del cuerpo,
 abajo a la izquierda, uno a continuación del otro (RA RB RC +24V MI2 MI1 MI4
-MI3 MI6 MI5 DCM SG+ SG-). El cable interno (baja del borne, corre a la
+MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-). El cable interno (baja del borne, corre a la
 izquierda por su carril y baja por el costado sin cruzarse con los demás)
 solo se dibuja si el borne tiene un cable en la escena (data-show con
 wired.<borne>). El RS-485 sale del RJ-45 como par trenzado SG+ (amarillo) y
-SG- (azul). 10V, AVI, AFM y ACM no se conectan (sin entradas analógicas).
+SG- (azul). AFM (salida analógica) no se conecta.
 
 Uso: gen_vfd_el.py <salida.svg>
 """
@@ -34,8 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fam22 import header, finish, jw_term, INK, F
 
 OUT = sys.argv[1]
-W, H = 580, 700
-OX, OY = 276, 2           # esquina del cuerpo (U/T1 y R/L1 caen en múltiplos de 20)
+W, H = 640, 700
+OX, OY = 336, 2           # esquina del cuerpo (U/T1 y R/L1 caen en múltiplos de 20)
 BW, BH = 288, 696         # 72 x 174 mm
 
 
@@ -184,14 +184,19 @@ p.append(f'<rect x="{X(2.9)}" y="{Y(77.6)}" width="{X(69.1)-X(2.9)}" height="{Y(
 p.append(f'<rect x="{X(2.9)}" y="{Y(73.5)}" width="{X(16.5)-X(2.9)}" height="{Y(96.2)-Y(73.5)}" rx="2" fill="#6a6d71" stroke="#2c2e31"/>')
 # conmutadores NPN/PNP y AVI/ACI
 for x0, top, bot, lft in ((21.6, "NPN", "PNP", True), (31.7, "AVI", "ACI", False)):
-    p.append(f'<rect x="{X(x0)}" y="{Y(82.5)}" width="15" height="31" rx="1.5" fill="#2f3135"/><rect x="{X(x0)+3}" y="{Y(82.5)+3}" width="9" height="12" rx="1" fill="#e6e8ea"/>')
+    p.append(f'<rect x="{X(x0)}" y="{Y(82.5)}" width="15" height="31" rx="1.5" fill="#2f3135"/>')
+    knob = lambda dy: f'<rect x="{X(x0)+3}" y="{Y(82.5)+dy}" width="9" height="12" rx="1" fill="#e6e8ea"/>'
+    if lft:
+        p.append(knob(3))
+    else:   # Sw2: arriba AVI (0-10 V), abajo ACI (4-20 mA)
+        p.append(f'<g data-show="!param.sw2=ACI (4-20 mA)">{knob(3)}</g><g data-show="param.sw2=ACI (4-20 mA)">{knob(16)}</g>')
     tx = X(x0) - 3 if lft else X(x0) + 18
     anc = "end" if lft else "start"
     p.append(f'<text x="{tx}" y="{Y(84.9)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{top}</text>')
     p.append(f'<text x="{tx}" y="{Y(89.7)}" text-anchor="{anc}" {F} font-size="7" font-weight="800" fill="#c9cdd2">{bot}</text>')
 
-UP = [("+24V", "24V", 20.0), ("MI1", "MI1", 25.2), ("MI3", "MI3", 30.4), ("MI5", "MI5", 35.6), (None, "10V", 40.8), (None, "AVI", 46.0)]
-LO = [("MI2", "MI2", 22.9), ("MI4", "MI4", 28.1), ("MI6", "MI6", 33.3), ("DCM", "DCM", 38.5), (None, "AFM", 43.7), (None, "ACM", 48.9)]
+UP = [("+24V", "24V", 20.0), ("MI1", "MI1", 25.2), ("MI3", "MI3", 30.4), ("MI5", "MI5", 35.6), ("+10V", "10V", 40.8), ("AVI", "AVI", 46.0)]
+LO = [("MI2", "MI2", 22.9), ("MI4", "MI4", 28.1), ("MI6", "MI6", 33.3), ("DCM", "DCM", 38.5), (None, "AFM", 43.7), ("ACM", "ACM", 48.9)]
 RL = [("RA", "RA", 5.9), ("RB", "RB", 10.9), ("RC", "RC", 15.9)]
 YU, YL, YR = Y(96.0), Y(105.9), Y(107.0)
 # bloques verdes enchufables
@@ -240,15 +245,17 @@ p.append(f'<path d="M{X(60)} {OY+BH}V{Y(164)}a7 7 0 0 1 14 0V{OY+BH}" fill="#2a2
 # Orden por la posición del borne (de izquierda a derecha): carril más alto y
 # salida más a la izquierda para el primero; así ningún cable cruza a otro.
 LEADS = [("RA", 5.9, YR), ("RB", 10.9, YR), ("RC", 15.9, YR), ("+24V", 20.0, YU), ("MI2", 22.9, YL), ("MI1", 25.2, YU),
-         ("MI4", 28.1, YL), ("MI3", 30.4, YU), ("MI6", 33.3, YL), ("MI5", 35.6, YU), ("DCM", 38.5, YL)]
-COLOR = {"RA": "#d6d9dc", "RB": "#d6d9dc", "RC": "#d6d9dc", "+24V": "#d63a3a", "DCM": "#2f6fd6"}
+         ("MI4", 28.1, YL), ("MI3", 30.4, YU), ("MI6", 33.3, YL), ("MI5", 35.6, YU), ("DCM", 38.5, YL),
+         ("+10V", 40.8, YU), ("AVI", 46.0, YU), ("ACM", 48.9, YL)]
+COLOR = {"RA": "#d6d9dc", "RB": "#d6d9dc", "RC": "#d6d9dc", "+24V": "#d63a3a", "DCM": "#2f6fd6",
+         "+10V": "#e07b28", "AVI": "#f4f4f4", "ACM": "#7fb3e6"}
 LANE0, LANE = Y(111.4), 5.0
 EXIT = lambda k: 20 + 20 * k
 
 
 def marker(t, col):
     return (f'<rect x="{col-9}" y="{H-31}" width="18" height="12" rx="2" fill="#f4f1e2" stroke="#6b6a5e" stroke-width=".8"/>'
-            f'<text x="{col}" y="{H-22}" text-anchor="middle" {F} font-size="{5.6 if len(t) > 3 else 6.2}" font-weight="800" fill="#2b2a24">{t}</text>')
+            f'<text x="{col}" y="{H-22}" text-anchor="middle" {F} font-size="{5.6 if len(t) > 3 else 6.2}" font-weight="800" fill="#2b2a24">{t.replace("+10V", "10V")}</text>')
 
 
 for k, (t, mm, ys) in enumerate(LEADS):
@@ -297,8 +304,8 @@ p.append(jw_term("SG+", c1, H - 10))
 p.append(jw_term("SG-", c2, H - 10))
 
 
-# aviso de referencia sin modelar (AVI/ACI)
+# aviso de la entrada analógica (Sw2 equivocado, pérdida de ACI)
 p.append(f'<g data-show="out.aviso"><rect x="{X(3.2)}" y="{Y(78.4)}" width="{X(68.8)-X(3.2)}" height="14" rx="3" fill="#ffd400" stroke="#8a6d00"/>'
-         f'<text x="{X(36)}" y="{Y(78.4)+10}" text-anchor="middle" {F} font-size="8" font-weight="800" fill="#2b2200">02.00 = AVI/ACI: entrada analógica no modelada (0 Hz)</text></g>')
+         f'<text x="{X(36)}" y="{Y(78.4)+10}" text-anchor="middle" {F} font-size="8" font-weight="800" fill="#2b2200" data-text="out.aviso"></text></g>')
 
 open(OUT, "w").write(finish(p, "vfdel"))

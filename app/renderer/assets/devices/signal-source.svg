@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Calibrador de lazo portátil 4-20 mA / 0-10 V en su funda. Vista frontal. Escala reducida de campo (2 px/mm). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320">
+<defs>
+<linearGradient id="cal-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="cal-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="cal-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="cal-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="cal-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="cal-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="cal-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="cal-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="cal-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="cal-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="cal-hol" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9a91a"/><stop offset=".15" stop-color="#f2c230"/><stop offset=".85" stop-color="#f0bf2b"/><stop offset="1" stop-color="#c99a14"/></linearGradient>
+<linearGradient id="cal-lcd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9d6b8"/><stop offset="1" stop-color="#aebd9a"/></linearGradient>
+<radialGradient id="cal-red" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ff6b5e"/><stop offset="1" stop-color="#b3180c"/></radialGradient>
+<radialGradient id="cal-bk" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#5a5f66"/><stop offset="1" stop-color="#121417"/></radialGradient>
+</defs>
+<rect x="12" y="6" width="176" height="306" rx="22" fill="#000" opacity=".22" transform="translate(2 3)"/>
+<rect x="12" y="6" width="176" height="306" rx="22" fill="url(#cal-hol)" stroke="#7a5d08" stroke-width="1.6"/>
+<rect x="26" y="18" width="148" height="276" rx="12" fill="#3a3e44" stroke="#1d1f22" stroke-width="1.4"/>
+<text x="100" y="34" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="900" fill="#f2c230">LOOP CALIBRATOR</text>
+<rect x="38" y="42" width="124" height="62" rx="5" fill="#1b1d20"/>
+<rect x="43" y="47" width="114" height="52" rx="3" fill="url(#cal-lcd)"/>
+<text x="50" y="59" font-family="sans-serif" font-size="8" font-weight="800" fill="#2c3324">SOURCE</text>
+<text x="150" y="59" text-anchor="end" font-family="sans-serif" font-size="8" font-weight="800" fill="#2c3324" data-text="param.modo">4-20 mA</text>
+<text x="150" y="90" text-anchor="end" font-family="monospace" font-size="21" font-weight="700" fill="#1d2418" data-text="out.texto">12.00 mA</text>
+<rect x="48" y="114" width="30" height="16" rx="4" fill="#5b6068" stroke="#24272b"/><text x="63" y="125.5" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e7eaed">mA</text>
+<rect x="84" y="114" width="30" height="16" rx="4" fill="#5b6068" stroke="#24272b"/><text x="99" y="125.5" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e7eaed">V</text>
+<rect x="120" y="114" width="30" height="16" rx="4" fill="#5b6068" stroke="#24272b"/><text x="135" y="125.5" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e7eaed">%</text>
+<line x1="73.1" y1="212.9" x2="68.9" y2="217.1" stroke="#c9cdd2" stroke-width="1.8"/>
+<line x1="63.9" y1="197.7" x2="58.2" y2="199.6" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="62.5" y1="180.1" x2="56.5" y2="179.1" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="69.3" y1="163.7" x2="64.4" y2="160.1" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="82.7" y1="152.1" x2="80.0" y2="146.8" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="100.0" y1="148.0" x2="100.0" y2="142.0" stroke="#c9cdd2" stroke-width="1.8"/>
+<line x1="117.3" y1="152.1" x2="120.0" y2="146.8" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="130.7" y1="163.7" x2="135.6" y2="160.1" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="137.5" y1="180.1" x2="143.5" y2="179.1" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="136.1" y1="197.7" x2="141.8" y2="199.6" stroke="#c9cdd2" stroke-width="1"/>
+<line x1="126.9" y1="212.9" x2="131.1" y2="217.1" stroke="#c9cdd2" stroke-width="1.8"/>
+<text x="66" y="228" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="800" fill="#c9cdd2">0 %</text>
+<text x="134" y="228" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="800" fill="#c9cdd2">100 %</text>
+<g data-action="valor" data-kind="drag" data-drag="y:0:-1.2:0:100">
+<circle cx="100" cy="186" r="36" fill="#000" opacity="0"/>
+<g data-rotate="out.valor|param.valor:0:100:-135:135:100:186">
+<circle cx="100" cy="188" r="30" fill="#000" opacity=".4"/>
+<circle cx="100" cy="186" r="30" fill="url(#cal-knob)" stroke="#16181b" stroke-width="1.2"/>
+<circle cx="100" cy="186" r="20" fill="#2b2f34"/>
+<rect x="98" y="158" width="4" height="13" rx="1.5" fill="#f2c230"/>
+</g></g>
+<circle cx="80" cy="280" r="13" fill="#1b1d20"/><circle cx="80" cy="280" r="10.5" fill="url(#cal-red)" stroke="#16181b"/><circle cx="80" cy="280" r="4" fill="#0b0c0d"/>
+<text x="80" y="262" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="900" fill="#e7eaed">+</text>
+<circle class="jw-term" data-term="+" cx="80" cy="280" r="11"/>
+<circle cx="120" cy="280" r="13" fill="#1b1d20"/><circle cx="120" cy="280" r="10.5" fill="url(#cal-bk)" stroke="#16181b"/><circle cx="120" cy="280" r="4" fill="#0b0c0d"/>
+<text x="120" y="262" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="900" fill="#e7eaed">COM</text>
+<circle class="jw-term" data-term="-" cx="120" cy="280" r="11"/>
+<text x="100" y="306" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="900" fill="#5a4504">OUT</text>
+</svg>

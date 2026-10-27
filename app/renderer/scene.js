@@ -713,7 +713,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 

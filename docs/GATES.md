@@ -64,7 +64,8 @@ JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé tempo
 JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
                                     (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
 JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (27/10: completa la parte de taller (mando, potencia, protección, motores 1F/3F/2v,
-                                     VFD-EL, neumática, inductivo) y el transmisor PT100 TT-510; pendientes: fotoeléctrico y
+                                     VFD-EL con AVI/ACI, potenciómetro y calibrador de lazo, neumática, inductivo), el transmisor
+                                     PT100 TT-510 y la corriente de los motores (térmico NR2 clase 10); pendientes: fotoeléctrico y
                                      relé enchufable (pospuestos), pH (sin sensor confirmado), motorreductor 24 VDC (sin PWM) y
                                      válvula de agua del fermentador)
 JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING

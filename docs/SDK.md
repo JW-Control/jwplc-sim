@@ -189,6 +189,11 @@ En cada `update`, `inputs.values[id]` trae el valor de la sonda del mismo
 los hilos están cruzados, llega `NaN` y el transmisor la ve abierta.
 Ejemplos: `jwsim/fermentador` (sondas `pt100`, `ph` y `atc`) y los
 transmisores `pt100-rs485` y `ph-rs485` en `scene/devices/process.mjs`.
+Las señales analógicas de campo usan el mismo mecanismo
+(`scene/devices/analog.mjs`): `pot` (potenciómetro, bornes extremo-cursor-
+extremo, valor 0 a 1), `0-10V` (V) y `4-20mA` (mA). La entrada AVI del
+`vfd-el` declara las cuatro (`pot` en los dos sentidos, para que un
+potenciómetro con los extremos cruzados gire al revés).
 
 ### 2.3.2 Esclavo Modbus RTU (bus RS-485)
 

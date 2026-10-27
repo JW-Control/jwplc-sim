@@ -191,21 +191,23 @@ aviso de falta de fase.
 
 Variador Delta VFD-EL (`gen_vfd_el.py`, 26/10/2026, según el manual del
 VFD-EL, la foto del producto y el cableado de referencia de JW Control):
-estructura A de 72 x 174 mm a 4 px/mm, a la derecha de un viewBox de 580 x
+estructura A de 72 x 174 mm a 4 px/mm, a la derecha de un viewBox de 640 x
 700. Arriba R/L1, S/L2, T/L3 (sin tornillo en el modelo monofásico) y
 tierra; el teclado con los colores reales (RUN verde, STOP/RESET rojo, ▲▼ y
 MODE grises, ENTER azul), la pantalla de 7 segmentos de 4 dígitos
 (`data-seg`), los LED RUN FWD REV y STOP y el potenciómetro con su escala en
 arco (se arrastra en vertical); la abertura con los conmutadores NPN/PNP y
-AVI/ACI, la bornera de control verde en dos filas escalonadas, el relé RA RB
+Sw2 AVI/ACI (su palanca sigue a `param.sw2`), la bornera de control verde en dos filas escalonadas, el relé RA RB
 RC y el puerto RS-485, subidos para dejar paso al cableado; abajo U/T1 V/T2
 W/T3, + y - y la barra de tierra. Los puntos de conexión de la bornera de
 control están fuera del cuerpo, abajo a la izquierda, uno a continuación del
-otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM SG+ SG-). El cable interno de
+otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-). El cable interno de
 cada borne (baja, corre a la izquierda por su carril y baja por el costado,
 sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
 escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+
-amarillo y SG- azul. 10V, AVI, AFM y ACM no se conectan.
+amarillo y SG- azul; 10V naranja, AVI blanco y ACM celeste. AFM (salida
+analógica) no se conecta. Una franja amarilla muestra `out.aviso` (Sw2
+equivocado, pérdida de ACI).
 
 Motor monofásico (27/10/2026, propuesta): la misma vista del WEG con el
 capacitor de arranque en un cilindro sobre la carcasa, junto a una caja de
@@ -217,6 +219,12 @@ cabezal Form B visto desde arriba a 4 px/mm (Ø44 mm), con los bornes del
 diagrama de cableado de su ficha (B, A, −24V y +24V arriba; la RTD abajo,
 R3 blanco solo y R1-R2 rojos juntos) y una etiqueta al costado con la
 lectura o la falla de la sonda.
+
+Señales analógicas (`gen_analog.py`, 27/10/2026, propuesta): potenciómetro
+de panel de 22 mm (160 x 240, 4 px/mm, base y aro de la familia XB2) con
+escala 0-10 y perilla que se arrastra, bornes 1, 2 y 3 arriba; y calibrador
+de lazo portátil en funda amarilla (200 x 320, escala reducida de campo) con
+la pantalla de la señal, la perilla de ajuste y los bornes + y COM abajo.
 
 Pendientes: sensor fotoeléctrico y relé enchufable (pospuestos por JW
 Control), transmisor de pH (falta que el cliente confirme el sensor),
