@@ -63,11 +63,11 @@ JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones co
 JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)
 JWSIM_G7_COMMUNITY_INDEX=PASS       (índice Ed25519 con 3 paquetes; firma válida instala, 7 casos inválidos no)
                                     (G7: Linux y Windows CI, corrida 1 de g7.yml: gates y E2E de la escena PASS)
-JWSIM_G8_2D_ELECTRICAL=IN_PROGRESS  (27/10: completa la parte de taller (mando, potencia, protección, motores 1F/3F/2v,
-                                     VFD-EL con AVI/ACI, potenciómetro y calibrador de lazo, neumática, inductivo), el transmisor
-                                     PT100 TT-510 y la corriente de los motores (térmico NR2 clase 10); pendientes: fotoeléctrico y
-                                     relé enchufable (pospuestos), pH (sin sensor confirmado), motorreductor 24 VDC (sin PWM) y
-                                     válvula de agua del fermentador)
+JWSIM_G8_2D_ELECTRICAL=PASS         (alcance v1, aprobado por JW Control el 27/10: mando, potencia, protección, motores
+                                     1F/3F/2v, VFD-EL con AVI/ACI, potenciómetro y calibrador de lazo, neumática, inductivo,
+                                     transmisor PT100 TT-510 y corriente de los motores (térmico NR2 clase 10). Fuera de la v1,
+                                     con el dibujo genérico: fotoeléctrico, relé enchufable, transmisor de pH, válvula de agua
+                                     del fermentador y motor genérico; motorreductor 24 VDC descartado (el Basic no tiene PWM))
 JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)
@@ -161,7 +161,7 @@ JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. C1: los dispositivos de la biblioteca tienen símbolo según `docs/simbolos/LINEAMIENTOS.md` (modelo comercial real, vista frontal, 4 px/mm; los de campo a una escala reducida fija), aprobado por JW Control. C2: cableado editable (crear, quitar, puntos de doblez, color, puentes) sin superponerse a los equipos. C3: estados legibles y animados con la simulación: cables con tensión, contactos y palancas, vástago del cilindro, giro del motor, pilotos, disparo de las protecciones. | `node scripts/export-symbols.mjs` sin `plantilla: null` + E2E de la escena (`app/tests/e2e-g7.mjs`) + vistas de escala. |
+| `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. C1: los dispositivos de la biblioteca dentro del alcance acordado con JW Control tienen símbolo según `docs/simbolos/LINEAMIENTOS.md` (modelo comercial real, vista frontal, 4 px/mm; los de campo a una escala reducida fija), aprobado por JW Control. C2: cableado editable (crear, quitar, puntos de doblez, color, puentes) sin superponerse a los equipos. C3: estados legibles y animados con la simulación: cables con tensión, contactos y palancas, vástago del cilindro, giro del motor, pilotos, disparo de las protecciones. | `node scripts/export-symbols.mjs` sin `plantilla: null` fuera de los excluidos del alcance (v1: `sensor-photoelectric`, `relay`, `ph-rs485`, `water-valve`, `motor`) + E2E de la escena (`app/tests/e2e-g7.mjs`) + vistas de escala. |
 | `JWSIM_G8_3D_SCENES` | Escenas 3D (three.js) de procesos: cinta, cilindro, tanque, puerta. ≥ 30 fps en el host de referencia. | Medición. |
 | `JWSIM_G8_OIP_FUXA` | Puente con Open Industry Project y FUXA (Modbus TCP) documentado y probado. | Prueba de integración. |
 

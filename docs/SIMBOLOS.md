@@ -226,8 +226,9 @@ escala 0-10 y perilla que se arrastra, bornes 1, 2 y 3 arriba; y calibrador
 de lazo portátil en funda amarilla (200 x 320, escala reducida de campo) con
 la pantalla de la señal, la perilla de ajuste y los bornes + y COM abajo.
 
-Pendientes: sensor fotoeléctrico y relé enchufable (pospuestos por JW
-Control), transmisor de pH (falta que el cliente confirme el sensor),
-motorreductor de 24 VDC (el JWPLC Basic no tiene salidas PWM para
-regularlo) y la válvula de agua del fermentador.
+Fuera de la primera versión (decisión de JW Control, 27/10/2026): sensor
+fotoeléctrico, relé enchufable, transmisor de pH y válvula de agua del
+fermentador. Siguen en la biblioteca con el dibujo genérico, igual que el
+motor genérico de los ejercicios. El motorreductor de 24 VDC no se hace: el
+JWPLC Basic no tiene salidas PWM para regularlo.
 `node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.
