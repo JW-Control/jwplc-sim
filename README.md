@@ -53,6 +53,12 @@ genera en GitHub Actions, a pedido y con cada tag `v*`.
 `node scripts/dist.mjs --dir` arma solo la carpeta (en Linux, la versión de
 Linux) para probar.
 
+El ícono (un monitor con el frente del JWPLC Basic y el logo cuadrado de JW
+Control) está en `app/icon/`: `icon.svg` es la fuente y
+`node scripts/gen-icon.mjs` regenera los PNG y el `.ico` (16 a 256 px), que
+se versionan. Lo usan el `.exe`, el instalador, los accesos directos y la
+ventana de la app.
+
 **Windows: "¿Cómo desea abrir este archivo?" al escribir `npm`.** Pasa
 cuando la variable `PATHEXT` tiene una entrada vacía (un `;` de más, que
 dejan algunos instaladores): PowerShell toma el archivo `npm` sin extensión

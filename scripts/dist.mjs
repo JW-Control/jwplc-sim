@@ -65,6 +65,7 @@ if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falt
 const { build, Platform } = createRequire(join(APP, "package.json"))("electron-builder");
 const version = JSON.parse(readFileSync(join(APP, "package.json"), "utf8")).version;
 const electronVersion = JSON.parse(readFileSync(join(APP, "node_modules", "electron", "package.json"), "utf8")).version;
+const ICON = join(APP, "icon");
 const res = (from, to = from) => ({ from: join(ROOT, from), to, filter: ["**/*", "!**/node_modules/**", "!**/*.estado/**"] });
 
 /** @type {import("electron-builder").Configuration} */
@@ -87,11 +88,12 @@ const config = {
     ...(win ? [res(".jwsim/toolchain")] : []),
   ],
   win: {
+    icon: join(ICON, "icon.ico"),
     // El .zip (portable) toma este nombre; el instalador, el de nsis.
     artifactName: "JWPLC-Sim-${version}-portable.${ext}",
     target: dirOnly ? [{ target: "dir", arch: ["x64"] }] : [{ target: "nsis", arch: ["x64"] }, { target: "zip", arch: ["x64"] }],
   },
-  linux: { target: [{ target: "dir" }], category: "Development" },
+  linux: { target: [{ target: "dir" }], category: "Development", icon: join(ICON, "icon.png") },
   nsis: {
     oneClick: false,
     perMachine: false,
@@ -99,6 +101,9 @@ const config = {
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: "JWPLC Sim",
+    installerIcon: join(ICON, "icon.ico"),
+    uninstallerIcon: join(ICON, "icon.ico"),
+    installerHeaderIcon: join(ICON, "icon.ico"),
     artifactName: "JWPLC-Sim-${version}-instalador.${ext}",
   },
 };

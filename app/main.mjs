@@ -734,6 +734,8 @@ app.whenReady().then(() => {
     minWidth: 960,
     minHeight: 600,
     title: "JWPLC Sim",
+    // Ícono de la ventana y de la barra de tareas (en Windows empaquetado lo da el .exe).
+    icon: join(import.meta.dirname, "icon", process.platform === "win32" ? "icon.ico" : "icon.png"),
     backgroundColor: "#16191d",
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
