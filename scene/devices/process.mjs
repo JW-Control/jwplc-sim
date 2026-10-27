@@ -52,10 +52,10 @@ function measured(params, inp, id) {
 export const pt100Rs485 = {
   type: "jwsim/pt100-rs485",
   version: "2.0.0",
-  name: "Transmisor PT100 RS-485",
+  name: "Transmisor PT100 RS-485 (TT-510)",
   category: "Sensores",
   description:
-    "Transmisor de temperatura para PT100 de 3 hilos (R1, R2 rojos; R3 blanco) con salida RS-485 Modbus RTU, 24 VDC. Registro 0 = temperatura × 10 (°C, entero con signo), funciones 03 y 04. Sonda abierta: 32767.",
+    "Transmisor de temperatura de cabezal PIDMaxWell TT-510 (Form B, Ø44 mm) para PT100 de 3 hilos (R1, R2 rojos; R3 blanco) con salida RS-485 Modbus RTU, 12-35 VDC. De fábrica: dirección 1, 9600 bps, 8N1. Registro 0 = temperatura × 10 (°C, entero con signo), funciones 03 y 04; sonda abierta: 32767. La ficha no trae el mapa de registros: verificar con el equipo.",
   parameters: [...BUS_PARAMS, { id: "temp", label: "Temperatura (simulada)", type: "number", default: 25, unit: "°C" }],
   terminals: [...POWER_BUS, { id: "R1", label: "PT100 rojo" }, { id: "R2", label: "PT100 rojo" }, { id: "R3", label: "PT100 blanco" }],
   actions: [

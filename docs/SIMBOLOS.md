@@ -212,6 +212,14 @@ capacitor de arranque en un cilindro sobre la carcasa, junto a una caja de
 bornes más angosta; `motor-1ph` (U1 U2 PE) y `motor-1ph__4cables` (U1 U2 Z1
 Z2 PE), con el aviso «ZUMBA: NO ARRANCA» (`out.bloqueado`).
 
-Pendientes (todavía dibujados en código, sin escala real): sensor
-fotoeléctrico y relé enchufable.
+Transmisor PT100 RS-485 (`gen_tt510.py`, 27/10/2026): PIDMaxWell TT-510 de
+cabezal Form B visto desde arriba a 4 px/mm (Ø44 mm), con los bornes del
+diagrama de cableado de su ficha (B, A, −24V y +24V arriba; la RTD abajo,
+R3 blanco solo y R1-R2 rojos juntos) y una etiqueta al costado con la
+lectura o la falla de la sonda.
+
+Pendientes: sensor fotoeléctrico y relé enchufable (pospuestos por JW
+Control), transmisor de pH (falta que el cliente confirme el sensor),
+motorreductor de 24 VDC (el JWPLC Basic no tiene salidas PWM para
+regularlo) y la válvula de agua del fermentador.
 `node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.
