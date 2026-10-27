@@ -17,7 +17,7 @@ test("registro: los 16 dispositivos con tipo, versión, bornes y parámetros vá
   assert.equal(r.list().length, builtinDevices.length);
   for (const d of builtinDevices) {
     assert.match(d.type, /^jwsim\//);
-    assert.ok(d.terminals.length > 0, d.type);
+    assert.ok(d.terminals.length > 0 || d.category === "Planta", d.type);
     for (const p of d.parameters ?? []) if (p.type === "enum") assert.ok(p.options.includes(p.default), `${d.type}.${p.id}`);
   }
   for (const t of ["pushbutton-no", "pushbutton-nc", "selector-2", "selector-3", "limit-switch", "sensor-inductive",

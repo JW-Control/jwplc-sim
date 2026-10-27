@@ -17,7 +17,8 @@
     "test:e2e:g7": "node tests/e2e-g7.mjs"
   },
   "dependencies": {
-    "monaco-editor": "0.57.0"
+    "monaco-editor": "0.57.0",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "electron": "44.6.0",

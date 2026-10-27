@@ -698,7 +698,7 @@ export class Scene {
       /** @type {Record<string, unknown>} */
       const outputs = {};
       for (const [k, v] of Object.entries(dev.step.outputs ?? {})) {
-        outputs[k] = v && typeof v === "object" ? valueAt(v, dev.stepT, this.t) : v;
+        outputs[k] = v && typeof v === "object" && !Array.isArray(v) ? valueAt(v, dev.stepT, this.t) : v;
       }
       return {
         id: dev.id,
@@ -735,7 +735,7 @@ export class Scene {
     const dev = this.devices.get(id);
     if (!dev) throw new Error(`dispositivo inexistente: ${id}`);
     const v = dev.step.outputs?.[key];
-    return v && typeof v === "object" ? valueAt(v, dev.stepT, this.t) : v;
+    return v && typeof v === "object" && !Array.isArray(v) ? valueAt(v, dev.stepT, this.t) : v;
   }
 
   contact(id, cid) {

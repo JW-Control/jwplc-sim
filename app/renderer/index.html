@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:"
+      content="default-src 'self'; script-src 'self' 'sha256-75FO2RBp+XPH4ZEjooP+6jYpgQhdX+zQDjDF7LQhOmE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:"
     />
     <title>JWPLC Sim</title>
     <link rel="stylesheet" href="style.css" />
@@ -77,6 +77,7 @@
             <div class="mode" id="board-view" role="radiogroup" aria-label="Vista">
               <button class="seg active" data-view="board" role="radio" aria-checked="true" title="Placa con entradas y salidas manuales">Placa</button>
               <button class="seg" data-view="scene" role="radio" aria-checked="false" title="Escena: la placa cableada a dispositivos industriales">Escena</button>
+              <button class="seg" data-view="3d" role="radio" aria-checked="false" title="Planta en 3D: cinta, tanque, puerta y cilindro de la escena">3D</button>
             </div>
             <span class="muted" id="board-name">JWPLC Basic</span>
             <details class="faults-menu" id="faults-menu">
@@ -124,6 +125,13 @@
               <div class="io-row" id="inputs"></div>
               <div class="io-row" id="outputs"></div>
             </div></div>
+          </div>
+          <div id="view3d" class="view3d" hidden>
+            <canvas id="view3d-canvas"></canvas>
+            <div id="view3d-empty" class="view3d-empty">
+              Agregue a la escena una cinta, un tanque, una puerta o una electroválvula 5/2 con cilindro (paleta «Planta»):
+              aquí se ven en 3D, movidos por la simulación. Arrastre para girar, rueda para acercar.
+            </div>
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-tools">
@@ -250,5 +258,9 @@
     <script src="sound.js"></script>
     <script src="scene-symbols.js"></script>
     <script src="scene.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }
+    </script>
+    <script type="module" src="scene3d.js"></script>
   </body>
 </html>

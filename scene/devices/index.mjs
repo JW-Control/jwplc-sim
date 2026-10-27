@@ -13,6 +13,7 @@ import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
 import { motor2v, overloadRelay } from "./drives.mjs";
 import { vfdEl } from "./vfd-el.mjs";
 import { potentiometer, signalSource } from "./analog.mjs";
+import { conveyor, door, tank } from "./plant.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
@@ -46,6 +47,9 @@ export const builtinDevices = [
   phRs485,
   fermenter,
   waterValve,
+  conveyor,
+  tank,
+  door,
 ];
 
 /** Compara versiones x.y.z. */

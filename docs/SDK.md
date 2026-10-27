@@ -177,6 +177,12 @@ booleanos como 0/1; un segmento, en el instante actual). Es una lectura sin
 cable: sirve para enlaces que no se cablean en la realidad. Lo que en la
 planta va por cable (una sonda a su transmisor) se modela con §2.3.3.
 
+Un equipo sin bornes (`terminals: []`) debe ir en la categoría «Planta»:
+lo mueve lo que lee y actúa sobre los sensores por sus salidas (ejemplos en
+`scene/devices/plant.mjs`). Una salida puede ser una lista de números
+(`number[]`, p. ej. las piezas de una cinta); se informa tal cual, sin
+interpolar.
+
 ### 2.3.3 Sondas por cable
 
 Un bloque de planta declara sus elementos sensores con

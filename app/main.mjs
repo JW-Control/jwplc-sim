@@ -752,6 +752,10 @@ function buildMenu() {
   );
 }
 
+// Vista 3D (three.js): sin GPU (máquina virtual, escritorio remoto) WebGL
+// cae a SwiftShader por software en lugar de no estar disponible.
+app.commandLine.appendSwitch("enable-unsafe-swiftshader");
+
 app.whenReady().then(() => {
   buildMenu();
   win = new BrowserWindow({

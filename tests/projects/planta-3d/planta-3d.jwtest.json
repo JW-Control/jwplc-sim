@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Planta 3D (G8): con el firmware y la escena, S1 arranca la cinta (KM1); la pieza que llega al final (B1 en C1.sensorB) hace salir el cilindro Y1; LL (nivel bajo) prende la bomba (KM2); la persona (BF en P1.persona) abre la puerta (KM3) y 3 s después de irse cierra (KM4) hasta el final de carrera BC.",
+  "sketch": "sketch/planta_3d",
+  "scene": "planta-3d.jwsim",
+  "until_ms": 32000,
+  "actions": [
+    { "at_ms": 500, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 800, "device": "S1", "action": "press", "value": false },
+    { "at_ms": 3000, "device": "P1", "action": "persona", "value": true },
+    { "at_ms": 5000, "device": "P1", "action": "persona", "value": false }
+  ],
+  "expect": {
+    "console": [{ "match": "^planta lista$", "count": 1 }, { "match": "^pieza al final$", "after_ms": 6500, "before_ms": 8000 }],
+    "scene": {
+      "state": [
+        { "at_ms": 1000, "KM1.closed": true, "KM2.closed": true, "M2.running": true, "P1.cerrada": true },
+        { "at_ms": 6000, "KM3.closed": true, "P1.cerrada": false },
+        { "at_ms": 7900, "Y1.position": 1 },
+        { "at_ms": 9500, "KM3.closed": false, "KM4.closed": true },
+        { "at_ms": 31000, "P1.cerrada": true, "KM4.closed": false, "M1.running": true }
+      ],
+      "faults": []
+    }
+  }
+}

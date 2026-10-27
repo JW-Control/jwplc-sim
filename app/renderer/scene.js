@@ -828,6 +828,7 @@
     const r = await api.sceneAnalyze(cleanSpec());
     S.error = r.error ?? null;
     S.snap = r.snapshot ?? null;
+    window.Jwsim3D?.onSnapshot(S.snap);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
@@ -1177,8 +1178,11 @@
       b.setAttribute("aria-checked", String(on));
     }
     $("scene-view").hidden = view !== "scene";
-    document.querySelector(".plc").hidden = view === "scene";
-    document.querySelector(".board-card").classList.toggle("scene-mode", view === "scene");
+    $("view3d").hidden = view !== "3d";
+    document.querySelector(".plc").hidden = view !== "board";
+    document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
+    window.Jwsim3D?.show(view === "3d");
+    if (view === "3d" && !S.snap && !S.running) analyze();
     if (view === "scene") {
       await loadBoard();
       ensurePlc();
@@ -1223,6 +1227,9 @@
       return sc.devices.length > 1 || sc.wiring.length ? sc : { devices: [], wiring: [] };
     },
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
+    // Para la vista 3D: la escena tal como está y si corre la simulación.
+    specForView: () => S.spec,
+    isRunning: () => S.running,
     owns(signal) {
       return S.running && !!S.snap && signal in (S.snap.inputs ?? {});
     },
@@ -1246,6 +1253,8 @@
       add: (type, x, y, id) => addDevice(type, x, y, id),
       wire: (a, b) => addWire(a, b),
       act: (id, action, value) => act(id, action, value),
+      view3d: () => window.Jwsim3D?.objects() ?? [],
+      fps3d: () => window.Jwsim3D?.fps() ?? 0,
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
       select: (id) => {
@@ -1323,6 +1332,7 @@
         }
       }
       S.snap = snap;
+      window.Jwsim3D?.onSnapshot(snap);
       render();
     });
     const sound = $("scene-sound");

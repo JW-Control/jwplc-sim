@@ -892,6 +892,36 @@ button.io.on {
 .scene-view[hidden] {
   display: none;
 }
+/* Vista 3D (G8): el lienzo de three.js ocupa el panel. */
+.view3d {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.view3d[hidden] {
+  display: none;
+}
+.view3d canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.view3d-empty {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(20, 23, 27, 0.85);
+  color: var(--muted);
+  font-size: 12px;
+}
+.view3d-empty[hidden] {
+  display: none;
+}
 .scene-tools {
   display: flex;
   gap: 6px;

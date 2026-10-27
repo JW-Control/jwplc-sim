@@ -540,6 +540,39 @@ fallas, modelo del fermentador) y `tests/plant/` con firmware real
 (sensores por Modbus y lazo cerrado del fermentador). Proyecto para la app:
 `tests/plant/fermentador.jwsim`.
 
+### 4.5 Equipos de planta y vista 3D **[G8]**
+
+Equipos sin bornes (categoría «Planta», `scene/devices/plant.mjs`) que mueve
+un motor de la escena, leído por nombre con `reads` (SDK §2.3.1). Sus
+salidas accionan los sensores por `source`, como la posición de un cilindro:
+
+| Tipo | Lee | Salidas | Acciones |
+|---|---|---|---|
+| `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
+| `jwsim/tank` (tanque con bomba) | `bomba` (p. ej. `M1.running`) | `nivel` (0-1) y `nivelPct` como segmentos, `rebalse`, `vacio`, `bombeando` | `consumo` (L/min) |
+| `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
+
+La cinta integra el avance con la regla del trapecio (exacta en la rampa
+lineal del motor) y agenda el próximo evento en el cruce de un borde de
+pieza con un punto de detección o con el final; durante la rampa se
+reevalúa cada 20 ms. Tanque y puerta publican segmentos, así que los
+sensores de nivel y los finales de carrera se calculan en el cruce exacto.
+Las salidas que son listas se informan tal cual (no pasan por la
+interpolación de segmentos).
+
+**Vista 3D** (`app/renderer/scene3d.js`, three.js 0.186.1 con OrbitControls):
+pestaña «3D» junto a Placa y Escena. Arma un modelo por equipo de planta y
+por cilindro (`jwsim/solenoid-valve-2`), con balizas para los sensores
+enlazados a ellos, y se actualiza con cada instantánea de la escena; entre
+instantáneas extrapola las piezas con `avance` y la velocidad de la
+simulación. El encuadre inicial se ajusta al ancho de la planta y respeta
+la órbita que deje el usuario. Sin WebGL por hardware, Electron usa
+SwiftShader; si tampoco hay WebGL, la vista lo avisa.
+
+Pruebas: `scene/tests/plant.test.mjs` y `app/tests/e2e-g8-3d.mjs` con el
+proyecto `tests/projects/planta-3d` (cinta con marcha y parada, cilindro al
+llegar la pieza, bomba entre nivel bajo y alto, puerta con fotocelda).
+
 
 
 Extraído del package (alpha.12, revisado con alpha.13). "Fuente" indica de dónde sale cada dato.

@@ -8,7 +8,13 @@ Procedimiento: ARCHITECTURE §9
 JWSIM_PACKAGE_SYNC_ALPHA14=PASS
 ```
 
-alpha.14 todavía no tiene tag: `package.lock` fija la rama de cierre
+**Actualización 2026-10-27:** alpha.14 ya está publicada. `package.lock`
+fija el tag `v2.1.0-alpha.14` (`f3f47aeeaaef`); respecto de `eddee62e` solo
+cambian ejemplos de `JWPLC_Display`. Con el tag: paridad sin diferencias y
+matriz de ejemplos 111/111 (incluidos los tres ejemplos HMI nuevos, con
+capturas de pantalla en `tests/examples/JWPLC_Display/`).
+
+Antes de publicarse, `package.lock` fijaba la rama de cierre
 (`v2.1.0-alpha.14/HmiDesigner/main`) y su commit. `scripts/fetch-package.mjs`
 acepta una rama: si avanza, o si se renombra o borra (como pasó con
 `v2.1.0-alpha.14/feature/hmi-designer`), trae igual el commit fijado; un tag

@@ -56,7 +56,8 @@ JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el r
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (alpha.14: 109 ejemplos, 106 compilan, corren y pasan su prueba; 3 obsoletos; artefacto)
 JWSIM_G5_RELEASE_WORKFLOW=PENDING   (en espera hasta cerrar alpha.14 y alpha.15; sim-regression.yml probado: alpha.13 PASS, alpha.10 FAIL)
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
-JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; v2.1.0-alpha.14/HmiDesigner/main @ eddee62e, sin tag todavía)
+JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; tag v2.1.0-alpha.14 @ f3f47aee: paridad sin diferencias,
+                                     matriz 111/111)
 JWSIM_G6_*=PENDING                  (OpenPLC: después de cerrar la alpha.15 de Kenyi)
 JWSIM_G7_DEVICE_LIBRARY=PASS        (18 dispositivos, 23 pruebas de comportamiento; símbolos v2 en 13 de 18; docs/reports/G7.md)
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)
@@ -71,7 +72,9 @@ JWSIM_G8_2D_ELECTRICAL=PASS         (alcance v1, aprobado por JW Control el 27/1
 JWSIM_G8_OIP_FUXA=IN_PROGRESS     (27/10: puente de E/S Modbus TCP (bornera en 127.0.0.1:5020) probado con un cliente
                                      que hace lo de OIP y FUXA: mapa, excepciones, escena y latencia ≤ 35 ms;
                                      guía en docs/integration/OIP_FUXA.md; falta la prueba con OIP y FUXA reales en taller)
-JWSIM_G8_3D_SCENES=PENDING
+JWSIM_G8_3D_SCENES=PASS             (27/10: vista 3D (three.js) con cinta, tanque, puerta y cilindro manejados por el
+                                     firmware (tests/projects/planta-3d); 56 fps con render por software (SwiftShader, xvfb);
+                                     app/tests/e2e-g8-3d.mjs)
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)
 JWSIM_G9_EXERCISES=PASS             (8 ejercicios con escena, enunciado, plantilla, solución 20/20 y rúbrica; docs/EJERCICIOS.md)
@@ -165,7 +168,7 @@ JWSIM_G10_*=PENDING
 | Gate | Criterios | Verificación |
 |---|---|---|
 | `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. C1: los dispositivos de la biblioteca dentro del alcance acordado con JW Control tienen símbolo según `docs/simbolos/LINEAMIENTOS.md` (modelo comercial real, vista frontal, 4 px/mm; los de campo a una escala reducida fija), aprobado por JW Control. C2: cableado editable (crear, quitar, puntos de doblez, color, puentes) sin superponerse a los equipos. C3: estados legibles y animados con la simulación: cables con tensión, contactos y palancas, vástago del cilindro, giro del motor, pilotos, disparo de las protecciones. | `node scripts/export-symbols.mjs` sin `plantilla: null` fuera de los excluidos del alcance (v1: `sensor-photoelectric`, `relay`, `ph-rs485`, `water-valve`, `motor`) + E2E de la escena (`app/tests/e2e-g7.mjs`) + vistas de escala. |
-| `JWSIM_G8_3D_SCENES` | Escenas 3D (three.js) de procesos: cinta, cilindro, tanque, puerta. ≥ 30 fps en el host de referencia. | Medición. |
+| `JWSIM_G8_3D_SCENES` | Escenas 3D (three.js) de procesos: cinta, cilindro, tanque, puerta. C1: los equipos de planta (`jwsim/conveyor`, `jwsim/tank`, `jwsim/door`) y el cilindro se dibujan en 3D con los sensores enlazados. C2: con el firmware en marcha la vista sigue a la simulación. C3: ≥ 30 fps en el host de referencia. | `node --test scene/tests/plant.test.mjs` + E2E `app/tests/e2e-g8-3d.mjs` (medición de fps). |
 | `JWSIM_G8_OIP_FUXA` | Puente con Open Industry Project y FUXA (Modbus TCP) documentado y probado. C1: la bornera del Basic simulado como esclavo Modbus TCP (bobinas, entradas discretas y registros; `docs/integration/OIP_FUXA.md`). C2: no escribe las entradas que maneja la escena. C3: latencia entrada → salida ≤ 100 ms a velocidad real. C4: prueba con OIP y FUXA reales registrada en `docs/reports/`. | `node scripts/gate-g8-io-bridge.mjs` (C1-C3) + prueba de taller (C4). |
 
 ## G9 — Ejercicios

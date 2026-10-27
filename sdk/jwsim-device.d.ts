@@ -222,8 +222,9 @@ export interface DeviceStep {
   contacts?: Record<string, boolean>;
   /** Estado de las fuentes controladas (id de la fuente → estado). */
   sources?: Record<string, SourceState>;
-  /** Salidas observables y mecánicas; las señales de signals.out van a la placa. */
-  outputs?: Record<string, number | boolean | string | Segment>;
+  /** Salidas observables y mecánicas; las señales de signals.out van a la placa. Una lista de números
+   *  (p. ej. las posiciones de las piezas de una cinta) se informa tal cual. */
+  outputs?: Record<string, number | boolean | string | Segment | number[]>;
   /** Próximo evento propio (temporizador, fin de rampa). */
   nextEventNs?: Ns;
   /**
