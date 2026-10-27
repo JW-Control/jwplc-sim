@@ -32,20 +32,15 @@ if (app.isPackaged && process.platform === "win32") {
 }
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
-const TEMPLATE = `// Sketch nuevo para JWPLC Basic.
-// Las entradas I0_0..I0_7 y salidas Q0_0..Q0_7 se manejan con la API del core.
+// Sketch nuevo: el clásico de Arduino IDE.
+const TEMPLATE = `void setup() {
+  // Escriba aquí su código de configuración; se ejecuta una vez:
 
-void setup()
-{
-  Serial.begin(115200);
-  Serial.println("Hola desde JWPLC Sim");
 }
 
-void loop()
-{
-  // Copia la entrada I0_0 en la salida Q0_0.
-  digitalWrite(Q0_0, digitalRead(I0_0));
-  delay(10);
+void loop() {
+  // Escriba aquí su código principal; se ejecuta una y otra vez:
+
 }
 `;
 

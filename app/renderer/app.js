@@ -1326,6 +1326,7 @@ function initMonaco() {
 window.jwsimTest = {
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
+  openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
   saveProject: () => saveProjectFile(),
   toggleBreakpoint: (name, line) => toggleBreakpoint(name, line),
   breakpoints: (name) => bpLines(name),
@@ -1373,11 +1374,10 @@ async function main() {
   await initMonaco();
   renderWatch();
   clearDebugView();
-  const examples = await populateExamples();
+  state.examples = await populateExamples();
   populateExercises();
-  // Primer arranque: el ejemplo de E/S básico del package.
-  const first = examples.find((e) => e.name === "02_io_basic") ?? examples[0];
-  if (first) loadSketch(await api.openExample(first.dir));
+  // Como Arduino IDE: arranca con un sketch nuevo (setup y loop vacíos).
+  loadSketch(await api.newSketch());
 }
 
 main();

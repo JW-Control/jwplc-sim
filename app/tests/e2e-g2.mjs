@@ -45,6 +45,11 @@ if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no
 const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_BUILD_TIMING: "1" } });
 const win = await app.firstWindow();
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
+// Arranca con un sketch nuevo (setup y loop vacíos, como Arduino IDE).
+await win.waitForSelector(".tab.active:has-text('sketch_')", { timeout: 30000 });
+const fresh = await win.evaluate(() => window.monaco.editor.getModels()[0].getValue());
+criteria.NEW_SKETCH = { pass: /void setup\(\) \{[\s\S]*\}\s*void loop\(\) \{[\s\S]*\}/.test(fresh), source: fresh };
+await win.evaluate(() => window.jwsimTest.openExampleNamed("02_io_basic"));
 await win.waitForSelector(".tab.active:has-text('02_io_basic.ino')", { timeout: 30000 });
 const coldMs = Date.now() - t0;
 await shot(win, "01-inicio.png");
