@@ -83,6 +83,12 @@ try {
   const piezas = await out("C1", "piezas");
   const nivel = await out("T1", "nivelPct");
   await shot("3d-marcha.png");
+  // Los mismos equipos en la Escena 2D (símbolos de planta).
+  await t(() => window.jwsimTest.scene.view("scene"));
+  await sleep(600);
+  await shot("2d-planta.png");
+  await t(() => window.jwsimTest.scene.view("3d"));
+  await sleep(300);
   // Cuadros por segundo en marcha (promedio de tres lecturas).
   const fps = [];
   for (let i = 0; i < 3; i++) {

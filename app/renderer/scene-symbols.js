@@ -15,6 +15,7 @@
   const SCREW_INSET = 14;
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const snap = (v) => Math.round(v / GRID) * GRID;
+  const num = (v, d) => (v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
   const LENS = { verde: "#2fd05a", rojo: "#ff3b30", amarillo: "#ffcc00", azul: "#2f8cff", blanco: "#f5f7fa", negro: "#2b2f35" };
   const ink = "#1b1e22";
   const face = "#e4e7eb";
@@ -50,6 +51,10 @@
     "vfd-el": [640, 220, ["R", "S", "PE"], ["RA", "RB", "RC", "+24V", "MI2", "MI1", "MI4", "MI3", "MI6", "MI5", "DCM", "+10V", "AVI", "ACM", "SG+", "SG-", "U", "V", "W"]],
     "power-24vdc": [100, 120, [], ["+V1", "-V1"]],
     "power-230vac": [80, 120, [], ["L", "N"]],
+    // Planta (G8): sin bornes; dibujo de proceso, no de un modelo comercial.
+    conveyor: [280, 120, [], []],
+    tank: [140, 180, [], []],
+    door: [260, 160, [], []],
   };
   // Segunda línea del rótulo (más chica): función del borne.
   const SUBLABELS = {
@@ -588,6 +593,67 @@
           `<text class="sym-big" x="${w / 4}" y="28">L</text><text class="sym-big light" x="${(3 * w) / 4}" y="28">N</text>` +
           `<text class="sym-tag" x="${cx}" y="56">230 VAC</text>` +
           (ok ? "" : `<text class="sym-bad" x="${cx}" y="72">DISPARADA</text>`)
+        );
+      }
+      case "conveyor": {
+        // Cinta vista de costado: piezas a escala del largo, puntos A y B.
+        const L = Math.max(0.2, num(p.largo, 2));
+        const x0 = 20, x1 = w - 20, by = 56;
+        const sx = (m) => x0 + (m / L) * (x1 - x0);
+        const len = Math.max(0.02, num(p.pieza, 0.2));
+        const piezas = Array.isArray(o.piezas) ? o.piezas : [];
+        const mark = (m, on, t) =>
+          `<path d="M${sx(m) - 6} ${by - 34} h12 l-6 9 Z" fill="${on ? "#ff9f1a" : "#8a9099"}" stroke="${ink}"/>` +
+          `<text class="sym-tag" x="${sx(m)}" y="${by - 38}">${t}</text>`;
+        const run = Number(o.avance ?? 0) !== 0;
+        return (
+          module(w, h, "#f4f5f7") +
+          `<rect x="${x0 - 8}" y="${by}" width="${x1 - x0 + 16}" height="16" rx="8" fill="#3a3f46" stroke="${ink}"/>` +
+          Array.from({ length: 9 }, (_, i) => `<circle cx="${x0 + (i * (x1 - x0)) / 8}" cy="${by + 8}" r="5" fill="#9aa1aa" stroke="${ink}" stroke-width="0.8"/>`).join("") +
+          `<line x1="${x0 + 10}" y1="${by + 16}" x2="${x0 + 10}" y2="${by + 40}" stroke="${ink}" stroke-width="3"/><line x1="${x1 - 10}" y1="${by + 16}" x2="${x1 - 10}" y2="${by + 40}" stroke="${ink}" stroke-width="3"/>` +
+          piezas.map((m) => {
+            const a = Math.max(x0 - 8, sx(m - len / 2)), b = Math.min(x1 + 8, sx(m + len / 2));
+            return b > a ? `<rect x="${a}" y="${by - 18}" width="${b - a}" height="18" rx="2" fill="#e08a2c" stroke="${ink}"/>` : "";
+          }).join("") +
+          mark(num(p.sensorA, 0.4), !!o.sensorA, "A") + mark(num(p.sensorB, 1.7), !!o.sensorB, "B") +
+          (run ? `<text class="sym-tag" x="${x1 + 8}" y="${h - 8}" style="text-anchor:end">${Number(o.avance) > 0 ? "▶" : "◀"} ${Math.abs(Number(o.avance)).toFixed(2)} m/s</text>` : "") +
+          `<text class="sym-tag" x="${x0 - 8}" y="${h - 8}" style="text-anchor:start">salidas ${Number(o.salidas ?? 0)}</text>` +
+          `<g class="act" data-action="poner" data-kind="momentary"><rect x="${w / 2 - 29}" y="${h - 22}" width="58" height="18" rx="3" fill="#3a3f46"/><text class="sym-tag light" x="${w / 2}" y="${h - 10}">+ pieza</text></g>`
+        );
+      }
+      case "tank": {
+        const lv = Math.max(0, Math.min(1, Number(o.nivel ?? num(p.nivel0, 50) / 100)));
+        const tx = 24, ty = 30, tw = 80, th = 120;
+        const lh = lv * (th - 4);
+        return (
+          module(w, h, "#f4f5f7") +
+          `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}" rx="8" fill="#e4e7eb" stroke="${ink}" stroke-width="1.6"/>` +
+          `<rect x="${tx + 2}" y="${ty + th - 2 - lh}" width="${tw - 4}" height="${lh}" rx="6" fill="#3d8be0" opacity="0.85"/>` +
+          [0.25, 0.5, 0.75].map((f) => `<line x1="${tx + tw}" y1="${ty + th - 2 - f * (th - 4)}" x2="${tx + tw + 6}" y2="${ty + th - 2 - f * (th - 4)}" stroke="${ink}"/>`).join("") +
+          `<text class="sym-big" x="${tx + tw / 2}" y="${ty + th / 2 + 5}">${Math.round(lv * 100)} %</text>` +
+          // Bomba (abajo a la derecha) y caño de entrada por arriba.
+          `<path d="M${tx + tw + 22} ${ty + th - 10} V${ty - 12} H${tx + tw - 16} V${ty + 4}" fill="none" stroke="#7d8590" stroke-width="4"/>` +
+          `<circle cx="${tx + tw + 22}" cy="${ty + th - 4}" r="9" fill="${o.bombeando ? "#37d67a" : "#59606a"}" stroke="${ink}"/>` +
+          (o.bombeando ? `<path d="M${tx + tw - 16} ${ty + 6} v${th - 10 - lh}" stroke="#3d8be0" stroke-width="3" stroke-dasharray="4 3"/>` : "") +
+          (o.rebalse ? `<text class="sym-bad" x="${w / 2}" y="${h - 10}">REBALSE</text>` : o.vacio ? `<text class="sym-bad" x="${w / 2}" y="${h - 10}">VACÍO</text>` : `<text class="sym-tag" x="${w / 2}" y="${h - 10}">${Math.round(num(p.volumen, 200) * lv)} / ${num(p.volumen, 200)} L</text>`)
+        );
+      }
+      case "door": {
+        // Puerta corrediza de frente: la hoja se corre a la derecha al abrir.
+        const pos = Math.max(0, Math.min(1, Number(o.posicion ?? num(p.posicion0, 0) / 100)));
+        const fx = 20, fy = 24, fw = 110, fh = 90;
+        const per = !!o.persona;
+        return (
+          module(w, h, "#f4f5f7") +
+          `<rect x="${fx - 6}" y="${fy - 8}" width="${fw * 2 + 12}" height="8" fill="#3a3f46"/>` +
+          `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" fill="#2b2f35" stroke="${ink}"/>` +
+          (per ? `<circle cx="${fx + 24}" cy="${fy + 26}" r="9" fill="#e0b48a" stroke="${ink}"/><rect x="${fx + 13}" y="${fy + 37}" width="22" height="${fh - 37}" rx="6" fill="#2f62d6" stroke="${ink}"/>` : "") +
+          `<line x1="${fx}" y1="${fy + fh - 22}" x2="${fx + fw}" y2="${fy + fh - 22}" stroke="#ff3b30" stroke-width="1.5" stroke-dasharray="${per ? "0" : "4 4"}" opacity="${per ? 1 : 0.5}"/>` +
+          `<rect x="${fx + pos * fw}" y="${fy}" width="${fw}" height="${fh}" fill="#c9ced5" stroke="${ink}" stroke-width="1.6"/>` +
+          `<rect x="${fx + pos * fw + 8}" y="${fy + fh / 2 - 12}" width="6" height="24" rx="2" fill="#59606a"/>` +
+          `<text class="sym-tag" x="${fx}" y="${fy + fh + 22}" style="text-anchor:start">${o.abierta ? "abierta" : o.cerrada ? "cerrada" : `${Math.round(pos * 100)} %`}</text>` +
+          (o.forzando ? `<text class="sym-bad" x="${w / 2}" y="${h - 6}">FORZANDO TOPE</text>` : "") +
+          `<g class="act" data-action="persona" data-kind="toggle"><rect x="${w - 84}" y="${fy + fh + 9}" width="64" height="18" rx="3" fill="${per ? "#2f62d6" : "#3a3f46"}"/><text class="sym-tag light" x="${w - 52}" y="${fy + fh + 21}">persona</text></g>`
         );
       }
       default: {

@@ -569,6 +569,12 @@ simulación. El encuadre inicial se ajusta al ancho de la planta y respeta
 la órbita que deje el usuario. Sin WebGL por hardware, Electron usa
 SwiftShader; si tampoco hay WebGL, la vista lo avisa.
 
+En la Escena 2D los tres equipos tienen un dibujo de proceso en código
+(`app/renderer/scene-symbols.js`): la cinta de costado con las piezas a
+escala y los puntos A y B, el tanque con su nivel y la bomba, y la puerta
+con la hoja que corre y la persona. No representan un modelo comercial, así
+que quedan fuera de la regla de 4 px/mm de los símbolos de tablero.
+
 Pruebas: `scene/tests/plant.test.mjs` y `app/tests/e2e-g8-3d.mjs` con el
 proyecto `tests/projects/planta-3d` (cinta con marcha y parada, cilindro al
 llegar la pieza, bomba entre nivel bajo y alto, puerta con fotocelda).
