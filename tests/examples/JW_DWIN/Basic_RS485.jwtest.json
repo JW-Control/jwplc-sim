@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Pantalla DWIN por Modbus RTU (esclavo 1) en el bus RS-485 (UART2). Se simula la pantalla: responde a setPage(0x10), al texto 'JW_DWIN v0.1' y a enableTouch, y a la lectura de la tecla 0x1031 con el código 5. El enlace queda en línea (sale el texto 'EN LINEA') y el contador pasa a 1 (sendValue val=1). Después deja de responder: los pedidos dan Timeout y el enlace pasa a offline.",
+  "sketch": "package:libraries/JW_DWIN/examples/Basic_RS485",
+  "until_ms": 2500,
+  "stim": [
+    "730 uart2 \"\\x01\\x10\\x00\\x84\\x00\\x02\\x01\\xE1\"",
+    "760 uart2 \"\\x01\\x10\\x10\\xA0\\x00\\x06\\x44\\xE9\"",
+    "790 uart2 \"\\x01\\x10\\x00\\xB0\\x00\\x04\\xC0\\x2D\"",
+    "830 uart2 \"\\x01\\x03\\x02\\x00\\x05\\x78\\x47\""
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^\\\\x01\\\\x10\\\\x00\\\\x84\\\\x00\\\\x02\\\\x04Z\\\\x01\\\\x00\\\\x10\\\\xB8\\\\xE8\\\\x01\\\\x10\\\\x10\\\\xA0\\\\x00\\\\x06\\\\x0CJW_DWIN v0\\.1",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "\\\\x0CEN LINEA ",
+        "port": 2,
+        "count": 1
+      },
+      {
+        "match": "^\\[\\d+\\] (setPage|sendText|enableTouch) .*Timeout$",
+        "port": 0,
+        "count": 0,
+        "before_ms": 1200
+      },
+      {
+        "match": "^\\[\\d+\\] sendValue \\| addr=0x1000 val=1 Timeout$",
+        "port": 0,
+        "count": 1
+      },
+      {
+        "match": "^\\[\\d+\\] link \\| offline: Timeout$",
+        "port": 0,
+        "count": 1,
+        "after_ms": 1200,
+        "before_ms": 1350
+      }
+    ]
+  }
+}

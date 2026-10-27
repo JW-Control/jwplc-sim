@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Plantilla estándar de proyecto (pestañas A…K). Paro (I0_1), emergencia (I0_2) y térmico (I0_3) son NC y se cierran desde 0 ms: arranca sin alarmas falsas (alm=0x0000, regresión del antirrebote). Marcha a 1,5 s: ARRANCANDO (estado=1, Q0_0) y MARCHA (estado=2) tras 2 s. Paro a 5 s: PARADO. Marcha a 6 s y emergencia a 8,5 s: FALLA (estado=3), Q0_0 apagada y piloto Q0_1. La emergencia vuelve a 9 s pero la alarma queda enclavada hasta ESC a 10 s; entonces PARADO.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/00.Plantilla_Proyecto_JWPLC",
+  "until_ms": 11500,
+  "stim": [
+    "0 I0_1=1", "0 I0_2=1", "0 I0_3=1",
+    "1500 I0_0=1", "1700 I0_0=0",
+    "5000 I0_1=0", "5200 I0_1=1",
+    "6000 I0_0=1", "6200 I0_0=0",
+    "8500 I0_2=0", "9000 I0_2=1",
+    "10000 BTN_ESC=1", "10150 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      "^Plantilla JWPLC v1\\.0\\.0 \\| cliente: -$",
+      { "match": "^\\[FRAM\\] datos por defecto$", "count": 1 },
+      { "match": "^estado=0 IN=0x0E OUT=0x00 alm=0x0000/0x0000 ", "min": 1, "before_ms": 1500 },
+      { "match": "^estado=1 IN=0x0E OUT=0x01 alm=0x0000/0x0000 ", "min": 1, "after_ms": 1500, "before_ms": 3600 },
+      { "match": "^estado=2 IN=0x0E OUT=0x01 alm=0x0000/0x0000 ", "min": 1, "after_ms": 3600, "before_ms": 5000 },
+      { "match": "^estado=0 ", "min": 1, "after_ms": 5100, "before_ms": 6010 },
+      { "match": "^estado=3 IN=0x0A OUT=0x02 alm=0x0001/0x0001 ", "min": 1, "after_ms": 8500, "before_ms": 9500 },
+      { "match": "^estado=3 IN=0x0E OUT=0x02 alm=0x0000/0x0001 ", "min": 1, "after_ms": 9000, "before_ms": 10010 },
+      { "match": "^estado=0 IN=0x0E OUT=0x00 alm=0x0000/0x0000 ", "min": 1, "after_ms": 10200 },
+      { "match": "alm=0x0000/0x000[1-9]", "count": 0, "before_ms": 8500 }
+    ],
+    "signals": [
+      { "at_ms": 1400, "DO": "0b00000000" },
+      { "at_ms": 1800, "Q0_0": 1 },
+      { "at_ms": 5400, "Q0_0": 0 },
+      { "at_ms": 8700, "Q0_0": 0, "Q0_1": 1 },
+      { "at_ms": 9800, "Q0_0": 0, "Q0_1": 1 },
+      { "at_ms": 10300, "DO": "0b00000000" }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 07: cada flanco de subida en I0_0 invierte Q0_0 (antirrebote de 20 ms); mantener apretado no repite. Pulsaciones a 1,0 s (larga, 600 ms) y a 2,0 s.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/07.Flancos_un_pulsador",
+  "until_ms": 3000,
+  "stim": ["1000 I0_0=1", "1600 I0_0=0", "2000 I0_0=1", "2100 I0_0=0"],
+  "expect": {
+    "console": [
+      "^Lección 07: cada pulsación en I0\\.0 cambia Q0\\.0$",
+      { "match": "^Pulsación: Q0\\.0 encendida$", "count": 1, "after_ms": 1000, "before_ms": 1050 },
+      { "match": "^Pulsación: Q0\\.0 apagada$", "count": 1, "after_ms": 2000, "before_ms": 2050 },
+      { "match": "^Pulsación: ", "count": 2 },
+      { "match": "^Pulsador suelto$", "count": 2 }
+    ],
+    "signals": [
+      { "at_ms": 900, "Q0_0": 0 },
+      { "at_ms": 1500, "Q0_0": 1 },
+      { "at_ms": 1900, "Q0_0": 1 },
+      { "at_ms": 2500, "Q0_0": 0 }
+    ]
+  }
+}

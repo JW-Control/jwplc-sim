@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 05: digitalReadBlock/digitalWriteBlock copian las 8 entradas a los 8 relés cada 500 ms; la consola lista los bits de I0_0 a I0_7. Patrón 0x09 (I0_0 e I0_3) a 1,2 s y 0xF0 a 2,4 s.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/1.Primeros_pasos/05.Las_8_entradas_y_salidas",
+  "until_ms": 3500,
+  "stim": [
+    "1200 I0_0=1", "1200 I0_3=1",
+    "2400 I0_0=0", "2400 I0_3=0", "2400 I0_4=1", "2400 I0_5=1", "2400 I0_6=1", "2400 I0_7=1"
+  ],
+  "expect": {
+    "console": [
+      "^Lección 05: las 8 entradas y los 8 relés en un byte$",
+      { "match": "^Entradas: 0 0 0 0 0 0 0 0\\s*$", "min": 1, "before_ms": 1200 },
+      { "match": "^Entradas: 1 0 0 1 0 0 0 0\\s*$", "min": 2, "after_ms": 1200, "before_ms": 2400 },
+      { "match": "^Entradas: 0 0 0 0 1 1 1 1\\s*$", "min": 1, "after_ms": 2400 }
+    ],
+    "signals": [
+      { "at_ms": 1100, "DO": "0b00000000" },
+      { "at_ms": 1800, "DI": "0b00001001", "DO": "0b00001001" },
+      { "at_ms": 3000, "DI": "0b11110000", "DO": "0b11110000" }
+    ]
+  }
+}

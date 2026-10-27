@@ -52,6 +52,7 @@
     "JWPLC_ModbusTCP",
     "JWPLC_RS485",
     "JWPLC_TFT",
+    "JW_DWIN",
     "JW_FRAM",
     "JW_MatrixButtons",
     "JW_ModbusRTU",

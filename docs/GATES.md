@@ -61,6 +61,8 @@ JWSIM_G5_RELEASE_WORKFLOW=IN_PROGRESS (27/10: job SIM_REGRESSION en release-jwpl
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
 JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; tag v2.1.0-alpha.14 @ f3f47aee: paridad sin diferencias,
                                      matriz 111/111)
+JWSIM_PACKAGE_SYNC_ALPHA15=PASS     (docs/reports/SYNC_ALPHA15.md; republicación de alpha.15: JW_DWIN registrada,
+                                     14 pruebas nuevas, matriz 125 ejemplos)
 JWSIM_G6_*=PENDING                  (OpenPLC: después de cerrar la alpha.15 de Kenyi)
 JWSIM_G7_DEVICE_LIBRARY=PASS        (18 dispositivos, 23 pruebas de comportamiento; símbolos v2 en 13 de 18; docs/reports/G7.md)
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)

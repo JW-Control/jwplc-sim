@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 10: cuenta flancos de I0_0 hasta 10 piezas por caja. Q0_0 (cinta) cerrado mientras haya lugar; con 10 piezas se abre, Q0_1 avisa caja llena y la pulsación 11 no cuenta. RESET por flanco de I0_1 a 2,5 s vuelve a 0.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/10.Contadores",
+  "until_ms": 3000,
+  "stim": [
+    "1000 I0_0=1", "1050 I0_0=0", "1100 I0_0=1", "1150 I0_0=0", "1200 I0_0=1", "1250 I0_0=0", "1300 I0_0=1", "1350 I0_0=0", "1400 I0_0=1", "1450 I0_0=0", "1500 I0_0=1", "1550 I0_0=0", "1600 I0_0=1", "1650 I0_0=0", "1700 I0_0=1", "1750 I0_0=0", "1800 I0_0=1", "1850 I0_0=0", "1900 I0_0=1", "1950 I0_0=0", "2000 I0_0=1", "2050 I0_0=0", 
+    "2500 I0_1=1", "2600 I0_1=0"
+  ],
+  "expect": {
+    "console": [
+      "^Lección 10: piezas en I0\\.0, RESET en I0\\.1$",
+      { "match": "^Piezas: 1$", "count": 1, "after_ms": 1000, "before_ms": 1050 },
+      { "match": "^Piezas: 10$", "count": 1, "after_ms": 1900, "before_ms": 1950 },
+      { "match": "^Piezas: \\d+$", "count": 10 },
+      { "match": "^Caja llena: cambia la caja y aprieta RESET$", "count": 1, "after_ms": 1900, "before_ms": 1950 },
+      { "match": "^RESET: caja nueva$", "count": 1, "after_ms": 2500, "before_ms": 2550 }
+    ],
+    "signals": [
+      { "at_ms": 900, "DO": "0b00000001" },
+      { "at_ms": 1800, "DO": "0b00000001" },
+      { "at_ms": 2200, "DO": "0b00000010" },
+      { "at_ms": 2700, "DO": "0b00000001" }
+    ]
+  }
+}
