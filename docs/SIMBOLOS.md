@@ -207,6 +207,11 @@ sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
 escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+
 amarillo y SG- azul. 10V, AVI, AFM y ACM no se conectan.
 
+Motor monofásico (27/10/2026, propuesta): la misma vista del WEG con el
+capacitor de arranque en un cilindro sobre la carcasa, junto a una caja de
+bornes más angosta; `motor-1ph` (U1 U2 PE) y `motor-1ph__4cables` (U1 U2 Z1
+Z2 PE), con el aviso «ZUMBA: NO ARRANCA» (`out.bloqueado`).
+
 Pendientes (todavía dibujados en código, sin escala real): sensor
-fotoeléctrico, relé enchufable y motor monofásico.
+fotoeléctrico y relé enchufable.
 `node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.

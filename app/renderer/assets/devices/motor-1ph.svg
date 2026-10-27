@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Motor WEG W22 (monofasico con capacitor) visto desde el ventilador; medidas aproximadas de la carcasa IEC 80. Escala de campo 2 px/mm. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 460">
+<defs>
+<linearGradient id="motor-1ph-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="motor-1ph-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="motor-1ph-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="motor-1ph-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="motor-1ph-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="motor-1ph-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="motor-1ph-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="motor-1ph-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="motor-1ph-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="motor-1ph-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<radialGradient id="motor-1ph-body" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#4a83b8"/><stop offset=".65" stop-color="#2e5f8f"/><stop offset="1" stop-color="#1f4466"/></radialGradient>
+<linearGradient id="motor-1ph-box" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a83b8"/><stop offset="1" stop-color="#1f4466"/></linearGradient>
+<radialGradient id="motor-1ph-hole" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#2a2d31"/><stop offset="1" stop-color="#0d0e10"/></radialGradient>
+<linearGradient id="motor-1ph-blade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a5f66"/><stop offset=".5" stop-color="#2b2e33"/><stop offset="1" stop-color="#16181b"/></linearGradient>
+<radialGradient id="motor-1ph-soot" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#140f0b" stop-opacity=".9"/><stop offset=".65" stop-color="#2a2019" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<clipPath id="motor-1ph-fanclip"><circle cx="180" cy="280" r="122"/></clipPath>
+</defs>
+<path d="M110 390 L52 426 H12 V440 H110 Z" fill="url(#motor-1ph-body)" stroke="#1f4466" stroke-width="1.4"/>
+<ellipse cx="32" cy="433" rx="9" ry="4" fill="#0d1a28"/>
+<path d="M250 390 L308 426 H348 V440 H250 Z" fill="url(#motor-1ph-body)" stroke="#1f4466" stroke-width="1.4"/>
+<ellipse cx="328" cy="433" rx="9" ry="4" fill="#0d1a28"/>
+<rect x="8" y="440" width="344" height="8" rx="2" fill="#3a3f46"/>
+<polygon points="330.0,280.0 329.5,291.8 319.6,291.0 318.3,301.9 328.2,303.5 325.9,315.0 316.1,312.7 313.1,323.3 322.7,326.4 318.6,337.4 309.3,333.6 304.7,343.6 313.7,348.1 307.9,358.4 299.4,353.1 293.3,362.3 301.4,368.2 294.1,377.4 286.5,370.9 279.0,379.0 286.1,386.1 277.4,394.1 270.9,386.5 262.3,393.3 268.2,401.4 258.4,407.9 253.1,399.4 243.6,404.7 248.1,413.7 237.4,418.6 233.6,409.3 223.3,413.1 226.4,422.7 215.0,425.9 212.7,416.1 201.9,418.3 203.5,428.2 191.8,429.5 191.0,419.6 180.0,420.0 180.0,430.0 168.2,429.5 169.0,419.6 158.1,418.3 156.5,428.2 145.0,425.9 147.3,416.1 136.7,413.1 133.6,422.7 122.6,418.6 126.4,409.3 116.4,404.7 111.9,413.7 101.6,407.9 106.9,399.4 97.7,393.3 91.8,401.4 82.6,394.1 89.1,386.5 81.0,379.0 73.9,386.1 65.9,377.4 73.5,370.9 66.7,362.3 58.6,368.2 52.1,358.4 60.6,353.1 55.3,343.6 46.3,348.1 41.4,337.4 50.7,333.6 46.9,323.3 37.3,326.4 34.1,315.0 43.9,312.7 41.7,301.9 31.8,303.5 30.5,291.8 40.4,291.0 40.0,280.0 30.0,280.0 30.5,268.2 40.4,269.0 41.7,258.1 31.8,256.5 34.1,245.0 43.9,247.3 46.9,236.7 37.3,233.6 41.4,222.6 50.7,226.4 55.3,216.4 46.3,211.9 52.1,201.6 60.6,206.9 66.7,197.7 58.6,191.8 65.9,182.6 73.5,189.1 81.0,181.0 73.9,173.9 82.6,165.9 89.1,173.5 97.7,166.7 91.8,158.6 101.6,152.1 106.9,160.6 116.4,155.3 111.9,146.3 122.6,141.4 126.4,150.7 136.7,146.9 133.6,137.3 145.0,134.1 147.3,143.9 158.1,141.7 156.5,131.8 168.2,130.5 169.0,140.4 180.0,140.0 180.0,130.0 191.8,130.5 191.0,140.4 201.9,141.7 203.5,131.8 215.0,134.1 212.7,143.9 223.3,146.9 226.4,137.3 237.4,141.4 233.6,150.7 243.6,155.3 248.1,146.3 258.4,152.1 253.1,160.6 262.3,166.7 268.2,158.6 277.4,165.9 270.9,173.5 279.0,181.0 286.1,173.9 294.1,182.6 286.5,189.1 293.3,197.7 301.4,191.8 307.9,201.6 299.4,206.9 304.7,216.4 313.7,211.9 318.6,222.6 309.3,226.4 313.1,236.7 322.7,233.6 325.9,245.0 316.1,247.3 318.3,258.1 328.2,256.5 329.5,268.2 319.6,269.0 320.0,280.0" fill="url(#motor-1ph-body)" stroke="#1f4466" stroke-width="1.2"/>
+<circle cx="180" cy="280" r="138" fill="#2e5f8f" stroke="#1f4466" stroke-width="1"/>
+<circle cx="180" cy="280" r="128" fill="url(#motor-1ph-hole)"/>
+<g clip-path="url(#motor-1ph-fanclip)"><g data-spin="out.speed:180:280:3">
+<path transform="rotate(0.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(45.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(90.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(135.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(180.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(225.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(270.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<path transform="rotate(315.0 180 280)" d="M194 274 C240 240 285 242 296 266 C288 284 240 288 194 286 Z" fill="url(#motor-1ph-blade)" stroke="#000" stroke-width=".8"/>
+<circle cx="180" cy="280" r="20" fill="#3a3f46" stroke="#000" stroke-width="1"/>
+<circle cx="189" cy="276" r="3" fill="#8f969d"/>
+</g></g>
+<circle cx="180" cy="280" r="36" fill="none" stroke="#2e5f8f" stroke-width="5"/>
+<circle cx="180" cy="280" r="36" fill="none" stroke="#4a83b8" stroke-width="1.2" opacity=".6"/>
+<circle cx="180" cy="280" r="62" fill="none" stroke="#2e5f8f" stroke-width="5"/>
+<circle cx="180" cy="280" r="62" fill="none" stroke="#4a83b8" stroke-width="1.2" opacity=".6"/>
+<circle cx="180" cy="280" r="88" fill="none" stroke="#2e5f8f" stroke-width="5"/>
+<circle cx="180" cy="280" r="88" fill="none" stroke="#4a83b8" stroke-width="1.2" opacity=".6"/>
+<circle cx="180" cy="280" r="112" fill="none" stroke="#2e5f8f" stroke-width="5"/>
+<circle cx="180" cy="280" r="112" fill="none" stroke="#4a83b8" stroke-width="1.2" opacity=".6"/>
+<line x1="216.0" y1="280.0" x2="304.0" y2="280.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="211.2" y1="298.0" x2="287.4" y2="342.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="198.0" y1="311.2" x2="242.0" y2="387.4" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="180.0" y1="316.0" x2="180.0" y2="404.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="162.0" y1="311.2" x2="118.0" y2="387.4" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="148.8" y1="298.0" x2="72.6" y2="342.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="144.0" y1="280.0" x2="56.0" y2="280.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="148.8" y1="262.0" x2="72.6" y2="218.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="162.0" y1="248.8" x2="118.0" y2="172.6" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="180.0" y1="244.0" x2="180.0" y2="156.0" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="198.0" y1="248.8" x2="242.0" y2="172.6" stroke="#2e5f8f" stroke-width="5"/>
+<line x1="211.2" y1="262.0" x2="287.4" y2="218.0" stroke="#2e5f8f" stroke-width="5"/>
+<circle cx="180" cy="280" r="128" fill="none" stroke="#1f4466" stroke-width="7"/>
+<circle cx="180" cy="280" r="125" fill="none" stroke="#4a83b8" stroke-width="1.5" opacity=".7"/>
+<circle cx="180" cy="280" r="24" fill="url(#motor-1ph-body)" stroke="#1f4466" stroke-width="1.5"/>
+<text x="180" y="284" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="900" fill="#e8eef5">WEG</text>
+<rect x="126" y="132" width="164" height="10" fill="#1f4466"/>
+<rect x="96" y="62" width="224" height="74" rx="6" fill="url(#motor-1ph-box)" stroke="#1f4466" stroke-width="1.4"/>
+<circle cx="104" cy="70" r="3" fill="#9aa4ae" stroke="#3a4450" stroke-width=".7"/>
+<circle cx="104" cy="128" r="3" fill="#9aa4ae" stroke="#3a4450" stroke-width=".7"/>
+<circle cx="312" cy="70" r="3" fill="#9aa4ae" stroke="#3a4450" stroke-width=".7"/>
+<circle cx="312" cy="128" r="3" fill="#9aa4ae" stroke="#3a4450" stroke-width=".7"/>
+<rect x="320" y="89.0" width="14" height="20" rx="3" fill="#202326" stroke="#000"/>
+<rect x="118" y="72" width="180" height="54" rx="2" fill="#d9dde1" stroke="#7d858d" stroke-width=".8"/>
+<text x="124" y="86" font-family="sans-serif" font-size="12" font-weight="900" fill="#1f4f86">WEG</text>
+<text x="160" y="85" font-family="sans-serif" font-size="9" font-weight="700" fill="#2b2f35">Monofásico · IEC 80</text>
+<text x="124" y="102" font-family="sans-serif" font-size="8.5" fill="#2b2f35">1 HP · 1720 rpm · 60 Hz</text>
+<text x="124" y="115" font-family="sans-serif" font-size="8.5" fill="#2b2f35">1~ 220 V · 5,6 A · cap. arranque</text>
+<text x="124" y="124" font-family="sans-serif" font-size="6.5" fill="#5a6068">IP55 · aislamiento F · S1</text>
+<path d="M42 132 V194 L80 182 V132 Z" fill="#1f4466" stroke="#16324d" stroke-width="1"/>
+<circle cx="58" cy="112" r="34" fill="url(#motor-1ph-box)" stroke="#1f4466" stroke-width="1.6"/>
+<circle cx="58" cy="112" r="27" fill="none" stroke="#4a83b8" stroke-width="1.4" opacity=".7"/>
+<circle cx="58" cy="112" r="4" fill="#9aa4ae" stroke="#3a4450" stroke-width=".7"/>
+<text x="58" y="102" text-anchor="middle" font-family="sans-serif" font-size="7.5" font-weight="900" fill="#e8eef5">CAP</text>
+<text x="58" y="130" text-anchor="middle" font-family="sans-serif" font-size="6.5" font-weight="700" fill="#cfe0f1">250 V~</text>
+<path d="M160.0 62 V14" stroke="#0c0d0f" stroke-width="9"/>
+<path d="M160.0 62 V14" stroke="#7a4a22" stroke-width="6"/>
+<rect x="151.0" y="36" width="18" height="12" rx="2" fill="#f4f5f7" stroke="#8a9099" stroke-width=".6"/>
+<text x="160.0" y="45" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">U1</text>
+<rect x="156.0" y="6" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="155.0" y="0" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="U1" cx="160.0" cy="12" r="11"/>
+<path d="M200.0 62 V14" stroke="#0c0d0f" stroke-width="9"/>
+<path d="M200.0 62 V14" stroke="#2f6fd6" stroke-width="6"/>
+<rect x="191.0" y="36" width="18" height="12" rx="2" fill="#f4f5f7" stroke="#8a9099" stroke-width=".6"/>
+<text x="200.0" y="45" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">U2</text>
+<rect x="196.0" y="6" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="195.0" y="0" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="U2" cx="200.0" cy="12" r="11"/>
+<path d="M240.0 62 V14" stroke="#0c0d0f" stroke-width="9"/>
+<path d="M240.0 62 V14" stroke="#2fa84f" stroke-width="6"/>
+<path d="M240.0 62 V14" stroke="#f2d22e" stroke-width="6" stroke-dasharray="6 6"/>
+<rect x="231.0" y="36" width="18" height="12" rx="2" fill="#f4f5f7" stroke="#8a9099" stroke-width=".6"/>
+<text x="240.0" y="45" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">PE</text>
+<rect x="236.0" y="6" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="235.0" y="0" width="10" height="4" fill="#16181b"/>
+<circle class="jw-term" data-term="PE" cx="240.0" cy="12" r="11"/>
+<g data-show="out.faltaFase"><rect x="110" y="269" width="140" height="22" rx="4" fill="#000" opacity=".7"/><text x="180" y="285" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="900" fill="#ff5a4a">FALTA DE FASE</text></g>
+<g data-show="out.bloqueado"><rect x="88" y="269" width="184" height="22" rx="4" fill="#000" opacity=".7"/><text x="180" y="285" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="900" fill="#ffb02e">ZUMBA: NO ARRANCA</text></g>
+<g data-show="damaged"><circle cx="180" cy="280" r="160" fill="url(#motor-1ph-soot)"/><text x="180" y="410" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="900" fill="#ff5a4a">BOBINADO ABIERTO</text></g>
+</svg>

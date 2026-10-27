@@ -277,11 +277,72 @@ export const motor3ph = {
   },
 };
 
+/** Puentes de fábrica del motor monofásico con «2 cables»: el auxiliar en paralelo con el principal (adelante). */
+export const MOTOR_1PH_BRIDGES = { "2 cables": { "U1-Z1": ["U1", "Z1"], "U2-Z2": ["U2", "Z2"] }, "4 cables": {} };
+
+/** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
+export const motor1ph = {
+  type: "jwsim/motor-1ph",
+  version: "1.0.0",
+  name: "Motor monofásico",
+  category: "Actuadores",
+  description:
+    "Motor monofásico WEG de 220 V con capacitor de arranque (1 HP, 1720 rpm): bobinado principal U1-U2 y auxiliar Z1-Z2 con el capacitor. El auxiliar solo actúa al arrancar (el interruptor centrífugo lo saca sobre el 75 % de la velocidad): sin él el motor zumba y no arranca. El sentido lo da la polaridad del auxiliar respecto del principal; invertir Z1-Z2 con el motor a velocidad no lo invierte (hay que dejarlo parar). Bornera: «2 cables» trae el auxiliar puenteado de fábrica (U1, U2 y PE); «4 cables» saca Z1 y Z2 para invertir el giro desde el tablero.",
+  parameters: [
+    { id: "bornera", label: "Bornera", type: "enum", options: ["2 cables", "4 cables"], default: "2 cables" },
+    { id: "rpm", label: "Velocidad nominal", type: "number", default: 1720, unit: "rpm" },
+    { id: "accelMs", label: "Arranque", type: "number", default: 500, unit: "ms" },
+    { id: "stopMs", label: "Parada (inercia)", type: "number", default: 2500, unit: "ms" },
+  ],
+  terminals: [{ id: "U1" }, { id: "U2" }, { id: "Z1" }, { id: "Z2" }, { id: "PE", label: "PE (tierra)" }],
+  electrical: (p) => ({
+    loads: [
+      { id: "main", a: "U1", b: "U2", rating: "230VAC" },
+      { id: "aux", a: "Z1", b: "Z2", rating: "230VAC" },
+    ],
+    contacts: MOTOR_1PH_BRIDGES[String(p.bornera)] ?? {},
+  }),
+  create(ctx) {
+    const p = ctx.params;
+    const speed = new Ramp(0);
+    const bridges = Object.fromEntries(Object.keys(MOTOR_1PH_BRIDGES[String(p.bornera)] ?? {}).map((k) => [k, true]));
+    let dir = 0;   // sentido fijado al arrancar
+    return {
+      update(t, inp) {
+        const m = inp.loads.main;
+        const a = inp.loads.aux;
+        const cur = speed.at(t);
+        // Interruptor centrífugo cerrado bajo el 75 %: el auxiliar decide el sentido.
+        if (m.on && a.on && Math.abs(cur) < 0.75) dir = m.polarity * a.polarity;
+        if (!m.on && cur === 0) dir = 0;
+        const hum = m.on && dir === 0;   // solo el principal, detenido: zumba sin arrancar
+        const goal = m.on ? dir : 0;
+        // Acelera (o frena a contramarcha) con el par del motor; sin tensión, por inercia.
+        const driven = goal !== 0 && (Math.abs(goal) > Math.abs(cur) || Math.sign(goal) !== Math.sign(cur));
+        speed.step(t, goal, 1000 / Number(driven ? p.accelMs : p.stopMs));
+        const seg = speed.segment(t);
+        return {
+          contacts: bridges,
+          outputs: {
+            energized: m.on,
+            bloqueado: hum,
+            speed: seg,
+            running: seg.value !== 0 || seg.rate !== 0,
+            direction: goal,
+            rpm: Math.round(Math.abs(seg.value) * Number(p.rpm)),
+          },
+          nextEventNs: earliest(speed.next),
+        };
+      },
+    };
+  },
+};
+
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const motor = {
   type: "jwsim/motor",
   version: "1.0.0",
-  name: "Motor",
+  name: "Motor genérico (230 VAC / 24 VDC)",
   category: "Actuadores",
   description:
     "Motor monofásico de 230 VAC o de 24 VDC (U1-U2). speed va de -1 a 1 con rampa de arranque y de parada; en CC el sentido sigue a la polaridad.",

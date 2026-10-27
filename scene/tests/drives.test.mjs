@@ -63,6 +63,58 @@ test("relé térmico NR2: STOP abre 95-96 sin disparar; en A se rearma solo al e
   assert.equal(s.contact("F", "95-96"), true);
 });
 
+test("motor monofásico «2 cables»: L-N en U1-U2 arranca adelante (auxiliar puenteado de fábrica)", () => {
+  const s = scene(["N:power-230vac", "S:pushbutton-no", "M:motor-1ph"], ["N.L - S.13", "S.14 - M.U1", "N.N - M.U2"]);
+  assert.equal(s.output("M", "energized"), false);
+  s.act("S", "press", true, ms(0));
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("M", "speed"), 1);
+  assert.equal(s.output("M", "rpm"), 1720);
+  assert.equal(s.output("M", "direction"), 1);
+  s.act("S", "press", false, ms(1000));
+  s.advanceTo(ms(4000));
+  assert.equal(s.output("M", "speed"), 0);
+  assert.deepEqual(faults(s), []);
+});
+
+test("motor monofásico «4 cables»: sin auxiliar zumba; Z1-Z2 da el sentido y a velocidad no se invierte", () => {
+  // Principal por S1; auxiliar adelante (SF: Z1 a L, Z2 a N) o atrás (SR: Z1 a N, Z2 a L).
+  const s = scene(
+    ["N:power-230vac", "S1:pushbutton-no", "SF:pushbutton-nono", "SR:pushbutton-nono", { id: "M", type: "jwsim/motor-1ph", params: { bornera: "4 cables" } }],
+    [
+      "N.L - S1.13", "S1.14 - M.U1", "N.N - M.U2",
+      "N.L - SF.13", "SF.14 - M.Z1", "N.N - SF.23", "SF.24 - M.Z2",
+      "N.L - SR.13", "SR.14 - M.Z2", "N.N - SR.23", "SR.24 - M.Z1",
+    ],
+  );
+  s.act("S1", "press", true, ms(0));
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("M", "bloqueado"), true, "solo el principal: zumba");
+  assert.equal(s.output("M", "speed"), 0);
+  // Pulso de arranque adelante: sale a velocidad y sigue sin el auxiliar.
+  s.act("SF", "press", true, ms(1000));
+  s.advanceTo(ms(1300));
+  s.act("SF", "press", false, ms(1300));
+  assert.equal(s.output("M", "bloqueado"), false);
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("M", "speed"), 1);
+  // Auxiliar invertido a velocidad: el centrífugo está abierto, no cambia.
+  s.act("SR", "press", true, ms(2000));
+  s.advanceTo(ms(3000));
+  assert.equal(s.output("M", "speed"), 1);
+  s.act("SR", "press", false, ms(3000));
+  // Se corta el principal, baja del 75 % por inercia y vuelve con el auxiliar invertido: invierte.
+  s.act("S1", "press", false, ms(3000));
+  s.advanceTo(ms(4000));
+  assert.ok(s.output("M", "speed") < 0.75);
+  s.act("SR", "press", true, ms(4000));
+  s.act("S1", "press", true, ms(4000));
+  s.advanceTo(ms(6000));
+  assert.equal(s.output("M", "speed"), -1);
+  assert.equal(s.output("M", "direction"), -1);
+  assert.deepEqual(faults(s), []);
+});
+
 test("motor de dos velocidades: baja por 1U-1V-1W, alta por 2U-2V-2W y conflicto con las dos", () => {
   const s = scene(
     ["R:power-3ph", "KL:pushbutton-no", "KH:pushbutton-no", "M:motor-2v"],
