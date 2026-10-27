@@ -1,0 +1,50 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JW_DWIN por USB: el Modbus va en sobres ESC 'JW' por el mismo Serial que el texto. Sin la PC que emula la pantalla, setPage, el texto 'JW_DWIN USB' y enableTouch salen en sobres y dan Timeout. Por la consola: 'ping' responde 'pong', 'cnt 7' pone el contador (sendValue val=7) y un comando desconocido se informa.",
+  "sketch": "package:libraries/JW_DWIN/examples/Simular_USB",
+  "until_ms": 4000,
+  "stim": [
+    "1300 uart0 \"ping\\n\"",
+    "1500 uart0 \"cnt 7\\n\"",
+    "1700 uart0 \"xyz\\n\""
+  ],
+  "expect": {
+    "console": [
+      "^Simular_USB: JW_DWIN por USB$",
+      {
+        "match": "^\\\\x1BJW\\\\x01\\\\x10\\\\x00\\\\x84\\\\x00\\\\x02.*\\[\\d+\\] setPage \\| addr=0x0084 val=2 Timeout$",
+        "count": 1
+      },
+      {
+        "match": "^\\\\x1BJW\\\\x15.*JW_DWIN USB .*sendText",
+        "count": 1
+      },
+      {
+        "match": "^\\[\\d+\\] enableTouch \\| addr=0x00B0 val=4 Timeout$",
+        "count": 1
+      },
+      {
+        "match": "^pong$",
+        "count": 1,
+        "after_ms": 1300,
+        "before_ms": 1400
+      },
+      {
+        "match": "^contador = 7$",
+        "count": 1,
+        "after_ms": 1500,
+        "before_ms": 1600
+      },
+      {
+        "match": "^comando desconocido: xyz$",
+        "count": 1,
+        "after_ms": 1700
+      },
+      {
+        "match": "sendValue \\| addr=0x1000 val=7 Timeout$",
+        "min": 1,
+        "after_ms": 1500
+      }
+    ]
+  }
+}

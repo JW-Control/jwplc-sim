@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 09: Q0_0 con retardo a la conexión de 3 s sobre I0_0 (un pulso de 1 s no alcanza; uno sostenido desde 2 s cierra a los 5 s) y Q0_1 con retardo a la desconexión de 10 s sobre I0_1 (presencia de 1 a 1,5 s: Q0_1 cerrado hasta ~11,5 s).",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/09.Temporizadores",
+  "until_ms": 12500,
+  "stim": ["800 I0_0=1", "1800 I0_0=0", "2000 I0_0=1", "1000 I0_1=1", "1500 I0_1=0"],
+  "expect": {
+    "signals": [
+      { "at_ms": 900, "Q0_0": 0, "Q0_1": 0 },
+      { "at_ms": 1100, "Q0_1": 1 },
+      { "at_ms": 1900, "Q0_0": 0 },
+      { "at_ms": 4900, "Q0_0": 0 },
+      { "at_ms": 5100, "Q0_0": 1 },
+      { "at_ms": 11400, "Q0_1": 1 },
+      { "at_ms": 11600, "Q0_1": 0 }
+    ]
+  }
+}

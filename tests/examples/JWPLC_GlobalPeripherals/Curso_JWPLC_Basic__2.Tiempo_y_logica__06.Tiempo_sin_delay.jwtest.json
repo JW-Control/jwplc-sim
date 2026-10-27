@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 06: Q0_0 parpadea cada 500 ms con millis() y, como no hay delay(), Q0_1 sigue a I0_0 al instante (pulso de 1,23 a 1,33 s).",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/06.Tiempo_sin_delay",
+  "until_ms": 3000,
+  "stim": [
+    "1230 I0_0=1",
+    "1330 I0_0=0"
+  ],
+  "expect": {
+    "signals": [
+      {
+        "at_ms": 1000,
+        "Q0_0": 1
+      },
+      {
+        "at_ms": 1240,
+        "Q0_1": 1
+      },
+      {
+        "at_ms": 1340,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 1500,
+        "Q0_0": 0
+      },
+      {
+        "at_ms": 2000,
+        "Q0_0": 1
+      },
+      {
+        "at_ms": 2500,
+        "Q0_0": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 01: saludo una sola vez desde setup() y los segundos encendido cada 1 s desde 0.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/1.Primeros_pasos/01.Hola_JWPLC",
+  "until_ms": 4000,
+  "expect": {
+    "console": [
+      { "match": "^Hola, JWPLC$", "count": 1 },
+      { "match": "^Este mensaje sale una sola vez, desde setup\\(\\)\\.$", "count": 1 },
+      { "match": "^Segundos encendido: 0$", "count": 1, "before_ms": 1000 },
+      { "match": "^Segundos encendido: 1$", "count": 1, "after_ms": 1500, "before_ms": 2000 },
+      { "match": "^Segundos encendido: 3$", "count": 1, "after_ms": 3500 },
+      { "match": "^Segundos encendido: \\d+$", "count": 4 }
+    ]
+  }
+}

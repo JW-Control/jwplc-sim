@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 11: semáforo con pulsador de peatón. VERDE (Q0_2) al arrancar; el pedido en I0_0 a 2 s se recuerda y se atiende al cumplir el verde mínimo de 10 s: AMARILLO (Q0_1) 3 s y ROJO (Q0_0 y Q0_3) 8 s; luego VERDE. Sin pedido, el verde dura el máximo de 30 s.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/11.Maquina_de_estados",
+  "until_ms": 52000,
+  "stim": ["2000 I0_0=1", "2200 I0_0=0"],
+  "expect": {
+    "console": [
+      { "match": "^Estado: VERDE$", "count": 1, "before_ms": 1000 },
+      { "match": "^Estado: AMARILLO$", "count": 1, "after_ms": 10600, "before_ms": 10800 },
+      { "match": "^Estado: ROJO$", "count": 1, "after_ms": 13600, "before_ms": 13800 },
+      { "match": "^Estado: VERDE$", "count": 1, "after_ms": 21600, "before_ms": 21800 },
+      { "match": "^Estado: AMARILLO$", "count": 1, "after_ms": 51600, "before_ms": 51800 },
+      { "match": "^Estado: ", "count": 5 }
+    ],
+    "signals": [
+      { "at_ms": 10000, "DO": "0b00000100" },
+      { "at_ms": 12000, "DO": "0b00000010" },
+      { "at_ms": 15000, "DO": "0b00001001" },
+      { "at_ms": 22000, "DO": "0b00000100" },
+      { "at_ms": 51500, "DO": "0b00000100" }
+    ]
+  }
+}

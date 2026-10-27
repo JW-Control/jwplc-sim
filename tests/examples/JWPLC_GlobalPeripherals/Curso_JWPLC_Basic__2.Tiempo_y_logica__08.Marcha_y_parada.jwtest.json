@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 08: marcha I0_0 con enclavamiento, parada NC I0_1 y térmico NC I0_2 (cerrados desde 0 ms). Marcha a 1 s, parada a 1,5 s, marcha a 2 s y disparo del térmico a 2,5 s, que además enciende el piloto Q0_1. Sin parada cerrada no arranca.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/08.Marcha_y_parada",
+  "until_ms": 3500,
+  "stim": [
+    "0 I0_1=1", "0 I0_2=1",
+    "1000 I0_0=1", "1100 I0_0=0",
+    "1500 I0_1=0", "1600 I0_1=1",
+    "2000 I0_0=1", "2100 I0_0=0",
+    "2500 I0_2=0",
+    "3000 I0_0=1", "3100 I0_0=0"
+  ],
+  "expect": {
+    "console": [
+      "^Lección 08: marcha I0\\.0, parada NC I0\\.1, térmico NC I0\\.2$",
+      { "match": "^Motor en marcha$", "count": 1, "after_ms": 1000, "before_ms": 1050 },
+      { "match": "^Motor detenido$", "count": 1, "after_ms": 1500, "before_ms": 1550 },
+      { "match": "^Motor en marcha$", "count": 1, "after_ms": 2000, "before_ms": 2050 },
+      { "match": "^Motor detenido$", "count": 1, "after_ms": 2500, "before_ms": 2550 },
+      { "match": "^Motor ", "count": 4 }
+    ],
+    "signals": [
+      { "at_ms": 900, "DO": "0b00000000" },
+      { "at_ms": 1300, "DO": "0b00000001" },
+      { "at_ms": 1800, "DO": "0b00000000" },
+      { "at_ms": 2300, "DO": "0b00000001" },
+      { "at_ms": 2700, "DO": "0b00000010" },
+      { "at_ms": 3300, "DO": "0b00000010" }
+    ]
+  }
+}

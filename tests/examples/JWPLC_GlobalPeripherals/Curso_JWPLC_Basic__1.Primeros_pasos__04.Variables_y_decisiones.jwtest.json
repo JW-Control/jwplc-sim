@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 04: Q0_0 = I0_0 Y I0_1, Q0_1 = I0_0 O I0_1, Q0_2 = NO I0_0, Q0_3 = I0_0 distinto de I0_1. Se recorren las cuatro combinaciones.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/1.Primeros_pasos/04.Variables_y_decisiones",
+  "until_ms": 3000,
+  "stim": ["1000 I0_0=1", "1500 I0_1=1", "2000 I0_0=0", "2500 I0_1=0"],
+  "expect": {
+    "signals": [
+      { "at_ms": 900, "DO": "0b00000100" },
+      { "at_ms": 1200, "DO": "0b00001010" },
+      { "at_ms": 1700, "DO": "0b00000011" },
+      { "at_ms": 2200, "DO": "0b00001110" },
+      { "at_ms": 2700, "DO": "0b00000100" }
+    ]
+  }
+}

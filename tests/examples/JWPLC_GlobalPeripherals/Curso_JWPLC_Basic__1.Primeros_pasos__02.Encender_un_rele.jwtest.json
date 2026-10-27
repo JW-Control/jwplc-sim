@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 02: Q0_0 se cierra y abre cada segundo (1 s cerrado, 1 s abierto) desde el arranque.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/1.Primeros_pasos/02.Encender_un_rele",
+  "until_ms": 4000,
+  "expect": {
+    "signals": [
+      { "at_ms": 1200, "Q0_0": 1, "DO": "0b00000001" },
+      { "at_ms": 2200, "Q0_0": 0, "DO": "0b00000000" },
+      { "at_ms": 3200, "Q0_0": 1 },
+      { "at_ms": 3900, "Q0_0": 0 }
+    ]
+  }
+}

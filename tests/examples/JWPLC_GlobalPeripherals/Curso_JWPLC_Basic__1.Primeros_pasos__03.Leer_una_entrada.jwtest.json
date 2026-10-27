@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Curso 03: Q0_0 copia I0_0 (cada 200 ms) y la consola dice si la entrada está activa. Pulsador apretado de 1,5 a 2,5 s.",
+  "sketch": "package:libraries/JWPLC_GlobalPeripherals/examples/Curso_JWPLC_Basic/1.Primeros_pasos/03.Leer_una_entrada",
+  "until_ms": 3500,
+  "stim": ["1500 I0_0=1", "2500 I0_0=0"],
+  "expect": {
+    "console": [
+      "^Lección 03: aprieta el pulsador de I0\\.0$",
+      { "match": "^I0\\.0 activa$", "count": 0, "before_ms": 1500 },
+      { "match": "^I0\\.0 activa$", "min": 4, "max": 5, "after_ms": 1500, "before_ms": 2700 },
+      { "match": "^I0\\.0 activa$", "count": 0, "after_ms": 2750 },
+      { "match": "^I0\\.0 inactiva$", "min": 1, "after_ms": 2500 }
+    ],
+    "signals": [
+      { "at_ms": 1400, "Q0_0": 0 },
+      { "at_ms": 1800, "Q0_0": 1 },
+      { "at_ms": 2400, "Q0_0": 1 },
+      { "at_ms": 2800, "Q0_0": 0 }
+    ]
+  }
+}
