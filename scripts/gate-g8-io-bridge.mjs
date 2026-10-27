@@ -81,7 +81,10 @@ const criteria = {};
       o.coils_entradas = (await c.readCoils(0, 8)).join("");
       o.coils_salidas = (await c.readCoils(16, 8)).join("");
       o.di_entradas = (await c.readDiscrete(8, 8)).join("");
-      o.pass = o.coils_entradas === "01100101" && o.coils_salidas === "01100101" && o.di_entradas === "01100101";
+      // Un pedido para todo el bloque 0-23 (FUXA agrupa así): el hueco 8-15 vale 0.
+      o.coils_bloque = (await c.readCoils(0, 24)).join("");
+      o.pass = o.coils_entradas === "01100101" && o.coils_salidas === "01100101" && o.di_entradas === "01100101" &&
+        o.coils_bloque === "01100101" + "00000000" + "01100101";
     } catch (e) {
       o.error = e.message;
     }

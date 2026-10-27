@@ -9,6 +9,7 @@
 // Mapa (cualquier unidad; direcciones desde 0):
 //   bobinas (FC01 leer, FC05/FC15 escribir)
 //     0-7    I0.0-I0.7   las escribe la planta (sensores, pulsadores)
+//     8-15   reservadas: se leen como 0 (escribir: excepción 02)
 //     16-23  Q0.0-Q0.7   salidas a relé (solo lectura)
 //   entradas discretas (FC02)
 //     0-7    Q0.0-Q0.7   salidas a relé (los actuadores de la planta)
@@ -80,6 +81,12 @@ export class IoBridge extends EventEmitter {
   #readBits(table, a, q) {
     const out = [];
     for (let i = a; i < a + q; i++) {
+      // Bobinas 8-15: hueco reservado, se lee como 0. Un SCADA que agrupa
+      // la lectura 0-23 en un solo pedido (FUXA lo hace) no recibe excepción.
+      if (table === "coil" && i >= N && i < 16) {
+        out.push(0);
+        continue;
+      }
       const s = table === "coil" ? (i < N ? IN[i] : i >= 16 && i < 16 + N ? OUT[i - 16] : null) : i < N ? OUT[i] : i < 2 * N ? IN[i - N] : null;
       if (!s) return undefined;
       out.push(this.levels.get(s) ? 1 : 0);

@@ -28,6 +28,7 @@ FUXA); `"present": false` lo quita. Al reproducir una grabación no se abre.
 | Tabla | Direcciones | Contenido | Acceso |
 |---|---|---|---|
 | Bobinas (FC01, FC05, FC15) | 0-7 | I0.0-I0.7 (sensores, pulsadores) | lectura y escritura |
+| Bobinas (FC01) | 8-15 | reservadas: se leen como 0 | solo lectura |
 | Bobinas (FC01) | 16-23 | Q0.0-Q0.7 (salidas a relé) | solo lectura |
 | Entradas discretas (FC02) | 0-7 | Q0.0-Q0.7 (actuadores) | solo lectura |
 | Entradas discretas (FC02) | 8-15 | I0.0-I0.7 | solo lectura |
@@ -66,16 +67,24 @@ escribe `co0` (I0.0) y la cinta lee `di0` (Q0.0); con el sketch
 
 FUXA es un cliente Modbus TCP. Dos usos:
 
-**a) La bornera (este puente).** Dispositivo **ModbusTCP**, IP
-`127.0.0.1`, puerto `5020`, unidad 1. Tags:
+**a) La bornera (este puente).** Dispositivo **ModbusTCP**, dirección
+`127.0.0.1:5020`, unidad (slave id) 1. FUXA necesita su plugin Modbus
+(`modbus-serial`, en *Plugins*); sin él el dispositivo no carga.
 
-- pulsadores del HMI → **Coil** 0-7 (I0.0-I0.7);
-- pilotos del HMI → **Discrete Input** 0-7 (Q0.0-Q0.7);
-- o, en un solo tag cada uno, **Holding Register** 0 (entradas) y 1
-  (salidas) como bits.
+FUXA numera las direcciones **desde 1** (probado con FUXA 1.3.5): la
+dirección 1 del editor es la 0 del mapa. Tags:
 
-FUXA puede numerar desde 1 según la versión (Coil 1 = dirección 0); si un
-piloto queda corrido en uno, corregir el desplazamiento.
+| Uso en el HMI | Tipo en FUXA | Dirección en FUXA | Señal |
+|---|---|---|---|
+| pulsadores | Coil Status, Bool | 1-8 | I0.0-I0.7 |
+| pilotos | Digital Inputs, Bool | 1-8 | Q0.0-Q0.7 |
+| pilotos (otra forma) | Coil Status, Bool | 17-24 | Q0.0-Q0.7 |
+| todas las entradas | Holding Register, UInt16 | 1 | I0.7…I0.0 como bits |
+| todas las salidas | Holding Register, UInt16 | 2 | Q0.7…Q0.0 como bits |
+
+FUXA agrupa en un solo pedido las tags vecinas de una misma tabla (por
+ejemplo, bobinas 1 a 17). Por eso el hueco de bobinas 8-15 del mapa se lee
+como 0 y no da excepción.
 
 **b) El Modbus TCP del propio sketch.** Si el sketch usa
 `JWPLC_ModbusTCP` como servidor (ejemplo `01.ModbusTCP_Server`), su puerto
@@ -90,5 +99,8 @@ programa, igual que con la placa real en la red.
 hace las mismas operaciones que OIP (bobinas y entradas discretas) y FUXA
 (registros): mapa completo, excepciones, que no pise las entradas de la
 escena y la latencia de la entrada a la salida a velocidad real (≤ 100 ms).
-La prueba con OIP y FUXA reales se hace en taller y se registra en
-`docs/reports/`.
+Con FUXA real: `node scripts/check-fuxa-real.mjs --fuxa <carpeta de
+@frangoteam/fuxa>` levanta un servidor FUXA, le crea el dispositivo y las
+tags por su API REST (como el editor) y comprueba pulsadores, pilotos y
+registros contra el sketch (informe en `docs/reports/G8_FUXA_REAL.md`). La
+prueba con Open Industry Project (Godot, con pantalla) se hace en taller.

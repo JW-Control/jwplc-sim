@@ -69,9 +69,9 @@ JWSIM_G8_2D_ELECTRICAL=PASS         (alcance v1, aprobado por JW Control el 27/1
                                      transmisor PT100 TT-510 y corriente de los motores (térmico NR2 clase 10). Fuera de la v1,
                                      con el dibujo genérico: fotoeléctrico, relé enchufable, transmisor de pH, válvula de agua
                                      del fermentador y motor genérico; motorreductor 24 VDC descartado (el Basic no tiene PWM))
-JWSIM_G8_OIP_FUXA=IN_PROGRESS     (27/10: puente de E/S Modbus TCP (bornera en 127.0.0.1:5020) probado con un cliente
-                                     que hace lo de OIP y FUXA: mapa, excepciones, escena y latencia ≤ 35 ms;
-                                     guía en docs/integration/OIP_FUXA.md; falta la prueba con OIP y FUXA reales en taller)
+JWSIM_G8_OIP_FUXA=IN_PROGRESS     (27/10: puente de E/S Modbus TCP (bornera en 127.0.0.1:5020): C1-C3 PASS con un cliente
+                                     que hace lo de OIP y FUXA (mapa, excepciones, escena, latencia ≤ 42 ms); C4 con FUXA 1.3.5
+                                     real PASS (docs/reports/G8_FUXA_REAL.md); falta Open Industry Project en taller)
 JWSIM_G8_3D_SCENES=PASS             (27/10: vista 3D (three.js) con cinta, tanque, puerta y cilindro manejados por el
                                      firmware (tests/projects/planta-3d); 56 fps con render por software (SwiftShader, xvfb);
                                      app/tests/e2e-g8-3d.mjs)
