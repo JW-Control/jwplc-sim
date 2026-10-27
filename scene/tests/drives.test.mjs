@@ -10,7 +10,8 @@ import { vfdEl } from "../devices/vfd-el.mjs";
 import { faults, ms, scene } from "./helpers.mjs";
 
 test("relé térmico: falta de fase sostenida dispara 95-96 (NC) y cierra 97-98; RESET con las tres fases", () => {
-  const dev = { id: "F", type: "jwsim/overload-relay", params: { tripMs: 3000 } };
+  // Ajuste alto: así solo actúa el disparo por falta de fase (no la sobrecarga).
+  const dev = { id: "F", type: "jwsim/overload-relay", params: { tripMs: 3000, range: "17-25 A", ajuste: 25 } };
   const s = scene(
     ["R:power-3ph", "S:pushbutton-nc", dev, "M:motor-3ph", "H:lamp"],
     ["R.L1 - S.11", "S.12 - F.1", "R.L2 - F.3", "R.L3 - F.5", "F.2 - M.U1", "F.4 - M.V1", "F.6 - M.W1"],
@@ -63,11 +64,85 @@ test("relé térmico NR2: STOP abre 95-96 sin disparar; en A se rearma solo al e
   assert.equal(s.contact("F", "95-96"), true);
 });
 
+/** Red → térmico → motor W22 directo (sin contactor); el pulsador NC corta L1. */
+function overloadScene(relay, motor = {}) {
+  return scene(
+    ["R:power-3ph", "S:pushbutton-nc", { id: "F", type: "jwsim/overload-relay", params: relay }, { id: "M", type: "jwsim/motor-3ph", params: motor }],
+    ["R.L1 - S.11", "S.12 - F.1", "R.L2 - F.3", "R.L3 - F.5", "F.2 - M.U1", "F.4 - M.V1", "F.6 - M.W1"],
+  );
+}
+
+test("corriente del motor: pico de arranque 6 × In, régimen según la carga, el térmico la mide por polo", () => {
+  const s = overloadScene({}, { In: 3.2, carga: 100 });
+  assert.equal(s.output("M", "corriente"), 19.2);
+  assert.equal(s.output("F", "corriente"), 19.2);
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("M", "corriente"), 3.2);
+  assert.equal(s.output("F", "corriente"), 3.2);
+  assert.equal(s.output("F", "tripped"), false);
+});
+
+test("térmico NR2 clase 10: 1,5 × ajuste < 2 min, 1,05 × no dispara, 7,2 × (rotor frenado) entre 2 y 10 s", () => {
+  // 1,5 × ajuste: In 3,2 A al 100 % con el dial en 3,2 / 1,5 (más el pico de arranque).
+  let s = overloadScene({ range: "1.6-2.5 A", ajuste: 3.2 / 1.5 }, { In: 3.2, carga: 100 });
+  s.advanceTo(ms(60_000));
+  assert.equal(s.output("F", "tripped"), false);
+  s.advanceTo(ms(120_000));
+  assert.equal(s.output("F", "tripped"), true);
+  assert.equal(s.output("F", "sobrecarga"), true);
+  assert.equal(s.contact("F", "95-96"), false);
+  assert.equal(s.contact("F", "97-98"), true);
+  // 1,05 × ajuste: no dispara en una hora.
+  s = overloadScene({ range: "2.5-4 A", ajuste: 3.2 / 1.05 }, { In: 3.2, carga: 100 });
+  s.advanceTo(ms(3_600_000));
+  assert.equal(s.output("F", "tripped"), false);
+  // 7,2 × ajuste: arranque pesado (10 s a 6 × In) con el dial en 6 × 1,5 / 7,2.
+  s = overloadScene({ range: "1-1.6 A", ajuste: 1.25 }, { In: 1.5, carga: 100, accelMs: 10_000 });
+  assert.equal(s.output("F", "corriente"), 9);
+  s.advanceTo(ms(2000));
+  assert.equal(s.output("F", "tripped"), false);
+  s.advanceTo(ms(10_000));
+  assert.equal(s.output("F", "tripped"), true);
+});
+
+test("térmico NR2: 95-96 suelta el contactor y el RESET no rearma hasta que se enfría", () => {
+  const s = scene(
+    ["R:power-3ph", "PS:power-24vdc", "S:pushbutton-no", "KM:contactor",
+      { id: "F", type: "jwsim/overload-relay", params: { range: "1.6-2.5 A", ajuste: 2.5, tauS: 30 } },
+      { id: "M", type: "jwsim/motor-3ph", params: { In: 3.2, carga: 100 } }],
+    ["PS.+V1 - S.13", "S.14 - F.95", "F.96 - KM.A1", "KM.A2 - PS.-V1",
+      "R.L1 - KM.1", "R.L2 - KM.3", "R.L3 - KM.5", "KM.2 - F.1", "KM.4 - F.3", "KM.6 - F.5",
+      "F.2 - M.U1", "F.4 - M.V1", "F.6 - M.W1"],
+  );
+  s.act("S", "press", true, ms(0));
+  s.advanceTo(ms(1000));
+  assert.equal(s.output("M", "corriente"), 3.2);
+  // 1,28 × ajuste con τ = 30 s: dispara a los ~22 s.
+  s.advanceTo(ms(20_000));
+  assert.equal(s.output("F", "tripped"), false);
+  s.advanceTo(ms(30_000));
+  assert.equal(s.output("F", "tripped"), true);
+  assert.equal(s.output("KM", "closed"), false);
+  assert.equal(s.output("F", "corriente"), 0);
+  s.act("S", "press", false, ms(30_000));
+  s.act("F", "reset", true, ms(30_100));
+  s.act("F", "reset", false, ms(30_200));
+  assert.equal(s.output("F", "tripped"), true, "caliente: no rearma");
+  s.advanceTo(ms(45_000));
+  assert.equal(s.output("F", "sobrecarga"), false);
+  s.act("F", "reset", true, ms(45_000));
+  s.act("F", "reset", false, ms(45_100));
+  assert.equal(s.output("F", "tripped"), false);
+  assert.equal(s.contact("F", "95-96"), true);
+});
+
 test("motor monofásico «2 cables»: L-N en U1-U2 arranca adelante (auxiliar puenteado de fábrica)", () => {
   const s = scene(["N:power-230vac", "S:pushbutton-no", "M:motor-1ph"], ["N.L - S.13", "S.14 - M.U1", "N.N - M.U2"]);
   assert.equal(s.output("M", "energized"), false);
   s.act("S", "press", true, ms(0));
+  assert.equal(s.output("M", "corriente"), 44.8, "arranque: principal 6 × 5,6 A y auxiliar 2 × 5,6 A");
   s.advanceTo(ms(1000));
+  assert.equal(s.output("M", "corriente"), 4.76, "régimen al 75 %: el centrífugo sacó el auxiliar");
   assert.equal(s.output("M", "speed"), 1);
   assert.equal(s.output("M", "rpm"), 1720);
   assert.equal(s.output("M", "direction"), 1);
@@ -179,6 +254,22 @@ test("VFD-EL plantilla multivelocidad: MI1 opera con rampa, MI3 velocidad 1, MI2
   assert.deepEqual(faults(s), []);
 });
 
+test("VFD-EL: la página A muestra la corriente del motor; acelerando pide más y sin pico de arranque", () => {
+  const s = vfdScene({ ...preset("multivelocidad"), "01-09": 2, "01-10": 2, pot: 50 });
+  tap(s, "mode", 0);
+  tap(s, "mode", 100);
+  assert.equal(s.output("VF", "lcd"), "A0.00");
+  s.act("S1", "press", true, ms(200));
+  s.advanceTo(ms(500));
+  assert.equal(s.output("VF", "corriente"), 3.26, "rampa: 1,2 × 2,72 A");
+  assert.equal(s.output("VF", "lcd"), "A3.26");
+  s.advanceTo(ms(3000));
+  assert.equal(s.output("VF", "lcd"), "A2.72");
+  s.act("S1", "press", false, ms(3000));
+  s.advanceTo(ms(6000));
+  assert.equal(s.output("VF", "lcd"), "A0.00");
+});
+
 /** Selección de parámetros: MODE hasta GG.NN y ▲ hasta el código. */
 function gotoParam(s, code, t) {
   for (let i = 0; i < 5; i++) tap(s, "mode", t + i * 100);
@@ -206,7 +297,7 @@ test("VFD-EL de fábrica: bornes y AVI (0 Hz); se programa 02.00 = 4 con el tecl
   tap(s, "mode", 1600);
   assert.equal(s.output("VF", "lcd"), "H0.00");
   tap(s, "mode", 1700);
-  assert.equal(s.output("VF", "lcd"), "A0.0");
+  assert.equal(s.output("VF", "lcd"), "A0.00");
   tap(s, "mode", 1800);
   assert.equal(s.output("VF", "lcd"), "U0.00");
   tap(s, "mode", 1900);
@@ -355,6 +446,8 @@ test("VFD-EL por Modbus RTU: parámetros GGNNH, 2001H, 2000H, monitoreo, excepci
   s.advanceTo(ms(2000));
   assert.equal(s.output("VF", "hz"), 45);
   assert.deepEqual(req([3, 3, 0x21, 0x02, 0x00, 0x02], 2000).bytes.slice(0, 7), [3, 3, 4, 0x11, 0x94, 0x11, 0x94], "2102H F y 2103H H");
+  // 2104H: corriente del motor W22 (In 3,2 A al 75 % = 2,72 A) × 10.
+  assert.deepEqual(req([3, 3, 0x21, 0x04, 0x00, 0x01], 2000).bytes.slice(3, 5), [0, 27], "2104H corriente");
   const st = req([3, 3, 0x21, 0x01, 0x00, 0x01], 2000).bytes;
   assert.equal(((st[3] << 8) | st[4]) & 0b11, 0b11, "2101H: operando");
   assert.equal(((st[3] << 8) | st[4]) >> 10 & 1, 1, "2101H bit 10: comando por comunicación");

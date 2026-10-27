@@ -153,11 +153,11 @@ const PAGES = ["F", "H", "A", "U", "dir", "sel"];
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const vfdEl = {
   type: "jwsim/vfd-el",
-  version: "1.1.0",
+  version: "1.2.0",
   name: "Variador Delta VFD-EL",
   category: "Actuadores",
   description:
-    "Variador de frecuencia Delta VFD007EL21A (estructura A: entrada monofásica 220 V en R/L1-S/L2, salida trifásica 220 V en U/T1 V/T2 W/T3, 0,75 kW). Se programa como el real: con el teclado (MODE recorre F, H, A, U, Frd/rEu y la selección de parámetros GG.NN; ENTER entra y guarda; ▲▼ cambian) o desde este inspector, y por Modbus (dirección GGNNH = Pr.GG.NN). El potenciómetro fija la frecuencia si 02.00 = 4. Entradas MI en modo NPN: se activan al unirlas a DCM. Relé RA/RB/RC según 03.00. Modbus por el puerto RS-485 (SG+/SG-): 2000H operar/sentido, 2001H frecuencia × 100, 2002H EF/reset; 2100H falla, 2101H estado, 2102H-2109H monitoreo. Elija una plantilla de taller para empezar.",
+    "Variador de frecuencia Delta VFD007EL21A (estructura A: entrada monofásica 220 V en R/L1-S/L2, salida trifásica 220 V en U/T1 V/T2 W/T3, 0,75 kW). Se programa como el real: con el teclado (MODE recorre F, H, A, U, Frd/rEu y la selección de parámetros GG.NN; ENTER entra y guarda; ▲▼ cambian) o desde este inspector, y por Modbus (dirección GGNNH = Pr.GG.NN). El potenciómetro fija la frecuencia si 02.00 = 4. Entradas MI en modo NPN: se activan al unirlas a DCM. Relé RA/RB/RC según 03.00. Modbus por el puerto RS-485 (SG+/SG-): 2000H operar/sentido, 2001H frecuencia × 100, 2002H EF/reset; 2100H falla, 2101H estado, 2102H-2109H monitoreo (2104H corriente de salida × 10, la del motor conectado). Elija una plantilla de taller para empezar.",
   parameters: [
     ...VFD_EL_PARAMS.filter((p) => p.inspector !== false).map((p) => ({
       id: p.code,
@@ -205,6 +205,8 @@ export const vfdEl = {
     ],
     contacts: { "RA-RC": ["RA", "RC"], "RB-RC": ["RB", "RC"] },
   }),
+  // Corriente de salida: la del motor conectado a U/T1 V/T2 W/T3.
+  currentSensors: () => [{ id: "out", terminals: ["U", "V", "W"] }],
   create(ctx) {
     /** Parámetros vivos (números del variador). @type {Record<string, number>} */
     const P = {};
@@ -241,8 +243,8 @@ export const vfdEl = {
     let msg = "", msgUntil = /** @type {bigint | null} */ (null);
     /** @type {{ key: string, since: bigint, next: bigint } | null} */
     let hold = null;
-    let regs = { status: 0, fRef: 0, fOut: 0, vOut: 0 };
-    let last = { fRef: 0, rev: false, going: false, outOn: false, fOut: 0 };
+    let regs = { status: 0, fRef: 0, fOut: 0, vOut: 0, amps: 0 };
+    let last = { fRef: 0, rev: false, going: false, outOn: false, fOut: 0, amps: 0 };
 
     const fmax = () => P["01-00"];
     const startPage = () => ["F", "H", "A", "U", "dir"][P["00-03"]] ?? "F";
@@ -311,7 +313,7 @@ export const vfdEl = {
       if (commLost && P["09-02"] !== 3) return "CE10";
       if (page === "F") return `F${f3(last.fRef)}`;
       if (page === "H") return `H${f3(seg.value)}`;
-      if (page === "A") return last.outOn ? "A---" : "A0.0";   // la corriente no se modela
+      if (page === "A") return `A${f3(last.amps)}`;
       if (page === "U") return `U${f3(last.fRef * P["00-05"])}`;
       if (page === "dir") return (going ? seg.value < 0 || (seg.value === 0 && last.rev) : keyRev) ? "rEu" : "Frd";
       const p = VFD_EL_PARAMS[si];
@@ -494,7 +496,9 @@ export const vfdEl = {
           1: outOn && fOut > 0, 2: reached, 3: powered && fOut < P["01-05"], 5: powered && bb, 8: !!fault,
           9: outOn && fOut >= P["03-02"] && P["03-02"] > 0, 17: going && !wantRev, 18: going && wantRev, 22: powered && !fault,
         }[P["03-00"]] ?? false;
-        last = { fRef: fCmd, rev, going, outOn, fOut };
+        const out = Object.values(inp.currents?.out ?? {});
+        const amps = outOn && out.length ? Math.max(...out) : 0;
+        last = { fRef: fCmd, rev, going, outOn, fOut, amps };
         const decel = outOn && !going;
         regs = {
           status: (outOn ? (going ? 0b11 : 0b01) : going ? 0b10 : 0) | (jog ? 0b100 : 0) | (rev ? 0b11 << 3 : 0) |
@@ -502,6 +506,7 @@ export const vfdEl = {
           fRef: Math.round(fCmd * 100),
           fOut: Math.round(fOut * 100),
           vOut: Math.round(Math.min(P["01-02"], (P["01-02"] * fOut) / Math.max(0.1, P["01-01"])) * 10),
+          amps: Math.round(amps * 10),
         };
         const commDue = src >= 3 && P["09-03"] > 0 && !commLost && powered ? lastComm + ms(P["09-03"] * 1000) : undefined;
         return {
@@ -515,6 +520,7 @@ export const vfdEl = {
             running: outOn,
             hz: { value: seg.value, rate: seg.rate },
             fRef: fCmd,
+            corriente: Math.round(amps * 100) / 100,
             direction: rev ? -1 : outOn ? 1 : 0,
             fault,
             lcd: display(going, seg),
@@ -540,7 +546,7 @@ export const vfdEl = {
         commLost = false;
         const st = {
           0x2100: fault ? VFD_EL_FAULTS[fault] ?? 1 : 0, 0x2101: regs.status, 0x2102: regs.fRef, 0x2103: regs.fOut,
-          0x2104: 0, 0x2108: 3110, 0x2109: regs.vOut, 0x210a: 30,
+          0x2104: regs.amps, 0x2108: 3110, 0x2109: regs.vOut, 0x210a: 30,
         };
         // Un parámetro por lectura (manual: con 03H se lee un único parámetro por vez).
         const p = BY_ADDR.get(start);

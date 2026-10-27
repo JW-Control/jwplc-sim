@@ -207,6 +207,8 @@ export interface DeviceInputs {
   wired: Set<string>;
   /** La fuente propia está disparada (cortocircuito o cruce). */
   tripped: boolean;
+  /** Lecturas de los sensores de corriente (id del sensor → borne → A). */
+  currents?: Record<string, Record<string, number>>;
 }
 
 /** Segmento lineal: valor en el instante de update y pendiente en unidades por segundo. */
@@ -229,6 +231,14 @@ export interface DeviceStep {
    * guarda en la escena, como la memoria del equipo real.
    */
   params?: Record<string, unknown>;
+  /** Corriente (A eficaces) que entra por cada borne propio (motores): la leen los sensores de corriente. */
+  currents?: Record<string, number>;
+}
+
+/** Sensor de corriente: los bornes por los que mide (polos de un térmico, salida de un variador). */
+export interface CurrentSensorSpec {
+  id: string;
+  terminals: string[];
 }
 
 export interface DeviceContext {
@@ -280,6 +290,12 @@ export interface DeviceDefinition {
   reads?(params: Record<string, any>): ReadSpec[];
   /** Sondas propias que otro dispositivo puede leer por cable. */
   probes?(params: Record<string, any>): ProbeSpec[];
+  /**
+   * Sensores de corriente: en update(), inp.currents[id][borne] es la suma de
+   * las corrientes que declaran las cargas aguas abajo de ese borne (sin
+   * contar los contactos del propio dispositivo).
+   */
+  currentSensors?(params: Record<string, any>): CurrentSensorSpec[];
   /** Entradas de sonda: se leen por cable de la sonda de otro dispositivo. */
   probeInputs?(params: Record<string, any>): ProbeInputSpec[];
   /** Esclavo Modbus RTU en el bus RS-485 (bornes A y B). */

@@ -172,6 +172,7 @@ export class Scene {
         modbus: def.modbus?.(params) ?? null,
         probes: def.probes?.(params) ?? [],
         probeInputs: def.probeInputs?.(params) ?? [],
+        currentSensors: def.currentSensors?.(params) ?? [],
         actions: {},
         wired: new Set(),
         step: /** @type {DeviceStep} */ ({}),
@@ -328,6 +329,42 @@ export class Scene {
     return this.#conn;
   }
 
+  /**
+   * Corriente (A) por cada borne de un sensor: la suma de las corrientes que
+   * los dispositivos declaran en sus bornes (DeviceStep.currents) del mismo
+   * nodo, con los cables sanos y los contactos cerrados, sin los contactos del
+   * propio sensor: así cada polo ve solo lo que alimenta aguas abajo.
+   */
+  #sensedCurrents(sensor, terms) {
+    const parent = new Map();
+    const find = (x) => {
+      while (parent.has(x) && parent.get(x) !== x) x = parent.get(x);
+      return x;
+    };
+    const join = (a, b) => {
+      const ra = find(a);
+      const rb = find(b);
+      if (ra !== rb) parent.set(ra, rb);
+    };
+    for (const [a, b] of this.wires) if (!this.injected.has(`open:${[a, b].sort().join(" ")}`)) join(a, b);
+    for (const dev of this.devices.values()) {
+      if (dev === sensor) continue;
+      for (const [cid, [a, b]] of Object.entries(dev.el.contacts ?? {})) if (dev.step.contacts?.[cid]) join(`${dev.id}.${a}`, `${dev.id}.${b}`);
+    }
+    /** @type {Record<string, number>} */
+    const out = {};
+    for (const term of terms) {
+      const net = find(`${sensor.id}.${term}`);
+      let amps = 0;
+      for (const dev of this.devices.values()) {
+        if (dev === sensor) continue;
+        for (const [k, a] of Object.entries(dev.step.currents ?? {})) if (find(`${dev.id}.${k}`) === net) amps += Number(a) || 0;
+      }
+      out[term] = Math.round(amps * 1000) / 1000;
+    }
+    return out;
+  }
+
   /** Evalúa la escena en t hasta el punto fijo. */
   evaluate(t) {
     this.t = t;
@@ -380,6 +417,11 @@ export class Scene {
         const values = {};
         for (const r of dev.reads) values[r.id] = this.#readValue(r.source, t);
         for (const pi of dev.probeInputs) values[pi.id] = this.#probeValue(dev, pi, t);
+        // Corriente que pasa por los bornes de un sensor (polos de un térmico,
+        // salida de un variador): la de las cargas aguas abajo.
+        /** @type {Record<string, Record<string, number>>} */
+        const currents = {};
+        for (const cs of dev.currentSensors) currents[cs.id] = this.#sensedCurrents(dev, cs.terminals);
         // Pegado (sensor, final de carrera, pulsador): se comporta como
         // accionado (value = true) o en reposo, haga lo que haga el usuario o
         // el enlace mecánico.
@@ -398,7 +440,7 @@ export class Scene {
         const signals = {};
         for (const s of dev.def.signals?.in ?? []) signals[s] = this.signals[s] ? 1 : 0;
         const tripped = (dev.el.sources ?? []).some((s) => this.tripped.has(s.id ? `${dev.id}.${s.id}` : dev.id));
-        const step = dev.inst.update(t, { loads, phases, links, values, actions, signals, wired: dev.wired, tripped }) ?? {};
+        const step = dev.inst.update(t, { loads, phases, links, values, actions, signals, wired: dev.wired, tripped, currents }) ?? {};
         // Soldado (relé, contactor): los contactos se pegan en la primera
         // vez que cierra y ya no abren aunque la bobina caiga.
         const welded = this.injected.get(`welded:${dev.id}`);
@@ -410,7 +452,7 @@ export class Scene {
             step.outputs = { ...step.outputs, closed: true };
           }
         }
-        const sig = stable([step.contacts ?? {}, step.outputs ?? {}]);
+        const sig = stable([step.contacts ?? {}, step.outputs ?? {}, step.currents ?? {}]);
         if (sig !== dev.sig) changed = true;
         dev.sig = sig;
         dev.step = step;

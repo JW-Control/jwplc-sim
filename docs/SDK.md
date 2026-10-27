@@ -101,6 +101,19 @@ Un dispositivo declara:
   los de `keep`) y `DeviceStep.params` devuelve los parámetros que el propio
   equipo reprogramó (teclado, Modbus) para que la app los guarde en la
   escena. Ejemplo: `vfd-el`;
+- **corriente**: una carga declara en `DeviceStep.currents` la corriente (A)
+  que entra por cada borne (`{ U1: 2.72, V1: 2.72, W1: 2.72 }`), y un sensor
+  (polos de un térmico, salida de un variador) declara
+  `currentSensors(params)`: `[{ id, terminals }]`; en `update()`,
+  `inp.currents[id][borne]` trae la suma de las corrientes de las cargas
+  unidas a ese borne por cables y contactos cerrados de otros equipos (no
+  los del propio sensor: cada polo ve solo lo que alimenta aguas abajo). La
+  corriente se evalúa por eventos: si cambia con el tiempo (rampa, pico de
+  arranque), el equipo pide un evento al terminar el tramo
+  (`nextEventNs`). Modelo de los motores en `motorCurrent()`
+  (`scene/devices/loads.mjs`): 6 × In al arrancar o con el rotor bloqueado
+  y `In · (0,4 + 0,6 · carga)` en régimen. Ejemplos: `motor-3ph`,
+  `overload-relay` y `vfd-el`;
 - **esclavos Modbus configurables**: `modbusWrite` puede devolver un código
   de excepción (3: valor fuera de rango) y `modbusConfig()` la dirección o la
   velocidad que el equipo cambió en marcha (teclado del variador);

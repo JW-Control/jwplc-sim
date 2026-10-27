@@ -218,10 +218,26 @@ export function motorConnection(terms) {
   return { connection, direction, faltaFase: powered && !connection };
 }
 
+/**
+ * Corriente de línea de un motor (A eficaces): en régimen, la de vacío (40 %)
+ * más la proporcional a la carga; arrancando, la de rotor bloqueado.
+ */
+export function motorCurrent(In, carga, { starting = false, locked = false, factor = 1 } = {}) {
+  const load = Math.min(1.5, Math.max(0, Number(carga) / 100));
+  if (locked || starting) return 6 * In * factor;
+  return In * (0.4 + 0.6 * load) * factor;
+}
+/** @returns {import("../../sdk/jwsim-device.js").ParameterSpec[]} */
+const CURRENT_PARAMS = (In) => [
+  { id: "In", label: "Corriente nominal", type: "number", default: In, unit: "A" },
+  { id: "carga", label: "Carga", type: "number", default: 75, unit: "%", hint: "0 a 150; sobre 100 se sobrecarga" },
+];
+const accelerating = (seg, goal) => goal !== 0 && seg.rate !== 0 && Math.sign(seg.rate) === Math.sign(goal) && Math.abs(seg.value) < Math.abs(goal);
+
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const motor3ph = {
   type: "jwsim/motor-3ph",
-  version: "1.0.0",
+  version: "1.1.0",
   name: "Motor trifásico",
   category: "Actuadores",
   description:
@@ -230,6 +246,7 @@ export const motor3ph = {
     { id: "bornera", label: "Bornera", type: "enum", options: ["triangulo", "estrella", "6 cables"], default: "triangulo" },
     { id: "accelMs", label: "Arranque en triángulo", type: "number", default: 500, unit: "ms" },
     { id: "stopMs", label: "Parada (inercia)", type: "number", default: 1500, unit: "ms" },
+    ...CURRENT_PARAMS(3.2),
   ],
   terminals: [{ id: "U1" }, { id: "V1" }, { id: "W1" }, { id: "W2" }, { id: "U2" }, { id: "V2" }, { id: "PE", label: "PE (tierra)" }],
   electrical: (p) => ({
@@ -260,8 +277,25 @@ export const motor3ph = {
           speed.step(t, goal, 1000 / (accel ? accelMs : Number(ctx.params.stopMs)));
           seg = speed.segment(t);
         }
+        // Corriente de línea: arranque directo 6 × In (en estrella, un tercio),
+        // con variador sin pico; con una fase menos, √3 más girando o la de
+        // rotor bloqueado si está parado.
+        const In = Number(ctx.params.In);
+        const star = c.connection === "estrella";
+        let line = 0;
+        if (c.connection && st?.controlled) line = seg.value === 0 && seg.rate === 0 ? 0 : motorCurrent(In, ctx.params.carga) * (accelerating(seg, goal) ? 1.2 : 1);
+        else if (c.connection) line = motorCurrent(In, ctx.params.carga, { starting: accelerating(seg, goal), factor: star ? 1 / 3 : 1 });
+        else if (c.faltaFase) line = Math.abs(seg.value) > 0.1 ? motorCurrent(In, ctx.params.carga) * Math.sqrt(3) : 0.87 * motorCurrent(In, 0, { locked: true });
+        // Con «6 cables» en triángulo, cada borne lleva la corriente de su bobinado (línea / √3).
+        const perTerm = ctx.params.bornera === "6 cables" && c.connection === "triangulo" ? line / Math.sqrt(3) : line;
+        /** @type {Record<string, number>} */
+        const currents = {};
+        // Con chapas, la corriente de línea entra solo por U1 V1 W1 (W2 U2 V2 están en el mismo nodo).
+        const fed = ctx.params.bornera === "6 cables" ? ["U1", "V1", "W1", "W2", "U2", "V2"] : ["U1", "V1", "W1"];
+        if (line) for (const k of fed) if (st?.terms?.[k]?.phase) currents[k] = Math.round(perTerm * 100) / 100;
         return {
           contacts: bridges,
+          currents,
           outputs: {
             energized: !!c.connection || c.faltaFase,
             connection: c.connection,
@@ -269,6 +303,7 @@ export const motor3ph = {
             speed: seg,
             running: seg.value !== 0 || seg.rate !== 0,
             direction: goal,
+            corriente: Math.round(line * 100) / 100,
           },
           nextEventNs: earliest(speed.next),
         };
@@ -283,7 +318,7 @@ export const MOTOR_1PH_BRIDGES = { "2 cables": { "U1-Z1": ["U1", "Z1"], "U2-Z2":
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const motor1ph = {
   type: "jwsim/motor-1ph",
-  version: "1.0.0",
+  version: "1.1.0",
   name: "Motor monofásico",
   category: "Actuadores",
   description:
@@ -293,6 +328,7 @@ export const motor1ph = {
     { id: "rpm", label: "Velocidad nominal", type: "number", default: 1720, unit: "rpm" },
     { id: "accelMs", label: "Arranque", type: "number", default: 500, unit: "ms" },
     { id: "stopMs", label: "Parada (inercia)", type: "number", default: 2500, unit: "ms" },
+    ...CURRENT_PARAMS(5.6),
   ],
   terminals: [{ id: "U1" }, { id: "U2" }, { id: "Z1" }, { id: "Z2" }, { id: "PE", label: "PE (tierra)" }],
   electrical: (p) => ({
@@ -321,11 +357,19 @@ export const motor1ph = {
         const driven = goal !== 0 && (Math.abs(goal) > Math.abs(cur) || Math.sign(goal) !== Math.sign(cur));
         speed.step(t, goal, 1000 / Number(driven ? p.accelMs : p.stopMs));
         const seg = speed.segment(t);
+        // Principal: 6 × In arrancando o zumbando (rotor bloqueado); el
+        // auxiliar suma 2 × In mientras actúa (bajo el 75 %).
+        const In = Number(p.In);
+        const main = !m.on ? 0 : hum ? motorCurrent(In, 0, { locked: true }) : motorCurrent(In, p.carga, { starting: accelerating(seg, goal) });
+        const aux = m.on && a.on && Math.abs(seg.value) < 0.75 ? 2 * In : 0;
+        const r = (v) => Math.round(v * 100) / 100;
         return {
           contacts: bridges,
+          currents: { ...(main ? { U1: r(main), U2: r(main) } : {}), ...(aux ? { Z1: r(aux), Z2: r(aux) } : {}) },
           outputs: {
             energized: m.on,
             bloqueado: hum,
+            corriente: r(main + aux),
             speed: seg,
             running: seg.value !== 0 || seg.rate !== 0,
             direction: goal,
