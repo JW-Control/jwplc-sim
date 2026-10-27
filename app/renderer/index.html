@@ -99,38 +99,31 @@
               <button class="seg" data-mode="push" role="radio" aria-checked="false" title="La entrada está activa mientras se mantiene presionada">Pulsador</button>
             </div>
           </div>
-          <div class="plc">
-            <div class="terminal-strip top">
-              <div class="strip-title">ENTRADAS DIGITALES · 24 VDC</div>
-              <div class="io-row" id="inputs"></div>
+          <div class="plc" id="plc">
+            <div class="plc-leds">
+              <span class="led-sm" id="led-pwr" title="Alimentación"></span><span>PWR</span>
+              <span class="led-sm" id="led-run" title="Firmware en ejecución"></span><span>RUN</span>
+              <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
+              <button class="sd-slot on" id="sd-slot" data-signal="SD_CARD" disabled
+                title="Zócalo microSD: clic para quitar o poner la tarjeta (detección por GPIO39)">microSD</button>
             </div>
-            <div class="plc-body">
-              <div class="plc-name">
-                <strong>JWPLC</strong> Basic
-                <span class="plc-sub">ESP32 · TCA6424A</span>
-              </div>
-              <div class="plc-leds">
-                <span class="led-sm" id="led-pwr" title="Alimentación"></span><span>PWR</span>
-                <span class="led-sm" id="led-run" title="Firmware en ejecución"></span><span>RUN</span>
-                <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
-                <button class="sd-slot on" id="sd-slot" data-signal="SD_CARD" disabled
-                  title="Zócalo microSD: clic para quitar o poner la tarjeta (detección por GPIO39)">microSD</button>
-              </div>
+            <!-- El JWPLC Basic (assets/jwplc-basic.svg) con la pantalla, la
+                 botonera, las entradas y las salidas encima, en sus posiciones. -->
+            <div class="plc-fit" id="plc-fit"><div class="plc-stage" id="plc-stage">
+              <div class="plc-art" id="plc-art"></div>
               <canvas id="tft" class="screen" width="320" height="170" tabindex="0"
                 title="Pantalla TFT 170×320 (con foco: flechas, Enter = OK, Esc = ESC)"></canvas>
               <div class="keypad" id="keypad" aria-label="Botonera frontal">
-                <button class="key" data-btn="BTN_LEFT" title="LEFT (←)" aria-label="Izquierda">◀</button>
-                <button class="key" data-btn="BTN_UP" title="UP (↑)" aria-label="Arriba">▲</button>
-                <button class="key" data-btn="BTN_RIGHT" title="RIGHT (→)" aria-label="Derecha">▶</button>
-                <button class="key small" data-btn="BTN_ESC" title="ESC (Esc)">ESC</button>
-                <button class="key small" data-btn="BTN_OK" title="OK (Enter)">OK</button>
-                <button class="key" data-btn="BTN_DOWN" title="DOWN (↓)" aria-label="Abajo">▼</button>
+                <button class="key" data-btn="BTN_LEFT" title="LEFT (←)" aria-label="Izquierda"></button>
+                <button class="key" data-btn="BTN_UP" title="UP (↑)" aria-label="Arriba"></button>
+                <button class="key" data-btn="BTN_RIGHT" title="RIGHT (→)" aria-label="Derecha"></button>
+                <button class="key" data-btn="BTN_ESC" title="ESC (Esc)" aria-label="ESC"></button>
+                <button class="key" data-btn="BTN_OK" title="OK (Enter)" aria-label="OK"></button>
+                <button class="key" data-btn="BTN_DOWN" title="DOWN (↓)" aria-label="Abajo"></button>
               </div>
-            </div>
-            <div class="terminal-strip bottom">
+              <div class="io-row" id="inputs"></div>
               <div class="io-row" id="outputs"></div>
-              <div class="strip-title">SALIDAS RELÉ</div>
-            </div>
+            </div></div>
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-tools">

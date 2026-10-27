@@ -15,10 +15,10 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
   // Grilla de la escena: bornes, dispositivos y tramos de cable caen en
-  // múltiplos de GRID. El SVG de la placa tiene sus tornillos cada 64
-  // unidades desde el origen del viewBox: con esta escala, cada 20 px.
+  // múltiplos de GRID. El SVG de la placa declara cada cuántas unidades
+  // caen sus tornillos (data-grid): con esa escala, cada 20 px.
   const GRID = 20;
-  const BOARD_K = GRID / 64;
+  const BOARD_K = GRID / 57;
   const snap = (v) => Math.round(v / GRID) * GRID;
   // Colores de cable (IEC 60445 y usuales en tablero).
   const WIRE_COLORS = {
@@ -39,7 +39,9 @@
     boardSvg: null,
     boardEntries: {},
     boardSides: {},
-    board: { w: 452, h: 500, k: BOARD_K },
+    board: { w: 460, h: 540, k: BOARD_K },
+    boardLeds: {}, // señal -> [x, y] del LED de estado (I0_n, Q0_n)
+    boardTitles: {}, // borne -> descripción (se ve al pasar el mouse)
     staticPoles: {}, // polos del último análisis sin simular (color automático de cables)
     boardTerms: {}, // borne -> [x, y] en la placa escalada
     drag: null,
@@ -95,13 +97,13 @@
     const doc = new DOMParser().parseFromString(text, "image/svg+xml");
     const svg = doc.documentElement;
     const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
-    const k = BOARD_K;
+    const k = GRID / (Number(svg.getAttribute("data-grid")) || 64);
     S.board = { w: vw * k, h: vh * k, k };
     // Tornillos (clic para cablear) y entrada del cable: el borde de la
-    // bornera hacia afuera de la placa (arriba, abajo o el borde superior de
-    // la bornera RS-485).
-    const ENTRY_Y = { sup: 18, med: 1126, inf: 1600 };
+    // bornera hacia afuera de la placa (data-entrada: arriba, abajo o el
+    // borde superior de la bornera RS-485).
     const terms = {};
+    const titles = {};
     const entries = {};
     const sides = {};
     for (const g of svg.querySelectorAll(".borne")) {
@@ -111,9 +113,14 @@
       const x = (Number(u.getAttribute("x")) - vx) * k;
       const block = g.dataset.bloque.split("-")[0];
       terms[id] = [x, (Number(u.getAttribute("y")) - vy) * k];
-      entries[id] = [x, (ENTRY_Y[block] - vy) * k];
+      entries[id] = [x, (Number(g.dataset.entrada) - vy) * k];
       sides[id] = block === "inf" ? "b" : "t";
+      titles[id] = g.querySelector("title")?.textContent ?? "";
     }
+    const leds = {};
+    for (const c of svg.querySelectorAll(".led-ancla")) leds[c.dataset.senal] = [(Number(c.getAttribute("cx")) - vx) * k, (Number(c.getAttribute("cy")) - vy) * k];
+    S.boardLeds = leds;
+    S.boardTitles = titles;
     S.boardTerms = terms;
     S.boardEntries = entries;
     S.boardSides = sides;
@@ -535,11 +542,10 @@
       const leds = g.querySelector(".board-leds");
       let html = "";
       for (let k = 0; k < 8; k++) {
-        const [x, y] = sym.screws[`I0_${k}`] ?? [];
-        if (x !== undefined) html += `<circle cx="${x}" cy="${y + 70 * S.board.k}" r="4" class="${st.outputs?.[`I0_${k}`] ? "led on" : "led"}"/>`;
-        const [qx, qy] = sym.screws[`Q0_${k}.1`] ?? [];
-        const [qx2] = sym.screws[`Q0_${k}.2`] ?? [];
-        if (qx !== undefined) html += `<circle cx="${(qx + qx2) / 2}" cy="${qy - 80 * S.board.k}" r="4" class="${st.contacts?.[`Q0_${k}`] ? "led on" : "led"}"/>`;
+        const [x, y] = S.boardLeds[`I0_${k}`] ?? [];
+        if (x !== undefined) html += `<circle cx="${x}" cy="${y}" r="4" class="${st.outputs?.[`I0_${k}`] ? "led on" : "led"}"/>`;
+        const [qx, qy] = S.boardLeds[`Q0_${k}`] ?? [];
+        if (qx !== undefined) html += `<circle cx="${qx}" cy="${qy}" r="4" class="${st.contacts?.[`Q0_${k}`] ? "led on" : "led"}"/>`;
       }
       const plcWired = S.spec.wiring.some((w) => w.from.startsWith(`${dev.id}.`) || w.to.startsWith(`${dev.id}.`));
       if (plcWired && st.outputs && st.outputs.powered === false && S.snap) html += `<text class="dev-note bad" x="${sym.w / 2}" y="-8">sin 24 VDC en 24VDC/M0</text>`;
@@ -571,7 +577,8 @@
       // El borne es el tornillo dibujado: el círculo es invisible (resalta
       // al pasar el mouse).
       th += `<g class="term" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 10}"/>`;
-      th += `<title>${esc(`${dev.id}.${id}`)}</title></g>`;
+      const what = sym.board ? S.boardTitles[id] : "";
+      th += `<title>${esc(`${dev.id}.${id}${what ? ` · ${what}` : ""}`)}</title></g>`;
     }
     t.innerHTML = th;
   }

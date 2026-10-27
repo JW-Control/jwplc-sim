@@ -407,10 +407,19 @@ botones de la interfaz.
 
 **Vista en la app** (`app/renderer/scene.js`):
 
-- **Placa:** el SVG del render de JW Control con sus tornillos en una grilla
-  de 64 unidades. En la escena se dibuja a escala 20/64, así cada borne cae
-  en la grilla de 20 px. Los bornes de los dispositivos y sus posiciones
-  también van sobre la grilla.
+- **Placa:** `assets/jwplc-basic.svg`, generado por
+  `docs/simbolos/herramientas/gen_jwplc_basic.py` desde el dibujo de bornes
+  de la web de JW Control (`docs/simbolos/fuentes/`), con rótulos de
+  serigrafía (nombre en gris sobre la caja y franja del color de la función
+  en la bornera; el detalle de cada borne en su `<title>`). Los tornillos
+  caen cada `data-grid` unidades (57): en la escena se dibuja a escala
+  20/57, así cada borne cae en la grilla de 20 px. El SVG declara también
+  por dónde entra el cable a cada borne (`data-entrada`), los LED de estado
+  (`.led-ancla`), la pantalla (`#tft`) y las teclas (`.tecla`). La vista
+  Placa usa el mismo dibujo: la pantalla, las teclas, las entradas (clic) y
+  los LED de las salidas van encima, en esas posiciones (`app.js`,
+  `placeBoard`). Los bornes de los dispositivos y sus posiciones también van
+  sobre la grilla.
 - **Símbolos** (`app/renderer/scene-symbols.js`): módulos con aspecto de
   equipo de tablero, con tornillos Phillips rotulados (número y función:
   1/L1, 13 NO, COM) y la cara frontal del equipo con su estado. El cable

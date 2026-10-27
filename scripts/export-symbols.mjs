@@ -8,7 +8,7 @@
 //   dispositivos.json      por tipo: tamaño, bornes (x, lado), parámetros,
 //                          acciones y salidas
 //   actuales/<tipo>-reposo.svg|png, -activo, -disparada   dibujos actuales
-//   placa/jwplc-basic.svg  la placa (pinout y grilla de 64 unidades)
+//   placa/jwplc-basic.svg  la placa (pinout y grilla de data-grid unidades)
 //   plantillas/            ejemplo que cumple el contrato
 //   referencias/           imágenes de referencia (--ref <carpeta>)
 //

@@ -157,6 +157,9 @@ function consoleWrite(text, cls) {
 }
 
 // ------------------------------------------------------------- placa
+// Vista Placa: el SVG del JWPLC Basic (el mismo de la escena) con las
+// entradas, salidas, teclas y la pantalla encima, en las posiciones que
+// declara el dibujo (.borne, .led-ancla, .tecla, #tft).
 function buildBoard() {
   const inputs = $("inputs");
   const outputs = $("outputs");
@@ -165,8 +168,8 @@ function buildBoard() {
     b.className = "io input";
     b.dataset.signal = `I0_${k}`;
     b.disabled = true;
-    b.title = `Entrada I0.${k}`;
-    b.innerHTML = `<span class="screw"></span><span class="name">I0.${k}</span><span class="led"></span>`;
+    b.title = `Entrada I0.${k} (24 VDC): clic para activarla`;
+    b.innerHTML = `<span class="led"></span>`;
     b.addEventListener("click", () => {
       if (state.inputMode === "toggle") setInput(b.dataset.signal, !state.levels.get(b.dataset.signal));
     });
@@ -179,9 +182,72 @@ function buildBoard() {
     const o = document.createElement("div");
     o.className = "io output";
     o.dataset.signal = `Q0_${k}`;
-    o.title = `Salida relé Q0.${k}`;
-    o.innerHTML = `<span class="lamp"></span><span class="name">Q0.${k}</span><span class="screw"></span>`;
+    o.title = `Salida a relé Q0.${k} (COM-NO)`;
+    o.innerHTML = `<span class="lamp"></span>`;
     outputs.appendChild(o);
+  }
+  placeBoard().catch((e) => consoleWrite(`[placa] ${e.message}\n`, "sys"));
+}
+
+async function placeBoard() {
+  const text = (await api.sceneBoardSvg()).replace(/<\?xml[^>]*>/, "").replace(/<!--[\s\S]*?-->/g, "");
+  // Ids propios (la app ya usa #tft y #btn-* en la barra).
+  const art = $("plc-art");
+  art.innerHTML = text.replace(/\bid="([^"]+)"/g, 'id="plcart-$1"').replace(/href="#/g, 'href="#plcart-');
+  const svg = art.querySelector("svg");
+  const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  // El mayor tamaño que entra en el panel sin deformar el dibujo.
+  const fit = () => {
+    const box = $("plc-fit");
+    const w = Math.min(box.clientWidth, (box.clientHeight * vw) / vh, 720);
+    if (w > 0) Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
+  };
+  new ResizeObserver(fit).observe($("plc-fit"));
+  fit();
+  const num = (el, k) => Number(el.getAttribute(k));
+  const place = (el, x, y, w, h) =>
+    Object.assign(el.style, { left: `${((x - vx) / vw) * 100}%`, top: `${((y - vy) / vh) * 100}%`, width: `${(w / vw) * 100}%`, height: `${(h / vh) * 100}%` });
+  const tft = svg.querySelector("#plcart-tft");
+  place($("tft"), num(tft, "x"), num(tft, "y"), num(tft, "width"), num(tft, "height"));
+  for (const key of document.querySelectorAll("#keypad .key")) {
+    const r = svg.querySelector(`.tecla[data-btn="${key.dataset.btn}"] rect`);
+    if (r) place(key, num(r, "x"), num(r, "y"), num(r, "width"), num(r, "height"));
+  }
+  const screw = (sig, pos) => svg.querySelector(`.borne[data-senal="${sig}"]${pos ? `[data-pos="${pos}"]` : ""}`);
+  const led = (sig) => svg.querySelector(`.led-ancla[data-senal="${sig}"]`);
+  const pitch = Number(svg.getAttribute("data-grid")) || 57;
+  // La luz del LED va en su ancla, dentro del área de la entrada o salida.
+  const putLed = (box, dot, anchor, x0, y0, w, h) => {
+    const r = num(anchor, "r");
+    Object.assign(dot.style, {
+      left: `${((num(anchor, "cx") - x0) / w) * 100}%`, top: `${((num(anchor, "cy") - y0) / h) * 100}%`, width: `${((2 * r) / w) * 100}%`,
+    });
+  };
+  for (let k = 0; k < 8; k++) {
+    const b = document.querySelector(`#inputs .io[data-signal="I0_${k}"]`);
+    const g = screw(`I0_${k}`);
+    const a = led(`I0_${k}`);
+    if (g && a) {
+      const x = num(g.querySelector("use"), "x");
+      const [x0, y0, w, h] = [x - pitch / 2, Number(g.dataset.entrada), pitch, num(a, "cy") + 16 - Number(g.dataset.entrada)];
+      place(b, x0, y0, w, h);
+      putLed(b, b.querySelector(".led"), a, x0, y0, w, h);
+      b.title = `${g.querySelector("title")?.textContent ?? `I0.${k}`}: clic para activarla`;
+    }
+    const o = document.querySelector(`#outputs .io[data-signal="Q0_${k}"]`);
+    const g1 = screw(`Q0_${k}`, 1);
+    const g2 = screw(`Q0_${k}`, 2);
+    const q = led(`Q0_${k}`);
+    if (g1 && g2 && q) {
+      const x1 = num(g1.querySelector("use"), "x");
+      const x2 = num(g2.querySelector("use"), "x");
+      const [x0, y0] = [x1 - pitch / 2, num(q, "cy") - 16];
+      const [w, h] = [x2 - x1 + pitch, Number(g1.dataset.entrada) - y0];
+      place(o, x0, y0, w, h);
+      putLed(o, o.querySelector(".lamp"), q, x0, y0, w, h);
+    }
   }
 }
 

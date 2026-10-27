@@ -226,6 +226,16 @@ escala 0-10 y perilla que se arrastra, bornes 1, 2 y 3 arriba; y calibrador
 de lazo portátil en funda amarilla (200 x 320, escala reducida de campo) con
 la pantalla de la señal, la perilla de ajuste y los bornes + y COM abajo.
 
+JWPLC Basic (`gen_jwplc_basic.py`, 27/10/2026, aprobado por JW Control):
+el dibujo de bornes de la web (`fuentes/JWPLC_Basic_Pines_Frente.svg`) sin
+las banderas, las llamadas ni la leyenda, con los tornillos en la grilla
+(57 unidades = 20 px) y rótulos de serigrafía (opción B): el nombre de cada
+borne en gris sobre la caja, del lado de adentro (el cable entra por el
+borde de afuera), y una franja del color de su función en la bornera (rojo
+L+, negro M y 1M, verde entradas, naranja relés, morado RS-485). El detalle
+(«I0.0 · entrada digital 24 VDC») aparece al pasar el mouse. Es el mismo
+dibujo en la vista Placa y en la Escena.
+
 Fuera de la primera versión (decisión de JW Control, 27/10/2026): sensor
 fotoeléctrico, relé enchufable, transmisor de pH y válvula de agua del
 fermentador. Siguen en la biblioteca con el dibujo genérico, igual que el

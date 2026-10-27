@@ -73,6 +73,7 @@ await win.waitForTimeout(500);
 await win.click(".io.input[data-signal='I0_0']");
 const q0 = await until(() => isOn("Q0_0"), 3000);
 const others = await win.$$eval(".io.output.on", (els) => els.map((e) => e.dataset.signal).filter((s) => s !== "Q0_0"));
+await (await win.$(".board-card")).screenshot({ path: join(OUT, "01-placa-io.png") });
 await win.click("#tab-buses");
 const busOk = await until(async () => (await win.$$eval("#bus-rows tr", (r) => r.map((x) => x.textContent))).some((t) => /TCA6424A.*Leer Entrada/.test(t)), 3000);
 const busSample = await win.$$eval("#bus-rows tr", (r) => r.slice(-3).map((x) => x.textContent));
