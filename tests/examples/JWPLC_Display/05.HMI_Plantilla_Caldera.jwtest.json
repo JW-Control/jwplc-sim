@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Ejemplo de HMI generado con el Designer (Plantilla de caldera): corre sin FATAL ni salida por Serial; la pantalla se verifica con capturas en cinco instantes de una navegación fija (arranque, OK, RIGHT, OK y ESC), contra las referencias grabadas.",
+  "sketch": "package:libraries/JWPLC_Display/examples/05.HMI_Plantilla_Caldera",
+  "until_ms": 6000,
+  "args": [
+    "--rtc",
+    "fijo:2026-01-15T08:30:00"
+  ],
+  "stim": [
+    "1800 BTN_OK=1",
+    "1900 BTN_OK=0",
+    "2600 BTN_RIGHT=1",
+    "2700 BTN_RIGHT=0",
+    "3400 BTN_OK=1",
+    "3500 BTN_OK=0",
+    "4400 BTN_ESC=1",
+    "4500 BTN_ESC=0"
+  ],
+  "expect": {
+    "console_absent": [
+      "^ERROR",
+      "FATAL"
+    ],
+    "screen": [
+      {
+        "at_ms": 1700,
+        "ref": "screens/05.HMI_Plantilla_Caldera_idle.png"
+      },
+      {
+        "at_ms": 2500,
+        "ref": "screens/05.HMI_Plantilla_Caldera_selector.png"
+      },
+      {
+        "at_ms": 3300,
+        "ref": "screens/05.HMI_Plantilla_Caldera_pagina1.png"
+      },
+      {
+        "at_ms": 4300,
+        "ref": "screens/05.HMI_Plantilla_Caldera_dentro.png"
+      },
+      {
+        "at_ms": 5200,
+        "ref": "screens/05.HMI_Plantilla_Caldera_esc.png"
+      }
+    ]
+  }
+}

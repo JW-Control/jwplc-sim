@@ -3,8 +3,8 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.14: cierre en la rama v2.1.0-alpha.14/HmiDesigner/main (24/10/2026);
-# al publicarse, cambiar REF por el tag si su árbol coincide.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.14/HmiDesigner/main
-JWPLC_PACKAGE_COMMIT=eddee62e592d328b4cbfd0fe4fbc11cfef7be263
+# 2.1.0-alpha.14 publicada (tag; cabeza de release/v2.1.x el 27/10/2026).
+# Respecto de la rama de cierre (eddee62e) solo cambian ejemplos de JWPLC_Display.
+JWPLC_PACKAGE_REF=v2.1.0-alpha.14
+JWPLC_PACKAGE_COMMIT=f3f47aeeaaef4435783fc9a62827862383cdec42
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
