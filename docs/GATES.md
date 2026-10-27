@@ -68,7 +68,10 @@ JWSIM_G8_2D_ELECTRICAL=PASS         (alcance v1, aprobado por JW Control el 27/1
                                      transmisor PT100 TT-510 y corriente de los motores (térmico NR2 clase 10). Fuera de la v1,
                                      con el dibujo genérico: fotoeléctrico, relé enchufable, transmisor de pH, válvula de agua
                                      del fermentador y motor genérico; motorreductor 24 VDC descartado (el Basic no tiene PWM))
-JWSIM_G8_3D_SCENES=PENDING, JWSIM_G8_OIP_FUXA=PENDING
+JWSIM_G8_OIP_FUXA=IN_PROGRESS     (27/10: puente de E/S Modbus TCP (bornera en 127.0.0.1:5020) probado con un cliente
+                                     que hace lo de OIP y FUXA: mapa, excepciones, escena y latencia ≤ 35 ms;
+                                     guía en docs/integration/OIP_FUXA.md; falta la prueba con OIP y FUXA reales en taller)
+JWSIM_G8_3D_SCENES=PENDING
 JWSIM_G9_FAULT_INJECTION=PASS       (7 fallas: pegado, soldado, quemado, cable cortado, microSD, RTC sin batería, ruido RS-485;
                                      9 casos con firmware, ruido determinista, E2E en la app; scripts/gate-g9-faults.mjs)
 JWSIM_G9_EXERCISES=PASS             (8 ejercicios con escena, enunciado, plantilla, solución 20/20 y rúbrica; docs/EJERCICIOS.md)
@@ -163,7 +166,7 @@ JWSIM_G10_*=PENDING
 |---|---|---|
 | `JWSIM_G8_2D_ELECTRICAL` | Vista 2D del tablero con cableado editable y estados animados. C1: los dispositivos de la biblioteca dentro del alcance acordado con JW Control tienen símbolo según `docs/simbolos/LINEAMIENTOS.md` (modelo comercial real, vista frontal, 4 px/mm; los de campo a una escala reducida fija), aprobado por JW Control. C2: cableado editable (crear, quitar, puntos de doblez, color, puentes) sin superponerse a los equipos. C3: estados legibles y animados con la simulación: cables con tensión, contactos y palancas, vástago del cilindro, giro del motor, pilotos, disparo de las protecciones. | `node scripts/export-symbols.mjs` sin `plantilla: null` fuera de los excluidos del alcance (v1: `sensor-photoelectric`, `relay`, `ph-rs485`, `water-valve`, `motor`) + E2E de la escena (`app/tests/e2e-g7.mjs`) + vistas de escala. |
 | `JWSIM_G8_3D_SCENES` | Escenas 3D (three.js) de procesos: cinta, cilindro, tanque, puerta. ≥ 30 fps en el host de referencia. | Medición. |
-| `JWSIM_G8_OIP_FUXA` | Puente con Open Industry Project y FUXA (Modbus TCP) documentado y probado. | Prueba de integración. |
+| `JWSIM_G8_OIP_FUXA` | Puente con Open Industry Project y FUXA (Modbus TCP) documentado y probado. C1: la bornera del Basic simulado como esclavo Modbus TCP (bobinas, entradas discretas y registros; `docs/integration/OIP_FUXA.md`). C2: no escribe las entradas que maneja la escena. C3: latencia entrada → salida ≤ 100 ms a velocidad real. C4: prueba con OIP y FUXA reales registrada en `docs/reports/`. | `node scripts/gate-g8-io-bridge.mjs` (C1-C3) + prueba de taller (C4). |
 
 ## G9 — Ejercicios
 

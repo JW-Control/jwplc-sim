@@ -952,6 +952,15 @@ conectado) desconecta el cable.
 Con red real el tiempo virtual va a la par del reloj de pared (velocidad
 ×1): los paquetes del host entran en el instante virtual en que llegan.
 
+**Puente de E/S [G8]** (`app/lib/io-bridge.mjs`): independiente del W5500 y
+del sketch, la app publica la bornera como esclavo Modbus TCP
+(`127.0.0.1:5020`; `simulation.ioBridge` en el proyecto). Las bobinas 0-7
+escriben I0.0-I0.7 con el mismo comando `set` que los botones de la placa;
+las entradas discretas 0-7 (y las bobinas 16-23) leen Q0.0-Q0.7; los
+registros 0 y 1 llevan las dos palabras de bits. Es la conexión para una
+planta 3D (Open Industry Project) o un SCADA (FUXA): guía en
+[integration/OIP_FUXA.md](integration/OIP_FUXA.md).
+
 ## 8. Formato de proyecto `.jwsim` v1
 
 JSON versionado. Un `.jwsim` **vincula** artefactos que siguen abriéndose y

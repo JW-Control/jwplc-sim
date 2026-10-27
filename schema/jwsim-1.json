@@ -91,6 +91,16 @@
         },
         "peripherals": {
           "type": "object"
+        },
+        "ioBridge": {
+          "type": "object",
+          "description": "Puente de E/S (G8): la bornera como esclavo Modbus TCP para Open Industry Project o FUXA.",
+          "properties": {
+            "present": { "type": "boolean" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "listenHost": { "type": "string" }
+          },
+          "additionalProperties": false
         }
       }
     },

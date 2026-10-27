@@ -94,6 +94,19 @@ export class ModbusTcpClient {
     if (r[0] !== 0x05) throw new Error(`excepción ${r[1]}`);
     return r[3] === 0xff;
   }
+  async readDiscrete(addr, qty) {
+    const r = await this.request([0x02, addr >> 8, addr & 255, qty >> 8, qty & 255]);
+    if (r[0] !== 0x02) throw new Error(`excepción ${r[1]}`);
+    return Array.from({ length: qty }, (_, i) => (r[2 + (i >> 3)] >> (i & 7)) & 1);
+  }
+  async writeCoils(addr, bits) {
+    const n = Math.ceil(bits.length / 8);
+    const pdu = [0x0f, addr >> 8, addr & 255, bits.length >> 8, bits.length & 255, n, ...new Array(n).fill(0)];
+    bits.forEach((b, i) => (pdu[6 + (i >> 3)] |= (b ? 1 : 0) << (i & 7)));
+    const r = await this.request(pdu);
+    if (r[0] !== 0x0f) throw new Error(`excepción ${r[1]}`);
+    return r.readUInt16BE(3);
+  }
   async readCoils(addr, qty) {
     const r = await this.request([0x01, addr >> 8, addr & 255, qty >> 8, qty & 255]);
     if (r[0] !== 0x01) throw new Error(`excepción ${r[1]}`);

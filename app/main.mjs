@@ -14,6 +14,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
+import { IoBridge } from "./lib/io-bridge.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
 import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
@@ -112,6 +113,8 @@ async function stopRunner() {
   sceneSession = null;
   bridge?.close();
   bridge = null;
+  ioBridge?.close();
+  ioBridge = null;
   r?.removeAllListeners();
   // El resumen final (instante y hash de traza) sí llega a la interfaz.
   r?.on("message", (m) => m.type === "stopped" && forward("sim:message", m));
@@ -401,6 +404,23 @@ function copyDir(from, to) {
 // la red ("ip" para el DHCP de la red virtual, "listenHost" "0.0.0.0" para
 // publicar en la LAN y "portOffset" para los puertos de escucha).
 let bridge = null;
+// Puente de E/S (G8): la bornera como esclavo Modbus TCP para Open Industry
+// Project o FUXA (app/lib/io-bridge.mjs). En el proyecto,
+// simulation.ioBridge: { "present": false } lo quita; "port" (5020) y
+// "listenHost" ("127.0.0.1"; "0.0.0.0" para la LAN) lo configuran.
+let ioBridge = null;
+let lastSceneInputs = null;
+function ioBridgeConfig(projectFile) {
+  let cfg = {};
+  if (projectFile) {
+    try {
+      cfg = loadProject(projectFile).project.simulation?.ioBridge ?? {};
+    } catch {
+      cfg = {};
+    }
+  }
+  return cfg.present === false ? null : cfg;
+}
 function ethernetConfig(projectFile) {
   let eth = {};
   if (projectFile) {
@@ -444,7 +464,10 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && forward("sim:message", m));
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
-    sceneSession.on("snapshot", (snap) => forward("scene:snapshot", snap));
+    sceneSession.on("snapshot", (snap) => {
+      lastSceneInputs = snap.inputs ?? null;
+      forward("scene:snapshot", snap);
+    });
     sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
   }
   r.on("display", (buf) => forward("sim:display", buf));
@@ -486,6 +509,14 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     bridge.on("listening", (p, hp) => forward("sim:stderr", `[jwsim] Ethernet: puerto ${p} del PLC en ${bridge.listenHost}:${hp}\n`));
     bridge.on("error", (err) => forward("sim:stderr", `[jwsim] Ethernet: ${err.message}\n`));
     bridge.attach(r);
+  }
+  const iob = !stim && ioBridgeConfig(projectFile);
+  if (iob) {
+    lastSceneInputs = null;
+    ioBridge = new IoBridge({ port: iob.port ?? 5020, host: iob.listenHost ?? "127.0.0.1", owns: (s) => !!lastSceneInputs && s in lastSceneInputs });
+    ioBridge.on("listening", (h, p) => forward("sim:stderr", `[jwsim] puente de E/S (Modbus TCP): bornera en ${h}:${p}\n`));
+    ioBridge.on("error", (err) => forward("sim:stderr", `[jwsim] ${err.message}\n`));
+    ioBridge.attach(r);
   }
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
