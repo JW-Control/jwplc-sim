@@ -91,8 +91,19 @@ function listSources(dir, recursive) {
   return out.sort();
 }
 
-function scanLibraries(pkgTree, manifest, thirdParty) {
+function scanLibraries(pkgTree, manifest, thirdParty, extra = []) {
   const libs = [];
+  // Librerías indicadas con --library (como en arduino-cli): con src/ se
+  // compila src/ entera; sin ella, los fuentes de la raíz (diseño plano).
+  // Cada una puede ser una carpeta o { dir, cxxflags, cxxflagsExcept }: banderas
+  // C++ propias de sus unidades, salvo los archivos exceptuados (p. ej. el -std=gnu++17 con que el editor OpenPLC
+  // precompila OpenPLCUserLib).
+  for (const d of extra) {
+    const dir = resolve(typeof d === "string" ? d : d.dir);
+    const hasSrc = existsSync(join(dir, "src"));
+    const srcDir = hasSrc ? join(dir, "src") : dir;
+    libs.push({ name: basename(dir), dir, srcDir, sources: listSources(srcDir, hasSrc), includeDirs: [srcDir], origin: "user", cxxflags: d.cxxflags ?? [], cxxflagsExcept: d.cxxflagsExcept ?? [] });
+  }
   const libRoot = join(pkgTree, "libraries");
   for (const name of readdirSync(libRoot).sort()) {
     const dir = join(libRoot, name);
@@ -315,7 +326,7 @@ export async function buildSketch(sketchDir, options = {}) {
     thirdParty["esp-idf-fatfs"],
   ];
 
-  const libs = scanLibraries(pkgTree, manifest, thirdParty);
+  const libs = scanLibraries(pkgTree, manifest, thirdParty, options.libraries ?? []);
   const index = headerIndex(libs);
   const usedLibs = [];
   const includeDirs = [...baseIncludes];
@@ -347,7 +358,9 @@ export async function buildSketch(sketchDir, options = {}) {
     // operación del firmware (semáforos, E/S) y no cambian la traza.
     const sketch = isSketchUnit(file);
     const opt = sketch ? "-O0" : isSimUnit(file) ? "-O2" : "-O1";
-    return [...base.map((f) => (f === "-O1" ? opt : sketch && f === "-std=gnu++2b" ? sketchStd : f)), ...defines, ...extra];
+    const ownLib = isC ? null : libs.find((l) => l.cxxflags?.length && file.startsWith(l.srcDir + sep));
+    const own = ownLib && !ownLib.cxxflagsExcept.includes(basename(file)) ? ownLib.cxxflags : [];
+    return [...base.map((f) => (f === "-O1" ? opt : sketch && f === "-std=gnu++2b" ? sketchStd : f)), ...defines, ...extra, ...own];
   };
 
   phase("package, terceros y placa");
@@ -362,7 +375,7 @@ export async function buildSketch(sketchDir, options = {}) {
     .sort()
     .map((f) => `${f}\n${readFileSync(join(sketchDir, f), "utf8").split(/\r?\n/).filter((l) => /^\s*#/.test(l)).join("\n")}`);
   const discoveryKey = hash(
-    JSON.stringify([lock.JWPLC_PACKAGE_COMMIT, target, tc.cxx, defines, directives, readFileSync(join(ROOT, "sim", "core-manifest.json"), "utf8")]),
+    JSON.stringify([lock.JWPLC_PACKAGE_COMMIT, target, tc.cxx, defines, directives, (options.libraries ?? []).map((d) => (typeof d === "string" ? resolve(d) : { ...d, dir: resolve(d.dir) })), readFileSync(join(ROOT, "sim", "core-manifest.json"), "utf8")]),
   );
   const discoveryFile = join(outDir, "discovery.json");
   let cached = null;

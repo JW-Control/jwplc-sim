@@ -8,6 +8,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 
 import { decodePng, encodePng, readScreenDump } from "../../scripts/lib/png.mjs";
 import { buildSketch, ROOT } from "./build.mjs";
+import { buildOpenPlcProject, isOpenPlcProject } from "./openplc.mjs";
 import { cosim } from "./cosim.mjs";
 import { buildNativeDevice, installedDevices } from "./device.mjs";
 import { parseResult, parseTimeline, runExeAsync } from "./runner.mjs";
@@ -326,7 +327,9 @@ export async function runTest(test, { pkg, target = "native", buildRoot, record 
   try {
     const rel = relative(pkg.root, sketchDir).startsWith("..") ? relative(ROOT, sketchDir) : relative(pkg.root, sketchDir);
     const outDir = join(buildRoot, target, rel.split(sep).join("__").replace(/[^\w.-]/g, "_"));
-    ({ exe } = await buildSketch(sketchDir, { target, outDir, package: pkg, log }));
+    ({ exe } = isOpenPlcProject(sketchDir)
+      ? await buildOpenPlcProject(sketchDir, { target, outDir, package: pkg, log })
+      : await buildSketch(sketchDir, { target, outDir, package: pkg, log }));
   } catch (err) {
     return { ...out, error: err.message, diagnostics: err.diagnostics?.filter((d) => d.severity === "error").slice(0, 10), wall_ms: Date.now() - t0 };
   }

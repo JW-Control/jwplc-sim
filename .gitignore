@@ -11,3 +11,6 @@ node_modules/
 *.estado/
 *.estado.inicio/
 *.estado.reproduccion/
+
+# Salida de jwsim-cli en proyectos OpenPLC (<proyecto>/build/, como el editor)
+/tests/openplc/*/build/

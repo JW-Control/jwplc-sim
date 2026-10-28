@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // jwsim-cli — interfaz de línea de comandos del simulador (modo headless, G5).
 //
-//   jwsim-cli build  <sketch_dir> [opciones de build]
+//   jwsim-cli build  <sketch_dir|proyecto_openplc> [opciones de build]
 //   jwsim-cli run    <sketch_dir> [opciones de build] -- [opciones del runner]
 //   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--report <archivo>]
 //   jwsim-cli parity [<ref>] [--package <dir>] [--update] [--report <archivo>]
@@ -29,6 +29,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
+import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
 import { buildNativeDevice, installedDevices, loadSceneDevice, packDevice, readManifest } from "./lib/device.mjs";
 import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
@@ -42,7 +43,7 @@ import { fetchPackageRef, packageFromDir, resolvePackageRoot } from "../scripts/
 export const EXIT = { OK: 0, FAIL: 1, USAGE: 2, BUILD: 3, SIM: 4, ENV: 5 };
 
 const USAGE = `uso:
-  jwsim-cli build  <sketch_dir> [--target native|windows] [--out dir] [--package dir] [--json]
+  jwsim-cli build  <sketch_dir> [--target native|windows] [--out dir] [--package dir] [--library dir]... [--json]
   jwsim-cli run    <sketch_dir> [opciones de build] [--json] -- [opciones del runner]
   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
@@ -75,6 +76,7 @@ function parse(argv) {
     else if (a === "--cc") opts.cc = value(++i, a);
     else if (a === "--board") opts.board = value(++i, a);
     else if (a === "--package") opts.packageDir = value(++i, a);
+    else if (a === "--library") (opts.libraries ??= []).push(value(++i, a));
     else if (a === "--report") opts.report = value(++i, a);
     else if (a === "--filter") opts.filter = value(++i, a);
     else if (a === "--index") opts.index = value(++i, a);
@@ -114,8 +116,10 @@ async function build(opts) {
   const sketch = resolve(opts._[0]);
   const base = { sketch, target: opts.target ?? "native", package: pkgInfo(pkg) };
   try {
-    const r = await buildSketch(sketch, { ...opts, package: pkg, log: opts.json ? (m) => process.stderr.write(m + "\n") : undefined });
-    return { ...base, ok: true, executable: r.exe, libraries: r.libraries, wall_ms: Date.now() - t0 };
+    const bopts = { ...opts, package: pkg, log: opts.json ? (m) => process.stderr.write(m + "\n") : undefined };
+    // Un proyecto del OpenPLC Editor pasa antes por la cadena del editor (G6).
+    const r = isOpenPlcProject(sketch) ? await buildOpenPlcProject(sketch, bopts) : await buildSketch(sketch, bopts);
+    return { ...base, ok: true, executable: r.exe, libraries: r.libraries, ...(r.openplc ? { openplc: r.openplc } : {}), wall_ms: Date.now() - t0 };
   } catch (err) {
     const out = { ...base, ok: false, error: err.message, diagnostics: err.diagnostics ?? [], wall_ms: Date.now() - t0 };
     out.exitCode = EXIT.BUILD;

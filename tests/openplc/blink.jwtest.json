@@ -1,0 +1,18 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "G6 LADDER_CHAIN: proyecto del OpenPLC Editor (ST con dos TON, %QX0.0 parpadea cada 500 ms + 20 ms de ciclo; %QX0.1 = %IX0.0) compilado con la cadena del editor fijado en editor.lock (xml2st, STruC++, HAL jwplcbasic.cpp del VPP) y corrido en la placa simulada.",
+  "sketch": "blink",
+  "until_ms": 3000,
+  "stim": ["1500 I0_0=1", "2500 I0_0=0"],
+  "expect": {
+    "signals": [
+      { "at_ms": 1000, "DO": "0b00000000" },
+      { "at_ms": 1400, "DO": "0b00000001" },
+      { "at_ms": 1600, "DO": "0b00000011" },
+      { "at_ms": 1800, "DO": "0b00000010" },
+      { "at_ms": 2400, "DO": "0b00000011" },
+      { "at_ms": 2600, "DO": "0b00000001" },
+      { "at_ms": 2900, "DO": "0b00000000" }
+    ]
+  }
+}

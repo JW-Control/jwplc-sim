@@ -63,8 +63,9 @@ Hay tres formas de uso, y la compatibilidad depende de ellas:
 |---|---|---|---|
 | GDB | GPL-3.0-or-later | Depurador vía DAP (G3) | Proceso separado. |
 | LLDB | Apache-2.0 WITH LLVM-exception | Alternativa en Linux/macOS | |
-| Editor OpenPLC (fork `JW-Control/openplc-editor`) | **verificar** (upstream GPL-3.0) | Se vincula el proyecto; se abre por separado | El botón "Simular" (G6) vive en el fork. |
-| matiec (compilador IEC 61131-3) | GPL-3.0 (compilador); biblioteca de runtime **verificar** (LGPL) | Herramienta; el C que genera se enlaza en el runner | Si la biblioteca de runtime fuera GPL-3.0, sigue siendo compatible. |
+| Editor OpenPLC (fork `JW-Control/openplc-editor`) | GPL-3.0 (`package.json` del fork) | Se vincula el proyecto; se abre por separado. Su cadena de compilación (TypeScript de `src/backend/shared`, `src/middleware/shared`) se empaqueta en `.jwsim/editor/` con `scripts/fetch-editor.mjs` y corre en un proceso Node | No se copia al repositorio (editor.lock). Si se incluye en el instalador, GPL-3.0 es compatible. El botón "Simular" (G6) vive en el fork. |
+| xml2st (Autonomy-Logic, v4.0.7) | **verificar** | Herramienta: PLCopen XML → ST, proceso separado | El editor 4.2.8 ya no usa matiec/iec2c. Se descarga con SHA-256 fijado en editor.lock. |
+| STruC++ (Autonomy-Logic, v0.5.13) | GPL-3.0-or-later con *STruC++ Runtime Library Exception* 1.0 | Compilador ST → C++ (Node, proceso separado); sus headers de runtime y las `.stlib` se enlazan en el runner | La excepción cubre el runtime enlazado en el firmware. Se descarga con SHA-256 fijado. |
 | HAL OpenPLC `jwplcbasic.cpp` | **verificar** (ecosistema OpenPLC, GPL-3.0) | Enlazado en el runner en modo ladder | |
 | QEMU-ESP32 (fork de espressif/qemu) | **GPL-2.0-only** (con partes GPL-2.0-or-later/BSD/MIT) | Proceso separado (G10) | **Incompatible** con GPL-3.0 en un mismo binario. Ver §3.3. |
 | ROM del ESP32 para QEMU | Términos de Espressif — **verificar antes de redistribuir** | Cargada por QEMU | Decisión 7: verificar si se puede incluir en el instalador o debe descargarse. |

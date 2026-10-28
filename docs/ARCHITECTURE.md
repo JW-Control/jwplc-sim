@@ -292,6 +292,44 @@ archivo>`, y dos unidades pueden generar el mismo nombre (en
 esos nombres se renombran con `objcopy` en una copia del objeto, sin tocar la
 caché compartida.
 
+### 3.6 Proyectos OpenPLC **[G6]**
+
+Un proyecto del OpenPLC Editor (carpeta con `project.json`, `pous/` y
+`devices/`, tal como la guarda el editor) se compila con la **cadena del
+propio editor**, fijada en [`editor.lock`](../editor.lock) como el package en
+`package.lock`: tag y commit del fork `JW-Control/openplc-editor`, y SHA-256 de
+lo que se descarga. `scripts/fetch-editor.mjs` deja en `.jwsim/editor/<tag>/`:
+
+- las fuentes del editor (sparse checkout) y su pipeline empaquetado con
+  esbuild (`deps/pipeline.cjs`): las mismas funciones que usa el main process
+  (`runCompilePipeline`, `parseProjectFiles`, `preprocessPous`,
+  `XmlGenerator`, `mergeStrucppRuntimeIntoSkeleton`, `buildDefaultPinMapping`);
+- xml2st y STruC++ en las versiones de `binary-versions.json` del editor, y las
+  `.stlib` incluidas de STruC++ (todas, como `LibraryManagerModule`);
+- el VPP del JWPLC Basic en `PLATFORM_VPP_SHA` del workflow de pre-release del
+  editor (el mismo VPP que empaqueta esa versión).
+
+`cli/lib/openplc.mjs` hace lo que el editor: proyecto → datos
+(`parseProjectFiles`), preproceso y forma IPC (`compiler-adapter.ts`),
+esqueleto `Baremetal` + runtime de STruC++ + HAL `jwplcbasic.cpp` del VPP
+como `src/arduino.cpp` (`compiler-module.ts`) y `runCompilePipeline`:
+xml2st → ST, STruC++ → C++, `defines.h` (defines del HAL, MD5, pines por
+defecto del VPP), bundle. Solo cambia el port: no instala core ni librerías
+(se usa el package fijado) y, en vez de llamar a arduino-cli, devuelve el
+sketch (`examples/Baremetal/`) y la librería `src/`. `buildSketch` los compila
+contra la placa simulada con `src/` como librería (`--library`), con
+`-std=gnu++17 -fno-rtti` en sus unidades salvo `arduino.cpp`: las banderas con
+que el editor precompila `OpenPLCUserLib` y deja el HAL en el sketch.
+
+`jwsim-cli build|run|test` aceptan la carpeta del proyecto en lugar de un
+sketch; el resultado queda en `<proyecto>/build/jwsim/` (el editor usa
+`build/<placa>/`). Pruebas: `tests/openplc/` (ST con TON y Ladder con CTUD).
+
+Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
+`finalizeJwplcHmiSkeleton`) y el Modbus de la pantalla del VPP
+(`vppModbusState`) todavía no se pasan; los POU en C/C++ y Python no se
+probaron.
+
 ## 4. Placa virtual e interfaz de dispositivos
 
 Definida en [`sim/engine/include/jwsim/devices.h`](../sim/engine/include/jwsim/devices.h).

@@ -1,0 +1,16 @@
+# Versión del OpenPLC Editor (JWPLC Edition) cuya cadena de compilación usa el
+# simulador para los proyectos OpenPLC (G6). ÚNICO lugar donde se fija. Del
+# editor salen también, sin copias:
+#   - xml2st y STruC++ en las versiones de su binary-versions.json;
+#   - el VPP del JWPLC Basic en el commit de platform-jwplc que fija su
+#     workflow de pre-release (PLATFORM_VPP_SHA).
+# Para cambiar de versión: REF y COMMIT, y `node scripts/fetch-editor.mjs`.
+OPENPLC_EDITOR_REPO=https://github.com/JW-Control/openplc-editor.git
+# 4.2.8-jwplc.8, publicado con 2.1.0-alpha.15 (27/10/2026).
+OPENPLC_EDITOR_REF=jwplc-editor-v4.2.8-jwplc.8
+OPENPLC_EDITOR_COMMIT=4a61c0b66fb2f7d260f397885f076bcba9fb83b2
+# SHA-256 de lo que se descarga del editor (versiones de su binary-versions.json:
+# xml2st v4.0.7 y STruC++ v0.5.13).
+XML2ST_SHA256_LINUX_X64=85e81f8dde76a17c819903646906683b1a2114cc90b6b3e9a6da0382d992baaa
+XML2ST_SHA256_WIN32_X64=af1880cbddc95aaf37786b38cf2ca062c3f248f002cbbaa5eb06eb8f2f77c916
+STRUCPP_SHA256=3390d793b92b9dd17e6f7ccc555963192fac238237d622fb3dde6ab833172a58
