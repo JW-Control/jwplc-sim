@@ -339,7 +339,8 @@ function resetBoard() {
 
 // ------------------------------------------------------------- editor
 function languageFor(name) {
-  return /\.(ino|c|cpp|h|hpp)$/i.test(name) ? "cpp" : "plaintext";
+  // ST/IL de OpenPLC: el resaltado de Pascal es el más parecido de Monaco.
+  return /\.(ino|c|cpp|h|hpp)$/i.test(name) ? "cpp" : /\.(st|il)$/i.test(name) ? "pascal" : "plaintext";
 }
 
 function loadSketch(sketch) {
@@ -365,6 +366,9 @@ function loadSketch(sketch) {
     state.saved.set(f.name, f.content);
   }
   state.exe = null;
+  // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
+  editor.updateOptions({ readOnly: !!sketch.openplc });
+  if (sketch.openplc) consoleWrite(`[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor; al guardar allí se recompila aquí\n`, "sys");
   showFile(sketch.files[0].name);
   clearProblems();
   $("build-log").textContent = "";
@@ -394,7 +398,7 @@ function renderTabs() {
 }
 
 async function saveSketch() {
-  if (!state.sketch) return;
+  if (!state.sketch || state.sketch.openplc) return;
   const files = [...state.models].map(([name, m]) => ({ name, content: m.getValue() }));
   await api.save({ dir: state.sketch.dir, files });
   for (const f of files) state.saved.set(f.name, f.content);
@@ -1029,7 +1033,8 @@ async function saveProjectFile() {
 
 // Edición externa (Arduino IDE u otro editor): se recarga el archivo y, si
 // la simulación estaba activa, se recompila y reinicia conservando la escena.
-async function onExternalChange({ name, content, at }) {
+async function onExternalChange({ name, content, at, openplc }) {
+  if (openplc) return onOpenPlcChange({ name, content, at });
   const model = state.models.get(name);
   if (!model || model.getValue() === content) return;
   if (model.getValue() !== state.saved.get(name)) {
@@ -1047,6 +1052,48 @@ async function onExternalChange({ name, content, at }) {
     const ms = Date.now() - at;
     $("sb-build").textContent = `Recargado en ${(ms / 1000).toFixed(2)} s tras edición externa`;
     $("sb-build").dataset.reloadMs = String(ms);
+  }
+}
+
+// Proyecto OpenPLC (G6 RELOAD_FROM_EDITOR): el editor guardó un POU, la
+// configuración o los pines. Las pestañas son de solo lectura, así que se
+// actualizan sin preguntar; con la simulación en marcha se recompila con la
+// cadena del editor y se reinicia conservando la escena.
+// El editor guarda varios archivos seguidos: se agrupan (300 ms) y se
+// compila una vez; si llega otro guardado durante la compilación, se repite.
+const plcReload = { timer: null, first: 0, names: new Set(), again: false };
+function onOpenPlcChange({ name, content, at }) {
+  const model = state.models.get(name);
+  if (model && content !== null && model.getValue() !== content) {
+    model.setValue(content);
+    state.saved.set(name, content);
+    renderTabs();
+  }
+  if (!plcReload.names.size) plcReload.first = at;
+  plcReload.names.add(name);
+  clearTimeout(plcReload.timer);
+  plcReload.timer = setTimeout(reloadOpenPlc, 300);
+}
+async function reloadOpenPlc() {
+  if (state.sim === "building") {
+    plcReload.again = true;
+    return;
+  }
+  const names = [...plcReload.names];
+  const at = plcReload.first;
+  plcReload.names.clear();
+  const live = state.sim === "running" || state.sim === "paused";
+  consoleWrite(`[jwsim] guardado en el OpenPLC Editor (${names.join(", ")}); ${live ? "recompilando" : "recargado"}\n`, "sys");
+  if (!live) return;
+  const ok = await buildAndRun({ keepScene: true });
+  if (ok) {
+    const ms = Date.now() - at;
+    $("sb-build").textContent = `Recargado en ${(ms / 1000).toFixed(2)} s tras guardar en el OpenPLC Editor`;
+    $("sb-build").dataset.reloadMs = String(ms);
+  }
+  if (plcReload.again || plcReload.names.size) {
+    plcReload.again = false;
+    plcReload.timer = setTimeout(reloadOpenPlc, 0);
   }
 }
 

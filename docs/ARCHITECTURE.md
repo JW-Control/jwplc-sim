@@ -325,6 +325,15 @@ que el editor precompila `OpenPLCUserLib` y deja el HAL en el sketch.
 sketch; el resultado queda en `<proyecto>/build/jwsim/` (el editor usa
 `build/<placa>/`). Pruebas: `tests/openplc/` (ST con TON y Ladder con CTUD).
 
+En la app **[G6 RELOAD_FROM_EDITOR]**: «Abrir» acepta el `project.json` del
+proyecto (o un `.jwsim` con `program.kind: "openplc"` y `program.project`, la
+carpeta del proyecto). Los POU se ven en pestañas de solo lectura: se editan
+en el OpenPLC Editor. La app vigila la carpeta en forma recursiva
+(`project.json`, `pous/`, `devices/`, `hmi/`; nunca `build/`); los guardados
+del editor se agrupan (300 ms) y, con la simulación en marcha, se recompila
+con la cadena del editor y se reinicia conservando la escena, como la
+recarga de un sketch (G2 EXTERNAL_EDIT_RELOAD).
+
 Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
 `finalizeJwplcHmiSkeleton`) y el Modbus de la pantalla del VPP
 (`vppModbusState`) todavía no se pasan; los POU en C/C++ y Python no se
@@ -1104,8 +1113,10 @@ y sirve para probar la ruta de migración.
 
 Reglas: rutas relativas al `.jwsim`; campos desconocidos se conservan; una
 versión mayor nueva implica migración explícita; `program.kind` admite
-`arduino` (G1) y `openplc` (G6, que genera el C con matiec y lo compila con
-el HAL `jwplcbasic.cpp` del ecosistema OpenPLC contra el mismo backend).
+`arduino` (G1, `program.sketch`) y `openplc` (G6, `program.project`: la
+carpeta del proyecto del OpenPLC Editor, compilada con la cadena del editor;
+§3.6). `links.openplc` sigue siendo un vínculo informativo de un proyecto
+Arduino.
 
 ## 9. Sincronización con el package
 

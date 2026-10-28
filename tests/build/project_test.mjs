@@ -71,3 +71,20 @@ test("guardar conserva campos desconocidos y escribe rutas relativas", () => {
   assert.ok(!saved.program.sketch.startsWith("/"), saved.program.sketch);
   assert.deepEqual(validate(saved), []);
 });
+
+test("proyecto OpenPLC (G6): program.kind openplc con la carpeta del proyecto del editor", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jwsim-proj-"));
+  const out = join(dir, "blink.jwsim");
+  const plc = join(ROOT, "tests", "openplc", "blink");
+  const saved = saveProject(out, { name: "Blink OpenPLC" }, { plcProjectPath: plc });
+  assert.equal(saved.program.kind, "openplc");
+  assert.equal(saved.program.sketch, undefined);
+  assert.ok(!saved.program.project.startsWith("/"), saved.program.project);
+  const { links, missing } = loadProject(out);
+  assert.equal(links.plcProject, plc);
+  assert.deepEqual(missing, []);
+  // Volver a un sketch Arduino quita el vínculo al proyecto OpenPLC.
+  const back = saveProject(out, saved, { sketchPath: join(DEMO, "sketch", "marcha", "marcha.ino") });
+  assert.equal(back.program.kind, "arduino");
+  assert.equal(back.program.project, undefined);
+});

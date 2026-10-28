@@ -108,6 +108,8 @@ export function resolveLinks(project, file) {
   const abs = (p) => (p ? resolve(base, p) : null);
   return {
     sketch: abs(project.program?.sketch),
+    // kind openplc (G6): carpeta del proyecto del OpenPLC Editor.
+    plcProject: abs(project.program?.project),
     openplc: abs(project.links?.openplc),
     hmi: abs(project.links?.hmi),
   };
@@ -136,7 +138,7 @@ export function loadProject(file) {
 
 // Escribe el proyecto: los campos de la interfaz se actualizan y el resto
 // (incluidos los desconocidos) se conserva tal cual.
-export function saveProject(file, project, { sketchPath, links = {}, simulation = {}, scene = {} } = {}) {
+export function saveProject(file, project, { sketchPath, plcProjectPath, links = {}, simulation = {}, scene = {} } = {}) {
   const base = dirname(resolve(file));
   const rel = (p) => {
     const r = toPosix(relative(base, p));
@@ -145,7 +147,14 @@ export function saveProject(file, project, { sketchPath, links = {}, simulation 
   const out = { $schema: SCHEMA_URL, format: "jwsim", version: CURRENT_VERSION, board: { id: "jwplcbasic" }, ...project };
   out.format = "jwsim";
   out.version = CURRENT_VERSION;
-  if (sketchPath) out.program = { ...(out.program ?? {}), kind: "arduino", sketch: rel(sketchPath) };
+  if (sketchPath) {
+    out.program = { ...(out.program ?? {}), kind: "arduino", sketch: rel(sketchPath) };
+    delete out.program.project;
+  }
+  if (plcProjectPath) {
+    out.program = { ...(out.program ?? {}), kind: "openplc", project: rel(plcProjectPath) };
+    delete out.program.sketch;
+  }
   for (const [k, p] of Object.entries(links)) {
     out.links = { ...(out.links ?? {}) };
     if (p) out.links[k] = isAbsolute(p) ? rel(p) : p;

@@ -61,6 +61,10 @@
         "sketch": {
           "$ref": "#/$defs/relPath",
           "pattern": "\\.ino$"
+        },
+        "project": {
+          "description": "kind openplc (G6): carpeta del proyecto del OpenPLC Editor (con project.json).",
+          "$ref": "#/$defs/relPath"
         }
       }
     },

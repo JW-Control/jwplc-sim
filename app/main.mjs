@@ -3,13 +3,14 @@
 // Proceso principal de JWPLC Sim (Electron): ventana, sketches del usuario,
 // compilación con jwsim-cli y ciclo de vida del runner (un PLC simulado).
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 
 import { Worker } from "node:worker_threads";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
+import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
@@ -66,7 +67,26 @@ function workspaceDir() {
   return dir;
 }
 
+// Proyecto del OpenPLC Editor (G6): sus POU se muestran de solo lectura (se
+// editan en el editor) y se compila con la cadena del editor (cli/lib/openplc.mjs).
+const PLC_POU_EXT = new Set([".st", ".il", ".ld", ".fbd", ".sfc", ".py", ".cpp"]);
+function readOpenPlc(dir) {
+  const files = [];
+  const walk = (d) => {
+    if (!existsSync(d)) return;
+    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (PLC_POU_EXT.has(extname(e.name).toLowerCase())) files.push({ name: relative(dir, p).split(sep).join("/"), path: p, content: readFileSync(p, "utf8") });
+    }
+  };
+  walk(join(dir, "pous"));
+  if (!files.length) throw new Error(`el proyecto OpenPLC ${dir} no tiene POU en pous/`);
+  return { dir, name: basename(dir), files, openplc: true };
+}
+
 function readSketch(dir) {
+  if (isOpenPlcProject(dir)) return readOpenPlc(dir);
   const name = basename(dir);
   const files = readdirSync(dir)
     .filter((f) => SKETCH_EXT.has(extname(f).toLowerCase()) && statSync(join(dir, f)).isFile())
@@ -266,16 +286,21 @@ ipcMain.handle("sketch:new", () => {
 
 ipcMain.handle("sketch:openDialog", async () => {
   const r = await dialog.showOpenDialog(win, {
-    title: "Abrir sketch",
+    title: "Abrir sketch o proyecto OpenPLC",
     defaultPath: workspaceDir(),
     properties: ["openFile"],
-    filters: [{ name: "Sketch de Arduino", extensions: ["ino"] }],
+    filters: [
+      { name: "Sketch de Arduino o proyecto OpenPLC", extensions: ["ino", "json"] },
+      { name: "Sketch de Arduino", extensions: ["ino"] },
+      { name: "Proyecto del OpenPLC Editor (project.json)", extensions: ["json"] },
+    ],
   });
   if (r.canceled || !r.filePaths[0]) return null;
   return readSketch(dirname(r.filePaths[0]));
 });
 
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
+  if (isOpenPlcProject(dir)) return true; // se edita en el OpenPLC Editor
   for (const f of files) {
     const p = resolve(dir, f.name);
     if (dirname(p) !== resolve(dir)) throw new Error(`nombre de archivo inválido: ${f.name}`);
@@ -300,6 +325,10 @@ ipcMain.handle("project:open", async () => {
 function openProject(file) {
   const { project, migratedFrom, links, missing } = loadProject(file);
   if (missing.some((m) => m.link === "sketch")) throw new Error(`el sketch vinculado no existe: ${links.sketch}`);
+  if (project.program?.kind === "openplc") {
+    if (!links.plcProject || missing.some((m) => m.link === "plcProject")) throw new Error(`el proyecto OpenPLC vinculado no existe: ${links.plcProject}`);
+    return { file, project, migratedFrom, links, missing, sketch: readSketch(links.plcProject) };
+  }
   return { file, project, migratedFrom, links, missing, sketch: readSketch(dirname(links.sketch)) };
 }
 ipcMain.handle("project:openFile", (_e, file) => openProject(file));
@@ -316,7 +345,7 @@ ipcMain.handle("project:save", async (_e, { file, project, sketchDir, simulation
     target = r.filePath;
   }
   const saved = saveProject(target, project ?? { name: basename(sketchDir) }, {
-    sketchPath: join(sketchDir, `${basename(sketchDir)}.ino`),
+    ...(isOpenPlcProject(sketchDir) ? { plcProjectPath: sketchDir } : { sketchPath: join(sketchDir, `${basename(sketchDir)}.ino`) }),
     simulation,
     scene,
   });
@@ -331,8 +360,14 @@ ipcMain.handle("watch:set", (_e, dir) => {
   watcher = null;
   if (!dir) return false;
   const pending = new Map();
-  watcher = watch(dir, (_event, name) => {
-    if (!name || !SKETCH_EXT.has(extname(name).toLowerCase())) return;
+  // Proyecto OpenPLC: lo que guarda el editor (project.json, pous/, devices/,
+  // hmi/), en subcarpetas; nunca su salida (build/).
+  const plc = isOpenPlcProject(dir);
+  const relevant = (name) =>
+    plc ? !/^build[\\/]/.test(name) && (name === "project.json" || /^(pous|devices|hmi)[\\/]/.test(name)) : SKETCH_EXT.has(extname(name).toLowerCase());
+  watcher = watch(dir, { recursive: plc }, (_event, rawName) => {
+    const name = rawName && String(rawName).split(sep).join("/");
+    if (!name || !relevant(name)) return;
     const p = join(dir, name);
     clearTimeout(pending.get(p));
     // Los editores suelen escribir en varios pasos: se espera a que se asiente.
@@ -343,7 +378,7 @@ ipcMain.handle("watch:set", (_e, dir) => {
         const content = readFileSync(p, "utf8");
         if (ownWrites.get(p) === content) return;
         ownWrites.set(p, content);
-        forward("fs:changed", { name, path: p, content, at: Date.now() });
+        forward("fs:changed", { name, path: p, content, at: Date.now(), openplc: plc });
       }, 60),
     );
   });
