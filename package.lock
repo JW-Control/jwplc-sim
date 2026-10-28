@@ -3,8 +3,8 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.14 publicada (tag; cabeza de release/v2.1.x el 27/10/2026).
-# Respecto de la rama de cierre (eddee62e) solo cambian ejemplos de JWPLC_Display.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.14
-JWPLC_PACKAGE_COMMIT=f3f47aeeaaef4435783fc9a62827862383cdec42
+# 2.1.0-alpha.15 publicada (tag, 27/10/2026). Respecto de alpha.14 solo agrega
+# JW_DWIN, la plantilla de proyecto y los ejemplos del curso (GlobalPeripherals).
+JWPLC_PACKAGE_REF=v2.1.0-alpha.15
+JWPLC_PACKAGE_COMMIT=cbeced0dc983d3f4cda9c0f0db29ee763a037c8a
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0

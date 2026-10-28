@@ -54,15 +54,14 @@ JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC e
 JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux y Windows CI)
 JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
 JWSIM_G5_EXAMPLES_MATRIX=PASS       (alpha.14: 109 ejemplos, 106 compilan, corren y pasan su prueba; 3 obsoletos; artefacto)
-JWSIM_G5_RELEASE_WORKFLOW=IN_PROGRESS (27/10: job SIM_REGRESSION en release-jwplc-package.yml (la release lo necesita) y en el
-                                     CI de PR, rama claude/jwplc-basic-simulator-8dgcen de platform-jwplc @ b8906d83, sin PR;
-                                     sim-regression.yml @ 700d4757 contra v2.1.0-alpha.14: PASS (run 40462884743);
-                                     falta el PR, tras cerrar alpha.15 y con aprobación)
+JWSIM_G5_RELEASE_WORKFLOW=PASS      (27/10: SIM_REGRESSION en release-jwplc-package.yml (la release lo necesita) y en el CI
+                                     de PR de platform-jwplc, jwplc-sim @ 19a1a40d; corrió en la publicación de 2.1.0-alpha.15:
+                                     PASS, run 40599208706)
 JWSIM_PACKAGE_SYNC_ALPHA13=PASS     (docs/reports/SYNC_ALPHA13.md)
 JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; tag v2.1.0-alpha.14 @ f3f47aee: paridad sin diferencias,
                                      matriz 111/111)
-JWSIM_PACKAGE_SYNC_ALPHA15=PASS     (docs/reports/SYNC_ALPHA15.md; republicación de alpha.15: JW_DWIN registrada,
-                                     14 pruebas nuevas, matriz 125 ejemplos)
+JWSIM_PACKAGE_SYNC_ALPHA15=PASS     (docs/reports/SYNC_ALPHA15.md; tag v2.1.0-alpha.15 @ cbeced0d: paridad sin diferencias,
+                                     matriz 125/125)
 JWSIM_G6_*=PENDING                  (OpenPLC: después de cerrar la alpha.15 de Kenyi)
 JWSIM_G7_DEVICE_LIBRARY=PASS        (18 dispositivos, 23 pruebas de comportamiento; símbolos v2 en 13 de 18; docs/reports/G7.md)
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)

@@ -9,8 +9,14 @@ Procedimiento: ARCHITECTURE §9
 JWSIM_PACKAGE_SYNC_ALPHA15=PASS
 ```
 
-`package.lock` sigue en el tag `v2.1.0-alpha.14`: el tag `v2.1.0-alpha.15` se va a publicar de nuevo (se
-borra y se vuelve a crear con `JW_DWIN`). Cuando esté publicado, se fija el tag nuevo y se repite la paridad.
+**Actualización 2026-10-28:** 2.1.0-alpha.15 quedó publicada. `package.lock` fija el tag
+`v2.1.0-alpha.15` (`cbeced0dc983`). Con el tag: paridad PASS (0 diferencias) y matriz de 125 ejemplos: 125
+compilan, 125 corren y 125 pasan su prueba (`JW_RS485/Status` incluido: la corrección de los ejemplos entró en
+la republicación). La publicación final del package ya corrió `SIM_REGRESSION` con jwplc-sim `19a1a40d`: PASS
+([run 40599208706](https://github.com/JW-Control/platform-jwplc/actions/runs/40599208706)).
+
+Antes de publicarse, `package.lock` seguía en el tag `v2.1.0-alpha.14` porque el tag `v2.1.0-alpha.15` se iba
+a volver a crear con `JW_DWIN`.
 El CI de platform-jwplc no depende de `package.lock`: `sim-regression.yml` recibe el árbol del llamador.
 
 ## 1. Qué trae alpha.15 que afecte al simulador
