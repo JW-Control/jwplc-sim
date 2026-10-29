@@ -1421,10 +1421,27 @@ async function main() {
   await initMonaco();
   renderWatch();
   clearDebugView();
-  state.examples = await populateExamples();
-  populateExercises();
+  // Un package que no se puede usar no debe dejar la app muda: el error se
+  // muestra en la consola y el resto arranca igual.
+  const fail = (what, err) =>
+    consoleWrite(`[jwsim] ${what}: ${String(err?.message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "")}\n`, "fatal");
+  try {
+    state.examples = await populateExamples();
+  } catch (err) {
+    state.examples = [];
+    fail("no se pudieron cargar los ejemplos del package", err);
+  }
+  try {
+    await populateExercises();
+  } catch (err) {
+    fail("no se pudieron cargar los ejercicios", err);
+  }
   // Como Arduino IDE: arranca con un sketch nuevo (setup y loop vacíos).
-  loadSketch(await api.newSketch());
+  try {
+    loadSketch(await api.newSketch());
+  } catch (err) {
+    fail("no se pudo crear el sketch nuevo", err);
+  }
 }
 
 main();

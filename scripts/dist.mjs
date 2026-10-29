@@ -59,6 +59,16 @@ const lock = Object.fromEntries(
 );
 const pkgDir = `.jwsim/package/${lock.JWPLC_PACKAGE_REF.replaceAll("/", "_")}`;
 if (!existsSync(join(ROOT, pkgDir))) throw new Error(`falta el package fijado en ${pkgDir}`);
+// La app instalada verifica el package con esta marca (en la PC del usuario
+// git puede no estar en el PATH); la escribe fetch-package al verificarlo.
+const mark = join(ROOT, pkgDir, ".jwsim-commit");
+if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAGE_COMMIT) {
+  throw new Error(`el package en ${pkgDir} no tiene la marca de ${lock.JWPLC_PACKAGE_COMMIT} (node scripts/fetch-package.mjs)`);
+}
+// Cadena del OpenPLC Editor (G6), si se descargó: sin ella la app compila
+// sketches igual y pide node scripts/fetch-editor.mjs para proyectos OpenPLC.
+const editorDir = existsSync(join(ROOT, ".jwsim", "editor")) ? ".jwsim/editor" : null;
+if (!editorDir) console.error("[dist] aviso: sin .jwsim/editor; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)");
 if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falta el toolchain (node scripts/fetch-toolchain.mjs)");
 
 // 2. electron-builder (dependencia de desarrollo de app/).
@@ -82,9 +92,10 @@ const config = {
   files: ["**/*", "!tests/**", "!build-res/**"],
   extraResources: [
     res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("exercises"), res("third_party"),
-    res("package.lock"), res("LICENSE"), res("LICENSES"),
+    res("package.lock"), res("editor.lock"), res("LICENSE"), res("LICENSES"),
     res(pkgDir),
     res(".jwsim/third_party"),
+    ...(editorDir ? [res(editorDir)] : []),
     ...(win ? [res(".jwsim/toolchain")] : []),
   ],
   win: {

@@ -16,7 +16,7 @@
 //                      fijado; nunca se modifica ese checkout.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,6 +58,23 @@ function revParse(dir, rev) {
   }
 }
 
+// Marca con el commit verificado: permite usar el package sin git (el
+// instalador lo lleva así a PCs donde git no está en el PATH).
+const COMMIT_MARK = ".jwsim-commit";
+function readMark(dir) {
+  try {
+    return readFileSync(join(dir, COMMIT_MARK), "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+function markCommit(dir, commit) {
+  if (readMark(dir) === commit) return;
+  try {
+    writeFileSync(join(dir, COMMIT_MARK), commit + "\n");
+  } catch {}
+}
+
 // Devuelve la raíz del checkout (directorio que contiene JWPLC/2.1.0).
 export function resolvePackageRoot({ fetch = true } = {}) {
   const lock = readLock();
@@ -93,9 +110,22 @@ export function resolvePackageRoot({ fetch = true } = {}) {
   }
 
   const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF.replaceAll("/", "_"));
-  if (existsSync(join(dest, ".git"))) {
+  if (existsSync(join(dest, ".git")) || existsSync(join(dest, COMMIT_MARK))) {
     const head = revParse(dest, "HEAD");
-    if (head === lock.JWPLC_PACKAGE_COMMIT) return { root: dest, lock, source: "cache" };
+    if (head === lock.JWPLC_PACKAGE_COMMIT) {
+      markCommit(dest, head);
+      return { root: dest, lock, source: "cache" };
+    }
+    // Sin git (la PC del usuario con el instalador): vale la marca escrita al
+    // descargarlo o al armar el instalador. Nunca se borra un package que no
+    // se pudo verificar: sin git tampoco se podría volver a clonar.
+    if (head === null) {
+      if (readMark(dest) === lock.JWPLC_PACKAGE_COMMIT) return { root: dest, lock, source: "cache" };
+      throw new Error(
+        `no se pudo verificar el package en ${dest} (git no disponible y sin la marca ${COMMIT_MARK} de ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}). ` +
+          `Reinstale JWPLC Sim o instale Git para Windows.`,
+      );
+    }
     if (!fetch) throw new Error(`${dest} está en ${head}, se esperaba ${lock.JWPLC_PACKAGE_COMMIT}`);
     rmSync(dest, { recursive: true, force: true });
   }
@@ -143,6 +173,7 @@ export function resolvePackageRoot({ fetch = true } = {}) {
         `¿Se movió el tag? No se continúa.`,
     );
   }
+  markCommit(dest, head);
   return { root: dest, lock, source: "clone" };
 }
 
