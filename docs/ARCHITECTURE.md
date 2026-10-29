@@ -339,6 +339,21 @@ Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
 (`vppModbusState`) todavía no se pasan; los POU en C/C++ y Python no se
 probaron.
 
+### 3.7 Autocompletado del editor
+
+`cli/lib/api-catalog.mjs` arma, de los headers del package fijado, el
+catálogo de la API del Basic: `I0_x`/`Q0_x` (`pins_is.h`), los `BTN_*`
+(`JWPLCButtonId`), los objetos globales `extern … JWPLC_*` con los métodos
+públicos de su clase y las funciones libres `JWPLC_*`. No ofrece lo que maneja
+el runtime (`begin*`, `update`, tareas y escaneo de la botonera) ni
+`JWPLC_LogicRuntime`. `app/renderer/completion.js` sugiere según el lugar del
+cursor (`digitalRead(` → entradas y sus alias del sketch, `digitalWrite(` →
+salidas y luego `HIGH`/`LOW`, `JWPLC_Buttons.pressed(` → `BTN_*`, `Objeto.` →
+sus métodos) y muestra la firma del parámetro; fuera de una llamada, la API
+del Basic, el Arduino que se usa y lo declarado en el sketch. Las sugerencias
+por palabras de Monaco están apagadas. Pruebas: `tests/build/api_catalog_test.mjs`
+y `app/tests/e2e-completion.mjs`.
+
 ## 4. Placa virtual e interfaz de dispositivos
 
 Definida en [`sim/engine/include/jwsim/devices.h`](../sim/engine/include/jwsim/devices.h).

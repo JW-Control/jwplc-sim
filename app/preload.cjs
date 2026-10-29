@@ -12,6 +12,7 @@ const on = (channel) => (cb) => {
 contextBridge.exposeInMainWorld("jwsim", {
   info: () => ipcRenderer.invoke("app:info"),
   listExamples: () => ipcRenderer.invoke("examples:list"),
+  apiCatalog: () => ipcRenderer.invoke("api:catalog"),
   listExercises: () => ipcRenderer.invoke("exercises:list"),
   openExercise: (id) => ipcRenderer.invoke("exercises:open", id),
   exerciseInfo: (file) => ipcRenderer.invoke("exercise:info", file),

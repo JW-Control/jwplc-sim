@@ -9,6 +9,7 @@ import { Worker } from "node:worker_threads";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
+import { buildApiCatalog } from "../cli/lib/api-catalog.mjs";
 import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
@@ -199,6 +200,17 @@ ipcMain.handle("app:info", () => {
 });
 
 ipcMain.handle("examples:list", () => listExamples());
+
+// Catálogo de la API del Basic para el autocompletado, de los headers del
+// package fijado (cli/lib/api-catalog.mjs).
+let apiCatalog = null;
+ipcMain.handle("api:catalog", () => {
+  if (!apiCatalog) {
+    const { root, lock } = resolvePackageRoot();
+    apiCatalog = buildApiCatalog(join(root, lock.JWPLC_PACKAGE_TREE));
+  }
+  return apiCatalog;
+});
 
 // ---------------------------------------------------------------- ejercicios (G9)
 const EXERCISES = join(import.meta.dirname, "..", "exercises");

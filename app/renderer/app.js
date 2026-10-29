@@ -1357,7 +1357,16 @@ function initMonaco() {
         scrollBeyondLastLine: false,
         tabSize: 2,
         glyphMargin: true,
+        // Autocompletado propio (completion.js): sin la lista de palabras de
+        // Monaco, que mezcla todo lo que aparece en el archivo.
+        wordBasedSuggestions: "off",
+        quickSuggestions: { other: true, comments: false, strings: false },
+        suggestOnTriggerCharacters: true,
       });
+      api
+        .apiCatalog()
+        .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models.values()]))
+        .catch((err) => consoleWrite(`[jwsim] autocompletado no disponible: ${err.message}\n`, "sys"));
       // Clic en el margen: alterna un breakpoint en esa línea.
       editor.onMouseDown((e) => {
         if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active) {
