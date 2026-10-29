@@ -88,7 +88,7 @@ const config = {
   asar: false,
   npmRebuild: false,
   // La app sin sus pruebas ni las dependencias de desarrollo.
-  files: ["**/*", "!tests/**", "!build-res/**"],
+  files: ["**/*", "!tests/**", "!build-res/**", "!installer/**"],
   extraResources: [
     res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("exercises"), res("third_party"),
     res("package.lock"), res("editor.lock"), res("LICENSE"), res("LICENSES"),
@@ -115,6 +115,8 @@ const config = {
     uninstallerIcon: join(ICON, "icon.ico"),
     installerHeaderIcon: join(ICON, "icon.ico"),
     artifactName: "JWPLC-Sim-${version}-instalador.${ext}",
+    // Comprobación propia de procesos abiertos (ver el archivo).
+    include: join(APP, "installer", "installer.nsh"),
   },
 };
 
