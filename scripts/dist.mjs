@@ -22,7 +22,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
+
+import { resolvePackageRoot } from "./fetch-package.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const APP = join(ROOT, "app");
@@ -51,19 +53,16 @@ node([join("scripts", "app.mjs"), "--setup"]);
 log("dependencias de terceros…");
 node([join("scripts", "fetch-third-party.mjs")]);
 
-const lock = Object.fromEntries(
-  readFileSync(join(ROOT, "package.lock"), "utf8")
-    .split(/\r?\n/)
-    .filter((l) => /^\w+=/.test(l))
-    .map((l) => l.split("=")),
-);
-const pkgDir = `.jwsim/package/${lock.JWPLC_PACKAGE_REF.replaceAll("/", "_")}`;
-if (!existsSync(join(ROOT, pkgDir))) throw new Error(`falta el package fijado en ${pkgDir}`);
-// La app instalada verifica el package con esta marca (en la PC del usuario
-// git puede no estar en el PATH); la escribe fetch-package al verificarlo.
-const mark = join(ROOT, pkgDir, ".jwsim-commit");
+// Verifica el package fijado y le escribe la marca con su commit: la app
+// instalada lo verifica con ella (en la PC del usuario git puede no estar en
+// el PATH). Un package descargado antes de que existiera la marca la recibe
+// aquí.
+if (process.env.JWPLC_PACKAGE_DIR) throw new Error("el instalador lleva el package de .jwsim/package: quite JWPLC_PACKAGE_DIR");
+const { root: pkgRoot, lock } = resolvePackageRoot();
+const pkgDir = relative(ROOT, pkgRoot).replaceAll("\\", "/");
+const mark = join(pkgRoot, ".jwsim-commit");
 if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAGE_COMMIT) {
-  throw new Error(`el package en ${pkgDir} no tiene la marca de ${lock.JWPLC_PACKAGE_COMMIT} (node scripts/fetch-package.mjs)`);
+  throw new Error(`no se pudo marcar el package en ${pkgDir} con ${lock.JWPLC_PACKAGE_COMMIT}`);
 }
 // Cadena del OpenPLC Editor (G6), si se descargó: sin ella la app compila
 // sketches igual y pide node scripts/fetch-editor.mjs para proyectos OpenPLC.
