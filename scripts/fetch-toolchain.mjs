@@ -70,11 +70,14 @@ function dllCharacteristicsOffset(fd) {
 }
 
 // Devuelve true si cc1/cc1plus quedan sin ASLR (ya estaban o se corrigieron).
+// Se lee primero en solo lectura: instalada en Program Files la app no puede
+// escribir el toolchain (dist.mjs lo deja corregido antes de empaquetar) y,
+// si aun así hiciera falta corregirlo y no se puede, se compila sin PCH fijo.
 export function ensurePchFriendlyCompiler(bin) {
   const exes = compilerProperExes(bin);
   if (!exes.length) return false;
   for (const exe of exes) {
-    const fd = openSync(exe, "r+");
+    let fd = openSync(exe, "r");
     try {
       const off = dllCharacteristicsOffset(fd);
       if (off < 0) return false;
@@ -82,12 +85,18 @@ export function ensurePchFriendlyCompiler(bin) {
       readSync(fd, buf, 0, 2, off);
       const flags = buf.readUInt16LE(0);
       const fixed = flags & ~(DYNAMIC_BASE | HIGH_ENTROPY_VA);
-      if (fixed !== flags) {
-        buf.writeUInt16LE(fixed, 0);
-        writeSync(fd, buf, 0, 2, off);
-      }
-    } finally {
+      if (fixed === flags) continue;
       closeSync(fd);
+      fd = null;
+      try {
+        fd = openSync(exe, "r+");
+      } catch {
+        return false;
+      }
+      buf.writeUInt16LE(fixed, 0);
+      writeSync(fd, buf, 0, 2, off);
+    } finally {
+      if (fd !== null) closeSync(fd);
     }
   }
   return true;

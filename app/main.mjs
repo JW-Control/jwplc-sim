@@ -33,6 +33,9 @@ if (app.isPackaged && process.platform === "win32") {
     process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
   }
 }
+// Instalada, la carpeta de la app puede ser de solo lectura (Program Files,
+// instalación para todos los usuarios): la caché de compilación va a los datos.
+if (app.isPackaged) process.env.JWSIM_CACHE_DIR ??= join(app.getPath("userData"), "cache");
 
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
 // Sketch nuevo: el clásico de Arduino IDE.

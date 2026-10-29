@@ -279,7 +279,9 @@ export async function buildSketch(sketchDir, options = {}) {
 
   const sketchName = basename(resolve(sketchDir));
   const outDir = resolve(options.outDir ?? join(ROOT, "build", `${sketchName}-${target}`));
-  const cacheDir = join(ROOT, "build", "cache", target);
+  // La app instalada no puede escribir junto a sus archivos (Program Files):
+  // app/main.mjs pone la caché en sus datos con JWSIM_CACHE_DIR.
+  const cacheDir = join(process.env.JWSIM_CACHE_DIR ?? join(ROOT, "build", "cache"), target);
   mkdirSync(outDir, { recursive: true });
 
   // Coherencia del manifiesto del core contra el árbol del package.

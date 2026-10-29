@@ -25,6 +25,7 @@ import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 
 import { resolvePackageRoot } from "./fetch-package.mjs";
+import { bundledToolchainBin, ensurePchFriendlyCompiler } from "./fetch-toolchain.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const APP = join(ROOT, "app");
@@ -69,6 +70,9 @@ if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAG
 const editorDir = existsSync(join(ROOT, ".jwsim", "editor")) ? ".jwsim/editor" : null;
 if (!editorDir) console.error("[dist] aviso: sin .jwsim/editor; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)");
 if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falta el toolchain (node scripts/fetch-toolchain.mjs)");
+// cc1/cc1plus sin ASLR ya en el instalador: instalada en Program Files la app
+// no puede corregirlos al compilar.
+if (win && !ensurePchFriendlyCompiler(bundledToolchainBin())) throw new Error("no se pudo preparar cc1/cc1plus del toolchain para el PCH");
 
 // 2. electron-builder (dependencia de desarrollo de app/).
 const { build, Platform } = createRequire(join(APP, "package.json"))("electron-builder");
