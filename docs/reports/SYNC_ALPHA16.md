@@ -15,6 +15,6 @@ La entrada `TFT_eSPI` de `thirdPartyLibraries` y su `flagOverrides` se mantienen
 ## Resultado (01/11/2026, Linux native)
 
 - `jwsim-cli parity`: PASS (0 diferencias).
-- `jwsim-cli matrix` con el package en `3ba1996` (PR #199): todos los ejemplos PASS salvo `Display_Graficos_Sprite`, que entonces no tenía prueba (añadida aquí).
+- `jwsim-cli matrix` con el package en `3ba1996` (PR #199): 126 ejemplos; 125 compilan, corren y pasan su prueba. El único sin prueba era `Display_Graficos_Sprite`, que se añade aquí.
 - `jwsim-cli test` de los dos ejemplos nuevos: PASS, deterministas en dos corridas.
 - `JWSIM_G4_TFT_HMI` (native): la página RTC difiere 170 px de la referencia **también con alpha.15**; no viene de estos cambios.
