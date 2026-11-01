@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UIBar. OK entra; valores simulados con ondas lentas: a los 4 s el nivel pasa su umbral (barra roja), a los 8,8 s está por debajo.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_Barras",
+  "until_ms": 9000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - Widgets_Barras$",
+        "count": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 4000,
+        "ref": "screens/Widgets_Barras_umbral.png"
+      },
+      {
+        "at_ms": 8800,
+        "ref": "screens/Widgets_Barras_normal.png"
+      }
+    ]
+  }
+}

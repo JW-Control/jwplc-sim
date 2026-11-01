@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UIQR. OK entra al QR de vinculación (jwplc://vincular?id=JWPLC-0001&c=482913); ► pasa al QR de la red Wi-Fi; ESC vuelve a IDLE. Las capturas se leyeron con un lector de QR (OpenCV) y devuelven el texto exacto.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_QR",
+  "until_ms": 5200,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "3000 BTN_RIGHT=1",
+    "3100 BTN_RIGHT=0",
+    "4500 BTN_ESC=1",
+    "4600 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - Widgets_QR$",
+        "count": 1
+      },
+      {
+        "match": "^QR v3 jwplc://vincular\\?id=JWPLC-0001&c=482913$",
+        "count": 1
+      },
+      {
+        "match": "^QR v3 WIFI:T:WPA;S:JWPLC-0001;P:jw12345678;;$",
+        "count": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 2500,
+        "ref": "screens/Widgets_QR_vincular.png"
+      },
+      {
+        "at_ms": 4000,
+        "ref": "screens/Widgets_QR_wifi.png"
+      }
+    ]
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UIKeyboard. OK entra; ▼×3 y ►×3 llegan a «<-» y borran el «1» de «Bomba 1»; ▲×4 y ◄×6 llegan al «2» y lo escriben; ▼×4 y ►×3 llegan a OK. Clave: ▼ «a», ▲▲ «1», ▼×4 y ◄ a OK. ESC en el resumen vuelve a IDLE. Capturas: teclado, borrado, «Bomba 2», clave vacía, clave «**» y resumen.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_Teclado",
+  "until_ms": 14500,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "2200 BTN_DOWN=1",
+    "2300 BTN_DOWN=0",
+    "2500 BTN_DOWN=1",
+    "2600 BTN_DOWN=0",
+    "2800 BTN_DOWN=1",
+    "2900 BTN_DOWN=0",
+    "3100 BTN_RIGHT=1",
+    "3200 BTN_RIGHT=0",
+    "3400 BTN_RIGHT=1",
+    "3500 BTN_RIGHT=0",
+    "3700 BTN_RIGHT=1",
+    "3800 BTN_RIGHT=0",
+    "4000 BTN_OK=1",
+    "4100 BTN_OK=0",
+    "4300 BTN_UP=1",
+    "4400 BTN_UP=0",
+    "4600 BTN_UP=1",
+    "4700 BTN_UP=0",
+    "4900 BTN_UP=1",
+    "5000 BTN_UP=0",
+    "5200 BTN_UP=1",
+    "5300 BTN_UP=0",
+    "5500 BTN_LEFT=1",
+    "5600 BTN_LEFT=0",
+    "5800 BTN_LEFT=1",
+    "5900 BTN_LEFT=0",
+    "6100 BTN_LEFT=1",
+    "6200 BTN_LEFT=0",
+    "6400 BTN_LEFT=1",
+    "6500 BTN_LEFT=0",
+    "6700 BTN_LEFT=1",
+    "6800 BTN_LEFT=0",
+    "7000 BTN_LEFT=1",
+    "7100 BTN_LEFT=0",
+    "7300 BTN_OK=1",
+    "7400 BTN_OK=0",
+    "7600 BTN_DOWN=1",
+    "7700 BTN_DOWN=0",
+    "7900 BTN_DOWN=1",
+    "8000 BTN_DOWN=0",
+    "8200 BTN_DOWN=1",
+    "8300 BTN_DOWN=0",
+    "8500 BTN_DOWN=1",
+    "8600 BTN_DOWN=0",
+    "8800 BTN_RIGHT=1",
+    "8900 BTN_RIGHT=0",
+    "9100 BTN_RIGHT=1",
+    "9200 BTN_RIGHT=0",
+    "9400 BTN_RIGHT=1",
+    "9500 BTN_RIGHT=0",
+    "9700 BTN_OK=1",
+    "9800 BTN_OK=0",
+    "10000 BTN_DOWN=1",
+    "10100 BTN_DOWN=0",
+    "10300 BTN_OK=1",
+    "10400 BTN_OK=0",
+    "10600 BTN_UP=1",
+    "10700 BTN_UP=0",
+    "10900 BTN_UP=1",
+    "11000 BTN_UP=0",
+    "11200 BTN_OK=1",
+    "11300 BTN_OK=0",
+    "11500 BTN_DOWN=1",
+    "11600 BTN_DOWN=0",
+    "11800 BTN_DOWN=1",
+    "11900 BTN_DOWN=0",
+    "12100 BTN_DOWN=1",
+    "12200 BTN_DOWN=0",
+    "12400 BTN_DOWN=1",
+    "12500 BTN_DOWN=0",
+    "12700 BTN_LEFT=1",
+    "12800 BTN_LEFT=0",
+    "13000 BTN_OK=1",
+    "13100 BTN_OK=0",
+    "13300 BTN_ESC=1",
+    "13400 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - Widgets_Teclado$",
+        "count": 1
+      },
+      {
+        "match": "^NOMBRE=Bomba 2$",
+        "count": 1
+      },
+      {
+        "match": "^CLAVE=a1$",
+        "count": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 3000,
+        "ref": "screens/Widgets_Teclado_teclado.png"
+      },
+      {
+        "at_ms": 4200,
+        "ref": "screens/Widgets_Teclado_borrado.png"
+      },
+      {
+        "at_ms": 7500,
+        "ref": "screens/Widgets_Teclado_nombre.png"
+      },
+      {
+        "at_ms": 9900,
+        "ref": "screens/Widgets_Teclado_clave.png"
+      },
+      {
+        "at_ms": 11400,
+        "ref": "screens/Widgets_Teclado_clave_oculta.png"
+      },
+      {
+        "at_ms": 13200,
+        "ref": "screens/Widgets_Teclado_resumen.png"
+      }
+    ]
+  }
+}
