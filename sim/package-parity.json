@@ -50,6 +50,7 @@
     "JWPLC_ModbusRTU",
     "JWPLC_ModbusTCP",
     "JWPLC_RS485",
+    "JWPLC_Runtime",
     "JWPLC_TFT",
     "JWPLC_UI_Widgets",
     "JW_DWIN",

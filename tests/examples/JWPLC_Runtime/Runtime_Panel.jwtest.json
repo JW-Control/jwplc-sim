@@ -1,0 +1,95 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Runtime (MVP estilo LOGO! 8) con el programa de ejemplo. OK abre el menú; ▲ va a INICIAR; el diálogo arranca en «No», ◄ elige «Sí». I0.0+I0.1 encienden Q0.0 tras T=3 s (B02 TON). Cinco pulsos en I0.6 llenan el contador B05 (5/5): Q0.2 y el aviso B08 ponen ERR A08 en la pantalla RUN. Después Programa > Monitor con el contador seleccionado.",
+  "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_Panel",
+  "until_ms": 20000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-02T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "2500 BTN_UP=1",
+    "2600 BTN_UP=0",
+    "3100 BTN_OK=1",
+    "3200 BTN_OK=0",
+    "3900 BTN_LEFT=1",
+    "4000 BTN_LEFT=0",
+    "4500 BTN_OK=1",
+    "4600 BTN_OK=0",
+    "6100 I0_0=1",
+    "6150 I0_1=1",
+    "10150 I0_6=1",
+    "10300 I0_6=0",
+    "10450 I0_6=1",
+    "10600 I0_6=0",
+    "10750 I0_6=1",
+    "10900 I0_6=0",
+    "11050 I0_6=1",
+    "11200 I0_6=0",
+    "11350 I0_6=1",
+    "11500 I0_6=0",
+    "12300 BTN_ESC=1",
+    "12400 BTN_ESC=0",
+    "13700 BTN_OK=1",
+    "13800 BTN_OK=0",
+    "14700 BTN_OK=1",
+    "14800 BTN_OK=0",
+    "15500 BTN_DOWN=1",
+    "15600 BTN_DOWN=0",
+    "16100 BTN_OK=1",
+    "16200 BTN_OK=0",
+    "18000 BTN_DOWN=1",
+    "18100 BTN_DOWN=0",
+    "18350 BTN_DOWN=1",
+    "18450 BTN_DOWN=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - Runtime_Panel$",
+        "count": 1
+      },
+      {
+        "match": "^Q1=1$",
+        "count": 1
+      }
+    ],
+    "signals": [
+      {
+        "at_ms": 6000,
+        "Q0_0": 0,
+        "Q0_2": 0
+      },
+      {
+        "at_ms": 9900,
+        "Q0_0": 1,
+        "Q0_2": 0
+      },
+      {
+        "at_ms": 12000,
+        "Q0_0": 1,
+        "Q0_2": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 6000,
+        "ref": "screens/Runtime_Panel_menu_run.png"
+      },
+      {
+        "at_ms": 13600,
+        "ref": "screens/Runtime_Panel_aviso_A08.png"
+      },
+      {
+        "at_ms": 17900,
+        "ref": "screens/Runtime_Panel_monitor.png"
+      },
+      {
+        "at_ms": 19450,
+        "ref": "screens/Runtime_Panel_monitor_contador.png"
+      }
+    ]
+  }
+}

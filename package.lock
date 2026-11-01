@@ -5,6 +5,7 @@
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # alpha.16 en curso (01/11/2026): línea JWPLC-Sim, JWPLC_TFT 0.5.0 en modo fuente con
 # TFT_eSPI en src/ y la librería nueva JWPLC_UI_Widgets (PR #199 y siguiente).
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/ui-f0-resto
-JWPLC_PACKAGE_COMMIT=226801cfea8b954dd7972eab57250bdac4a09d3a
+# feature/runtime-mvp: librería nueva JWPLC_Runtime (MVP estilo LOGO! 8).
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/runtime-mvp
+JWPLC_PACKAGE_COMMIT=ac1682a6b2fb045562773be5a1ccd189bcf0f364
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
