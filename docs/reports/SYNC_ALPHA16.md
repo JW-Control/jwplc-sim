@@ -18,3 +18,5 @@ La entrada `TFT_eSPI` de `thirdPartyLibraries` y su `flagOverrides` se mantienen
 - `jwsim-cli matrix` con el package en `3ba1996` (PR #199): 126 ejemplos; 125 compilan, corren y pasan su prueba. El único sin prueba era `Display_Graficos_Sprite`, que se añade aquí.
 - `jwsim-cli test` de los dos ejemplos nuevos: PASS, deterministas en dos corridas.
 - `JWSIM_G4_TFT_HMI` (native): la página RTC difiere 170 px de la referencia **también con alpha.15**; no viene de estos cambios.
+- `jwsim-cli test tests/examples/JWPLC_Display tests/examples/JWPLC_UI_Widgets`: 15/16. La que falla, `Display_Alpha8_HMI_Gate`, apunta a un ejemplo que ya no existe en el package (tampoco está en `v2.1.0-alpha.15`); la matriz no la corre. Es preexistente y conviene retirarla o reubicarla aparte.
+- `JWPLC_FONT_16` (Font 2 de TFT_eSPI como GFXfont) entra en `JWPLC_TFT`; los widgets la usan en filas, mensajes y avisos. Capturas de `Widgets_Parametros` regeneradas.
