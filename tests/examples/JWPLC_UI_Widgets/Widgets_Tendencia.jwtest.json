@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UI_Widgets: JWPLC_UITrend. OK entra a la pantalla; el horno simulado sube de 20 a 60 C; ▲ ▲ a los 20 s llevan la consigna a 70 C; OK pausa a los 40 s y reanuda a los 44 s; a los ~85 s el cursor da la vuelta con el hueco; ESC vuelve a IDLE y OK redibuja el historial. Capturas: subida, pausa, vuelta del cursor, IDLE y regreso.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_Tendencia",
+  "until_ms": 96000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "20000 BTN_UP=1", "20100 BTN_UP=0",
+    "20300 BTN_UP=1", "20400 BTN_UP=0",
+    "40000 BTN_OK=1", "40100 BTN_OK=0",
+    "44000 BTN_OK=1", "44100 BTN_OK=0",
+    "92000 BTN_ESC=1", "92100 BTN_ESC=0",
+    "94000 BTN_OK=1", "94100 BTN_OK=0"
+  ],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - Widgets_Tendencia$", "count": 1 }
+    ],
+    "screen": [
+      { "at_ms": 19000, "ref": "screens/Widgets_Tendencia_subida.png" },
+      { "at_ms": 42000, "ref": "screens/Widgets_Tendencia_pausa.png" },
+      { "at_ms": 91000, "ref": "screens/Widgets_Tendencia_vuelta.png" },
+      { "at_ms": 93000, "ref": "screens/Widgets_Tendencia_idle.png" },
+      { "at_ms": 95500, "ref": "screens/Widgets_Tendencia_regreso.png" }
+    ]
+  }
+}
