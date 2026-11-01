@@ -50,6 +50,8 @@ JWSIM_G4_TFT_HMI=PASS              (4 capturas idénticas píxel a píxel; 6 bot
 JWSIM_G4_RS485_MULTINODE=PASS      (3 nodos, choques, maestro externo por TCP; COM con pty)
 JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducción; W5500 poblado por defecto)
 JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502)
+JWSIM_EXPANSION_RTU=PASS           (01/11, alpha.16: esclavo JWPLC_Expansion en el bus RS-485; alta 247 -> 5, clave errónea,
+                                    estado seguro 0x03 y persistencia; scripts/gate-expansion-rtu.mjs)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)
 JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux y Windows CI)
 JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
@@ -146,6 +148,7 @@ JWSIM_G10_*=PENDING
 | `JWSIM_G4_RS485_MULTINODE` | UART con tiempo de carácter por baudios; bus RS-485 entre varios runners y con un COM virtual del host; `JWPLC_ModbusRTU` maestro/esclavo interoperando con una herramienta externa (JW Modbus Tool). | Prueba con 3 nodos y herramienta externa. |
 | `JWSIM_G4_W5500_MODEL` | **Tras publicarse alpha.13** (2026-10-22). Modelo W5500 por registros (común, 8 sockets, buffers, INTn), TCP/UDP mapeados a sockets del host; ejemplos de `JWPLC_Ethernet` pasan con el comportamiento de alpha.13/14. | Ejemplos + tests del modelo. |
 | `JWSIM_G4_MODBUS_TCP_HOST` | `JWPLC_ModbusTCP` accesible desde el host (localhost/LAN) por un cliente externo; varios PLC simulados en puertos distintos. | Cliente Modbus TCP externo. |
+| `JWSIM_EXPANSION_RTU` | Protocolo de expansión v2 del package (alpha.16): el ejemplo `Expansion_Esclavo_Basic` responde de fábrica en el ID 247, se configura con el comando 5 (ID, estado seguro, vigilancia, vínculo), rechaza la clave errónea, aplica el estado seguro al callar el maestro y conserva la configuración tras reiniciar. | `scripts/gate-expansion-rtu.mjs` (dos runners en el bus RS-485). |
 
 ## G5 — CI del package
 

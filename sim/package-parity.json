@@ -44,6 +44,7 @@
     "Insights",
     "JWPLC_Display",
     "JWPLC_Ethernet",
+    "JWPLC_Expansion",
     "JWPLC_GlobalPeripherals",
     "JWPLC_LogicRuntime",
     "JWPLC_LogicRuntime_UI",
