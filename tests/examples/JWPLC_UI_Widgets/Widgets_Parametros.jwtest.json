@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UI_Widgets 0.1.0. OK entra a la lista; ▼ ▼ elige «C1 Preset»; OK abre el editor; ▲ suma 1 (251), ◄ pasa a las decenas y ▲ suma 10 (261); OK abre el diálogo y OK (Sí) guarda; ▼ ×5 hace scroll hasta «Ciclo PWM»; ESC vuelve a IDLE. Capturas: lista, editor, diálogo, aviso «Guardado», lista desplazada e IDLE.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_Parametros",
+  "until_ms": 9800,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1", "1600 BTN_OK=0",
+    "2200 BTN_DOWN=1", "2300 BTN_DOWN=0",
+    "2500 BTN_DOWN=1", "2600 BTN_DOWN=0",
+    "3000 BTN_OK=1", "3100 BTN_OK=0",
+    "3400 BTN_UP=1", "3500 BTN_UP=0",
+    "3700 BTN_LEFT=1", "3800 BTN_LEFT=0",
+    "3900 BTN_UP=1", "4000 BTN_UP=0",
+    "4400 BTN_OK=1", "4500 BTN_OK=0",
+    "4900 BTN_OK=1", "5000 BTN_OK=0",
+    "7200 BTN_DOWN=1", "7300 BTN_DOWN=0",
+    "7500 BTN_DOWN=1", "7600 BTN_DOWN=0",
+    "7800 BTN_DOWN=1", "7900 BTN_DOWN=0",
+    "8100 BTN_DOWN=1", "8200 BTN_DOWN=0",
+    "8400 BTN_DOWN=1", "8500 BTN_DOWN=0",
+    "9000 BTN_ESC=1", "9100 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - Widgets_Parametros$", "count": 1 },
+      { "match": "^GUARDADO C1 Preset = 261 pzs$", "count": 1, "after_ms": 4900, "before_ms": 5100 },
+      { "match": "^GUARDADO", "count": 1 }
+    ],
+    "screen": [
+      { "at_ms": 2800, "ref": "screens/Widgets_Parametros_lista.png" },
+      { "at_ms": 4200, "ref": "screens/Widgets_Parametros_editor.png" },
+      { "at_ms": 4700, "ref": "screens/Widgets_Parametros_dialogo.png" },
+      { "at_ms": 5200, "ref": "screens/Widgets_Parametros_guardado.png" },
+      { "at_ms": 8700, "ref": "screens/Widgets_Parametros_scroll.png" },
+      { "at_ms": 9600, "ref": "screens/Widgets_Parametros_idle.png" }
+    ]
+  }
+}

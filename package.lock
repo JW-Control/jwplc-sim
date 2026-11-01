@@ -3,8 +3,8 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.15 publicada (tag, 27/10/2026). Respecto de alpha.14 solo agrega
-# JW_DWIN, la plantilla de proyecto y los ejemplos del curso (GlobalPeripherals).
-JWPLC_PACKAGE_REF=v2.1.0-alpha.15
-JWPLC_PACKAGE_COMMIT=cbeced0dc983d3f4cda9c0f0db29ee763a037c8a
+# alpha.16 en curso (01/11/2026): línea JWPLC-Sim, JWPLC_TFT 0.4.0 en modo fuente con
+# TFT_eSPI en src/ y la librería nueva JWPLC_UI_Widgets (PR #199 y siguiente).
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/ui-widgets-runtime
+JWPLC_PACKAGE_COMMIT=445617885ecfe8dd8efb15ed12472262f8f97c3f
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0

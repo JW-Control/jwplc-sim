@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "API gráfica de JWPLC_TFT 0.4.0 (sprite de 4 bits, recorte, polilínea gruesa). En IDLE se pulsa ◄ ◄: no deben mover la selección al entrar (el ejemplo descarta las teclas pendientes). OK entra con «&» seleccionado; ► pasa a «TON»; ◄ vuelve a «&». El sketch no imprime nada: la pantalla se verifica con capturas.",
+  "sketch": "package:libraries/JWPLC_Display/examples/Display_Graficos_Sprite",
+  "until_ms": 5000,
+  "stim": [
+    "1500 BTN_LEFT=1",
+    "1600 BTN_LEFT=0",
+    "1800 BTN_LEFT=1",
+    "1900 BTN_LEFT=0",
+    "2400 BTN_OK=1",
+    "2500 BTN_OK=0",
+    "3400 BTN_RIGHT=1",
+    "3500 BTN_RIGHT=0",
+    "4400 BTN_LEFT=1",
+    "4500 BTN_LEFT=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": ".",
+        "count": 0,
+        "after_ms": 1200
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 3200,
+        "ref": "screens/Display_Graficos_Sprite_entrada.png"
+      },
+      {
+        "at_ms": 4200,
+        "ref": "screens/Display_Graficos_Sprite_ton.png"
+      },
+      {
+        "at_ms": 4900,
+        "ref": "screens/Display_Graficos_Sprite_vuelta.png"
+      }
+    ]
+  }
+}
