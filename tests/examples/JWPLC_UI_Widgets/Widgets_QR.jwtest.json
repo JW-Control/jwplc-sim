@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_UIQR: vinculación del celular. OK entra; ► ◄ cambian el rol; ▼ simula el pedido del celular; OK lo acepta (confirmación física). Segundo pedido: ESC lo rechaza y renueva el código. El código sale de random(), así que solo se comprueba su forma. Las capturas se leyeron con un lector de QR (OpenCV): http://192.168.1.50/v?c=<código>.",
+  "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_QR",
+  "until_ms": 12500,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "3000 BTN_RIGHT=1",
+    "3100 BTN_RIGHT=0",
+    "4000 BTN_LEFT=1",
+    "4100 BTN_LEFT=0",
+    "5000 BTN_DOWN=1",
+    "5100 BTN_DOWN=0",
+    "6000 BTN_OK=1",
+    "6100 BTN_OK=0",
+    "10000 BTN_DOWN=1",
+    "10100 BTN_DOWN=0",
+    "11000 BTN_ESC=1",
+    "11100 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - Widgets_QR$", "count": 1 },
+      { "match": "^CODIGO [0-9]{6}$", "min": 3 },
+      { "match": "^SOLICITUD rol=Operador$", "count": 2 },
+      { "match": "^VINCULADO rol=Operador$", "count": 1 },
+      { "match": "^RECHAZADO$", "count": 1 },
+      { "match": "^SOLICITUD rol=Admin$", "count": 0 }
+    ],
+    "screen": [
+      { "at_ms": 2500, "ref": "screens/Widgets_QR_espera.png" },
+      { "at_ms": 3500, "ref": "screens/Widgets_QR_admin.png" },
+      { "at_ms": 5500, "ref": "screens/Widgets_QR_solicitud.png" },
+      { "at_ms": 6500, "ref": "screens/Widgets_QR_vinculado.png" },
+      { "at_ms": 11500, "ref": "screens/Widgets_QR_rechazado.png" }
+    ]
+  }
+}

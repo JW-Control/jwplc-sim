@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Expansion 0.1.0. Esclavo solo, sin maestro: arranca de fábrica (ID 247), título «Esclavo fabrica», RUN apagado y ERR vacío; I0.0 se refleja en la pantalla y las salidas quedan apagadas. El protocolo con maestro se prueba en scripts/gate-expansion-rtu.mjs.",
+  "sketch": "package:libraries/JWPLC_Expansion/examples/Expansion_Esclavo_Basic",
+  "until_ms": 3000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 I0_0=1"
+  ],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - Expansion_Esclavo_Basic$", "count": 1 }
+    ],
+    "screen": [
+      { "at_ms": 2500, "ref": "screens/Expansion_Esclavo_Basic_fabrica.png" }
+    ]
+  }
+}
