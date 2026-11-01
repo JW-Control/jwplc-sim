@@ -7,6 +7,7 @@ JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # TFT_eSPI en src/ y la librería nueva JWPLC_UI_Widgets (PR #199 y siguiente).
 # feature/runtime-mvp: librería nueva JWPLC_Runtime (MVP estilo LOGO! 8).
 # feature/runtime-expansion: JWPLC_Expansion (esclavo) y Runtime 0.2.0 (maestro).
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/runtime-expansion
-JWPLC_PACKAGE_COMMIT=c529d39ba5ed781ba900f2a8aeb66ccc054eec15
+# 01/11: #201..#204 fusionados en la rama principal de la línea.
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/main
+JWPLC_PACKAGE_COMMIT=686b6179d4df94d89575f859d356559152dd58ef
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
