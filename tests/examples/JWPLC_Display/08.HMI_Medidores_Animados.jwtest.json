@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Medidor circular (270° porcentaje y 180° por segmentos con valor) e iconos animados (bomba, motor y ventilador en marcha): corre sin FATAL; capturas al arrancar, con la bomba en marcha (dos cuadros seguidos de la animación) y al final.",
+  "sketch": "package:libraries/JWPLC_Display/examples/08.HMI_Medidores_Animados",
+  "until_ms": 6000,
+  "args": [
+    "--rtc",
+    "fijo:2026-01-15T08:30:00"
+  ],
+  "stim": [],
+  "expect": {
+    "console_absent": [
+      "^ERROR",
+      "FATAL"
+    ],
+    "screen": [
+      {
+        "at_ms": 1500,
+        "ref": "screens/08.HMI_Medidores_Animados_inicio.png"
+      },
+      {
+        "at_ms": 3000,
+        "ref": "screens/08.HMI_Medidores_Animados_marcha_a.png"
+      },
+      {
+        "at_ms": 3100,
+        "ref": "screens/08.HMI_Medidores_Animados_marcha_b.png"
+      },
+      {
+        "at_ms": 5800,
+        "ref": "screens/08.HMI_Medidores_Animados_final.png"
+      }
+    ]
+  }
+}

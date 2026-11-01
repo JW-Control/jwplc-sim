@@ -9,6 +9,6 @@ JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # feature/runtime-expansion: JWPLC_Expansion (esclavo) y Runtime 0.2.0 (maestro).
 # 01/11: #201..#204 fusionados en la rama principal de la línea; luego #198 y #205..#207
 # (André y Kenyi) y la feature integracion-designer.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/main
-JWPLC_PACKAGE_COMMIT=a0900c00aa1d028121ecc7973de9929a2a86389c
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/ejemplos-display-andre
+JWPLC_PACKAGE_COMMIT=4366f595b72143a5d6ecb52ab498e0e6717e4b1b
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
