@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Historial de eventos: corre sin FATAL; capturas de la página Proceso, del historial con el arranque, del detalle de un evento (OK) y del historial tras cerrarlo (OK) con marcha y paro de la bomba.",
+  "sketch": "package:libraries/JWPLC_Display/examples/09.HMI_Registro_Eventos",
+  "until_ms": 6000,
+  "args": [
+    "--rtc",
+    "fijo:2026-01-15T08:30:00"
+  ],
+  "stim": [
+    "2000 BTN_RIGHT=1",
+    "2100 BTN_RIGHT=0",
+    "2600 BTN_OK=1",
+    "2700 BTN_OK=0",
+    "3600 BTN_OK=1",
+    "3700 BTN_OK=0"
+  ],
+  "expect": {
+    "console_absent": [
+      "^ERROR",
+      "FATAL"
+    ],
+    "screen": [
+      {
+        "at_ms": 1000,
+        "ref": "screens/09.HMI_Registro_Eventos_proceso.png"
+      },
+      {
+        "at_ms": 2500,
+        "ref": "screens/09.HMI_Registro_Eventos_historial.png"
+      },
+      {
+        "at_ms": 3500,
+        "ref": "screens/09.HMI_Registro_Eventos_detalle.png"
+      },
+      {
+        "at_ms": 5900,
+        "ref": "screens/09.HMI_Registro_Eventos_cerrado.png"
+      }
+    ]
+  }
+}
