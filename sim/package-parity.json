@@ -54,6 +54,7 @@
     "JWPLC_Runtime",
     "JWPLC_TFT",
     "JWPLC_UI_Widgets",
+    "JWPLC_WebScreen",
     "JW_DWIN",
     "JW_FRAM",
     "JW_MatrixButtons",
