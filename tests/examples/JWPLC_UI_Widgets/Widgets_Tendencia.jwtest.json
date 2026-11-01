@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "JWPLC_UI_Widgets: JWPLC_UITrend. OK entra a la pantalla; el horno simulado sube de 20 a 60 C; ▲ ▲ a los 20 s llevan la consigna a 70 C; OK pausa a los 40 s y reanuda a los 44 s; a los ~85 s el cursor da la vuelta con el hueco; ESC vuelve a IDLE y OK redibuja el historial. Capturas: subida, pausa, vuelta del cursor, IDLE y regreso.",
+  "$comment": "JWPLC_UI_Widgets: JWPLC_UITrend. OK entra a la pantalla; el horno simulado sube de 20 a 60 C; ▲ ▲ a los 20 s llevan la consigna a 70 C; OK pausa a los 40 s y reanuda a los 44 s; a los ~75 s el cursor da la vuelta con el hueco; ESC vuelve a IDLE y OK redibuja el historial. Capturas: subida, pausa, vuelta del cursor, IDLE y regreso.",
   "sketch": "package:libraries/JWPLC_UI_Widgets/examples/Widgets_Tendencia",
   "until_ms": 96000,
   "args": [

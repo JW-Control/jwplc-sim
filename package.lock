@@ -6,5 +6,5 @@ JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # alpha.16 en curso (01/11/2026): línea JWPLC-Sim, JWPLC_TFT 0.4.0 en modo fuente con
 # TFT_eSPI en src/ y la librería nueva JWPLC_UI_Widgets (PR #199 y siguiente).
 JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/ui-tendencia
-JWPLC_PACKAGE_COMMIT=02323a7261de78bb131d72c7d91dddf6106f6597
+JWPLC_PACKAGE_COMMIT=ac1912db6f954962bbd34e2acbe7f530284c1486
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
