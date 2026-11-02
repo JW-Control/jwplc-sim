@@ -6,9 +6,17 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0–G4 cerrados (G1 salvo la calibración contra placa) · siguiente: G5
-Package fijado: platform-jwplc v2.1.0-alpha.13 (package.lock)
+Estado: G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS, botón «Simular» pendiente
+Package fijado: platform-jwplc 2.1.0-alpha.16 (package.lock)
 ```
+
+## Descargar (Windows)
+
+Instalador y portable en [Releases](https://github.com/JW-Control/jwplc-sim/releases/latest): traen el package
+JWPLC, las dependencias y el compilador, así que no hace falta Node.js ni red. Va junto al package
+[JWPLC 2.1.0-alpha.16](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16), el
+[OpenPLC Editor – JWPLC Edition 4.2.8-jwplc.9](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.2.8-jwplc.9)
+y el HMI Designer.
 
 Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
 
@@ -55,7 +63,7 @@ misma ventana lo muestra en `127.0.0.1:1080`.
 Los dos llevan el package fijado, las dependencias de terceros y el
 toolchain GCC: compilan sin red ni Node.js en la PC. El workflow
 *Instalador y portable (Windows)* (`.github/workflows/dist-windows.yml`) los
-genera en GitHub Actions, a pedido y con cada tag `v*`.
+genera en GitHub Actions, a pedido y con cada tag `v*`; con un tag además los publica como Release.
 `node scripts/dist.mjs --dir` arma solo la carpeta (en Linux, la versión de
 Linux) para probar.
 
