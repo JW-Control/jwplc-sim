@@ -11,7 +11,8 @@ JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # (André y Kenyi) y la feature integracion-designer.
 # 01/11: #210 (ejemplos 08/09 del Display) y #211 (eventos del Runtime en JWPLC_UI_EventLog)
 # fusionados en la rama principal.
-# feature/pantalla-web: JWPLC_WebScreen (pantalla en el navegador) y JW_MatrixButtons 1.0.6.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/pantalla-web
-JWPLC_PACKAGE_COMMIT=ce7d30e2f59040c0f75191f1032d71ff7e2c5eb8
+# 02/11: #212 (pantalla web), #213 (indicador en el historial) y #214 (página HMI en el
+# Runtime) fusionados en la rama principal.
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/main
+JWPLC_PACKAGE_COMMIT=852cbd8068269b4080a32af216cfe36b65d96c21
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
