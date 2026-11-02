@@ -10,6 +10,8 @@
 //               paleta incremental) es idéntica, píxel a píxel, a la TFT
 //               simulada en el mismo instante
 //   trafico     con la pantalla quieta cada pedido pesa menos de 1 KB
+// Acepta los dos formatos de cuadro: JWS1 (filas enteras) y JWS2 (alpha.16:
+// tramos de fila, conexión keep-alive con cuerpo chunked).
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -46,7 +48,9 @@ async function poll() {
   view.reqs++;
   view.bytes.push(b.length);
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  if (b.toString("latin1", 0, 4) !== "JWS1") throw new Error("cuadro sin cabecera JWS1");
+  const magic = b.toString("latin1", 0, 4);
+  if (magic !== "JWS1" && magic !== "JWS2") throw new Error(`cuadro con cabecera desconocida: ${magic}`);
+  const spans = magic === "JWS2";
   let o = 4;
   const nv = dv.getUint32(o, true);
   const w = dv.getUint16(o + 4, true);
@@ -64,7 +68,14 @@ async function poll() {
     const y = dv.getUint16(o, true);
     o += 2;
     if (y === 0xffff) break;
-    for (let x = 0; x < w; ) {
+    let x = 0;
+    let end = w;
+    if (spans) {
+      x = dv.getUint16(o, true);
+      end = x + dv.getUint16(o + 2, true);
+      o += 4;
+    }
+    while (x < end) {
       const len = dv.getUint8(o) + 1;
       view.idx.fill(dv.getUint8(o + 1), y * w + x, y * w + x + len);
       x += len;
