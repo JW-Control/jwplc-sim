@@ -6,23 +6,43 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Estado: G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS, botón «Simular» pendiente
-Package fijado: platform-jwplc 2.1.0-alpha.16 (package.lock)
+Versión: 0.2.0 · package JWPLC 2.1.0-alpha.16 (package.lock)
+Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS; botón «Simular» en el editor pendiente
+Matriz:  138 ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-Instalador y portable en [Releases](https://github.com/JW-Control/jwplc-sim/releases/latest): traen el package
-JWPLC, las dependencias y el compilador, así que no hace falta Node.js ni red. Va junto al package
-[JWPLC 2.1.0-alpha.16](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16), el
-[OpenPLC Editor – JWPLC Edition 4.2.8-jwplc.9](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.2.8-jwplc.9)
-y el HMI Designer.
+**[⬇ JWPLC Sim 0.2.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+package JWPLC, sus dependencias y el compilador GCC, así que no hace falta Node.js ni red. No tienen firma de
+código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
+
+Va junto a:
+
+| Programa | Descarga |
+|---|---|
+| Package Arduino JWPLC 2.1.0-alpha.16 | [Release](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16) |
+| OpenPLC Editor – JWPLC Edition 4.2.8-jwplc.9 y VPP | [Release](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.2.8-jwplc.9) |
+| JWPLC HMI Designer 2.1.0-alpha.16 | adjunto a la [Release del package](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16) |
+
+## Qué hace
+
+- Compila el sketch con las librerías reales del package y lo corre en la PC con la placa en vivo: entradas,
+  salidas, LED, pantalla TFT y botonera (clic o teclado).
+- Abre proyectos de **OpenPLC Editor** con la cadena real del editor; guardar en el editor recarga la simulación.
+- **Runtime de panel** (`JWPLC_Runtime`): programa estilo LOGO! desde la pantalla, con la «Demo feria» y
+  Diagnóstico › Simular entradas I.
+- **Pantalla en el navegador** (`JWPLC_WebScreen`) y una ventana para ver un JWPLC Basic real por Ethernet.
+- Buses I2C/SPI/UART/Modbus, depuración con breakpoints, FRAM, NVS, RTC y microSD persistentes, varios PLC en
+  RS-485, red virtual, fallas inyectadas y ejercicios con calificación automática.
+
+![JWPLC Sim corriendo Runtime_Panel: la «Demo feria» en RUN con Q0.0–Q0.2 encendidas y el aviso ERR](docs/img/app-runtime-demo.png)
+
+![JWPLC Sim con 05.HMI_Plantilla_Caldera: pantalla de reposo del HMI generado por el Designer](docs/img/app-hmi-caldera.png)
 
 Estado detallado de cada gate en [docs/GATES.md](docs/GATES.md).
 
-![JWPLC Sim: editor, placa y pestaña Buses](docs/img/g2.png)
-
-## Abrir la interfaz
+## Abrir desde el código fuente
 
 Requisitos: Node.js ≥ 22 y Git. En Linux, además, `gcc`/`g++` del sistema;
 en Windows el compilador se descarga solo (WinLibs GCC 14.3.0, ~245 MB, con
@@ -87,8 +107,8 @@ Con GCC propio en el `PATH` (MinGW-w64 ≥ 13 con hilos POSIX) también se
 puede usar en Windows: el toolchain incluido tiene prioridad si está
 descargado.
 
-La primera compilación de un sketch tarda ~10–15 s (core + 16 librerías del
-package); un cambio posterior, menos de 1 s. Los ejemplos del package se
+La primera compilación de un sketch tarda ~10–50 s (core + las librerías del
+package que usa); un cambio posterior, menos de 1 s. Los ejemplos del package se
 copian a `Documentos/JWPLC Sim/` antes de editarlos. F5 compila y ejecuta,
 F6 pausa. Proyecto → Abrir/Guardar maneja archivos `.jwsim` (sketch,
 vínculos a OpenPLC y HMI, escena). Si edita el sketch con el Arduino IDE, la
@@ -171,12 +191,12 @@ paquete `g++-multilib`) reproduce el modelo de datos ILP32 del ESP32.
 ```sh
 node scripts/fetch-package.mjs        # descarga el tag fijado a .jwsim/ (no se versiona)
 node cli/jwsim-cli.mjs run \
-  .jwsim/package/v2.1.0-alpha.13/tools/build-speed-benchmark/sketches/02_io_basic \
+  tests/sketches/g8_biestable \
   -- --until 3000 --set I0_0=1@1000 --set I0_0=0@2000
 node scripts/gate-g0-poc.mjs          # gate JWSIM_G0_POC_IO_BASIC
 node cli/jwsim-cli.mjs test tests/examples/JWPLC_Display   # pruebas de los ejemplos de una librería
 node cli/jwsim-cli.mjs matrix         # todos los ejemplos del package × (compila, corre, pasa su prueba)
-node cli/jwsim-cli.mjs parity v2.1.0-alpha.14              # qué cambia un tag nuevo del package
+node cli/jwsim-cli.mjs parity v2.1.0-alpha.16              # qué cambia un tag nuevo del package
 ```
 
 Opciones del runner: `--until <ms>`, `--set SEÑAL=V@ms`, `--stim archivo`,
