@@ -183,7 +183,7 @@ function buildBoard() {
     o.className = "io output";
     o.dataset.signal = `Q0_${k}`;
     o.title = `Salida a relé Q0.${k} (COM-NO)`;
-    o.innerHTML = `<span class="lamp"></span>`;
+    o.innerHTML = `<span class="lamp"></span><span class="io-label">Q0.${k}</span>`;
     outputs.appendChild(o);
   }
   placeBoard().catch((e) => consoleWrite(`[placa] ${e.message}\n`, "sys"));
@@ -195,13 +195,28 @@ async function placeBoard() {
   const art = $("plc-art");
   art.innerHTML = text.replace(/\bid="([^"]+)"/g, 'id="plcart-$1"').replace(/href="#/g, 'href="#plcart-');
   const svg = art.querySelector("svg");
-  const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+  // Solo el frente (pantalla, botonera y LEDs de entrada): el recuadro del
+  // panel frontal del dibujo, sin las borneras. Las salidas, cuyos LEDs están
+  // en la bornera inferior, van en la tira de abajo (#outputs).
+  const front = svg.querySelector('rect[rx="26"]');
+  const full = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+  // Sin los bordes: arriba asoman las borneras (terminan 1 px dentro del
+  // frente) y abajo el cuerpo inferior, que empieza antes del borde.
+  const lower = [...svg.querySelectorAll(":scope > rect")].find((r) => Number(r.getAttribute("y")) > Number(front?.getAttribute("y")));
+  const [vx, vy, vw, vh] = front
+    ? (() => {
+        const [x, y, w, h] = ["x", "y", "width", "height"].map((k) => Number(front.getAttribute(k)));
+        const bottom = lower ? Math.min(y + h, Number(lower.getAttribute("y"))) : y + h;
+        return [x + 2, y + 3, w - 4, bottom - y - 3];
+      })()
+    : full;
+  svg.setAttribute("viewBox", `${vx} ${vy} ${vw} ${vh}`);
   svg.removeAttribute("width");
   svg.removeAttribute("height");
   // El mayor tamaño que entra en el panel sin deformar el dibujo.
   const fit = () => {
     const box = $("plc-fit");
-    const w = Math.min(box.clientWidth, (box.clientHeight * vw) / vh, 720);
+    const w = Math.min(box.clientWidth, (box.clientHeight * vw) / vh, 900);
     if (w > 0) Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
   };
   new ResizeObserver(fit).observe($("plc-fit"));
@@ -215,38 +230,24 @@ async function placeBoard() {
     const r = svg.querySelector(`.tecla[data-btn="${key.dataset.btn}"] rect`);
     if (r) place(key, num(r, "x"), num(r, "y"), num(r, "width"), num(r, "height"));
   }
-  const screw = (sig, pos) => svg.querySelector(`.borne[data-senal="${sig}"]${pos ? `[data-pos="${pos}"]` : ""}`);
+  const screw = (sig) => svg.querySelector(`.borne[data-senal="${sig}"]`);
   const led = (sig) => svg.querySelector(`.led-ancla[data-senal="${sig}"]`);
   const pitch = Number(svg.getAttribute("data-grid")) || 57;
-  // La luz del LED va en su ancla, dentro del área de la entrada o salida.
-  const putLed = (box, dot, anchor, x0, y0, w, h) => {
-    const r = num(anchor, "r");
-    Object.assign(dot.style, {
-      left: `${((num(anchor, "cx") - x0) / w) * 100}%`, top: `${((num(anchor, "cy") - y0) / h) * 100}%`, width: `${((2 * r) / w) * 100}%`,
-    });
-  };
+  // Entradas: desde el borde del frente hasta debajo del LED (rótulo + LED).
   for (let k = 0; k < 8; k++) {
     const b = document.querySelector(`#inputs .io[data-signal="I0_${k}"]`);
     const g = screw(`I0_${k}`);
     const a = led(`I0_${k}`);
     if (g && a) {
       const x = num(g.querySelector("use"), "x");
-      const [x0, y0, w, h] = [x - pitch / 2, Number(g.dataset.entrada), pitch, num(a, "cy") + 16 - Number(g.dataset.entrada)];
+      const y0 = Math.max(vy, Number(g.dataset.entrada));
+      const [x0, w, h] = [x - pitch / 2, pitch, num(a, "cy") + 16 - y0];
       place(b, x0, y0, w, h);
-      putLed(b, b.querySelector(".led"), a, x0, y0, w, h);
+      const r = num(a, "r");
+      Object.assign(b.querySelector(".led").style, {
+        left: `${((num(a, "cx") - x0) / w) * 100}%`, top: `${((num(a, "cy") - y0) / h) * 100}%`, width: `${((2 * r) / w) * 100}%`,
+      });
       b.title = `${g.querySelector("title")?.textContent ?? `I0.${k}`}: clic para activarla`;
-    }
-    const o = document.querySelector(`#outputs .io[data-signal="Q0_${k}"]`);
-    const g1 = screw(`Q0_${k}`, 1);
-    const g2 = screw(`Q0_${k}`, 2);
-    const q = led(`Q0_${k}`);
-    if (g1 && g2 && q) {
-      const x1 = num(g1.querySelector("use"), "x");
-      const x2 = num(g2.querySelector("use"), "x");
-      const [x0, y0] = [x1 - pitch / 2, num(q, "cy") - 16];
-      const [w, h] = [x2 - x1 + pitch, Number(g1.dataset.entrada) - y0];
-      place(o, x0, y0, w, h);
-      putLed(o, o.querySelector(".lamp"), q, x0, y0, w, h);
     }
   }
 }
@@ -911,7 +912,6 @@ function onReplayEnd(m) {
 function onMessage(m) {
   switch (m.type) {
     case "hello":
-      $("board-name").textContent = `${m.board} · package ${state.packageRef}`;
       for (const [name, level] of m.signals ?? []) {
         // Las entradas que la interfaz ya fijó (escena reaplicada al
         // reiniciar) mandan sobre el estado inicial que informa el runner.
@@ -1203,7 +1203,7 @@ async function populateExamples() {
     for (const ex of items) {
       const o = document.createElement("option");
       o.value = ex.dir;
-      o.textContent = ex.name;
+      o.textContent = ex.label ?? ex.name;
       og.appendChild(o);
     }
     sel.appendChild(og);
@@ -1211,7 +1211,136 @@ async function populateExamples() {
   return list;
 }
 
+// ------------------------------------------------------------- autoformato
+// Ctrl+T (Herramientas > Autoformato), como Arduino IDE: formatea la pestaña
+// activa con clang-format. Es una sola edición: Ctrl+Z la deshace entera.
+async function formatModel(model) {
+  const name = model.uri.path.split("/").pop();
+  const r = await api.formatCode(model.getValue(), name, state.sketch?.dir ?? null);
+  if (r?.error) throw new Error(r.error);
+  return r;
+}
+async function autoFormat() {
+  if (!editor || !state.active || state.sketch?.openplc) return;
+  const model = editor.getModel();
+  if (!model || model.getLanguageId() !== "cpp" || editor.getOption(monacoRef.editor.EditorOption.readOnly)) return;
+  try {
+    const before = model.getValue();
+    const { text, style } = await formatModel(model);
+    if (model.getValue() !== before) return; // cambió mientras se formateaba
+    const note = $("sb-build");
+    if (text === before) {
+      note.textContent = "Autoformato: sin cambios";
+      return;
+    }
+    const pos = editor.getPosition();
+    editor.pushUndoStop();
+    editor.executeEdits("autoformato", [{ range: model.getFullModelRange(), text }]);
+    editor.pushUndoStop();
+    // El cursor queda en la misma línea (el formato rara vez la mueve mucho).
+    const line = Math.min(pos.lineNumber, model.getLineCount());
+    editor.setPosition({ lineNumber: line, column: model.getLineFirstNonWhitespaceColumn(line) || 1 });
+    editor.revealLineInCenterIfOutsideViewport(line);
+    note.textContent = `Autoformato aplicado (${style})`;
+  } catch (err) {
+    consoleWrite(`[jwsim] autoformato: ${err.message}\n`, "sys");
+  }
+}
+
+// ------------------------------------------------------------- divisor
+// Divisor entre el editor y la simulación: arrastrar cambia el ancho del
+// editor (con flechas, de a 24 px); doble clic vuelve al reparto inicial.
+// El ancho se recuerda en este equipo (localStorage).
+const SPLIT_KEY = "jwsim.codeWidth";
+const SPLIT_MIN = 320; // editor
+const SPLIT_MIN_SIM = 360; // simulación
+function storeGet(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+function storeSet(k, v) {
+  try {
+    if (v === null) localStorage.removeItem(k);
+    else localStorage.setItem(k, v);
+  } catch {
+    /* sin almacenamiento: solo dura la sesión */
+  }
+}
+function setCodeWidth(px, save = true) {
+  const ws = document.querySelector(".workspace");
+  if (px === null) {
+    ws.style.removeProperty("--code-w");
+    if (save) storeSet(SPLIT_KEY, null);
+    return;
+  }
+  const max = ws.clientWidth - SPLIT_MIN_SIM - 6;
+  const w = Math.round(Math.max(SPLIT_MIN, Math.min(px, max)));
+  ws.style.setProperty("--code-w", `${w}px`);
+  if (save) storeSet(SPLIT_KEY, String(w));
+}
+function wireSplitter() {
+  const bar = $("splitter");
+  const ws = document.querySelector(".workspace");
+  const saved = Number(storeGet(SPLIT_KEY));
+  if (saved > 0) setCodeWidth(saved, false);
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add("dragging");
+    document.body.classList.add("resizing");
+    const left = ws.getBoundingClientRect().left;
+    const move = (ev) => setCodeWidth(ev.clientX - left, false);
+    const up = (ev) => {
+      bar.removeEventListener("pointermove", move);
+      bar.removeEventListener("pointerup", up);
+      bar.removeEventListener("pointercancel", up);
+      bar.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      setCodeWidth(ev.clientX - left);
+    };
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", up);
+    bar.addEventListener("pointercancel", up);
+  });
+  bar.addEventListener("dblclick", () => setCodeWidth(null));
+  bar.addEventListener("keydown", (e) => {
+    const step = e.key === "ArrowLeft" ? -24 : e.key === "ArrowRight" ? 24 : 0;
+    if (!step) return;
+    e.preventDefault();
+    setCodeWidth(document.querySelector(".code-pane").getBoundingClientRect().width + step);
+  });
+  // Al achicar la ventana, el ancho guardado no debe dejar sin lugar a la simulación.
+  window.addEventListener("resize", () => {
+    const cur = parseFloat(ws.style.getPropertyValue("--code-w"));
+    if (cur > 0) setCodeWidth(cur, false);
+  });
+}
+
+// Panel del dispositivo de la escena: se pliega a una pestaña lateral.
+const SIDE_KEY = "jwsim.sceneSideCollapsed";
+function wireSceneSide() {
+  const main = document.querySelector(".scene-main");
+  const tab = $("scene-side-toggle");
+  const apply = (collapsed) => {
+    main.classList.toggle("side-collapsed", collapsed);
+    tab.setAttribute("aria-expanded", String(!collapsed));
+    tab.title = collapsed ? "Mostrar el panel del dispositivo" : "Ocultar el panel del dispositivo";
+  };
+  apply(storeGet(SIDE_KEY) === "1");
+  tab.addEventListener("click", () => {
+    const collapsed = !main.classList.contains("side-collapsed");
+    apply(collapsed);
+    storeSet(SIDE_KEY, collapsed ? "1" : "0");
+  });
+}
+
 function wireUi() {
+  wireSplitter();
+  wireSceneSide();
   $("btn-new").addEventListener("click", async () => loadSketch(await api.newSketch()));
   $("btn-open").addEventListener("click", async () => loadSketch(await api.openDialog()));
   $("btn-save").addEventListener("click", saveSketch);
@@ -1319,6 +1448,7 @@ function wireUi() {
     if (cmd === "new") $("btn-new").click();
     else if (cmd === "open") $("btn-open").click();
     else if (cmd === "save") saveSketch();
+    else if (cmd === "format") autoFormat();
     else if (cmd === "run") buildAndRun();
     else if (cmd === "pause") togglePause();
     else if (cmd === "stop") stopSim();
@@ -1355,7 +1485,10 @@ function initMonaco() {
         fontSize: 13,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        tabSize: 2,
+        // 4 espacios: el estilo de los ejemplos del package y del autoformato.
+        tabSize: 4,
+        insertSpaces: true,
+        detectIndentation: false,
         glyphMargin: true,
         // Autocompletado propio (completion.js): sin la lista de palabras de
         // Monaco, que mezcla todo lo que aparece en el archivo.
@@ -1367,6 +1500,21 @@ function initMonaco() {
         .apiCatalog()
         .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models.values()]))
         .catch((err) => consoleWrite(`[jwsim] autocompletado no disponible: ${err.message}\n`, "sys"));
+      // Autoformato también desde el menú contextual del editor ("Dar formato
+      // al documento", Mayús+Alt+F). Ctrl+T llega por el menú Herramientas.
+      monacoRef.languages.registerDocumentFormattingEditProvider("cpp", {
+        provideDocumentFormattingEdits: async (model) => {
+          try {
+            const { text } = await formatModel(model);
+            return [{ range: model.getFullModelRange(), text }];
+          } catch (err) {
+            consoleWrite(`[jwsim] autoformato: ${err.message}\n`, "sys");
+            return [];
+          }
+        },
+      });
+      // Ctrl+T con el foco en el editor (el menú Herramientas también lo atiende).
+      editor.addCommand(monacoRef.KeyMod.CtrlCmd | monacoRef.KeyCode.KeyT, () => autoFormat());
       // Clic en el margen: alterna un breakpoint en esa línea.
       editor.onMouseDown((e) => {
         if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active) {
@@ -1380,6 +1528,9 @@ function initMonaco() {
 
 // Ganchos para las pruebas E2E (abrir un proyecto sin el diálogo del SO).
 window.jwsimTest = {
+  autoFormat: () => autoFormat(),
+  setActiveText: (text) => editor.getModel().setValue(text),
+  activeText: () => editor.getModel().getValue(),
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
   openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
@@ -1425,8 +1576,9 @@ async function main() {
   setStatus("idle", "Detenido");
   const info = await api.info();
   state.packageRef = info.packageRef;
-  $("board-name").textContent = `JWPLC Basic · package ${info.packageRef}`;
-  $("sb-package").textContent = `platform-jwplc ${info.packageRef} (${info.packageCommit})`;
+  // La versión del package va solo en la ayuda emergente del logo (antes era
+  // un texto fijo en la cabecera de la placa y en la barra de estado).
+  document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})`;
   await initMonaco();
   renderWatch();
   clearDebugView();

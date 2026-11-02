@@ -190,10 +190,32 @@ select:focus-visible {
   border-color: #7a2c2c;
 }
 
+/* Editor | divisor arrastrable | simulación. --code-w lo fija el divisor
+   (app.js, guardado por usuario); sin él, el reparto inicial. */
 .workspace {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(520px, 0.9fr);
+  grid-template-columns: var(--code-w, minmax(320px, 1fr)) 6px minmax(360px, 0.9fr);
   min-height: 0;
+}
+.splitter {
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.12s;
+  touch-action: none;
+}
+.splitter:hover,
+.splitter.dragging,
+.splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing iframe,
+body.resizing #editor {
+  pointer-events: none;
 }
 .pane {
   min-height: 0;
@@ -201,7 +223,10 @@ select:focus-visible {
   flex-direction: column;
 }
 .code-pane {
-  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.sim-pane {
+  min-width: 0;
 }
 
 .code-head {
@@ -461,6 +486,8 @@ select:focus-visible {
 .plc-stage {
   position: relative;
   flex: none;
+  overflow: hidden;
+  border-radius: 14px;
 }
 .plc-art,
 .plc-art svg {
@@ -516,6 +543,41 @@ button.io.on {
 .io.output.on {
   background: rgba(255, 176, 32, 0.08);
   border-color: rgba(255, 176, 32, 0.6);
+}
+/* Tira de salidas bajo el frente de la placa (vista Placa). */
+.out-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.out-strip-title {
+  font-weight: 600;
+}
+.out-strip .io-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.out-strip .io.output {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-color: var(--border);
+}
+.out-strip .io.output .lamp {
+  position: static;
+  width: 11px;
+  transform: none;
+}
+.io-label {
+  font-family: var(--mono);
+  font-size: 11px;
 }
 .plc-leds {
   display: flex;
@@ -933,7 +995,44 @@ button.io.on {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(0, 1fr) 22px 240px;
+}
+/* Panel del dispositivo plegable: queda solo la pestaña lateral. */
+.scene-main.side-collapsed {
+  grid-template-columns: minmax(0, 1fr) 22px;
+}
+.scene-main.side-collapsed .scene-side {
+  display: none;
+}
+.side-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.side-tab:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+.side-tab-label {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.4px;
+}
+.side-tab-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+.scene-main.side-collapsed .side-tab-arrow {
+  transform: scaleX(-1);
 }
 #scene-svg {
   width: 100%;

@@ -71,6 +71,9 @@
         </div>
       </section>
 
+      <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Ancho del editor"
+        title="Arrastrar para cambiar el ancho del editor (doble clic: volver al reparto inicial)" tabindex="0"></div>
+
       <section class="pane sim-pane">
         <div class="board-card">
           <div class="panel-head">
@@ -79,7 +82,6 @@
               <button class="seg" data-view="scene" role="radio" aria-checked="false" title="Escena: la placa cableada a dispositivos industriales">Escena</button>
               <button class="seg" data-view="3d" role="radio" aria-checked="false" title="Planta en 3D: cinta, tanque, puerta y cilindro de la escena">3D</button>
             </div>
-            <span class="muted" id="board-name">JWPLC Basic</span>
             <details class="faults-menu" id="faults-menu">
               <summary title="Fallas de la placa (G9): RTC sin batería, ruido en RS-485">⚠ Fallas</summary>
               <div class="faults-pop">
@@ -123,8 +125,11 @@
                 <button class="key" data-btn="BTN_DOWN" title="DOWN (↓)" aria-label="Abajo"></button>
               </div>
               <div class="io-row" id="inputs"></div>
-              <div class="io-row" id="outputs"></div>
             </div></div>
+            <div class="out-strip" aria-label="Salidas a relé">
+              <span class="out-strip-title">Salidas</span>
+              <div class="io-row" id="outputs"></div>
+            </div>
           </div>
           <div id="view3d" class="view3d" hidden>
             <canvas id="view3d-canvas"></canvas>
@@ -159,7 +164,11 @@
                   <path id="scene-rubber" d=""></path>
                 </g>
               </svg>
-              <aside class="scene-side">
+              <button id="scene-side-toggle" class="side-tab" aria-expanded="true" aria-controls="scene-side"
+                title="Ocultar el panel del dispositivo">
+                <span class="side-tab-arrow" aria-hidden="true">›</span><span class="side-tab-label">Dispositivo</span>
+              </button>
+              <aside class="scene-side" id="scene-side">
                 <div id="scene-inspector" class="scene-inspector"></div>
                 <div class="insp-sub">Diagnóstico</div>
                 <ul id="scene-diag" class="scene-diag"></ul>
@@ -248,7 +257,6 @@
     <footer class="statusbar">
       <span id="sb-sketch">Sin sketch</span>
       <span id="sb-project"></span>
-      <span id="sb-package"></span>
       <span id="sb-build"></span>
     </footer>
 

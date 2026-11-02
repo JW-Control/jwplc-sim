@@ -15,6 +15,7 @@ import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
+import { formatSource } from "./lib/autoformat.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
@@ -100,23 +101,34 @@ function readSketch(dir) {
   return { dir, name, files };
 }
 
+// Solo los ejemplos del JWPLC Basic: librerías propias (JWPLC_*, JW_*). Los
+// del core ESP32 (WiFi, BLE, Matter…), los de terceros (Adafruit_BusIO) y los
+// benchmarks de compilación de tools/ no corren en la placa o no son para el
+// usuario. JWPLC_GlobalPeripherals va primero (plantilla y curso), luego
+// las JWPLC_* y al final las JW_*.
+const EXAMPLE_LIBS = /^(JWPLC|JW)_/;
+const EXAMPLE_FIRST = ["JWPLC_GlobalPeripherals"];
+
 function listExamples() {
   const { root, lock } = resolvePackageRoot();
   const tree = join(root, lock.JWPLC_PACKAGE_TREE);
   const out = [];
-  const bench = join(root, "tools", "build-speed-benchmark", "sketches");
-  if (existsSync(bench)) {
-    for (const n of readdirSync(bench).sort()) out.push({ group: "Benchmark del package", name: n, dir: join(bench, n) });
-  }
   const libs = join(tree, "libraries");
-  for (const lib of readdirSync(libs).sort()) {
+  const names = readdirSync(libs)
+    .filter((n) => EXAMPLE_LIBS.test(n))
+    .sort((a, b) => {
+      const rank = (n) => (EXAMPLE_FIRST.includes(n) ? 0 : n.startsWith("JWPLC_") ? 1 : 2);
+      return rank(a) - rank(b) || a.localeCompare(b);
+    });
+  for (const lib of names) {
     const ex = join(libs, lib, "examples");
     if (!existsSync(ex)) continue;
     const walk = (d) => {
-      for (const e of readdirSync(d, { withFileTypes: true })) {
+      for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
         if (!e.isDirectory()) continue;
         const p = join(d, e.name);
-        if (existsSync(join(p, `${e.name}.ino`))) out.push({ group: lib, name: e.name, dir: p });
+        // Subcarpetas (Curso_JWPLC_Basic/1.Primeros_pasos/…) en el nombre.
+        if (existsSync(join(p, `${e.name}.ino`))) out.push({ group: lib, name: e.name, label: relative(ex, p).split(sep).join(" / "), dir: p });
         else walk(p);
       }
     };
@@ -196,6 +208,16 @@ async function detachDebugger() {
 }
 
 const hasBreakpoints = () => [...breakpoints.values()].some((l) => l.length);
+
+// Autoformato (Ctrl+T): clang-format con el estilo del JWPLC o el
+// .clang-format de la carpeta del sketch.
+ipcMain.handle("code:format", (_e, { text, name, dir }) => {
+  try {
+    return formatSource(text, name, dir);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
 
 ipcMain.handle("app:info", () => {
   const lock = readLock();
@@ -782,6 +804,10 @@ function buildMenu() {
           { type: "separator" },
           { role: "quit", label: "Salir" },
         ],
+      },
+      {
+        label: "Herramientas",
+        submenu: [{ label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") }],
       },
       {
         label: "Simulación",

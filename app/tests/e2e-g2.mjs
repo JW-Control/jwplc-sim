@@ -18,6 +18,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { resolvePackageRoot } from "../../scripts/fetch-package.mjs";
 import { _electron as electron } from "playwright";
 
 const APP = resolve(import.meta.dirname, "..");
@@ -49,7 +50,9 @@ await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForSelector(".tab.active:has-text('sketch_')", { timeout: 30000 });
 const fresh = await win.evaluate(() => window.monaco.editor.getModels()[0].getValue());
 criteria.NEW_SKETCH = { pass: /void setup\(\) \{[\s\S]*\}\s*void loop\(\) \{[\s\S]*\}/.test(fresh), source: fresh };
-await win.evaluate(() => window.jwsimTest.openExampleNamed("02_io_basic"));
+// 02_io_basic es un benchmark del package: ya no está en la lista de Ejemplos.
+const ioBasic = join(resolvePackageRoot().root, "tools", "build-speed-benchmark", "sketches", "02_io_basic");
+await win.evaluate((d) => window.jwsimTest.openSketchDir(d), ioBasic);
 await win.waitForSelector(".tab.active:has-text('02_io_basic.ino')", { timeout: 30000 });
 const coldMs = Date.now() - t0;
 await shot(win, "01-inicio.png");
