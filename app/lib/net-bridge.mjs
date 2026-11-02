@@ -116,7 +116,7 @@ export class NetBridge extends EventEmitter {
   }
 
   #connect(s, ip, port) {
-    const sock = net.connect({ host: this.#target(ip), port: this.connectPort(ip, port) });
+    const sock = net.connect({ host: this.#target(ip), port: this.connectPort(ip, port), noDelay: true });
     let connected = false;
     sock.once("connect", () => {
       connected = true;
@@ -143,7 +143,9 @@ export class NetBridge extends EventEmitter {
   #listen(s, port) {
     let l = this.listening.get(port);
     if (!l) {
-      const server = net.createServer({ pauseOnConnect: false }, (c) => {
+      // noDelay: el W5500 envía cada SEND al momento (sin Nagle). Con Nagle,
+      // el último trozo de una respuesta keep-alive esperaba el ACK retrasado.
+      const server = net.createServer({ pauseOnConnect: false, noDelay: true }, (c) => {
         l.backlog.push(c);
         c.on("error", () => {});
         this.#accept(port);
