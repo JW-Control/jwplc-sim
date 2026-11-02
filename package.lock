@@ -3,20 +3,8 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# alpha.16 en curso (01/11/2026): línea JWPLC-Sim, JWPLC_TFT 0.5.0 en modo fuente con
-# TFT_eSPI en src/ y la librería nueva JWPLC_UI_Widgets (PR #199 y siguiente).
-# feature/runtime-mvp: librería nueva JWPLC_Runtime (MVP estilo LOGO! 8).
-# feature/runtime-expansion: JWPLC_Expansion (esclavo) y Runtime 0.2.0 (maestro).
-# 01/11: #201..#204 fusionados en la rama principal de la línea; luego #198 y #205..#207
-# (André y Kenyi) y la feature integracion-designer.
-# 01/11: #210 (ejemplos 08/09 del Display) y #211 (eventos del Runtime en JWPLC_UI_EventLog)
-# fusionados en la rama principal.
-# 02/11: #212 (pantalla web), #213 (indicador en el historial) y #214 (página HMI en el
-# Runtime) fusionados en la rama principal.
-# 02/11: #215 (latencia de la pantalla web) y #216 (tramos de fila JWS2, página con ETag)
-# fusionados en la rama principal.
-# 02/11: cierre de alpha.16 (PR #218, .a regenerados) con la «Demo feria» del Runtime y
-# Diagnóstico > Simular entradas I. Pasa a la rama principal cuando se fusione #218.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/feature/cierre-alpha16
-JWPLC_PACKAGE_COMMIT=1bec1ce2a64727cb664571317af6021e6a3b894b
+# 2.1.0-alpha.16 publicada (02/11/2026): Runtime de panel, expansión RS-485, pantalla web,
+# JWPLC_TFT 0.5.0 y JWPLC_UI_Widgets; TFT/Display/MatrixButtons de nuevo precompiladas.
+JWPLC_PACKAGE_REF=v2.1.0-alpha.16
+JWPLC_PACKAGE_COMMIT=81e7e7b58c2ca9c09a1706db933858cd904075a6
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
