@@ -744,6 +744,26 @@ ipcMain.handle("stim:open", async () => {
   return file ? { file, text: readFileSync(file, "utf8") } : null;
 });
 
+// Pantalla de un JWPLC Basic real (JWPLC_WebScreen): ventana aparte que pide la IP
+// y carga la página que sirve el equipo. Sin preload: es contenido de la red.
+let realWin = null;
+function openRealDevice() {
+  if (realWin && !realWin.isDestroyed()) {
+    realWin.focus();
+    return;
+  }
+  realWin = new BrowserWindow({
+    width: 1040,
+    height: 760,
+    title: "JWPLC real",
+    backgroundColor: "#14171b",
+    autoHideMenuBar: true,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  realWin.loadFile(join(import.meta.dirname, "renderer", "equipo.html"));
+  realWin.on("closed", () => (realWin = null));
+}
+
 function buildMenu() {
   const send = (cmd) => () => forward("menu", cmd);
   Menu.setApplicationMenu(
@@ -790,6 +810,8 @@ function buildMenu() {
       {
         label: "Ver",
         submenu: [
+          { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
+          { type: "separator" },
           { role: "reload", label: "Recargar" },
           { role: "toggleDevTools", label: "Herramientas de desarrollo" },
           { type: "separator" },

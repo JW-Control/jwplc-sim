@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Runtime de panel con la pantalla web e IP fija 192.168.10.10 (cable directo a la laptop). Con el enlace arriba el sketch avisa la URL. OK abre el MENU, ▼ y ► van a RED; OK abre Red, que muestra la fila «Pantalla web» con http://192.168.10.10/.",
+  "sketch": "package:libraries/JWPLC_WebScreen/examples/02.Runtime_En_Vivo",
+  "until_ms": 11500,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-03T09:00:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "2500 BTN_DOWN=1",
+    "2600 BTN_DOWN=0",
+    "3000 BTN_RIGHT=1",
+    "3100 BTN_RIGHT=0",
+    "9000 BTN_OK=1",
+    "9100 BTN_OK=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - 02.Runtime_En_Vivo$",
+        "count": 1
+      },
+      {
+        "match": "^Pantalla en vivo: http://192\\.168\\.10\\.10/$",
+        "count": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 5500,
+        "ref": "screens/02.Runtime_En_Vivo_menu_red.png"
+      },
+      {
+        "at_ms": 11000,
+        "ref": "screens/02.Runtime_En_Vivo_red_url.png"
+      }
+    ]
+  }
+}

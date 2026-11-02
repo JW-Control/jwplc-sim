@@ -34,6 +34,12 @@ sin abrir.
 En Windows, **`JWPLC Sim.bat`** (en la raíz) hace lo mismo con doble clic:
 abre la app desde esta copia del repositorio, con los cambios locales.
 
+**Ver > JWPLC real (pantalla en vivo)…** (`Ctrl+Shift+R`) abre en una ventana
+aparte la pantalla de un JWPLC Basic real por Ethernet, con su botonera: el
+sketch del equipo usa `JWPLC_WebScreen` (ejemplos de esa librería) y se escribe
+su IP. Con un sketch que usa `JWPLC_WebScreen` corriendo en el simulador, la
+misma ventana lo muestra en `127.0.0.1:1080`.
+
 ### Instalador y portable (Windows)
 
 **`Generar instalador.bat`** (o `node scripts/dist.mjs`) arma en
