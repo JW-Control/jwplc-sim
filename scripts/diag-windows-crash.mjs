@@ -5,7 +5,7 @@
 // los casos que terminaban con 0xC0000005 en CI e imprime la pila del hilo
 // que falla. Uso: node scripts/diag-windows-crash.mjs
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
@@ -51,8 +51,9 @@ function underGdb(title, exe, args) {
   underGdb("g4_rtu_slave3 con un pedido por UART2", exe, ["--until", "3000", "--quiet", "--stim", stim]);
 }
 
-// 3) JWPLC_LogicRuntime FRAM_Boot: el 2.º arranque ejecuta el programa de la FRAM.
-{
+// 3) JWPLC_LogicRuntime FRAM_Boot: el 2.º arranque ejecuta el programa de la FRAM
+//    (solo si el package fijado trae la librería; alpha.17 la borró).
+if (existsSync(join(libs, "JWPLC_LogicRuntime"))) {
   const exe = await build(join(libs, "JWPLC_LogicRuntime", "examples", "JWPLC_LogicRuntime_FRAM_Boot"));
   const st = join(work, "fram_boot");
   mkdirSync(st, { recursive: true });

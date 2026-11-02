@@ -17,7 +17,7 @@
 // alpha.13, Superblock_Redundancy esperaba Unformatted con ambas copias del
 // superblock corruptas y la librería devuelve CorruptMetadata (hallazgo H13,
 // corregido en el ejemplo).
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildSketch, ROOT } from "../cli/lib/build.mjs";
@@ -109,8 +109,8 @@ const criteria = {};
   criteria.core = { pass: Object.values(out).every((c) => c.pass), ...out };
 }
 
-// ---- logicruntime
-{
+// ---- logicruntime (alpha.17 borró JWPLC_LogicRuntime: solo se prueba si el package fijado la trae)
+if (existsSync(join(libs, "JWPLC_LogicRuntime"))) {
   // FRAM de partida con un patrón: al terminar debe quedar idéntica.
   const pattern = Buffer.alloc(8192);
   for (let i = 0, x = 0x1234567; i < pattern.length; i++) {
