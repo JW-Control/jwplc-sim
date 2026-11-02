@@ -1,0 +1,80 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Runtime con página HMI del Designer (proyecto «Runtime», 2 páginas). Arranca el programa de ejemplo (OK, ▲, OK, ◄ «Sí», OK) y ESC vuelve a RUN. ► abre «Tablero»: Q1 PARADO con la barra del retardo B02 avanzando y MARCHA a los 3 s; tres pulsos en I0.6 ponen Piezas B05 = 3. ► pasa a «Entradas» (I1 e I2 en 1), ESC abre el MENU y otro ESC vuelve a RUN.",
+  "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_HMI",
+  "until_ms": 17000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-02T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0",
+    "2500 BTN_UP=1",
+    "2600 BTN_UP=0",
+    "3100 BTN_OK=1",
+    "3200 BTN_OK=0",
+    "3900 BTN_LEFT=1",
+    "4000 BTN_LEFT=0",
+    "4500 BTN_OK=1",
+    "4600 BTN_OK=0",
+    "5500 BTN_ESC=1",
+    "5600 BTN_ESC=0",
+    "6100 I0_0=1",
+    "6150 I0_1=1",
+    "6500 BTN_RIGHT=1",
+    "6600 BTN_RIGHT=0",
+    "10150 I0_6=1",
+    "10300 I0_6=0",
+    "10450 I0_6=1",
+    "10600 I0_6=0",
+    "10750 I0_6=1",
+    "10900 I0_6=0",
+    "12500 BTN_RIGHT=1",
+    "12600 BTN_RIGHT=0",
+    "14000 BTN_ESC=1",
+    "14100 BTN_ESC=0",
+    "15500 BTN_ESC=1",
+    "15600 BTN_ESC=0"
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^JWPLC Basic - Runtime_HMI$",
+        "count": 1
+      }
+    ],
+    "signals": [
+      {
+        "at_ms": 8000,
+        "Q0_0": 0
+      },
+      {
+        "at_ms": 9800,
+        "Q0_0": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 8000,
+        "ref": "screens/Runtime_HMI_tablero_retardo.png"
+      },
+      {
+        "at_ms": 12000,
+        "ref": "screens/Runtime_HMI_tablero_piezas.png"
+      },
+      {
+        "at_ms": 13500,
+        "ref": "screens/Runtime_HMI_entradas.png"
+      },
+      {
+        "at_ms": 15000,
+        "ref": "screens/Runtime_HMI_menu.png"
+      },
+      {
+        "at_ms": 16500,
+        "ref": "screens/Runtime_HMI_run.png"
+      }
+    ]
+  }
+}
