@@ -13,6 +13,8 @@ JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
 # fusionados en la rama principal.
 # 02/11: #212 (pantalla web), #213 (indicador en el historial) y #214 (página HMI en el
 # Runtime) fusionados en la rama principal.
+# 02/11: #215 (latencia de la pantalla web) y #216 (tramos de fila JWS2, página con ETag)
+# fusionados en la rama principal.
 JWPLC_PACKAGE_REF=v2.1.0-alpha.16/JWPLC-Sim/main
-JWPLC_PACKAGE_COMMIT=852cbd8068269b4080a32af216cfe36b65d96c21
+JWPLC_PACKAGE_COMMIT=da628bb52d93e10f2a426adf18bae0558fd5744b
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
