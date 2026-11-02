@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_WebScreen: la copia de la pantalla y el servidor web no cambian lo que muestra la TFT. Sin servidor DHCP en la prueba, el aviso de la URL no sale. La página y las teclas virtuales se prueban con la red real en scripts/gate-webscreen.mjs (JWSIM_WEBSCREEN).",
+  "sketch": "package:libraries/JWPLC_WebScreen/examples/01.Pantalla_Web",
+  "until_ms": 4000,
+  "args": ["--rtc", "fijo:2026-11-03T09:00:00"],
+  "stim": [],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - 01.Pantalla_Web$", "count": 1 },
+      { "match": "^Pantalla en vivo", "count": 0 }
+    ],
+    "screen": [
+      { "at_ms": 3500, "ref": "screens/01.Pantalla_Web_reposo.png" }
+    ]
+  }
+}
