@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "JWPLC_Runtime (MVP estilo LOGO! 8) con el programa de ejemplo. OK abre el menú; ▲ va a INICIAR; el diálogo arranca en «No», ◄ elige «Sí». I0.0+I0.1 encienden Q0.0 tras T=3 s (B02 TON). Cinco pulsos en I0.6 llenan el contador B05 (5/5): Q0.2 y el aviso B08 ponen ERR A08 en la pantalla RUN. Después Programa > Monitor con el contador seleccionado.",
+  "$comment": "JWPLC_Runtime con la «Demo feria», sin cables: todo con la botonera. OK abre el menú; ▲ va a INICIAR; el diálogo arranca en «No», ◄ elige «Sí». Con el MENU en DETENER, ▲ va a DIAGNOSTICO > Simular entradas I: OK, OK en I1 da el pulso de marcha (B01 SR -> Q0.0) y Q0.1 sigue 3 s después (B02 TON). En I3, cinco pulsos (OK, OK) llenan el contador B03 (5/5): Q0.2 y el aviso B04. ESC x3 vuelve a RUN: ERR A04 e I0.0/I0.2 con «F».",
   "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_Panel",
-  "until_ms": 20000,
+  "until_ms": 21000,
   "args": [
     "--rtc",
     "fijo:2026-11-02T08:30:00"
@@ -18,32 +18,54 @@
     "4000 BTN_LEFT=0",
     "4500 BTN_OK=1",
     "4600 BTN_OK=0",
-    "6100 I0_0=1",
-    "6150 I0_1=1",
-    "10150 I0_6=1",
-    "10300 I0_6=0",
-    "10450 I0_6=1",
-    "10600 I0_6=0",
-    "10750 I0_6=1",
-    "10900 I0_6=0",
-    "11050 I0_6=1",
-    "11200 I0_6=0",
-    "11350 I0_6=1",
-    "11500 I0_6=0",
-    "12300 BTN_ESC=1",
-    "12400 BTN_ESC=0",
-    "13700 BTN_OK=1",
-    "13800 BTN_OK=0",
-    "14700 BTN_OK=1",
-    "14800 BTN_OK=0",
-    "15500 BTN_DOWN=1",
-    "15600 BTN_DOWN=0",
+    "5500 BTN_UP=1",
+    "5600 BTN_UP=0",
+    "6500 BTN_OK=1",
+    "6600 BTN_OK=0",
+    "6900 BTN_DOWN=1",
+    "7000 BTN_DOWN=0",
+    "7300 BTN_DOWN=1",
+    "7400 BTN_DOWN=0",
+    "7700 BTN_DOWN=1",
+    "7800 BTN_DOWN=0",
+    "8100 BTN_DOWN=1",
+    "8200 BTN_DOWN=0",
+    "8500 BTN_OK=1",
+    "8600 BTN_OK=0",
+    "8900 BTN_OK=1",
+    "9000 BTN_OK=0",
+    "9300 BTN_OK=1",
+    "9400 BTN_OK=0",
+    "13700 BTN_DOWN=1",
+    "13800 BTN_DOWN=0",
+    "14100 BTN_DOWN=1",
+    "14200 BTN_DOWN=0",
+    "14500 BTN_OK=1",
+    "14600 BTN_OK=0",
+    "14900 BTN_OK=1",
+    "15000 BTN_OK=0",
+    "15300 BTN_OK=1",
+    "15400 BTN_OK=0",
+    "15700 BTN_OK=1",
+    "15800 BTN_OK=0",
     "16100 BTN_OK=1",
     "16200 BTN_OK=0",
-    "18000 BTN_DOWN=1",
-    "18100 BTN_DOWN=0",
-    "18350 BTN_DOWN=1",
-    "18450 BTN_DOWN=0"
+    "16500 BTN_OK=1",
+    "16600 BTN_OK=0",
+    "16900 BTN_OK=1",
+    "17000 BTN_OK=0",
+    "17300 BTN_OK=1",
+    "17400 BTN_OK=0",
+    "17700 BTN_OK=1",
+    "17800 BTN_OK=0",
+    "18100 BTN_OK=1",
+    "18200 BTN_OK=0",
+    "18600 BTN_ESC=1",
+    "18700 BTN_ESC=0",
+    "19200 BTN_ESC=1",
+    "19300 BTN_ESC=0",
+    "19800 BTN_ESC=1",
+    "19900 BTN_ESC=0"
   ],
   "expect": {
     "console": [
@@ -58,37 +80,49 @@
     ],
     "signals": [
       {
-        "at_ms": 6000,
+        "at_ms": 8500,
         "Q0_0": 0,
+        "Q0_1": 0,
         "Q0_2": 0
       },
       {
-        "at_ms": 9900,
+        "at_ms": 9500,
         "Q0_0": 1,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 12500,
+        "Q0_0": 1,
+        "Q0_1": 1,
         "Q0_2": 0
       },
       {
-        "at_ms": 12000,
+        "at_ms": 18200,
         "Q0_0": 1,
+        "Q0_1": 1,
         "Q0_2": 1
       }
     ],
     "screen": [
       {
-        "at_ms": 6000,
+        "at_ms": 6400,
         "ref": "screens/Runtime_Panel_menu_run.png"
       },
       {
-        "at_ms": 13600,
-        "ref": "screens/Runtime_Panel_aviso_A08.png"
+        "at_ms": 7200,
+        "ref": "screens/Runtime_Panel_diagnostico.png"
       },
       {
-        "at_ms": 17900,
-        "ref": "screens/Runtime_Panel_monitor.png"
+        "at_ms": 9700,
+        "ref": "screens/Runtime_Panel_simular_i1.png"
       },
       {
-        "at_ms": 19450,
-        "ref": "screens/Runtime_Panel_monitor_contador.png"
+        "at_ms": 17500,
+        "ref": "screens/Runtime_Panel_simular_i3.png"
+      },
+      {
+        "at_ms": 20800,
+        "ref": "screens/Runtime_Panel_run_forzadas.png"
       }
     ]
   }

@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "JWPLC_Runtime con página HMI del Designer (proyecto «Runtime», 2 páginas). Arranca el programa de ejemplo (OK, ▲, OK, ◄ «Sí», OK) y ESC vuelve a RUN. ► abre «Tablero»: Q1 PARADO con la barra del retardo B02 avanzando y MARCHA a los 3 s; tres pulsos en I0.6 ponen Piezas B05 = 3. ► pasa a «Entradas» (I1 e I2 en 1), ESC abre el MENU y otro ESC vuelve a RUN.",
+  "$comment": "JWPLC_Runtime con página HMI del Designer (proyecto «Runtime», 2 páginas) y la «Demo feria». Arranca el programa (OK, ▲, OK, ◄ «Sí», OK) y ESC vuelve a RUN. ► abre «Tablero»; un pulso en I0.0 (marcha) pone Motor Q1 en MARCHA, la barra del retardo B02 avanza y la Bomba Q2 arranca a los 3 s; tres pulsos en I0.2 ponen Piezas B03 = 3. ► pasa a «Entradas», ESC abre el MENU y otro ESC vuelve a RUN.",
   "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_HMI",
   "until_ms": 17000,
   "args": [
@@ -21,17 +21,18 @@
     "5500 BTN_ESC=1",
     "5600 BTN_ESC=0",
     "6100 I0_0=1",
-    "6150 I0_1=1",
+    "6250 I0_0=0",
     "6500 BTN_RIGHT=1",
     "6600 BTN_RIGHT=0",
-    "10150 I0_6=1",
-    "10300 I0_6=0",
-    "10450 I0_6=1",
-    "10600 I0_6=0",
-    "10750 I0_6=1",
-    "10900 I0_6=0",
+    "10150 I0_2=1",
+    "10300 I0_2=0",
+    "10450 I0_2=1",
+    "10600 I0_2=0",
+    "10750 I0_2=1",
+    "10900 I0_2=0",
     "12500 BTN_RIGHT=1",
     "12600 BTN_RIGHT=0",
+    "13000 I0_3=1",
     "14000 BTN_ESC=1",
     "14100 BTN_ESC=0",
     "15500 BTN_ESC=1",
@@ -46,12 +47,19 @@
     ],
     "signals": [
       {
+        "at_ms": 6000,
+        "Q0_0": 0,
+        "Q0_1": 0
+      },
+      {
         "at_ms": 8000,
-        "Q0_0": 0
+        "Q0_0": 1,
+        "Q0_1": 0
       },
       {
         "at_ms": 9800,
-        "Q0_0": 1
+        "Q0_0": 1,
+        "Q0_1": 1
       }
     ],
     "screen": [
