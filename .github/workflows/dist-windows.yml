@@ -2,13 +2,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Instalador (NSIS, por usuario) y portable (.zip) de JWPLC Sim para Windows,
 # con el package fijado, las dependencias de terceros y el toolchain GCC
-# incluidos (la app compila sin red). A pedido y con cada tag v*.
+# incluidos (la app compila sin red). A pedido y con cada tag v*; con un tag
+# además publica una GitHub Release (pre-release) con los dos archivos.
 name: Instalador y portable (Windows)
 
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+
+permissions:
+  contents: write
 
 jobs:
   dist:
@@ -43,3 +47,16 @@ jobs:
           name: JWPLC-Sim-portable
           path: build/dist/*-portable.zip
           compression-level: 0
+
+      - name: Publicar Release del tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          pkg=$(grep '^JWPLC_PACKAGE_REF=' package.lock | cut -d= -f2)
+          printf 'JWPLC Sim %s para Windows x64.\n\n- `*-instalador.exe`: instalador por usuario (sin administrador).\n- `*-portable.zip`: la misma app en una carpeta.\n\nIncluye el package JWPLC `%s`, las dependencias de terceros y el toolchain GCC: compila sin red ni Node.js.\nNo tiene firma de código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.\n' "$tag" "$pkg" > notes.md
+          gh release create "$tag" build/dist/*-instalador.exe build/dist/*-portable.zip \
+            --repo "$GITHUB_REPOSITORY" --title "JWPLC Sim $tag" --notes-file notes.md --prerelease
