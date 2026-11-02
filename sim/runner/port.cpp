@@ -11,6 +11,10 @@
 //                 {"type":"subscribe","buses":1|0[,"lossless":1]} · {"type":"quit"}
 //                 {"type":"rs485","port":2,"on":1} → {"type":"uart_tx","port":2,"bytes":[[inicio,fin,byte]...]}
 //                 {"type":"uart_rx","port":2,"data":"t_ns:hh,t_ns:hh"}
+//                 {"type":"tap","port":0|2,"on":1} → {"type":"uart_out","port":N,"hex":"..."}:
+//                   bytes transmitidos por esa UART, sin perder binarios, para
+//                   el puerto COM virtual (app/lib/com-bridge.mjs). Lo que llega
+//                   del COM entra con {"type":"uart",...} y queda en la grabación.
 //                 {"type":"net","on":1} → el runner informa lo que el W5500
 //                   envía: {"type":"net","op":"listen|connect|send|close|
 //                   udp_open|sendto|udp_close","s",...} (app/lib/net-bridge.mjs)
@@ -417,8 +421,12 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
              std::to_string(uart_bus[p].size()) + "]");
     uart_bus[p].clear();
   };
+  // Puerto COM virtual: bytes TX de las UART derivadas, sin límite ni pérdida.
+  bool tap_on[3] = {false, false, false};
+  std::string tap_buf[3];
   board.set_uart_sink([&](int port, const uint8_t *data, size_t len) {
     serial[port].append(reinterpret_cast<const char *>(data), len);
+    if (port >= 0 && port < 3 && tap_on[port]) tap_buf[port].append(reinterpret_cast<const char *>(data), len);
     if (!bus_on) return;
     const jwsim_ns_t now = jwsim_now();
     if (!uart_bus[port].empty() && now - uart_last[port] > kUartGapNs) uart_item(port);
@@ -512,6 +520,12 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
     if (!link_items.empty()) {
       send_json("{\"type\":\"uart_tx\",\"port\":" + std::to_string(link_port) + ",\"bytes\":[" + link_items + "]}");
       link_items.clear();
+    }
+    for (int p = 0; p < 3; ++p) {
+      if (tap_buf[p].empty()) continue;
+      send_json("{\"type\":\"uart_out\",\"port\":" + std::to_string(p) + ",\"hex\":\"" +
+                hex(reinterpret_cast<const uint8_t *>(tap_buf[p].data()), tap_buf[p].size()) + "\"}");
+      tap_buf[p].clear();
     }
     for (int p = 0; p < 3; ++p) {
       const size_t n = utf8_complete_prefix(serial[p]);
@@ -641,6 +655,12 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       // virtuales (con 3 ms de ida y vuelta, ×1 corría al 77 %).
     } else if (type == "yield") {
       if (scene_on && !scene_wait && scene_until > jwsim_now()) scene_until = jwsim_now();
+    } else if (type == "tap") {
+      const int p = f.count("port") ? std::atoi(f.at("port").c_str()) : 0;
+      if (p >= 0 && p < 3) {
+        tap_on[p] = f.count("on") && (f.at("on") == "1" || f.at("on") == "true");
+        if (!tap_on[p]) tap_buf[p].clear();
+      }
     } else if (type == "rs485") {
       link_port = f.count("on") && f.at("on") == "1" ? (f.count("port") ? std::atoi(f.at("port").c_str()) : 2) : -1;
     } else if (type == "uart_rx") {

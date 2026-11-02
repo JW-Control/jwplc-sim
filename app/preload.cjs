@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld("jwsim", {
   start: (exe, stim, projectFile, rtc, scene) => ipcRenderer.invoke("sim:start", { exe, stim, projectFile, rtc, scene }),
   command: (msg) => ipcRenderer.invoke("sim:command", msg),
   stop: () => ipcRenderer.invoke("sim:stop"),
+  comList: () => ipcRenderer.invoke("com:list"),
+  comSet: (cfg) => ipcRenderer.invoke("com:set", cfg),
+  comInstall: () => ipcRenderer.invoke("com:install"),
   openProject: () => ipcRenderer.invoke("project:open"),
   openProjectFile: (file) => ipcRenderer.invoke("project:openFile", file),
   saveProject: (args) => ipcRenderer.invoke("project:save", args),
@@ -49,6 +52,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   onDisplay: on("sim:display"),
   onStderr: on("sim:stderr"),
   onExit: on("sim:exit"),
+  onComClosed: on("com:closed"),
   onMenu: on("menu"),
   // Escena (G7)
   sceneDevices: () => ipcRenderer.invoke("scene:devices"),

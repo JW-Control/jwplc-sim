@@ -1284,6 +1284,20 @@ function wireUi() {
     if (state.sim === "break") setStatus("running", "Ejecutando");
     clearDebugView();
   });
+  $("btn-com").addEventListener("click", async () => {
+    const panel = $("com-panel");
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) await comRefresh();
+  });
+  $("com-refresh").addEventListener("click", comRefresh);
+  $("com-connect").addEventListener("click", comToggle);
+  $("com-install").addEventListener("click", async () => {
+    $("com-note").textContent = "Instalando el puerto COM virtual (acepta el permiso de administrador)…";
+    const r = await api.comInstall();
+    await comRefresh();
+    if (r.error) $("com-note").textContent = r.error;
+  });
+  api.onComClosed?.((path) => comShow(null, `Se cerró ${path}.`));
   $("btn-view-clear").addEventListener("click", () => {
     if (state.view === "console") $("console").textContent = "";
     else if (state.view === "buses") resetBuses();
@@ -1378,8 +1392,61 @@ function initMonaco() {
   });
 }
 
+// ------------------------------------------------------------- puerto COM virtual
+// El instalador de Windows crea el par com0com COM20 ↔ COM21: el Sim abre
+// COM20 y JW Serial (u otro programa) abre COM21.
+const COM_DEFAULT = "COM20";
+let comCurrent = null;
+
+function comShow(current, note = "") {
+  comCurrent = current;
+  const on = !!current;
+  $("btn-com").textContent = on ? `${current.path} · ${current.uart === 2 ? "RS-485" : "USB"}` : "Puerto COM";
+  $("btn-com").classList.toggle("active", on);
+  $("com-connect").textContent = on ? "Desconectar" : "Conectar";
+  $("com-port").disabled = on;
+  $("com-uart").disabled = on;
+  $("com-note").textContent = note || (on ? `Conectado: el otro programa abre el par de ${current.path}.` : "");
+}
+
+async function comRefresh() {
+  const { available, ports, current, canInstall } = await api.comList();
+  $("com-install").hidden = !canInstall || ports.some((p) => p.path === COM_DEFAULT);
+  const sel = $("com-port");
+  const prev = sel.value || current?.path;
+  sel.textContent = "";
+  for (const p of ports) {
+    const o = document.createElement("option");
+    o.value = p.path;
+    o.textContent = p.label;
+    sel.appendChild(o);
+  }
+  if (prev && ports.some((p) => p.path === prev)) sel.value = prev;
+  else if (ports.some((p) => p.path === COM_DEFAULT)) sel.value = COM_DEFAULT;
+  if (current) $("com-uart").value = String(current.uart);
+  $("com-connect").disabled = !available || (!current && !ports.length);
+  comShow(current, !available ? "Puerto COM no disponible en esta instalación." : !ports.length ? "No hay puertos COM. En Windows, usa «Instalar COM20 ↔ COM21»." : "");
+}
+
+async function comToggle() {
+  if (comCurrent) {
+    const r = await api.comSet(null);
+    return comShow(r.current);
+  }
+  const path = $("com-port").value;
+  if (!path) return;
+  const r = await api.comSet({ path, uart: Number($("com-uart").value) });
+  comShow(r.current, r.error ?? "");
+}
+
 // Ganchos para las pruebas E2E (abrir un proyecto sin el diálogo del SO).
 window.jwsimTest = {
+  comConnect: async (path, uart) => {
+    await comRefresh();
+    const r = await api.comSet(path ? { path, uart } : null);
+    comShow(r.current, r.error ?? "");
+    return r;
+  },
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
   openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
