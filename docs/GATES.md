@@ -120,7 +120,7 @@ JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G2_SPLIT_UI` | Electron con código (Monaco) y simulación lado a lado; pestañas Sketch, Placa, Consola, Buses; arranque en frío < 5 s. | `cd app && npm run test:e2e` (Playwright sobre Electron) → `JWSIM_G2_E2E.json`, criterio `SPLIT_UI`. |
+| `JWSIM_G2_SPLIT_UI` | Electron con código (Monaco) y simulación lado a lado; pestañas Sketch, Placa, Consola, Comunicación (antes Buses); arranque en frío < 5 s. | `cd app && npm run test:e2e` (Playwright sobre Electron) → `JWSIM_G2_E2E.json`, criterio `SPLIT_UI`. |
 | `JWSIM_G2_LOCAL_COMPILE` | Compilación con el toolchain incluido, sin red ni Arduino IDE; incremental de un cambio en `loop()` < 3 s en el host de referencia; prototipos automáticos como arduino-cli. | `node scripts/gate-g2-local-compile.mjs` + criterio `LOCAL_COMPILE` de la E2E; toolchain fijado en `third_party/toolchain.json`. |
 | `JWSIM_G2_ERROR_MAPPING` | Errores y avisos aparecen en la línea correcta del `.ino` (y de pestañas múltiples) en el editor. | `tests/sketches/g2_errores` (5 errores en 2 pestañas), criterio `ERROR_MAPPING` de la E2E. |
 | `JWSIM_G2_UNSUPPORTED_LIB_MSG` | Usar una librería o API no soportada (WiFi, BLE, ADC…) produce un mensaje en español que nombra la API/librería y el gate que la soportará (o que no está en el plan G0–G10), en compilación o al primer uso. | `node scripts/gate-g2-unsupported.mjs` sobre `tests/sketches/g2_unsupported`. |
