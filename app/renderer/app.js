@@ -161,19 +161,93 @@ function setStatus(kind, text) {
   window.JwsimScene?.onStatus(kind);
 }
 
+// La consola junta lo que llega y lo pinta como mucho cada kConsoleMs: un
+// sketch que imprime sin pausa (más aún en ×10 o Máx) no traba la interfaz.
+// Cada pintada es un nodo nuevo (modificar un nodo de texto grande obliga a
+// recalcular todas sus líneas) y se borran nodos enteros del principio
+// cuando se pasa de kConsoleMax caracteres.
+const kConsoleMax = 100_000;
+const kConsoleMs = 50;
+const consoleQueue = [];
+let consoleTimer = 0;
+let consoleChars = 0;
+
+let consoleQueued = 0;
+
 function consoleWrite(text, cls) {
+  const last = consoleQueue.at(-1);
+  if (last && last.cls === cls) last.text += text;
+  else consoleQueue.push({ text, cls });
+  consoleQueued += text.length;
+  // En Máx llega más de lo que se puede mostrar: se guarda solo lo último.
+  if (consoleQueued > 2 * kConsoleMax) {
+    while (consoleQueue.length > 1 && consoleQueued - consoleQueue[0].text.length > kConsoleMax) consoleQueued -= consoleQueue.shift().text.length;
+    const first = consoleQueue[0];
+    if (consoleQueued > kConsoleMax) {
+      const cut = first.text.indexOf("\n", consoleQueued - kConsoleMax);
+      const n = cut >= 0 ? cut + 1 : consoleQueued - kConsoleMax;
+      first.text = first.text.slice(n);
+      consoleQueued -= n;
+    }
+  }
+  consoleTimer ||= setTimeout(() => requestAnimationFrame(consoleFlush), kConsoleMs);
+}
+
+function consoleClear() {
+  consoleQueue.length = 0;
+  consoleQueued = 0;
+  consoleChars = 0;
+  $("console").textContent = "";
+}
+
+function consoleFlush() {
+  consoleTimer = 0;
   const pre = $("console");
   const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
-  if (cls) {
-    const span = document.createElement("span");
-    span.className = cls;
-    span.textContent = text;
-    pre.appendChild(span);
-  } else {
-    pre.appendChild(document.createTextNode(text));
+  // Lo nuevo ya llena la consola: lo anterior sobra entero.
+  if (consoleQueued >= kConsoleMax) {
+    pre.textContent = "";
+    consoleChars = 0;
   }
-  // Límite para sketches que imprimen sin parar.
-  while (pre.childNodes.length > 4000) pre.removeChild(pre.firstChild);
+  consoleQueued = 0;
+  // Cada pintada va en su propio bloque: el navegador solo calcula las
+  // líneas nuevas. Si el bloque anterior quedó a media línea, se sigue en él.
+  let chunk = pre.lastElementChild;
+  if (!chunk || chunk.textContent.endsWith("\n")) {
+    chunk = document.createElement("div");
+    chunk.className = "console-chunk";
+    pre.appendChild(chunk);
+  }
+  for (const { text, cls } of consoleQueue.splice(0)) {
+    // De un bloque más largo que el límite solo se ve el final.
+    const t = text.length > kConsoleMax ? text.slice(-kConsoleMax) : text;
+    if (cls) {
+      const span = document.createElement("span");
+      span.className = cls;
+      span.textContent = t;
+      chunk.appendChild(span);
+    } else {
+      chunk.appendChild(document.createTextNode(t));
+    }
+    consoleChars += t.length;
+  }
+  // La línea a medias pasa a un bloque propio (pequeño), que es el que se
+  // completa en la siguiente pintada; el bloque de líneas enteras no se toca.
+  const tail = chunk.lastChild;
+  if (tail?.nodeType === Node.TEXT_NODE && !tail.data.endsWith("\n") && chunk.textContent.includes("\n")) {
+    const nl = tail.data.lastIndexOf("\n");
+    const rest = nl >= 0 ? tail.splitText(nl + 1) : tail;
+    const next = document.createElement("div");
+    next.className = "console-chunk";
+    next.appendChild(rest);
+    pre.appendChild(next);
+    if (!chunk.firstChild) chunk.remove();
+    chunk = next;
+  }
+  while (consoleChars > kConsoleMax && pre.firstElementChild && pre.firstElementChild !== chunk) {
+    consoleChars -= pre.firstElementChild.textContent.length;
+    pre.firstElementChild.remove();
+  }
   if (atBottom) pre.scrollTop = pre.scrollHeight;
 }
 
@@ -500,7 +574,7 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   }
   state.exe = r.exe;
   $("build-log").textContent += `\nOK · ${r.libraries.length} librerías del package\n`;
-  $("console").textContent = "";
+  consoleClear();
   resetBuses();
   // Breakpoints con las líneas actuales (las ediciones los desplazan).
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
@@ -1449,7 +1523,7 @@ function wireUi() {
   });
   api.onComClosed?.((path) => comShow(null, `Se cerró ${path}.`));
   $("btn-view-clear").addEventListener("click", () => {
-    if (state.view === "console") $("console").textContent = "";
+    if (state.view === "console") consoleClear();
     else if (state.view === "buses") resetBuses();
   });
   for (const b of document.querySelectorAll(".ptab")) b.addEventListener("click", () => setView(b.dataset.view));

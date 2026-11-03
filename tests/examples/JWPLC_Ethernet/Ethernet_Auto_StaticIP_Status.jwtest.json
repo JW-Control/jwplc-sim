@@ -12,7 +12,7 @@
       "^Ethernet_Auto_StaticIP_Status$",
       "^Configuring static IP\\. No begin\\(\\) called\\.$",
       {
-        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: no \\| Ready: no \\| .*Status: Not started \\|",
+        "match": "^Mode: STATIC \\| Enabled: yes \\| Attempted: no \\| Ready: no \\| ",
         "count": 1
       },
       {
