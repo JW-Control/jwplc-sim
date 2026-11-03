@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Runtime con el programa «Intermitente» (dos TON, sin entradas): arranca en RUN y Q0.0/Q0.1 se alternan cada 1 s (primer cambio ~0,75 s, luego cada ~1,01 s). OK abre el MENU, OK entra a Programa y OK a Editar: los dos TON y Q1/Q2 en una sola pantalla.",
+  "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_Intermitente",
+  "until_ms": 9500,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-03T10:00:00"
+  ],
+  "expect": {
+    "signals": [
+      {
+        "at_ms": 1200,
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      {
+        "at_ms": 2200,
+        "Q0_0": 1,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 3200,
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      {
+        "at_ms": 4200,
+        "Q0_0": 1,
+        "Q0_1": 0
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 2200,
+        "ref": "screens/Runtime_Intermitente_run.png"
+      },
+      {
+        "at_ms": 8300,
+        "ref": "screens/Runtime_Intermitente_monitor_q1.png"
+      },
+      {
+        "at_ms": 9300,
+        "ref": "screens/Runtime_Intermitente_monitor_q2.png"
+      }
+    ]
+  },
+  "stim": [
+    "5000 BTN_OK=1",
+    "5100 BTN_OK=0",
+    "5600 BTN_OK=1",
+    "5700 BTN_OK=0",
+    "6200 BTN_DOWN=1",
+    "6300 BTN_DOWN=0",
+    "6800 BTN_OK=1",
+    "6900 BTN_OK=0"
+  ]
+}
