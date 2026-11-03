@@ -109,6 +109,15 @@ function appendBus(items, dropped) {
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
+const VIEW_NOTES = {
+  problems: "",
+  build: "",
+  console: "USB · UART0 · 115200",
+  buses: "RS-485 y Modbus en vivo",
+  watch: "Forzar fija la señal aunque el programa o la escena la cambien",
+  debug: "gdb",
+  exercise: "Enunciado y calificación",
+};
 function setView(view) {
   state.view = view;
   for (const b of document.querySelectorAll(".ptab")) {
@@ -117,7 +126,9 @@ function setView(view) {
     b.setAttribute("aria-selected", String(on));
   }
   for (const v of document.querySelectorAll(".view")) v.hidden = v.dataset.view !== view;
-  $("view-note").textContent = { console: "UART0 · 115200", buses: "RS-485 y Modbus en vivo", watch: "E/S y variables", debug: "gdb", exercise: "Enunciado y calificación" }[view];
+  $("view-note").textContent = VIEW_NOTES[view] ?? "";
+  $("opt-ts").hidden = view !== "console";
+  $("btn-view-clear").hidden = !["console", "buses"].includes(view);
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
 }
 
@@ -197,7 +208,44 @@ function consoleClear() {
   consoleQueue.length = 0;
   consoleQueued = 0;
   consoleChars = 0;
+  serialBol = true;
+  serialPendingT = undefined;
   $("console").textContent = "";
+}
+
+// Texto de la UART0. Con «Marca de tiempo», cada línea lleva delante el
+// tiempo virtual en que el firmware la empezó a enviar (el runner manda en
+// "lines" el instante de cada línea que empieza en el fragmento).
+const TS_KEY = "jwsim.serialTimestamps";
+let serialBol = true;
+let serialPendingT; // línea que empezó con un "\r" suelto
+function serialWrite(raw, lines = []) {
+  const text = raw.replaceAll("\r", "");
+  if (!text) {
+    if (serialBol && lines.length) serialPendingT = lines[0];
+    return;
+  }
+  if (!state.serialTs) {
+    serialBol = text.endsWith("\n");
+    consoleWrite(text);
+    return;
+  }
+  let out = "";
+  let k = 0;
+  let from = 0;
+  while (from < text.length) {
+    if (serialBol) {
+      const t = serialPendingT ?? lines[k++];
+      serialPendingT = undefined;
+      out += `${t === undefined ? "            " : fmtTime(t)} > `;
+    }
+    const nl = text.indexOf("\n", from);
+    const to = nl < 0 ? text.length : nl + 1;
+    out += text.slice(from, to);
+    serialBol = nl >= 0;
+    from = to;
+  }
+  consoleWrite(out);
 }
 
 function consoleFlush() {
@@ -505,6 +553,7 @@ async function saveSketch() {
 function clearProblems() {
   $("problems").textContent = "";
   $("problems-count").textContent = "";
+  $("problems-count").className = "badge";
   for (const m of state.models.values()) monacoRef.editor.setModelMarkers(m, "gcc", []);
 }
 
@@ -538,7 +587,9 @@ function showProblems(diags) {
   }
   for (const [name, markers] of byFile) monacoRef.editor.setModelMarkers(state.models.get(name), "gcc", markers);
   const errors = relevant.filter((d) => d.severity === "error").length;
-  $("problems-count").textContent = errors ? `${errors} error${errors > 1 ? "es" : ""}` : "";
+  $("problems-count").textContent = relevant.length ? String(relevant.length) : "";
+  $("problems-count").className = `badge ${errors ? "error" : relevant.length ? "warning" : ""}`;
+  $("problems-count").title = `${errors} error${errors === 1 ? "" : "es"} · ${relevant.length - errors} aviso${relevant.length - errors === 1 ? "" : "s"}`;
   const first = relevant.find((d) => d.severity === "error");
   if (first) $("problems").firstChild?.click();
 }
@@ -560,8 +611,10 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   resetBoard();
   resetSession();
   setStatus("building", "Compilando…");
-  $("output-panel").classList.remove("collapsed");
-  $("btn-output-toggle").textContent = "Ocultar";
+  // El panel inferior sigue a la compilación: Compilación mientras compila,
+  // Problemas si falla y, si compila, Serie (o la vista que tenía el usuario).
+  const before = state.view;
+  setView("build");
   $("build-log").textContent = "";
   clearProblems();
   const r = await api.build(state.sketch.dir);
@@ -569,9 +622,22 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   if (!r.ok) {
     setStatus("error", "Error de compilación");
     $("build-log").textContent += `\n${r.message}\n${r.output}`;
-    showProblems(r.diagnostics);
+    $("build-log").scrollTop = $("build-log").scrollHeight;
+    showProblems(r.diagnostics ?? []);
+    // Error sin línea del sketch (librería que falta, enlace…): igual va a Problemas.
+    if (!$("problems").childElementCount && r.message) {
+      const li = document.createElement("li");
+      li.className = "error";
+      li.textContent = r.message.trim();
+      $("problems").appendChild(li);
+      $("problems-count").textContent = "1";
+      $("problems-count").className = "badge error";
+    }
+    setView("problems");
     return false;
   }
+  if (r.diagnostics?.length) showProblems(r.diagnostics);
+  setView(["problems", "build"].includes(before) ? "console" : before);
   state.exe = r.exe;
   $("build-log").textContent += `\nOK · ${r.libraries.length} librerías del package\n`;
   consoleClear();
@@ -632,11 +698,7 @@ function setInputMode(mode) {
 
 function setSpeed(speed) {
   state.speed = speed;
-  for (const b of document.querySelectorAll(".speed .seg")) {
-    const on = Number(b.dataset.speed) === speed;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-checked", String(on));
-  }
+  $("sel-speed").value = String(speed);
   if (state.sim === "running") api.command({ type: "run", speed });
 }
 
@@ -817,42 +879,46 @@ function dbgCommand(cmd) {
 const IO_SIGNALS = [...Array(8).keys()].map((k) => `I0_${k}`).concat([...Array(8).keys()].map((k) => `Q0_${k}`));
 const watchCells = new Map(); // señal o expresión -> celda de valor
 
+// Pestaña «E/S y variables»: entradas y salidas en tablas al estilo de la
+// tabla de forzado de un PLC (valor, estado y Forzar 0/1 · Liberar) y, al
+// lado, las variables del sketch que se observan.
 function renderWatch() {
-  const body = $("watch-rows");
-  body.textContent = "";
   watchCells.clear();
-  const group = (text) => {
-    const tr = document.createElement("tr");
-    tr.className = "group";
-    tr.innerHTML = `<td colspan="3"></td>`;
-    tr.firstChild.textContent = text;
-    body.appendChild(tr);
-  };
-  group("Entradas digitales");
+  for (const id of ["io-in-rows", "io-out-rows"]) $(id).textContent = "";
   for (const sig of IO_SIGNALS) {
-    if (sig === "Q0_0") group("Salidas relé");
     const tr = document.createElement("tr");
     tr.dataset.signal = sig;
     const name = document.createElement("td");
+    name.className = "sig";
     name.textContent = sig.replace("_", ".");
     const val = document.createElement("td");
     val.className = "value";
+    const st = document.createElement("td");
+    st.className = "state";
     const f = document.createElement("td");
     f.className = "force";
-    for (const [label, v] of [["Libre", null], ["0", 0], ["1", 1]]) {
+    for (const [label, v] of [["0", 0], ["1", 1], ["Liberar", null]]) {
       const b = document.createElement("button");
       b.className = `seg ${v === null ? "free" : `f${v}`}`;
       b.textContent = label;
-      b.title = v === null ? "Sin forzar" : `Forzar a ${v}`;
+      b.title = v === null ? "Quitar el forzado: la señal vuelve a seguir al programa o a la escena" : `Forzar a ${v}`;
       b.addEventListener("click", () => setForce(sig, v));
       f.appendChild(b);
     }
-    tr.append(name, val, f);
-    body.appendChild(tr);
+    tr.append(name, val, st, f);
+    $(sig.startsWith("I") ? "io-in-rows" : "io-out-rows").appendChild(tr);
     watchCells.set(sig, val);
     updateWatchSignal(sig);
   }
-  group("Variables del sketch");
+  const body = $("watch-rows");
+  body.textContent = "";
+  if (!state.watches.length) {
+    const tr = document.createElement("tr");
+    tr.className = "empty";
+    tr.innerHTML = `<td colspan="3"></td>`;
+    tr.firstChild.textContent = "Agregue una variable global del sketch para ver su valor mientras corre.";
+    body.appendChild(tr);
+  }
   for (const expr of state.watches) {
     const tr = document.createElement("tr");
     const name = document.createElement("td");
@@ -879,12 +945,16 @@ function updateWatchSignal(sig) {
   const cell = watchCells.get(sig);
   if (!cell) return;
   const forced = state.forced.get(sig);
-  cell.textContent = `${state.levels.get(sig) ? 1 : 0}${forced !== undefined ? `  (forzada a ${forced})` : ""}`;
+  const on = !!state.levels.get(sig);
+  cell.innerHTML = `<span class="lvl ${on ? "on" : "off"}"></span>`;
+  cell.firstChild.textContent = on ? "1 · ON" : "0 · OFF";
   const tr = cell.parentElement;
   tr.classList.toggle("forced", forced !== undefined);
+  tr.querySelector(".state").textContent = forced !== undefined ? `Forzada a ${forced}` : "Libre";
   for (const b of tr.querySelectorAll(".force .seg")) {
     const v = b.classList.contains("free") ? undefined : b.classList.contains("f1") ? 1 : 0;
-    b.classList.toggle("active", v === forced);
+    b.classList.toggle("active", v !== undefined && v === forced);
+    if (v === undefined) b.disabled = forced === undefined;
   }
 }
 
@@ -1032,8 +1102,8 @@ function onMessage(m) {
       appendBus(m.items, m.dropped);
       break;
     case "serial":
-      // La consola es UART0; el resto (RS-485 en UART2) se ve en Buses.
-      if (!m.port) consoleWrite(m.text.replaceAll("\r", ""));
+      // La consola es UART0; el resto (RS-485 en UART2) se ve en Tráfico.
+      if (!m.port) serialWrite(m.text, m.lines);
       break;
     case "restart":
       // esp_restart(): el runner relanza el firmware conservando lo externo.
@@ -1433,8 +1503,74 @@ function wireSceneSide() {
   });
 }
 
+// Panel inferior: alto ajustable con su divisor (se recuerda) y plegable.
+const DOCK_KEY = "jwsim.dockHeight";
+const DOCK_FOLD_KEY = "jwsim.dockCollapsed";
+const DOCK_MIN = 120;
+const DOCK_MIN_TOP = 300; // editor y placa
+function setDockHeight(px, save = true) {
+  if (px === null) {
+    document.body.style.removeProperty("--dock-h");
+    if (save) storeSet(DOCK_KEY, null);
+    return;
+  }
+  const max = window.innerHeight - DOCK_MIN_TOP;
+  const h = Math.round(Math.max(DOCK_MIN, Math.min(px, max)));
+  document.body.style.setProperty("--dock-h", `${h}px`);
+  if (save) storeSet(DOCK_KEY, String(h));
+}
+function setDockCollapsed(collapsed) {
+  document.body.classList.toggle("dock-collapsed", collapsed);
+  $("btn-dock-toggle").textContent = collapsed ? "▴" : "▾";
+  $("btn-dock-toggle").title = collapsed ? "Mostrar el panel inferior" : "Plegar el panel inferior";
+  $("btn-dock-toggle").setAttribute("aria-expanded", String(!collapsed));
+  storeSet(DOCK_FOLD_KEY, collapsed ? "1" : null);
+}
+function wireDock() {
+  const bar = $("dock-splitter");
+  const saved = Number(storeGet(DOCK_KEY));
+  if (saved > 0) setDockHeight(saved, false);
+  if (storeGet(DOCK_FOLD_KEY) === "1") setDockCollapsed(true);
+  $("btn-dock-toggle").addEventListener("click", () => setDockCollapsed(!document.body.classList.contains("dock-collapsed")));
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add("dragging");
+    document.body.classList.add("resizing", "resizing-v");
+    if (document.body.classList.contains("dock-collapsed")) setDockCollapsed(false);
+    const move = (ev) => setDockHeight(window.innerHeight - ev.clientY - statusbarH(), false);
+    const up = (ev) => {
+      bar.removeEventListener("pointermove", move);
+      bar.removeEventListener("pointerup", up);
+      bar.removeEventListener("pointercancel", up);
+      bar.classList.remove("dragging");
+      document.body.classList.remove("resizing", "resizing-v");
+      setDockHeight(window.innerHeight - ev.clientY - statusbarH());
+    };
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", up);
+    bar.addEventListener("pointercancel", up);
+  });
+  bar.addEventListener("dblclick", () => setDockHeight(null));
+  bar.addEventListener("keydown", (e) => {
+    const step = e.key === "ArrowUp" ? 24 : e.key === "ArrowDown" ? -24 : 0;
+    if (!step) return;
+    e.preventDefault();
+    setDockHeight($("dock").getBoundingClientRect().height + step);
+  });
+  window.addEventListener("resize", () => {
+    const cur = parseFloat(document.body.style.getPropertyValue("--dock-h"));
+    if (cur > 0) setDockHeight(cur, false);
+  });
+}
+function statusbarH() {
+  return document.querySelector(".statusbar").getBoundingClientRect().height;
+}
+
 function wireUi() {
   wireSplitter();
+  wireDock();
   wireSceneSide();
   $("btn-new").addEventListener("click", async () => loadSketch(await api.newSketch()));
   $("btn-open").addEventListener("click", async () => loadSketch(await api.openDialog()));
@@ -1458,10 +1594,8 @@ function wireUi() {
   $("btn-run").addEventListener("click", buildAndRun);
   $("btn-pause").addEventListener("click", togglePause);
   $("btn-stop").addEventListener("click", stopSim);
-  for (const b of document.querySelectorAll(".speed .seg")) b.addEventListener("click", () => setSpeed(Number(b.dataset.speed)));
+  $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
   for (const b of document.querySelectorAll(".mode .seg")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
-  $("btn-project-open").addEventListener("click", openProject);
-  $("btn-project-save").addEventListener("click", saveProjectFile);
   api.onFileChanged(onExternalChange);
   $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
   $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));
@@ -1508,11 +1642,18 @@ function wireUi() {
     if (state.sim === "break") setStatus("running", "Ejecutando");
     clearDebugView();
   });
-  $("btn-com").addEventListener("click", async () => {
-    const panel = $("com-panel");
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) await comRefresh();
+  $("btn-com").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    await comPopover($("com-panel").hidden);
   });
+  // El panel del COM se cierra con Esc o con un clic fuera de él.
+  document.addEventListener("pointerdown", (e) => {
+    if (!$("com-panel").hidden && !e.target.closest("#com-panel, #btn-com")) comPopover(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("com-panel").hidden) comPopover(false);
+  });
+  window.addEventListener("resize", () => !$("com-panel").hidden && comPlace());
   $("com-refresh").addEventListener("click", comRefresh);
   $("com-connect").addEventListener("click", comToggle);
   $("com-install").addEventListener("click", async () => {
@@ -1526,12 +1667,16 @@ function wireUi() {
     if (state.view === "console") consoleClear();
     else if (state.view === "buses") resetBuses();
   });
-  for (const b of document.querySelectorAll(".ptab")) b.addEventListener("click", () => setView(b.dataset.view));
-  $("btn-output-toggle").addEventListener("click", () => {
-    const p = $("output-panel");
-    p.classList.toggle("collapsed");
-    $("btn-output-toggle").textContent = p.classList.contains("collapsed") ? "Mostrar" : "Ocultar";
-    editor.layout();
+  for (const b of document.querySelectorAll(".ptab"))
+    b.addEventListener("click", () => {
+      setView(b.dataset.view);
+      setDockCollapsed(false);
+    });
+  state.serialTs = storeGet(TS_KEY) === "1";
+  $("serial-ts").checked = state.serialTs;
+  $("serial-ts").addEventListener("change", (e) => {
+    state.serialTs = e.target.checked;
+    storeSet(TS_KEY, state.serialTs ? "1" : "0");
   });
 
   api.onBuildLog((line) => {
@@ -1644,12 +1789,30 @@ let comCurrent = null;
 function comShow(current, note = "") {
   comCurrent = current;
   const on = !!current;
-  $("btn-com").textContent = on ? `${current.path} · ${current.uart === 2 ? "RS-485" : "USB"}` : "Puerto COM";
-  $("btn-com").classList.toggle("active", on);
+  $("com-label").textContent = on ? `${current.path} ↔ ${current.uart === 2 ? "RS-485" : "USB"}` : "Sin COM";
+  $("btn-com").classList.toggle("on", on);
+  $("btn-com").title = on
+    ? `Conectado: ${current.path} unido al ${current.uart === 2 ? "RS-485" : "USB (Monitor serie)"} del JWPLC simulado. Clic para cambiar.`
+    : "Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)";
   $("com-connect").textContent = on ? "Desconectar" : "Conectar";
   $("com-port").disabled = on;
   $("com-uart").disabled = on;
   $("com-note").textContent = note || (on ? `Conectado: el otro programa abre el par de ${current.path}.` : "");
+}
+
+// Panel del COM: se abre bajo su botón de la barra superior.
+function comPlace() {
+  const r = $("btn-com").getBoundingClientRect();
+  const panel = $("com-panel");
+  panel.style.top = `${Math.round(r.bottom + 6)}px`;
+  panel.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+}
+async function comPopover(open) {
+  $("com-panel").hidden = !open;
+  $("btn-com").setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  comPlace();
+  await comRefresh();
 }
 
 async function comRefresh() {

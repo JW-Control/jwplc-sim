@@ -10,6 +10,10 @@
 //   BOARD_FRONT      la vista Placa muestra solo el frente (pantalla y botonera)
 //                    y las salidas en la tira inferior
 //   NO_PACKAGE_TEXT  sin el texto «JWPLC Basic · package …» arriba ni abajo
+//   DOCK             panel inferior a lo ancho con las pestañas Problemas ·
+//                    Compilación · Serie · Tráfico · E/S y variables ·
+//                    Depuración; su alto se arrastra, se recuerda y se pliega;
+//                    COM y velocidad en la barra superior (sin Proyecto ahí)
 // Informe en build/gates/JWSIM_A17_UI.json y capturas en build/gates/a17-ui/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-a17-ui.mjs
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -106,6 +110,36 @@ await win.waitForTimeout(300);
 const open1 = await sideW();
 await (await win.$(".board-card")).screenshot({ path: join(OUT, "05-escena-panel-abierto.png") });
 criteria.SCENE_SIDE = { pass: open0 > 200 && closed === 0 && open1 > 200, open: open0, closed, scene_width_closed: svgW };
+
+// ---- DOCK
+await win.click("[data-view=board]");
+const tabs = await win.$$eval("#dock .ptab:not([hidden])", (b) => b.map((x) => x.textContent.trim()));
+const dockBox = () => win.$eval("#dock", (e) => { const r = e.getBoundingClientRect(); return { y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; });
+const d0 = await dockBox();
+const ds = await win.$eval("#dock-splitter", (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+await win.mouse.move(ds.x, ds.y);
+await win.mouse.down();
+await win.mouse.move(ds.x, ds.y - 120, { steps: 8 });
+await win.mouse.up();
+await win.waitForTimeout(300);
+const d1 = await dockBox();
+const dockStored = await win.evaluate(() => localStorage.getItem("jwsim.dockHeight"));
+await win.screenshot({ path: join(OUT, "06-panel-inferior.png") });
+await win.click("#btn-dock-toggle");
+await win.waitForTimeout(300);
+const dFold = await dockBox();
+await win.click("#tab-buses");
+await win.waitForTimeout(300);
+const dOpen = await dockBox();
+const viewport = await win.evaluate(() => window.innerWidth);
+const toolbar = await win.$eval(".toolbar", (e) => ({ speed: !!e.querySelector("select#sel-speed"), com: !!e.querySelector("#btn-com"), project: !!e.querySelector("#btn-project-open, #btn-project-save") }));
+criteria.DOCK = {
+  pass:
+    tabs.join("|") === "Problemas|Compilación|Serie|Tráfico|E/S y variables|Depuración" &&
+    d0.w === viewport && Math.abs(d1.h - d0.h - 120) <= 4 && Number(dockStored) === d1.h &&
+    dFold.h < 60 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project,
+  tabs, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, reopened: dOpen.h, toolbar,
+};
 
 await app.close();
 const pass = Object.values(criteria).every((c) => c.pass);

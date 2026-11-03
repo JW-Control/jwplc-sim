@@ -851,10 +851,11 @@ con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,
 `uart_out` en hex, para el puerto COM virtual de `app/lib/com-bridge.mjs`; lo
 que llega del COM entra como `uart` y queda en la grabación), `quit`; del runner, `signals` (último nivel de
 cada señal que cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin
-cortar caracteres), `bus` (transacciones I2C `[t_ns, bus, dirección,
+cortar caracteres y, en `lines`, el `t_ns` en que empezó cada línea del
+fragmento: la «Marca de tiempo» de la pestaña Serie), `bus` (transacciones I2C `[t_ns, bus, dirección,
 escritos, leídos, resultado]` y bytes de UART, hasta 400 por envío; el resto
-se informa como `dropped`), `status` y `stopped`. La pestaña Comunicación
-(antes Buses) muestra al usuario solo RS-485 (UART2) y Modbus RTU/TCP; I2C, SPI
+se informa como `dropped`), `status` y `stopped`. La pestaña Tráfico
+(antes Comunicación y Buses) muestra al usuario solo RS-485 (UART2) y Modbus RTU/TCP; I2C, SPI
 por CS y las demás UART quedan para el modo avanzado
 (`window.jwsimTest.showAllBuses(true)`, usado por las pruebas E2E). El analizador
 completo es G3. Un `set` se agenda como evento en el instante virtual

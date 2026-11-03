@@ -143,7 +143,7 @@ await t(() => window.jwsimTest.setForce("I0_3", 1));
 const q7 = await until(() => isOn("Q0_7"), 3000);
 const i3 = await until(() => isOn("I0_3"), 3000);
 const marked = (await isForced("Q0_7")) && (await isForced("I0_3"));
-const rowMarked = await win.$eval("#watch-rows tr[data-signal='Q0_7']", (e) => e.classList.contains("forced"));
+const rowMarked = await win.$eval("#io-out-rows tr[data-signal='Q0_7']", (e) => e.classList.contains("forced"));
 await shot(win, "03-observacion.png");
 await t(() => window.jwsimTest.setForce("Q0_7", null));
 const q7off = await until(async () => !(await isOn("Q0_7")), 3000);

@@ -39,6 +39,9 @@ JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI, alpha.13: recarga 1,63 s con la
 JWSIM_A17_UI=PASS                   (02/11, línea alpha.17: Ejemplos solo JWPLC_*/JW_*, autoformato Ctrl+T, divisor
                                      arrastrable, panel de la escena plegable, Placa solo con el frente, sin el texto del
                                      package; app/tests/e2e-a17-ui.mjs con xvfb en Linux)
+                                    (03/11, + DOCK: panel inferior a lo ancho con Problemas · Compilación · Serie ·
+                                     Tráfico · E/S y variables · Depuración, alto arrastrable y plegable; COM y
+                                     velocidad en la barra; Proyecto solo en el menú Archivo)
 JWSIM_G3_BREAKPOINTS_STEP=PASS     (gdb -i=dap; Windows CI y Linux; E2E en Electron)
 JWSIM_G3_FREEZE_TIME=PASS          (10 s detenido: millis() y tiempo virtual idénticos; sin perturbar el hash)
 JWSIM_G3_WATCH_FORCE_IO=PASS       (variables en vivo, forzado de I0/Q0 con marca visual, en la grabación)
@@ -136,7 +139,7 @@ JWSIM_G10_*=PENDING
 | `JWSIM_G2_UNSUPPORTED_LIB_MSG` | Usar una librería o API no soportada (WiFi, BLE, ADC…) produce un mensaje en español que nombra la API/librería y el gate que la soportará (o que no está en el plan G0–G10), en compilación o al primer uso. | `node scripts/gate-g2-unsupported.mjs` sobre `tests/sketches/g2_unsupported`. |
 | `JWSIM_G2_PROJECT_LINKING` | `.jwsim` v1 abre un proyecto que vincula `.ino`, proyecto OpenPLC y `.hmi`; validación por JSON Schema; migración probada de un archivo de versión anterior. | `node --test tests/build/project_test.mjs` + criterio `PROJECT_LINKING` de la E2E. |
 | `JWSIM_G2_EXTERNAL_EDIT_RELOAD` | Editar el `.ino` fuera del simulador (Arduino IDE) provoca recompilación y recarga en < 2 s sin perder la escena. | Criterio `EXTERNAL_EDIT_RELOAD` de la E2E (escritura externa con una entrada activa). |
-| `JWSIM_A17_UI` | Mejoras de interfaz de la línea alpha.17: la lista de Ejemplos solo trae las librerías del JWPLC Basic (`JWPLC_*`, `JW_*`); Herramientas > Autoformato (Ctrl+T) formatea con clang-format (estilo de los ejemplos o el `.clang-format` del sketch) y se deshace con un Ctrl+Z; el divisor editor/simulación se arrastra y se recuerda; el panel del dispositivo de la escena se pliega; la vista Placa muestra solo el frente con las salidas en una tira; sin el texto «JWPLC Basic · package …». | E2E `app/tests/e2e-a17-ui.mjs` → `JWSIM_A17_UI.json` (6 criterios). |
+| `JWSIM_A17_UI` | Mejoras de interfaz de la línea alpha.17: la lista de Ejemplos solo trae las librerías del JWPLC Basic (`JWPLC_*`, `JW_*`); Herramientas > Autoformato (Ctrl+T) formatea con clang-format (estilo de los ejemplos o el `.clang-format` del sketch) y se deshace con un Ctrl+Z; el divisor editor/simulación se arrastra y se recuerda; el panel del dispositivo de la escena se pliega; la vista Placa muestra solo el frente con las salidas en una tira; sin el texto «JWPLC Basic · package …»; panel inferior a lo ancho con las pestañas Problemas · Compilación · Serie · Tráfico · E/S y variables · Depuración, de alto arrastrable (se recuerda) y plegable, con el COM y la velocidad en la barra superior. | E2E `app/tests/e2e-a17-ui.mjs` → `JWSIM_A17_UI.json` (7 criterios). |
 
 ## G3 — Depuración
 

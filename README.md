@@ -110,8 +110,16 @@ descargado.
 La primera compilación de un sketch tarda ~10–50 s (core + las librerías del
 package que usa); un cambio posterior, menos de 1 s. Los ejemplos del package se
 copian a `Documentos/JWPLC Sim/` antes de editarlos. F5 compila y ejecuta,
-F6 pausa. Proyecto → Abrir/Guardar maneja archivos `.jwsim` (sketch,
-vínculos a OpenPLC y HMI, escena). Si edita el sketch con el Arduino IDE, la
+F6 pausa. Archivo → Abrir proyecto / Guardar proyecto (Ctrl+Mayús+O / S)
+maneja archivos `.jwsim` (sketch, vínculos a OpenPLC y HMI, escena).
+
+La ventana tiene arriba la barra (archivo, ejecución, velocidad ×1/×10/Máx,
+tiempo virtual, estado y el puerto COM con su luz), en el centro el editor y
+la placa, y abajo un panel a lo ancho, de alto ajustable y plegable, con las
+pestañas **Problemas**, **Compilación**, **Serie**, **Tráfico**, **E/S y
+variables**, **Depuración** y (con un ejercicio abierto) **Ejercicio**. Al
+compilar el panel muestra Compilación; si hay errores, Problemas; al
+ejecutar vuelve a Serie (o a la pestaña que se estaba mirando). Si edita el sketch con el Arduino IDE, la
 simulación se recarga sola.
 
 Depuración (G3), con el gdb del toolchain (o el del sistema en Linux):
@@ -120,12 +128,14 @@ Depuración (G3), con el gdb del toolchain (o el del sistema en Linux):
   por encima, F11 entra, Mayús+F11 sale, Ctrl+F8 interrumpe. Detenido, el
   tiempo virtual no avanza; la pestaña Depuración muestra la pila y las
   variables.
-- **Observación**: E/S y variables del sketch en vivo; forzado de entradas y
-  salidas (marca "F" en la placa).
+- **E/S y variables**: tablas de entradas y salidas con su valor, su estado
+  (Libre / Forzada) y los botones Forzar 0 · 1 · Liberar, como la tabla de
+  forzado de un PLC (marca "F" en la placa); al lado, variables del sketch
+  en vivo.
 - **Grabación**: toda la sesión (entradas y forzados) se guarda como `.stim`
   con su hash; Simulación → Reproducir grabación la repite y compara el hash.
-- **Buses**: I2C por registro, SPI por CS (TFT, SD, FRAM, W5500), UART y
-  Modbus RTU/TCP con CRC, con filtro por tipo.
+- **Tráfico**: RS-485 y Modbus RTU/TCP (en modo avanzado también I2C por registro, SPI por CS (TFT, SD, FRAM, W5500), UART y
+  Modbus RTU/TCP con CRC), con filtro por tipo.
 
 Periféricos (G4), modelados por registros contra sus hojas de datos:
 
@@ -139,8 +149,10 @@ Periféricos (G4), modelados por registros contra sus hojas de datos:
   `JWPLCDataLog` y `fopen("/sd/…")` funcionan como en la placa. El zócalo de
   la placa quita y pone la tarjeta. Para usar una imagen propia, copie un
   `.img` como `sd.img` en la carpeta de estado.
-- **Consola serie**: el campo bajo la consola envía texto por UART0 (con el
-  fin de línea elegido); queda en la grabación.
+- **Serie**: el monitor del USB (UART0). «Marca de tiempo» antepone a cada
+  línea el tiempo virtual en que el PLC la empezó a enviar
+  (`00:00:01.250 > …`). El campo de abajo envía texto por UART0 (con el fin
+  de línea elegido); queda en la grabación.
 - **Temporizadores y reinicio**: `esp_timer`, `Ticker`, timers de FreeRTOS,
   `timerBegin` y `ESP.restart()` (el PLC reinicia conservando FRAM, NVS, SD,
   RTC, salidas del expansor y pantalla).

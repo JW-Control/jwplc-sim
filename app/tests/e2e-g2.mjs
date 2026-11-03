@@ -165,7 +165,7 @@ const migratedMsg = await win
   .waitForFunction(() => /migrado de la versión 0/.test(document.querySelector("#console").textContent), null, { timeout: 5000 })
   .then(() => true, () => false);
 const pushMode = await win.$eval(".mode .seg[data-mode='push']", (e) => e.classList.contains("active"));
-const speed10 = await win.$eval(".speed .seg[data-speed='10']", (e) => e.classList.contains("active"));
+const speed10 = await win.$eval("#sel-speed", (e) => e.value === "10");
 await win.evaluate(() => window.jwsimTest.saveProject());
 await win.waitForTimeout(300);
 const saved = JSON.parse(readFileSync(v0, "utf8"));

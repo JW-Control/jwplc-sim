@@ -27,24 +27,23 @@
         <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
       </div>
       <div class="group">
-        <span class="label">Proyecto</span>
-        <button id="btn-project-open" title="Abrir proyecto .jwsim (Ctrl+Mayús+O)">Abrir</button>
-        <button id="btn-project-save" title="Guardar proyecto .jwsim (Ctrl+Mayús+S)">Guardar</button>
-      </div>
-      <div class="group">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
         <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
         <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
       </div>
-      <div class="group speed" role="radiogroup" aria-label="Velocidad" title="Velocidad de la simulación">
-        <button data-speed="1" class="seg active" role="radio" aria-checked="true">×1</button>
-        <button data-speed="10" class="seg" role="radio" aria-checked="false">×10</button>
-        <button data-speed="0" class="seg" role="radio" aria-checked="false" title="Lo más rápido posible">Máx</button>
-      </div>
+      <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
+        <option value="1">×1</option>
+        <option value="10">×10</option>
+        <option value="0">Máx</option>
+      </select>
       <div class="clock" title="Tiempo virtual del PLC simulado">
         <span class="label">t</span><span id="clock">00:00:00.000</span>
       </div>
       <div id="status" class="status idle">Detenido</div>
+      <button id="btn-com" class="com-status" aria-haspopup="dialog" aria-expanded="false"
+        title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
+        <span class="com-dot" aria-hidden="true"></span><span id="com-label">Sin COM</span>
+      </button>
     </header>
 
     <main class="workspace">
@@ -60,15 +59,6 @@
           </div>
         </div>
         <div id="editor"></div>
-        <div class="build-output" id="output-panel">
-          <div class="panel-head">
-            <span>Salida de compilación</span>
-            <span id="problems-count" class="count"></span>
-            <button id="btn-output-toggle" class="ghost small">Ocultar</button>
-          </div>
-          <ul id="problems" class="problems"></ul>
-          <pre id="build-log" class="log"></pre>
-        </div>
       </section>
 
       <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Ancho del editor"
@@ -177,97 +167,129 @@
           </div>
         </div>
 
-        <div class="console-card">
-          <div class="panel-head tabbar" role="tablist">
-            <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console">Consola serie</button>
-            <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses" title="Tramas de RS-485 y Modbus RTU/TCP">Comunicación</button>
-            <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch">Observación</button>
-            <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug">Depuración</button>
-            <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
-            <span class="muted" id="view-note">UART0 · 115200</span>
-            <button id="btn-com" class="ghost small" title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">Puerto COM</button>
-            <button id="btn-view-clear" class="ghost small">Limpiar</button>
+      </section>
+    </main>
+
+    <div class="dock-splitter" id="dock-splitter" role="separator" aria-orientation="horizontal" aria-label="Alto del panel inferior"
+      title="Arrastrar para cambiar el alto del panel inferior (doble clic: volver al alto inicial)" tabindex="0"></div>
+
+    <!-- Panel inferior: todo lo que es texto o tabla, a lo ancho de la ventana. -->
+    <section class="dock" id="dock">
+      <div class="panel-head tabbar" role="tablist">
+        <button class="ptab" role="tab" aria-selected="false" data-view="problems" id="tab-problems" title="Errores y avisos de la compilación (clic en uno: ir a la línea)">Problemas <span id="problems-count" class="badge"></span></button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="build" id="tab-build" title="Salida completa del compilador">Compilación</button>
+        <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console" title="Monitor serie del USB (UART0)">Serie</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses" title="Tramas de RS-485 y Modbus RTU/TCP">Tráfico</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch" title="Entradas, salidas y variables del sketch; forzado de E/S">E/S y variables</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug" title="Pila de llamadas y variables al detenerse en un breakpoint">Depuración</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
+        <span class="muted" id="view-note">UART0 · 115200</span>
+        <label class="dock-opt" id="opt-ts" title="Antepone a cada línea el tiempo virtual en que el PLC la empezó a enviar">
+          <input type="checkbox" id="serial-ts" /> Marca de tiempo
+        </label>
+        <button id="btn-view-clear" class="ghost small">Limpiar</button>
+        <button id="btn-dock-toggle" class="ghost small" title="Plegar el panel inferior" aria-expanded="true" aria-controls="dock-body">▾</button>
+      </div>
+      <div class="dock-body" id="dock-body">
+        <ul id="problems" class="problems view" data-view="problems" hidden></ul>
+        <pre id="build-log" class="log view" data-view="build" hidden></pre>
+        <pre id="console" class="console view" data-view="console"></pre>
+        <form id="serial-send" class="serial-send view" data-view="console">
+          <input id="serial-text" placeholder="Texto para UART0 (Enter envía)" spellcheck="false" autocomplete="off" aria-label="Texto para enviar por UART0" />
+          <select id="serial-eol" title="Fin de línea que se agrega al enviar" aria-label="Fin de línea">
+            <option value="lf">Nueva línea</option>
+            <option value="crlf">CR y NL</option>
+            <option value="cr">Retorno de carro</option>
+            <option value="none">Sin ajuste</option>
+          </select>
+          <button type="submit" id="btn-serial-send" disabled>Enviar</button>
+        </form>
+        <div id="exercise" class="exercise view" data-view="exercise" hidden>
+          <div class="ex-tools">
+            <button id="btn-grade" title="Compila el sketch y lo corre con la escena en cada caso de la rúbrica">Calificar</button>
+            <span id="grade-note" class="muted"></span>
           </div>
-          <div id="com-panel" class="com-panel" hidden>
-            <label for="com-port">Puerto de la PC</label>
-            <select id="com-port"></select>
-            <button id="com-refresh" class="ghost small" title="Volver a buscar puertos">↻</button>
-            <label for="com-uart">Puerto del JWPLC</label>
-            <select id="com-uart">
-              <option value="0">USB (Monitor serie)</option>
-              <option value="2">RS-485</option>
+          <div id="grade-result"></div>
+          <div id="ex-statement" class="md"></div>
+        </div>
+        <div id="buses" class="buses view" data-view="buses" hidden>
+          <div class="bus-tools">
+            <label for="bus-filter">Mostrar</label>
+            <select id="bus-filter">
+              <option value="">Todo</option>
+              <option value="RS485">RS-485</option>
+              <option value="Modbus">Modbus</option>
+              <option value="I2C" data-advanced hidden>I2C</option>
+              <option value="SPI" data-advanced hidden>SPI (por CS)</option>
+              <option value="UART" data-advanced hidden>Otras UART</option>
             </select>
-            <button id="com-connect" class="small">Conectar</button>
-            <button id="com-install" class="ghost small" hidden title="Instala el driver libre com0com y el par COM20 ↔ COM21 (pide permiso de administrador)">Instalar COM20 ↔ COM21</button>
-            <span id="com-note" class="muted"></span>
           </div>
-          <pre id="console" class="console view" data-view="console"></pre>
-          <form id="serial-send" class="serial-send view" data-view="console">
-            <input id="serial-text" placeholder="Texto para UART0 (Enter envía)" spellcheck="false" autocomplete="off" aria-label="Texto para enviar por UART0" />
-            <select id="serial-eol" title="Fin de línea que se agrega al enviar" aria-label="Fin de línea">
-              <option value="lf">Nueva línea</option>
-              <option value="crlf">CR y NL</option>
-              <option value="cr">Retorno de carro</option>
-              <option value="none">Sin ajuste</option>
-            </select>
-            <button type="submit" id="btn-serial-send" disabled>Enviar</button>
-          </form>
-          <div id="exercise" class="exercise view" data-view="exercise" hidden>
-            <div class="ex-tools">
-              <button id="btn-grade" title="Compila el sketch y lo corre con la escena en cada caso de la rúbrica">Calificar</button>
-              <span id="grade-note" class="muted"></span>
-            </div>
-            <div id="grade-result"></div>
-            <div id="ex-statement" class="md"></div>
-          </div>
-          <div id="buses" class="buses view" data-view="buses" hidden>
-            <div class="bus-tools">
-              <label for="bus-filter">Mostrar</label>
-              <select id="bus-filter">
-                <option value="">Todo</option>
-                <option value="RS485">RS-485</option>
-                <option value="Modbus">Modbus</option>
-                <option value="I2C" data-advanced hidden>I2C</option>
-                <option value="SPI" data-advanced hidden>SPI (por CS)</option>
-                <option value="UART" data-advanced hidden>Otras UART</option>
-              </select>
-            </div>
-            <table>
-              <thead>
-                <tr><th>t (ms)</th><th>Bus</th><th>Dispositivo</th><th>Operación</th><th>Datos</th></tr>
-              </thead>
-              <tbody id="bus-rows"></tbody>
+          <table>
+            <thead>
+              <tr><th>t (ms)</th><th>Bus</th><th>Dispositivo</th><th>Operación</th><th>Datos</th></tr>
+            </thead>
+            <tbody id="bus-rows"></tbody>
+          </table>
+        </div>
+        <div id="watch" class="watch view" data-view="watch" hidden>
+          <div class="watch-col">
+            <div class="watch-title">Entradas digitales</div>
+            <table class="io-table">
+              <thead><tr><th>Señal</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
+              <tbody id="io-in-rows"></tbody>
             </table>
           </div>
-          <div id="watch" class="watch view" data-view="watch" hidden>
+          <div class="watch-col">
+            <div class="watch-title">Salidas a relé</div>
+            <table class="io-table">
+              <thead><tr><th>Señal</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
+              <tbody id="io-out-rows"></tbody>
+            </table>
+          </div>
+          <div class="watch-col vars">
+            <div class="watch-title">Variables del sketch</div>
             <div class="watch-tools">
               <form id="watch-add">
-                <input id="watch-expr" placeholder="Variable o expresión del sketch (p. ej. contador)" spellcheck="false" />
+                <input id="watch-expr" placeholder="Variable o expresión (p. ej. contador)" spellcheck="false" />
                 <button type="submit">Agregar</button>
               </form>
-              <span class="rec" id="rec-info" title="Toda la sesión se graba desde t = 0: entradas, pulsos y forzados">● 0 eventos</span>
-              <button id="btn-rec-save" title="Guardar la sesión como archivo .stim reproducible" disabled>Guardar grabación</button>
             </div>
             <table>
-              <thead>
-                <tr><th>Nombre</th><th>Valor</th><th>Forzar</th></tr>
-              </thead>
+              <thead><tr><th>Nombre</th><th>Valor</th><th></th></tr></thead>
               <tbody id="watch-rows"></tbody>
             </table>
-          </div>
-          <div id="debug" class="debug view" data-view="debug" hidden>
-            <div class="dbg-col">
-              <div class="dbg-title">Pila de llamadas</div>
-              <ol id="dbg-stack" class="dbg-stack"></ol>
-            </div>
-            <div class="dbg-col">
-              <div class="dbg-title">Variables</div>
-              <div id="dbg-vars" class="tree"></div>
+            <div class="watch-tools rec-tools">
+              <span class="rec" id="rec-info" title="Toda la sesión se graba desde t = 0: entradas, pulsos y forzados">● 0 eventos</span>
+              <button id="btn-rec-save" class="small" title="Guardar la sesión como archivo .stim reproducible" disabled>Guardar grabación</button>
             </div>
           </div>
         </div>
-      </section>
-    </main>
+        <div id="debug" class="debug view" data-view="debug" hidden>
+          <div class="dbg-col">
+            <div class="dbg-title">Pila de llamadas</div>
+            <ol id="dbg-stack" class="dbg-stack"></ol>
+          </div>
+          <div class="dbg-col">
+            <div class="dbg-title">Variables</div>
+            <div id="dbg-vars" class="tree"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="com-panel" class="com-panel" role="dialog" aria-label="Puerto COM" hidden>
+      <label for="com-port">Puerto de la PC</label>
+      <select id="com-port"></select>
+      <button id="com-refresh" class="ghost small" title="Volver a buscar puertos">↻</button>
+      <label for="com-uart">Puerto del JWPLC</label>
+      <select id="com-uart">
+        <option value="0">USB (Monitor serie)</option>
+        <option value="2">RS-485</option>
+      </select>
+      <button id="com-connect" class="small">Conectar</button>
+      <button id="com-install" class="ghost small" hidden title="Instala el driver libre com0com y el par COM20 ↔ COM21 (pide permiso de administrador)">Instalar COM20 ↔ COM21</button>
+      <span id="com-note" class="muted"></span>
+    </div>
 
     <footer class="statusbar">
       <span id="sb-sketch">Sin sketch</span>

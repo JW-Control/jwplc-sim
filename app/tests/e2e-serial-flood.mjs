@@ -44,7 +44,7 @@ const until = async (fn, timeout = 5000) => {
 await t((dir) => window.jwsimTest.openSketchDir(dir), sketch);
 await win.waitForSelector(".tab.active:has-text('flood.ino')", { timeout: 10000 });
 await win.click("#tab-console").catch(() => {});
-if (process.env.JWSIM_FLOOD_SPEED) await win.click(`[data-speed="${process.env.JWSIM_FLOOD_SPEED}"]`);
+if (process.env.JWSIM_FLOOD_SPEED) await win.selectOption("#sel-speed", process.env.JWSIM_FLOOD_SPEED);
 await win.click("#btn-run");
 await until(async () => (await t(() => window.jwsimTest.status())) === "running", 600000);
 log(`imprimiendo ${SECONDS} s…`);
@@ -70,7 +70,7 @@ const sample = await t(() => {
     clock,
     last: Number(lines.at(-1)) || Number(lines.at(-2)),
     chars: document.querySelector("#console").textContent.length,
-    frames: f.length, ser: window.__ser, serB: window.__serB, speed: document.querySelector("[data-speed][aria-checked=true]")?.textContent,
+    frames: f.length, ser: window.__ser, serB: window.__serB, speed: document.querySelector("#sel-speed").selectedOptions[0]?.textContent,
     frame_p50_ms: Math.round(f[Math.floor(f.length * 0.5)] ?? 0),
     frame_p95_ms: Math.round(f[Math.floor(f.length * 0.95)] ?? 0),
     frame_max_ms: Math.round(f.at(-1) ?? 0),
