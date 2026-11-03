@@ -168,6 +168,7 @@ await win.waitForTimeout(300);
 const rec = await t(() => window.jwsimTest.saveRecording());
 const text = rec ? readFileSync(rec.file, "utf8") : "";
 const events = text.split("\n").filter((l) => /^\d/.test(l));
+await win.evaluate(() => window.jwsimTest.showAllBuses(true)); // I2C/SPI solo en modo avanzado
 await win.click("#tab-buses");
 if (rec) await t(([f, x]) => window.jwsimTest.replay(f, x), [rec.file, text]);
 const rp = await until(() => t(() => window.jwsimTest.lastReplay()), 60000);
@@ -187,6 +188,15 @@ await win.selectOption("#bus-filter", "SPI");
 const spiRows = await visibleRows();
 await shot(win, "05-buses-spi.png");
 await win.selectOption("#bus-filter", "");
+// Modo usuario (pestaña Comunicación): sin I2C ni SPI interno de la placa.
+await t(() => window.jwsimTest.showAllBuses(false));
+const userRows = await visibleRows();
+const userAdvancedOptions = await win.$$eval("#bus-filter option:not([hidden])", (o) => o.map((x) => x.value));
+criteria.BUS_USER_VIEW = {
+  pass: userRows.every((x) => !/I2C0|VSPI/.test(x) || /Modbus/.test(x)) && !userAdvancedOptions.includes("I2C") && !userAdvancedOptions.includes("SPI"),
+  visibles: userRows.length,
+  opciones: userAdvancedOptions,
+};
 criteria.BUS_ANALYZER_UI = {
   pass: i2cRows.length > 0 && spiRows.length > 0 && spiRows.every((x) => /VSPI/.test(x)) && spiRows.some((x) => /TFT.*(CASET|RAMWR|SLPOUT|MADCTL)/.test(x)),
   i2c_example: i2cRows[0],

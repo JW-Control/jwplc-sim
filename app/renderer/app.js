@@ -38,11 +38,31 @@ const state = {
 const MAX_BUS_ROWS = 1000;
 let busDecoder = window.JwsimBus.createDecoder();
 
+// La pestaña Comunicación muestra al usuario solo RS-485 (UART2) y Modbus RTU/TCP.
+// I2C, SPI y las demás UART son internos de la placa: solo se ven en modo
+// avanzado (window.jwsimTest.showAllBuses(true), lo usan las pruebas E2E).
+let busAll = false;
+
 function busKind(row) {
-  if (/^Modbus/.test(row.dev)) return "Modbus";
+  if (/^Modbus/.test(row.dev) || row.fields?.modbus) return "Modbus";
+  if (row.bus === "UART2") return "RS485";
   if (/^I2C/.test(row.bus)) return "I2C";
   if (/SPI/.test(row.bus)) return "SPI";
   return "UART";
+}
+
+const busForUser = (kind) => busAll || kind === "Modbus" || kind === "RS485";
+
+function busRowHidden(tr, filter) {
+  if (!busForUser(tr.dataset.kind)) return true;
+  return !!filter && tr.dataset.kind !== filter;
+}
+
+function showAllBuses(on) {
+  busAll = !!on;
+  for (const o of document.querySelectorAll("#bus-filter option[data-advanced]")) o.hidden = !busAll;
+  if (!busAll && document.querySelector("#bus-filter option:checked")?.hasAttribute("data-advanced")) $("bus-filter").value = "";
+  applyBusFilter();
 }
 
 function resetBuses() {
@@ -52,7 +72,7 @@ function resetBuses() {
 
 function applyBusFilter() {
   const f = $("bus-filter").value;
-  for (const tr of $("bus-rows").children) tr.hidden = !!f && tr.dataset.kind !== f && !(f === "Modbus" && tr.dataset.modbus);
+  for (const tr of $("bus-rows").children) tr.hidden = tr.dataset.kind ? busRowHidden(tr, f) : false;
 }
 
 function appendBus(items, dropped) {
@@ -66,8 +86,9 @@ function appendBus(items, dropped) {
       const tr = document.createElement("tr");
       if (d.level !== "ok") tr.className = d.level === "err" ? "nack" : "warn";
       tr.dataset.kind = busKind(d);
-      if (d.fields?.modbus) tr.dataset.modbus = "1";
-      tr.hidden = !!filter && tr.dataset.kind !== filter && !(filter === "Modbus" && tr.dataset.modbus);
+      // Lo interno de la placa (I2C, SPI, consola) no se guarda en modo usuario.
+      if (!busForUser(tr.dataset.kind)) continue;
+      tr.hidden = busRowHidden(tr, filter);
       for (const [v, cls] of [[(d.t / 1e6).toFixed(3)], [d.bus], [d.dev], [d.op, "op"], [d.data, "data"]]) {
         const td = document.createElement("td");
         td.textContent = v;
@@ -96,7 +117,7 @@ function setView(view) {
     b.setAttribute("aria-selected", String(on));
   }
   for (const v of document.querySelectorAll(".view")) v.hidden = v.dataset.view !== view;
-  $("view-note").textContent = { console: "UART0 · 115200", buses: "I2C, SPI por CS y UART en vivo", watch: "E/S y variables", debug: "gdb", exercise: "Enunciado y calificación" }[view];
+  $("view-note").textContent = { console: "UART0 · 115200", buses: "RS-485 y Modbus en vivo", watch: "E/S y variables", debug: "gdb", exercise: "Enunciado y calificación" }[view];
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
 }
 
@@ -1447,6 +1468,7 @@ window.jwsimTest = {
     comShow(r.current, r.error ?? "");
     return r;
   },
+  showAllBuses: (on) => showAllBuses(on),
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
   openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
