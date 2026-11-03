@@ -1,0 +1,10 @@
+com0com (puerto COM virtual, componente opcional del instalador de Windows)
+
+Versión: 2.2.2.0 x64, driver firmado por Steven William Hatchett.
+Licencia: GNU General Public License v2 o posterior.
+Código fuente: https://sourceforge.net/projects/com0com/ (versión 2.2.2.0).
+
+JWPLC Sim incluye sin modificar el instalador setup.exe de com0com y lo ejecuta
+solo si el usuario acepta instalar el puerto COM virtual. com0com se instala
+como un programa aparte en "Archivos de programa\com0com" y se desinstala
+desde Configuración de Windows (Aplicaciones).

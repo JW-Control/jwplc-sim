@@ -843,7 +843,9 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 
 Implementado en G2 **[G2]**: `hello` (placa y nivel de cada señal), `run`
 con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,
-`subscribe` (`buses`: 1/0), `quit`; del runner, `signals` (último nivel de
+`subscribe` (`buses`: 1/0), `tap` (`port`, `on`: bytes TX de esa UART como
+`uart_out` en hex, para el puerto COM virtual de `app/lib/com-bridge.mjs`; lo
+que llega del COM entra como `uart` y queda en la grabación), `quit`; del runner, `signals` (último nivel de
 cada señal que cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin
 cortar caracteres), `bus` (transacciones I2C `[t_ns, bus, dirección,
 escritos, leídos, resultado]` y bytes de UART, hasta 400 por envío; el resto

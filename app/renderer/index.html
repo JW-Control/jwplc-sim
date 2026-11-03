@@ -176,7 +176,21 @@
             <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug">Depuración</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
             <span class="muted" id="view-note">UART0 · 115200</span>
+            <button id="btn-com" class="ghost small" title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">Puerto COM</button>
             <button id="btn-view-clear" class="ghost small">Limpiar</button>
+          </div>
+          <div id="com-panel" class="com-panel" hidden>
+            <label for="com-port">Puerto de la PC</label>
+            <select id="com-port"></select>
+            <button id="com-refresh" class="ghost small" title="Volver a buscar puertos">↻</button>
+            <label for="com-uart">Puerto del JWPLC</label>
+            <select id="com-uart">
+              <option value="0">USB (Monitor serie)</option>
+              <option value="2">RS-485</option>
+            </select>
+            <button id="com-connect" class="small">Conectar</button>
+            <button id="com-install" class="ghost small" hidden title="Instala el driver libre com0com y el par COM20 ↔ COM21 (pide permiso de administrador)">Instalar COM20 ↔ COM21</button>
+            <span id="com-note" class="muted"></span>
           </div>
           <pre id="console" class="console view" data-view="console"></pre>
           <form id="serial-send" class="serial-send view" data-view="console">
