@@ -39,8 +39,14 @@ body {
   grid-template-rows: auto minmax(0, 1fr) 5px var(--dock-h, 260px) auto;
   grid-template-columns: minmax(0, 1fr);
 }
+/* Panel inferior plegado por completo: el área de trabajo llega a la barra
+   de estado; se vuelve a abrir desde ella (o con Ctrl+J). */
 body.dock-collapsed {
-  grid-template-rows: auto minmax(0, 1fr) 5px auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+body.dock-collapsed .dock,
+body.dock-collapsed .dock-splitter {
+  display: none;
 }
 
 button,
@@ -389,7 +395,14 @@ body.resizing-v {
   display: flex;
   flex-direction: column;
 }
-body.dock-collapsed .dock-body {
+.statusbar #sb-dock {
+  margin-left: 0;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  border-radius: 4px;
+}
+body:not(.dock-collapsed) #sb-dock {
   display: none;
 }
 .dock .log {
@@ -1124,12 +1137,25 @@ button.io.on {
 .view3d-empty[hidden] {
   display: none;
 }
+/* Herramientas de la escena: arriba del panel lateral (plegable), para que
+   el lienzo tenga toda la altura. */
 .scene-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  padding: 6px 10px;
+  margin: -8px -10px 8px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
+}
+.scene-tools #scene-add {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.scene-tools button {
+  flex: 1 1 0;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 .scene-main {
   flex: 1;

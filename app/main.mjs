@@ -886,6 +886,8 @@ function buildMenu() {
       {
         label: "Ver",
         submenu: [
+          { label: "Panel inferior", accelerator: "CmdOrCtrl+J", click: send("dock") },
+          { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
           { type: "separator" },
           { role: "reload", label: "Recargar" },

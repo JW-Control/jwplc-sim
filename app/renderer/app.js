@@ -634,6 +634,7 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
       $("problems-count").className = "badge error";
     }
     setView("problems");
+    setDockCollapsed(false);
     return false;
   }
   if (r.diagnostics?.length) showProblems(r.diagnostics);
@@ -1493,7 +1494,7 @@ function wireSceneSide() {
   const apply = (collapsed) => {
     main.classList.toggle("side-collapsed", collapsed);
     tab.setAttribute("aria-expanded", String(!collapsed));
-    tab.title = collapsed ? "Mostrar el panel del dispositivo" : "Ocultar el panel del dispositivo";
+    tab.title = collapsed ? "Mostrar el panel de la escena (agregar, ajustar, dispositivo)" : "Ocultar el panel de la escena";
   };
   apply(storeGet(SIDE_KEY) === "1");
   tab.addEventListener("click", () => {
@@ -1520,9 +1521,8 @@ function setDockHeight(px, save = true) {
   if (save) storeSet(DOCK_KEY, String(h));
 }
 function setDockCollapsed(collapsed) {
+  if (document.body.classList.contains("dock-collapsed") === collapsed) return;
   document.body.classList.toggle("dock-collapsed", collapsed);
-  $("btn-dock-toggle").textContent = collapsed ? "▴" : "▾";
-  $("btn-dock-toggle").title = collapsed ? "Mostrar el panel inferior" : "Plegar el panel inferior";
   $("btn-dock-toggle").setAttribute("aria-expanded", String(!collapsed));
   storeSet(DOCK_FOLD_KEY, collapsed ? "1" : null);
 }
@@ -1531,14 +1531,16 @@ function wireDock() {
   const saved = Number(storeGet(DOCK_KEY));
   if (saved > 0) setDockHeight(saved, false);
   if (storeGet(DOCK_FOLD_KEY) === "1") setDockCollapsed(true);
-  $("btn-dock-toggle").addEventListener("click", () => setDockCollapsed(!document.body.classList.contains("dock-collapsed")));
+  const toggle = () => setDockCollapsed(!document.body.classList.contains("dock-collapsed"));
+  $("btn-dock-toggle").addEventListener("click", toggle);
+  $("sb-dock").addEventListener("click", toggle);
+
   bar.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
     bar.setPointerCapture(e.pointerId);
     bar.classList.add("dragging");
     document.body.classList.add("resizing", "resizing-v");
-    if (document.body.classList.contains("dock-collapsed")) setDockCollapsed(false);
     const move = (ev) => setDockHeight(window.innerHeight - ev.clientY - statusbarH(), false);
     const up = (ev) => {
       bar.removeEventListener("pointermove", move);
@@ -1703,6 +1705,7 @@ function wireUi() {
     else if (cmd === "open") $("btn-open").click();
     else if (cmd === "save") saveSketch();
     else if (cmd === "format") autoFormat();
+    else if (cmd === "dock") $("sb-dock").click();
     else if (cmd === "run") buildAndRun();
     else if (cmd === "pause") togglePause();
     else if (cmd === "stop") stopSim();

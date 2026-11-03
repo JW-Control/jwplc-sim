@@ -129,12 +129,6 @@
             </div>
           </div>
           <div id="scene-view" class="scene-view" hidden>
-            <div class="scene-tools">
-              <select id="scene-add" title="Agregar un dispositivo a la escena" aria-label="Agregar dispositivo"></select>
-              <button id="scene-fit" class="small" title="Ver toda la escena">Ajustar</button>
-              <button id="scene-rearm" class="small" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" disabled>Rearmar</button>
-              <button id="scene-sound" class="small" title="Sonido de relés y contactores">🔊 Sonido</button>
-            </div>
             <div class="scene-main">
               <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
                 <defs>
@@ -155,10 +149,16 @@
                 </g>
               </svg>
               <button id="scene-side-toggle" class="side-tab" aria-expanded="true" aria-controls="scene-side"
-                title="Ocultar el panel del dispositivo">
-                <span class="side-tab-arrow" aria-hidden="true">›</span><span class="side-tab-label">Dispositivo</span>
+                title="Ocultar el panel de la escena">
+                <span class="side-tab-arrow" aria-hidden="true">›</span><span class="side-tab-label">Agregar y dispositivo</span>
               </button>
               <aside class="scene-side" id="scene-side">
+                <div class="scene-tools">
+                  <select id="scene-add" title="Agregar un dispositivo a la escena" aria-label="Agregar dispositivo"></select>
+                  <button id="scene-fit" class="small" title="Ver toda la escena">Ajustar</button>
+                  <button id="scene-rearm" class="small" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" disabled>Rearmar</button>
+                  <button id="scene-sound" class="small" title="Sonido de relés y contactores">🔊 Sonido</button>
+                </div>
                 <div id="scene-inspector" class="scene-inspector"></div>
                 <div class="insp-sub">Diagnóstico</div>
                 <ul id="scene-diag" class="scene-diag"></ul>
@@ -188,7 +188,7 @@
           <input type="checkbox" id="serial-ts" /> Marca de tiempo
         </label>
         <button id="btn-view-clear" class="ghost small">Limpiar</button>
-        <button id="btn-dock-toggle" class="ghost small" title="Plegar el panel inferior" aria-expanded="true" aria-controls="dock-body">▾</button>
+        <button id="btn-dock-toggle" class="ghost small" title="Ocultar el panel inferior (Ctrl+J); se vuelve a abrir desde la barra de estado" aria-expanded="true" aria-controls="dock">▾</button>
       </div>
       <div class="dock-body" id="dock-body">
         <ul id="problems" class="problems view" data-view="problems" hidden></ul>
@@ -295,6 +295,7 @@
       <span id="sb-sketch">Sin sketch</span>
       <span id="sb-project"></span>
       <span id="sb-build"></span>
+      <button id="sb-dock" class="ghost" title="Mostrar el panel inferior (Ctrl+J)">▴ Panel inferior</button>
     </footer>
 
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>

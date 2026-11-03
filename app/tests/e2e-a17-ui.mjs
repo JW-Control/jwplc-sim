@@ -12,7 +12,8 @@
 //   NO_PACKAGE_TEXT  sin el texto «JWPLC Basic · package …» arriba ni abajo
 //   DOCK             panel inferior a lo ancho con las pestañas Problemas ·
 //                    Compilación · Serie · Tráfico · E/S y variables ·
-//                    Depuración; su alto se arrastra, se recuerda y se pliega;
+//                    Depuración; su alto se arrastra y se recuerda; se oculta
+//                    por completo y vuelve desde la barra de estado;
 //                    COM y velocidad en la barra superior (sin Proyecto ahí)
 // Informe en build/gates/JWSIM_A17_UI.json y capturas en build/gates/a17-ui/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-a17-ui.mjs
@@ -127,11 +128,17 @@ await win.waitForTimeout(300);
 const d1 = await dockBox();
 const dockStored = await win.evaluate(() => localStorage.getItem("jwsim.dockHeight"));
 await win.screenshot({ path: join(OUT, "06-panel-inferior.png") });
+const workH = () => win.$eval(".workspace", (e) => Math.round(e.getBoundingClientRect().height));
+const wOpen = await workH();
 await win.click("#btn-dock-toggle");
 await win.waitForTimeout(300);
 const dFold = await dockBox();
-await win.click("#tab-buses");
+const wFold = await workH();
+const sbFold = await win.$eval(".statusbar", (e) => Math.round(e.getBoundingClientRect().height));
+await win.screenshot({ path: join(OUT, "07-panel-oculto.png") });
+await win.click("#sb-dock");
 await win.waitForTimeout(300);
+await win.click("#tab-buses");
 const dOpen = await dockBox();
 const viewport = await win.evaluate(() => window.innerWidth);
 const toolbar = await win.$eval(".toolbar", (e) => ({ speed: !!e.querySelector("select#sel-speed"), com: !!e.querySelector("#btn-com"), project: !!e.querySelector("#btn-project-open, #btn-project-save") }));
@@ -139,8 +146,8 @@ criteria.DOCK = {
   pass:
     tabs.join("|") === "Problemas|Compilación|Serie|Tráfico|E/S y variables|Depuración" &&
     d0.w === viewport && Math.abs(d1.h - d0.h - 120) <= 4 && Number(dockStored) === d1.h &&
-    dFold.h < 60 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project && modeKept,
-  tabs, input_mode_kept: modeKept, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, reopened: dOpen.h, toolbar,
+    dFold.h === 0 && wFold - wOpen >= d1.h && sbFold >= 18 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project && modeKept,
+  tabs, input_mode_kept: modeKept, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, workspace_grew: wFold - wOpen, statusbar_folded: sbFold, reopened: dOpen.h, toolbar,
 };
 
 await app.close();
