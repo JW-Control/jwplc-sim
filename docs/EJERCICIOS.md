@@ -23,7 +23,11 @@ trabajo (`Ejercicios/<id>`, sin la solución) y lo abre: el sketch de
 plantilla en el editor, la escena cableada y la pestaña **Ejercicio** con el
 enunciado. **Calificar** guarda el sketch, lo compila, lo corre con la
 escena en cada caso de la rúbrica y muestra la nota (0 a 20) con el detalle
-de cada verificación: qué falló y en qué instante.
+de cada verificación: qué falló y en qué instante. Si el ejercicio ya estaba
+copiado, al abrirlo de nuevo se ponen al día los archivos que el alumno no
+tocó (plantilla, enunciado, rúbrica); lo que editó se conserva
+(`.jwsim-ejercicio.json` guarda el hash de cada archivo copiado; prueba en
+`tests/app/exercise_copy_test.mjs`).
 
 **En la línea de comandos:**
 

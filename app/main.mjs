@@ -17,6 +17,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
+import { syncExercise } from "./lib/exercise-copy.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -265,7 +266,7 @@ ipcMain.handle("exercises:open", (_e, id) => {
   if (!/^[\w.-]+$/.test(id)) throw new Error(`ejercicio inválido: ${id}`);
   const src = join(EXERCISES, id);
   const dst = join(workspaceDir(), "Ejercicios", id);
-  if (!existsSync(dst)) cpSync(src, dst, { recursive: true, filter: (p) => !p.slice(src.length).split(/[\\/]/).includes("solucion") });
+  syncExercise(src, dst);
   return openProject(join(dst, `${id}.jwsim`));
 });
 

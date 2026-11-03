@@ -597,6 +597,9 @@
   function renderSide() {
     const side = $("scene-inspector");
     const sel = S.sel;
+    const selKey = sel ? `${sel.kind}:${sel.id}` : "";
+    if (selKey && selKey !== S.lastSelKey) window.JwsimScenePane?.showProps();
+    S.lastSelKey = selKey;
     let html = "";
     let stateHtml = "";
     if (sel?.kind === "device") {
@@ -686,7 +689,12 @@
         }
       }
     } else {
-      html += `<p class="insp-desc muted">Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr quita lo seleccionado. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
+      // Nada seleccionado: información general de la escena.
+      const nDev = S.spec.devices.filter((d) => d.type !== "jwsim/jwplc-basic").length;
+      const nWire = S.spec.wiring.length;
+      html += `<div class="insp-title">Escena</div><table class="insp-vals"><tr><td>Dispositivos</td><td>${nDev}</td></tr><tr><td>Cables</td><td>${nWire}</td></tr>` +
+        `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
+      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr quita lo seleccionado. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
     }
     if (side.dataset.key !== html) {
       side.innerHTML = html;
@@ -1146,22 +1154,38 @@
     render();
   }
 
+  // Pestaña «Agregar»: lista por categoría, con búsqueda; clic agrega el
+  // equipo en el centro de la vista.
   function populatePalette() {
-    const sel = $("scene-add");
+    const box = $("scene-add");
     const groups = new Map();
     for (const d of S.defs.values()) {
       if (d.type === "jwsim/jwplc-basic") continue;
       if (!groups.has(d.category)) groups.set(d.category, []);
       groups.get(d.category).push(d);
     }
-    sel.innerHTML = `<option value="">Agregar dispositivo…</option>` +
-      [...groups].map(([cat, list]) => `<optgroup label="${esc(cat)}">${list.map((d) => `<option value="${esc(d.type)}" title="${esc(d.description)}">${esc(d.name)}${d.installed ? " (instalado)" : ""}</option>`).join("")}</optgroup>`).join("");
-    sel.addEventListener("change", () => {
-      if (!sel.value) return;
+    box.innerHTML = [...groups]
+      .map(
+        ([cat, list]) =>
+          `<div class="palette-cat">${esc(cat)}</div>` +
+          list.map((d) => `<button class="palette-item" role="listitem" data-add="${esc(d.type)}" data-cat="${esc(cat)}" title="${esc(d.description)}">${esc(d.name)}${d.installed ? " (instalado)" : ""}</button>`).join(""),
+      )
+      .join("");
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-add]");
+      if (!b) return;
       const r = $("scene-svg").getBoundingClientRect();
       const c = toWorld({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 3 });
-      addDevice(sel.value, c.x, c.y);
-      sel.value = "";
+      addDevice(b.dataset.add, c.x, c.y);
+    });
+    $("scene-add-filter").addEventListener("input", (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      const shown = new Set();
+      for (const b of box.querySelectorAll(".palette-item")) {
+        b.hidden = !!q && !`${b.textContent} ${b.title} ${b.dataset.cat}`.toLowerCase().includes(q);
+        if (!b.hidden) shown.add(b.dataset.cat);
+      }
+      for (const c of box.querySelectorAll(".palette-cat")) c.hidden = !shown.has(c.textContent);
     });
   }
 
@@ -1337,7 +1361,8 @@
     });
     const sound = $("scene-sound");
     const paintSound = () => {
-      sound.textContent = window.JwsimSound?.enabled ? "🔊 Sonido" : "🔇 Sonido";
+      sound.textContent = window.JwsimSound?.enabled ? "🔊" : "🔇";
+      sound.title = window.JwsimSound?.enabled ? "Sonido de relés y contactores: activado" : "Sonido de relés y contactores: apagado";
       sound.classList.toggle("off", !window.JwsimSound?.enabled);
     };
     sound.addEventListener("click", () => {

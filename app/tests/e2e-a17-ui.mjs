@@ -89,28 +89,47 @@ await win.mouse.move(sb.x - 250, sb.y, { steps: 8 });
 await win.mouse.up();
 await win.waitForTimeout(300);
 const w1 = await codeW();
+// Con el ancho fijado, la simulación sigue llegando al borde derecho.
+const simRight = await win.$eval(".sim-pane", (e) => Math.round(e.getBoundingClientRect().right));
+const vw = await win.evaluate(() => window.innerWidth);
 const stored = await win.evaluate(() => localStorage.getItem("jwsim.codeWidth"));
 await win.screenshot({ path: join(OUT, "03-divisor.png") });
 await win.dblclick("#splitter");
 await win.waitForTimeout(300);
 const w2 = await codeW();
-criteria.SPLITTER = { pass: Math.abs(w0 - 250 - w1) <= 4 && Number(stored) === w1 && Math.abs(w2 - w0) <= 2, before: w0, after_drag: w1, stored, after_reset: w2 };
+criteria.SPLITTER = { pass: simRight === vw && Math.abs(w0 - 250 - w1) <= 4 && Number(stored) === w1 && Math.abs(w2 - w0) <= 2, before: w0, after_drag: w1, stored, after_reset: w2, sim_right: simRight, window: vw };
 
 // ---- SCENE_SIDE
 await win.click("[data-view=scene]");
 await win.waitForTimeout(500);
 const sideW = () => win.$eval("#scene-side", (e) => e.getBoundingClientRect().width);
+const pane = () => win.$eval(".scene-main", (e) => e.dataset.pane);
 const open0 = await sideW();
-await win.click("#scene-side-toggle");
+const pane0 = await pane();
+await win.click("#scene-tab-add");
+await win.waitForTimeout(300);
+const paneAdd = await pane();
+const items = await win.$$eval("#scene-add .palette-item", (b) => b.length);
+await win.fill("#scene-add-filter", "lámpara");
+const filtered = await win.$$eval("#scene-add .palette-item:not([hidden])", (b) => b.map((x) => x.dataset.add));
+await (await win.$(".board-card")).screenshot({ path: join(OUT, "04-escena-agregar.png") });
+await win.fill("#scene-add-filter", "");
+await win.click("#scene-tab-add");
 await win.waitForTimeout(300);
 const closed = await sideW();
 const svgW = await win.$eval("#scene-svg", (e) => e.getBoundingClientRect().width);
-await (await win.$(".board-card")).screenshot({ path: join(OUT, "04-escena-panel-plegado.png") });
-await win.click("#scene-side-toggle");
+const boardRight = await win.$eval(".board-card", (e) => Math.round(e.getBoundingClientRect().right));
+const winW = await win.evaluate(() => window.innerWidth);
+await win.click("#scene-tab-props");
 await win.waitForTimeout(300);
 const open1 = await sideW();
-await (await win.$(".board-card")).screenshot({ path: join(OUT, "05-escena-panel-abierto.png") });
-criteria.SCENE_SIDE = { pass: open0 > 200 && closed === 0 && open1 > 200, open: open0, closed, scene_width_closed: svgW };
+const general = await win.$eval("#scene-inspector", (e) => e.textContent);
+await (await win.$(".board-card")).screenshot({ path: join(OUT, "05-escena-propiedades.png") });
+criteria.SCENE_SIDE = {
+  pass: open0 > 200 && pane0 === "props" && paneAdd === "add" && items > 10 && filtered.includes("jwsim/lamp") && filtered.length < items &&
+    closed === 0 && open1 > 200 && /Dispositivos/.test(general) && boardRight === winW,
+  open: open0, pane0, paneAdd, items, filtered, closed, scene_width_closed: svgW, board_right: boardRight, window: winW,
+};
 
 // ---- DOCK
 await win.click("[data-view=board]");

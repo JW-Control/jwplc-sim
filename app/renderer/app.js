@@ -1439,12 +1439,14 @@ function setCodeWidth(px, save = true) {
   const ws = document.querySelector(".workspace");
   if (px === null) {
     ws.style.removeProperty("--code-w");
+    ws.classList.remove("code-w");
     if (save) storeSet(SPLIT_KEY, null);
     return;
   }
   const max = ws.clientWidth - SPLIT_MIN_SIM - 6;
   const w = Math.round(Math.max(SPLIT_MIN, Math.min(px, max)));
   ws.style.setProperty("--code-w", `${w}px`);
+  ws.classList.add("code-w");
   if (save) storeSet(SPLIT_KEY, String(w));
 }
 function wireSplitter() {
@@ -1486,22 +1488,29 @@ function wireSplitter() {
   });
 }
 
-// Panel del dispositivo de la escena: se pliega a una pestaña lateral.
-const SIDE_KEY = "jwsim.sceneSideCollapsed";
-function wireSceneSide() {
+// Panel lateral de la escena: pestañas Agregar y Propiedades en una barra
+// vertical a la derecha (como un IDE). Clic en la pestaña activa: se pliega.
+const SIDE_KEY = "jwsim.scenePane";
+function setScenePane(pane, save = true) {
   const main = document.querySelector(".scene-main");
-  const tab = $("scene-side-toggle");
-  const apply = (collapsed) => {
-    main.classList.toggle("side-collapsed", collapsed);
-    tab.setAttribute("aria-expanded", String(!collapsed));
-    tab.title = collapsed ? "Mostrar el panel de la escena (agregar, ajustar, dispositivo)" : "Ocultar el panel de la escena";
-  };
-  apply(storeGet(SIDE_KEY) === "1");
-  tab.addEventListener("click", () => {
-    const collapsed = !main.classList.contains("side-collapsed");
-    apply(collapsed);
-    storeSet(SIDE_KEY, collapsed ? "1" : "0");
-  });
+  main.classList.toggle("side-collapsed", !pane);
+  for (const t of document.querySelectorAll(".side-tab")) {
+    const on = t.dataset.pane === pane;
+    t.classList.toggle("active", on);
+    t.setAttribute("aria-pressed", String(on));
+  }
+  for (const p of document.querySelectorAll(".side-pane")) p.hidden = p.dataset.pane !== pane;
+  main.dataset.pane = pane ?? "";
+  if (save) storeSet(SIDE_KEY, pane || "none");
+  if (pane === "add") $("scene-add-filter").focus();
+}
+function wireSceneSide() {
+  const saved = storeGet(SIDE_KEY);
+  setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  for (const t of document.querySelectorAll(".side-tab"))
+    t.addEventListener("click", () => setScenePane(document.querySelector(".scene-main").dataset.pane === t.dataset.pane ? null : t.dataset.pane));
+  // Al seleccionar un equipo o un cable con el panel abierto, se ven sus propiedades.
+  window.JwsimScenePane = { showProps: () => document.querySelector(".scene-main").dataset.pane && setScenePane("props", false) };
 }
 
 // Panel inferior: alto ajustable con su divisor (se recuerda) y plegable.

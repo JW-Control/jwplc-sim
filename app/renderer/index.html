@@ -148,21 +148,35 @@
                   <path id="scene-rubber" d=""></path>
                 </g>
               </svg>
-              <button id="scene-side-toggle" class="side-tab" aria-expanded="true" aria-controls="scene-side"
-                title="Ocultar el panel de la escena">
-                <span class="side-tab-arrow" aria-hidden="true">›</span><span class="side-tab-label">Agregar y dispositivo</span>
-              </button>
+              <!-- Herramientas del lienzo: flotan en su esquina, no restan altura. -->
+              <div class="scene-float" role="toolbar" aria-label="Lienzo">
+                <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
+                <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
+                <button id="scene-sound" class="icon" title="Sonido de relés y contactores" aria-label="Sonido">🔊</button>
+              </div>
               <aside class="scene-side" id="scene-side">
-                <div class="scene-tools">
-                  <select id="scene-add" title="Agregar un dispositivo a la escena" aria-label="Agregar dispositivo"></select>
-                  <button id="scene-fit" class="small" title="Ver toda la escena">Ajustar</button>
-                  <button id="scene-rearm" class="small" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" disabled>Rearmar</button>
-                  <button id="scene-sound" class="small" title="Sonido de relés y contactores">🔊 Sonido</button>
-                </div>
-                <div id="scene-inspector" class="scene-inspector"></div>
-                <div class="insp-sub">Diagnóstico</div>
-                <ul id="scene-diag" class="scene-diag"></ul>
+                <section class="side-pane" data-pane="add" hidden>
+                  <div class="side-title">Agregar dispositivo</div>
+                  <input id="scene-add-filter" type="search" placeholder="Buscar…" spellcheck="false" aria-label="Buscar dispositivo" />
+                  <div id="scene-add" class="palette" role="list"></div>
+                  <p class="insp-desc muted">Clic: se agrega en el centro de la vista.</p>
+                </section>
+                <section class="side-pane" data-pane="props">
+                  <div class="side-title">Propiedades</div>
+                  <div id="scene-inspector" class="scene-inspector"></div>
+                  <div class="insp-sub">Diagnóstico</div>
+                  <ul id="scene-diag" class="scene-diag"></ul>
+                </section>
               </aside>
+              <!-- Barra lateral de pestañas (como un IDE): clic en la activa la pliega. -->
+              <nav class="side-bar" aria-label="Paneles de la escena">
+                <button class="side-tab" data-pane="add" id="scene-tab-add" title="Agregar dispositivo" aria-label="Agregar dispositivo" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14v7M14 17.5h7"/></svg>
+                </button>
+                <button class="side-tab" data-pane="props" id="scene-tab-props" title="Propiedades: la escena o lo seleccionado" aria-label="Propiedades" aria-pressed="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+                </button>
+              </nav>
             </div>
           </div>
         </div>
