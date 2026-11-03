@@ -11,6 +11,13 @@ rem
 rem No borra cambios locales: si hay archivos modificados, avisa y se detiene.
 setlocal
 cd /d "%~dp0"
+rem git: el del PATH o, si no hay, el que trae GitHub Desktop.
+where git >nul 2>nul
+if errorlevel 1 (
+  for /d %%D in ("%LOCALAPPDATA%\GitHubDesktop\app-*") do (
+    if exist "%%D\resources\app\git\cmd\git.exe" set "PATH=%%D\resources\app\git\cmd;%PATH%"
+  )
+)
 where git >nul 2>nul
 if errorlevel 1 (
   echo No se encontro git. Instale Git para Windows o GitHub Desktop.
