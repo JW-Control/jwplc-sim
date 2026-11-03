@@ -55,6 +55,10 @@ JWSIM_EXPANSION_RTU=PASS           (01/11, alpha.16: esclavo JWPLC_Expansion en 
 JWSIM_COM_E2E=PASS                 (02/11, alpha.17: puerto COM virtual en la app (USB o RS-485 a un puerto de la PC); con un
                                     pty: eco RS-485 binario 00 ff 41 0a 7e y saludo por USB; app/tests/e2e-com.mjs. En Windows,
                                     com0com COM20 <-> COM21 del instalador: [no verificado] en una PC)
+JWSIM_SERIAL_FLOOD=PASS            (03/11, alpha.17: Serial.println(millis()) sin delay; la UART0 sale a 115200 (≈2300
+                                    líneas/s) y la consola pinta por bloques cada 50 ms con tope de 100 000 caracteres. En
+                                    la app, 12 s: ×1 atraso 64 ms y cuadros p95 50 ms (antes 250 ms); ×10 atraso 1 s; Máx
+                                    p95 100 ms; app/tests/e2e-serial-flood.mjs. En Windows: [no verificado] en una PC)
 JWSIM_WEBSCREEN=PASS               (01/11, alpha.16: JWPLC_WebScreen; página, teclas desde la web y cuadro idéntico píxel a
                                     píxel a la TFT; <1 KB por pedido con la pantalla quieta; scripts/gate-webscreen.mjs)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)

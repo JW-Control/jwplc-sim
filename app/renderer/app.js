@@ -161,60 +161,92 @@ function setStatus(kind, text) {
   window.JwsimScene?.onStatus(kind);
 }
 
-// La consola junta lo que llega y lo pinta una vez por cuadro: un sketch que
-// imprime sin pausa (más aún en ×10 o Máx) no traba la interfaz. Se guardan
-// los últimos kConsoleMax caracteres.
-const kConsoleMax = 200_000;
+// La consola junta lo que llega y lo pinta como mucho cada kConsoleMs: un
+// sketch que imprime sin pausa (más aún en ×10 o Máx) no traba la interfaz.
+// Cada pintada es un nodo nuevo (modificar un nodo de texto grande obliga a
+// recalcular todas sus líneas) y se borran nodos enteros del principio
+// cuando se pasa de kConsoleMax caracteres.
+const kConsoleMax = 100_000;
+const kConsoleMs = 50;
 const consoleQueue = [];
-let consoleFrame = 0;
+let consoleTimer = 0;
+let consoleChars = 0;
+
+let consoleQueued = 0;
 
 function consoleWrite(text, cls) {
   const last = consoleQueue.at(-1);
   if (last && last.cls === cls) last.text += text;
   else consoleQueue.push({ text, cls });
-  consoleFrame ||= requestAnimationFrame(consoleFlush);
+  consoleQueued += text.length;
+  // En Máx llega más de lo que se puede mostrar: se guarda solo lo último.
+  if (consoleQueued > 2 * kConsoleMax) {
+    while (consoleQueue.length > 1 && consoleQueued - consoleQueue[0].text.length > kConsoleMax) consoleQueued -= consoleQueue.shift().text.length;
+    const first = consoleQueue[0];
+    if (consoleQueued > kConsoleMax) {
+      const cut = first.text.indexOf("\n", consoleQueued - kConsoleMax);
+      const n = cut >= 0 ? cut + 1 : consoleQueued - kConsoleMax;
+      first.text = first.text.slice(n);
+      consoleQueued -= n;
+    }
+  }
+  consoleTimer ||= setTimeout(() => requestAnimationFrame(consoleFlush), kConsoleMs);
 }
 
 function consoleClear() {
   consoleQueue.length = 0;
+  consoleQueued = 0;
+  consoleChars = 0;
   $("console").textContent = "";
 }
 
 function consoleFlush() {
-  consoleFrame = 0;
+  consoleTimer = 0;
   const pre = $("console");
   const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
+  // Lo nuevo ya llena la consola: lo anterior sobra entero.
+  if (consoleQueued >= kConsoleMax) {
+    pre.textContent = "";
+    consoleChars = 0;
+  }
+  consoleQueued = 0;
+  // Cada pintada va en su propio bloque: el navegador solo calcula las
+  // líneas nuevas. Si el bloque anterior quedó a media línea, se sigue en él.
+  let chunk = pre.lastElementChild;
+  if (!chunk || chunk.textContent.endsWith("\n")) {
+    chunk = document.createElement("div");
+    chunk.className = "console-chunk";
+    pre.appendChild(chunk);
+  }
   for (const { text, cls } of consoleQueue.splice(0)) {
     // De un bloque más largo que el límite solo se ve el final.
     const t = text.length > kConsoleMax ? text.slice(-kConsoleMax) : text;
-    const last = pre.lastChild;
-    if (!cls && last?.nodeType === Node.TEXT_NODE) {
-      last.appendData(t);
-    } else if (cls) {
+    if (cls) {
       const span = document.createElement("span");
       span.className = cls;
       span.textContent = t;
-      pre.appendChild(span);
+      chunk.appendChild(span);
     } else {
-      pre.appendChild(document.createTextNode(t));
+      chunk.appendChild(document.createTextNode(t));
     }
+    consoleChars += t.length;
   }
-  // Recorta desde el principio lo que pase del límite.
-  let total = 0;
-  for (const n of pre.childNodes) total += n.textContent.length;
-  while (total > kConsoleMax && pre.firstChild) {
-    const first = pre.firstChild;
-    const extra = total - kConsoleMax;
-    if (first.nodeType === Node.TEXT_NODE && first.length > extra) {
-      // Corta en un salto de línea para no dejar media línea arriba.
-      const cut = first.data.indexOf("\n", extra);
-      const n = cut >= 0 ? cut + 1 : extra;
-      first.deleteData(0, n);
-      total -= n;
-    } else {
-      total -= first.textContent.length;
-      pre.removeChild(first);
-    }
+  // La línea a medias pasa a un bloque propio (pequeño), que es el que se
+  // completa en la siguiente pintada; el bloque de líneas enteras no se toca.
+  const tail = chunk.lastChild;
+  if (tail?.nodeType === Node.TEXT_NODE && !tail.data.endsWith("\n") && chunk.textContent.includes("\n")) {
+    const nl = tail.data.lastIndexOf("\n");
+    const rest = nl >= 0 ? tail.splitText(nl + 1) : tail;
+    const next = document.createElement("div");
+    next.className = "console-chunk";
+    next.appendChild(rest);
+    pre.appendChild(next);
+    if (!chunk.firstChild) chunk.remove();
+    chunk = next;
+  }
+  while (consoleChars > kConsoleMax && pre.firstElementChild && pre.firstElementChild !== chunk) {
+    consoleChars -= pre.firstElementChild.textContent.length;
+    pre.firstElementChild.remove();
   }
   if (atBottom) pre.scrollTop = pre.scrollHeight;
 }

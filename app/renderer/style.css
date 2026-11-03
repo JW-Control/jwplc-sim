@@ -424,6 +424,10 @@ select:focus-visible {
   flex: 0 0 auto;
   font-size: 12px;
 }
+/* Bloques de la consola: el navegador solo recalcula los nuevos. */
+.console-chunk {
+  contain: layout style;
+}
 .console .sys {
   color: var(--muted);
 }
