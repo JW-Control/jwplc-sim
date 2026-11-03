@@ -15,6 +15,18 @@
   ${if} $R8 != 0
     StrCpy ${_OUT} ""
   ${endIf}
+  ; PowerShell termina la salida con un salto de línea aunque la lista esté
+  ; vacía: sin quitarlo, el aviso salía en blanco y no dejaba seguir.
+  ${do}
+    StrCpy $R8 ${_OUT} 1 -1
+    ${if} $R8 == "$\r"
+    ${orIf} $R8 == "$\n"
+    ${orIf} $R8 == " "
+      StrCpy ${_OUT} ${_OUT} -1
+    ${else}
+      ${break}
+    ${endIf}
+  ${loop}
 !macroend
 
 !macro jwsimKillInstdirProcs _DIR
