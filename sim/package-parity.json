@@ -1,5 +1,5 @@
 {
-  "$comment": "Registro de paridad con el package (jwsim-cli parity, gate JWSIM_G5_RELEASE_TREE_PARITY). 'autoload': librerías que arrastra un sketch vacío; 'libraries': librerías del package; 'knownMissingHeaders': headers que el preprocesado no encuentra y por qué no hace falta proveerlos. Se actualiza con 'jwsim-cli parity --update' al sincronizar una alpha (ARCHITECTURE §9).",
+  "$comment": "Registro de paridad con el package (jwsim-cli parity, gate JWSIM_G5_RELEASE_TREE_PARITY). 'autoload': librerías que arrastra un sketch vacío; 'libraries': librerías del package; 'knownMissingHeaders': headers que el preprocesado no encuentra y por qué no hace falta proveerlos. Se actualiza con 'jwsim-cli parity --update' al sincronizar una alpha (ARCHITECTURE §9); 'retiredLibraries': librerías borradas por una alpha, que pueden faltar sin ser una diferencia.",
   "autoload": [
     "Adafruit_BusIO",
     "FS",
@@ -86,5 +86,9 @@
     "Wire",
     "Zigbee"
   ],
-  "knownMissingHeaders": {}
+  "knownMissingHeaders": {},
+  "retiredLibraries": {
+    "JWPLC_LogicRuntime": "borrada en v2.1.0-alpha.17 (runtime anterior; el vigente es JWPLC_Runtime)",
+    "JWPLC_LogicRuntime_UI": "borrada en v2.1.0-alpha.17 junto con JWPLC_LogicRuntime"
+  }
 }

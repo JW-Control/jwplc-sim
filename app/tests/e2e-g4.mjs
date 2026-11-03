@@ -14,7 +14,7 @@
 //             quita la tarjeta (SD_CARD=0 en la grabación)
 // Informe en build/gates/JWSIM_G4_E2E.json y capturas en build/gates/g4/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g4.mjs
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -127,27 +127,30 @@ const b1 = await bootCount();
 const b2 = await bootCount();
 criteria.FRAM_PERSIST_APP = { pass: b1 !== null && b2 === b1 + 1, primera: b1, segunda: b2 };
 
-// ---- NVS: texto por la consola serie
-log("NVS");
-await t((dir) => window.jwsimTest.openSketchDir(dir), join(examples, "JWPLC_LogicRuntime", "examples", "JWPLC_LogicRuntime_Storage_API_Rollback"));
-await win.waitForSelector(".tab.active:has-text('JWPLC_LogicRuntime_Storage_API_Rollback.ino')", { timeout: 10000 });
-await win.click("#tab-console");
-await win.click("#btn-run");
-await until(async () => (await status()) === "running", 600000);
-const asked = await until(async () => /Escribe ROLLBACK/.test(await consoleText()), 15000);
-await win.fill("#serial-text", "ROLLBACK");
-await win.press("#serial-text", "Enter");
-const done = await until(async () => (await consoleText()).match(/ROLLBACK PERSISTENTE: (PASS|FAIL)/)?.[1], 20000);
-await win.screenshot({ path: join(OUT, "04-consola-nvs.png") });
-const rec = await t(() => window.jwsimTest.saveRecording());
-const recText = rec ? readFileSync(rec.file, "utf8") : "";
-await win.click("#btn-stop");
-criteria.NVS_CONSOLE = {
-  pass: !!asked && done === "PASS" && /^\d+(\.\d+)? uart0 "ROLLBACK\\n"$/m.test(recText),
-  pregunta: !!asked,
-  resultado: done,
-  grabacion: recText.split("\n").filter((l) => /uart0/.test(l)),
-};
+// ---- NVS: texto por la consola serie (solo si el package trae JWPLC_LogicRuntime; alpha.17 la borró)
+const nvsDir = join(examples, "JWPLC_LogicRuntime", "examples", "JWPLC_LogicRuntime_Storage_API_Rollback");
+if (existsSync(nvsDir)) {
+  log("NVS");
+  await t((dir) => window.jwsimTest.openSketchDir(dir), nvsDir);
+  await win.waitForSelector(".tab.active:has-text('JWPLC_LogicRuntime_Storage_API_Rollback.ino')", { timeout: 10000 });
+  await win.click("#tab-console");
+  await win.click("#btn-run");
+  await until(async () => (await status()) === "running", 600000);
+  const asked = await until(async () => /Escribe ROLLBACK/.test(await consoleText()), 15000);
+  await win.fill("#serial-text", "ROLLBACK");
+  await win.press("#serial-text", "Enter");
+  const done = await until(async () => (await consoleText()).match(/ROLLBACK PERSISTENTE: (PASS|FAIL)/)?.[1], 20000);
+  await win.screenshot({ path: join(OUT, "04-consola-nvs.png") });
+  const rec = await t(() => window.jwsimTest.saveRecording());
+  const recText = rec ? readFileSync(rec.file, "utf8") : "";
+  await win.click("#btn-stop");
+  criteria.NVS_CONSOLE = {
+    pass: !!asked && done === "PASS" && /^\d+(\.\d+)? uart0 "ROLLBACK\\n"$/m.test(recText),
+    pregunta: !!asked,
+    resultado: done,
+    grabacion: recText.split("\n").filter((l) => /uart0/.test(l)),
+  };
+}
 
 // ---- SD: persistencia y zócalo
 log("SD");

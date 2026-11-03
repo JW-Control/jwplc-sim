@@ -180,7 +180,7 @@
         <div class="console-card">
           <div class="panel-head tabbar" role="tablist">
             <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console">Consola serie</button>
-            <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses">Buses</button>
+            <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses" title="Tramas de RS-485 y Modbus RTU/TCP">Comunicación</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch">Observación</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug">Depuración</button>
             <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
@@ -211,10 +211,11 @@
               <label for="bus-filter">Mostrar</label>
               <select id="bus-filter">
                 <option value="">Todo</option>
-                <option value="I2C">I2C</option>
-                <option value="SPI">SPI (por CS)</option>
-                <option value="UART">UART</option>
+                <option value="RS485">RS-485</option>
                 <option value="Modbus">Modbus</option>
+                <option value="I2C" data-advanced hidden>I2C</option>
+                <option value="SPI" data-advanced hidden>SPI (por CS)</option>
+                <option value="UART" data-advanced hidden>Otras UART</option>
               </select>
             </div>
             <table>

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_TFT 0.5.0: JWPLC_FONT_7SEG_48 (reloj), JWPLC_FONT_26 (valor), JWPLC_FONT_16 y GLCD. OK entra.",
+  "sketch": "package:libraries/JWPLC_Display/examples/10.Display_Fuentes_Grandes",
+  "until_ms": 6000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-01T08:30:00"
+  ],
+  "stim": [
+    "1500 BTN_OK=1",
+    "1600 BTN_OK=0"
+  ],
+  "expect": {
+    "screen": [
+      {
+        "at_ms": 3200,
+        "ref": "screens/Display_Fuentes_Grandes_inicio.png"
+      },
+      {
+        "at_ms": 5800,
+        "ref": "screens/Display_Fuentes_Grandes_reloj.png"
+      }
+    ]
+  }
+}

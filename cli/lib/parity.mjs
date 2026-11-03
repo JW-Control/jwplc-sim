@@ -62,7 +62,10 @@ export async function checkParity(pkg, { target = "native", log = () => {}, upda
   auto.removed.forEach((l) => differences.push(`autoload: librería que ya no arrastra: ${l}`));
   const libs = diff(registry.libraries, probe.libraries);
   libs.added.forEach((l) => differences.push(`librerías: nueva en el package: ${l}`));
-  libs.removed.forEach((l) => differences.push(`librerías: ya no está en el package: ${l}`));
+  // retiredLibraries: librerías que una alpha borra; el registro las acepta
+  // ausentes (package nuevo) o presentes (package fijado anterior).
+  const retired = registry.retiredLibraries ?? {};
+  libs.removed.filter((l) => !(l in retired)).forEach((l) => differences.push(`librerías: ya no está en el package: ${l}`));
 
   // 3) Headers faltantes.
   const known = registry.knownMissingHeaders ?? {};
