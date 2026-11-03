@@ -36,7 +36,7 @@ como **[G0]**.
 
 ```text
 ┌──────────────────────────── Electron (escritorio) ─────────────────────────────┐
-│ Renderer: Monaco · pestañas Sketch / Ladder / HMI / 2D eléctrico / 3D / Buses   │
+│ Renderer: Monaco · pestañas Sketch / Ladder / HMI / 2D eléctrico / 3D / Comunic.│
 │           tabla de observación y forzado · consola · analizador de buses        │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │ Main (Node): proyectos .jwsim · watcher de archivos vinculados · compilación      │
@@ -847,9 +847,11 @@ con `speed` (1, 10 o 0 = máxima), `pause`, `set` de entradas `I0_k`,
 cada señal que cambió, cada 20 ms de pared), `serial` (texto UTF-8 sin
 cortar caracteres), `bus` (transacciones I2C `[t_ns, bus, dirección,
 escritos, leídos, resultado]` y bytes de UART, hasta 400 por envío; el resto
-se informa como `dropped`), `status` y `stopped`. La interfaz decodifica
-los registros del TCA6424A en la pestaña Buses; el analizador completo
-(SPI por CS, Modbus) es G3. Un `set` se agenda como evento en el instante virtual
+se informa como `dropped`), `status` y `stopped`. La pestaña Comunicación
+(antes Buses) muestra al usuario solo RS-485 (UART2) y Modbus RTU/TCP; I2C, SPI
+por CS y las demás UART quedan para el modo avanzado
+(`window.jwsimTest.showAllBuses(true)`, usado por las pruebas E2E). El analizador
+completo es G3. Un `set` se agenda como evento en el instante virtual
 actual, igual que un `.stim`: una sesión interactiva es reproducible. En
 pausa queda pendiente y se aplica al continuar. Si el host no alcanza la
 velocidad pedida, el runner se re-sincroniza con el reloj en vez de
