@@ -11,6 +11,7 @@
 // {"type":"uart_out","port","hex"}) y lo que llega del COM entra como
 // {"type":"uart","port","hex"}: queda en la grabación como una entrada más.
 // UART0 es el USB del JWPLC (Monitor serie); UART2 es el RS-485.
+import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 
 let serialMod;
@@ -19,13 +20,40 @@ async function serialport() {
   return serialMod;
 }
 
+// Puertos que Windows registra en HKLM\HARDWARE\DEVICEMAP\SERIALCOMM, con
+// el nombre del dispositivo (p. ej. "\Device\com0com10" → COM20).
+export function parseSerialComm(text) {
+  const out = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = line.match(/^\s*(\S+)\s+REG_SZ\s+(\S+)\s*$/);
+    if (m) out.push({ path: m[2], device: m[1] });
+  }
+  return out;
+}
+
+function serialCommPorts() {
+  if (process.platform !== "win32") return Promise.resolve([]);
+  return new Promise((done) => {
+    execFile("reg", ["query", "HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM"], { windowsHide: true }, (err, stdout) => done(err ? [] : parseSerialComm(stdout)));
+  });
+}
+
 // Puertos del host. [] si el módulo serialport no está disponible.
 export async function listComPorts() {
   const m = await serialport();
   if (!m) return [];
   // En Linux sin udev (contenedores) la lista falla: queda vacía.
   const ports = await m.SerialPort.list().catch(() => []);
-  return ports.map((p) => ({ path: p.path, label: [p.path, p.friendlyName ?? p.manufacturer].filter(Boolean).join(" · ") }));
+  const list = ports.map((p) => ({ path: p.path, label: [p.path, p.friendlyName ?? p.manufacturer].filter(Boolean).join(" · ") }));
+  // SerialPort.list() solo ve la clase «Puertos (COM y LPT)»; los de com0com
+  // están en su propia clase y solo aparecen en SERIALCOMM.
+  for (const p of await serialCommPorts()) {
+    if (list.some((q) => q.path.toUpperCase() === p.path.toUpperCase())) continue;
+    const virt = /com0com/i.test(p.device);
+    list.push({ path: p.path, label: virt ? `${p.path} · com0com (puerto virtual)` : p.path });
+  }
+  const num = (p) => Number(p.path.match(/\d+$/)?.[0] ?? 1e9);
+  return list.sort((a, b) => num(a) - num(b) || a.path.localeCompare(b.path));
 }
 
 export async function comAvailable() {
