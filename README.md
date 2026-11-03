@@ -6,16 +6,29 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.2.0 · package JWPLC 2.1.0-alpha.16 (package.lock)
+Versión: 0.3.0 · package JWPLC 2.1.0-alpha.16 (package.lock)
 Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS; botón «Simular» en el editor pendiente
 Matriz:  138 ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-**[⬇ JWPLC Sim 0.2.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+**[⬇ JWPLC Sim 0.3.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
 package JWPLC, sus dependencias y el compilador GCC, así que no hace falta Node.js ni red. No tienen firma de
 código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
+
+Novedades de 0.3.0:
+
+- Interfaz nueva: panel inferior a lo ancho (Problemas · Compilación · Serie · Tráfico · E/S y variables ·
+  Depuración), que se oculta por completo (Ctrl+J); velocidad y puerto COM en la barra superior; la escena con
+  pestañas laterales **Agregar** y **Propiedades**.
+- **Puerto COM virtual** integrado en el instalador (com0com, par COM20 ↔ COM21): JW Serial u otro programa se
+  conecta al USB o al RS-485 del PLC simulado.
+- Serie a la velocidad real (115200 baudios): un `Serial.println` sin pausa ya no traba la PC; marca de tiempo
+  por línea.
+- E/S y variables con tabla de forzado (Forzar 0 · 1 · Liberar); ejercicios sin `pinMode` y que se ponen al día
+  solos; la pestaña Tráfico muestra solo RS-485 y Modbus.
+- Instalador: arreglado el aviso de procesos abiertos que impedía instalar o desinstalar.
 
 Va junto a:
 
