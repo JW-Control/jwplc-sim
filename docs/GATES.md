@@ -55,6 +55,9 @@ JWSIM_G4_W5500_MODEL=PASS          (DHCP, IP fija, cable, cliente TCP, reproducc
 JWSIM_G4_MODBUS_TCP_HOST=PASS      (servidor y cliente contra el host; dos PLC en 1502/2502)
 JWSIM_EXPANSION_RTU=PASS           (01/11, alpha.16: esclavo JWPLC_Expansion en el bus RS-485; alta 247 -> 5, clave errónea,
                                     estado seguro 0x03 y persistencia; scripts/gate-expansion-rtu.mjs)
+JWSIM_COM_E2E=PASS                 (02/11, alpha.17: puerto COM virtual en la app (USB o RS-485 a un puerto de la PC); con un
+                                    pty: eco RS-485 binario 00 ff 41 0a 7e y saludo por USB; app/tests/e2e-com.mjs. En Windows,
+                                    com0com COM20 <-> COM21 del instalador: [no verificado] en una PC)
 JWSIM_WEBSCREEN=PASS               (01/11, alpha.16: JWPLC_WebScreen; página, teclas desde la web y cuadro idéntico píxel a
                                     píxel a la TFT; <1 KB por pedido con la pantalla quieta; scripts/gate-webscreen.mjs)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)

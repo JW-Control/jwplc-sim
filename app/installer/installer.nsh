@@ -15,6 +15,18 @@
   ${if} $R8 != 0
     StrCpy ${_OUT} ""
   ${endIf}
+  ; PowerShell termina la salida con un salto de línea aunque la lista esté
+  ; vacía: sin quitarlo, el aviso salía en blanco y no dejaba seguir.
+  ${do}
+    StrCpy $R8 ${_OUT} 1 -1
+    ${if} $R8 == "$\r"
+    ${orIf} $R8 == "$\n"
+    ${orIf} $R8 == " "
+      StrCpy ${_OUT} ${_OUT} -1
+    ${else}
+      ${break}
+    ${endIf}
+  ${loop}
 !macroend
 
 !macro jwsimKillInstdirProcs _DIR
@@ -62,4 +74,23 @@
 !macroend
 !macro customUnInstallCheckCurrentUser
   !insertmacro jwsimOldUninstallResult HKCU
+!macroend
+
+; Puerto COM virtual (opcional): com0com con el par COM20 (JWPLC Sim) <-> COM21
+; (JW Serial u otro programa). El resto del instalador no pide administrador;
+; este paso sí (instala un driver), por eso se pregunta y se eleva solo él.
+; Si ya hay un com0com instalado, el script solo agrega el par si falta.
+; Con /S (instalación silenciosa) no se instala.
+!macro customInstall
+  ; Ya instalado (actualización de JWPLC Sim): no se vuelve a preguntar.
+  SetRegView 64
+  ReadRegStr $R5 HKLM "SYSTEM\CurrentControlSet\Services\com0com" "ImagePath"
+  SetRegView lastused
+  ${if} $R5 == ""
+  ${andIf} ${FileExists} "$INSTDIR\resources\.jwsim\com0com\instalar-puerto-com.cmd"
+    MessageBox MB_YESNO|MB_ICONQUESTION "¿Instalar el puerto COM virtual?$\r$\n$\r$\nCrea el par COM20 (JWPLC Sim) <-> COM21 (JW Serial u otro programa) para conectar el JWPLC simulado con programas de la PC.$\r$\n$\r$\nUsa el driver libre com0com y Windows pedirá permiso de administrador." /SD IDNO IDNO jwsimSkipCom
+    DetailPrint "Instalando el puerto COM virtual (com0com)..."
+    ExecShellWait "runas" "$INSTDIR\resources\.jwsim\com0com\instalar-puerto-com.cmd" "" SW_HIDE
+    jwsimSkipCom:
+  ${endIf}
 !macroend

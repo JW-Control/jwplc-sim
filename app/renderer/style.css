@@ -1538,3 +1538,20 @@ button.fault.on {
   grid-template-columns: 1fr;
   gap: 2px;
 }
+
+/* Puerto COM virtual (barra bajo las pestañas de la consola) */
+.com-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.com-panel[hidden] {
+  display: none;
+}
+.com-panel select {
+  max-width: 260px;
+}

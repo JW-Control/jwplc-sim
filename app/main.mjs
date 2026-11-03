@@ -5,6 +5,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 
+import { spawn } from "node:child_process";
 import { Worker } from "node:worker_threads";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
@@ -18,6 +19,7 @@ import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
+import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
 import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
@@ -151,6 +153,7 @@ async function stopRunner() {
   bridge = null;
   ioBridge?.close();
   ioBridge = null;
+  comBridge?.detach();
   r?.removeAllListeners();
   // El resumen final (instante y hash de traza) sí llega a la interfaz.
   r?.on("message", (m) => m.type === "stopped" && forward("sim:message", m));
@@ -481,6 +484,8 @@ let bridge = null;
 // simulation.ioBridge: { "present": false } lo quita; "port" (5020) y
 // "listenHost" ("127.0.0.1"; "0.0.0.0" para la LAN) lo configuran.
 let ioBridge = null;
+// Puerto COM virtual (JW Serial u otro programa): queda abierto entre corridas.
+let comBridge = null;
 let lastSceneInputs = null;
 function ioBridgeConfig(projectFile) {
   let cfg = {};
@@ -533,7 +538,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   runnerExe = exe;
   // Los horizontes de la escena (cientos por segundo) y los bytes del enlace
   // Modbus son de SceneSession: no van a la interfaz.
-  r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && forward("sim:message", m));
+  r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out" && forward("sim:message", m));
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
     sceneSession.on("snapshot", (snap) => {
@@ -590,6 +595,8 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     ioBridge.on("error", (err) => forward("sim:stderr", `[jwsim] ${err.message}\n`));
     ioBridge.attach(r);
   }
+  // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.
+  if (comBridge && !stim) comBridge.attach(r);
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {
@@ -690,6 +697,49 @@ ipcMain.handle("sim:command", (_e, msg) => {
   if (msg?.type === "run" && msg.speed !== undefined) sceneSession?.setSpeed(msg.speed);
   runner?.send(msg);
   return !!runner;
+});
+
+// ---------------------------------------------------------------- puerto COM virtual
+const comStatus = () => (comBridge ? { path: comBridge.path, uart: comBridge.uart } : null);
+// Script de com0com que trae el instalador de Windows (scripts/fetch-com0com.mjs).
+const COM_INSTALL = join(import.meta.dirname, "..", ".jwsim", "com0com", "instalar-puerto-com.cmd");
+ipcMain.handle("com:list", async () => ({
+  available: await comAvailable(),
+  ports: await listComPorts(),
+  current: comStatus(),
+  canInstall: process.platform === "win32" && existsSync(COM_INSTALL),
+}));
+// Instala com0com y el par COM20 <-> COM21 como administrador (Windows pide
+// permiso). Para quien no lo instaló junto con JWPLC Sim.
+ipcMain.handle("com:install", () => {
+  if (process.platform !== "win32" || !existsSync(COM_INSTALL)) return { error: "este JWPLC Sim no trae el instalador del puerto COM" };
+  const ps = `$p = Start-Process -FilePath '${COM_INSTALL.replaceAll("'", "''")}' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode`;
+  return new Promise((done) => {
+    const c = spawn(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true });
+    c.on("error", (err) => done({ error: err.message }));
+    c.on("exit", (code) => done(code === 0 ? { ok: true } : { error: `la instalación terminó con código ${code} (¿se canceló el permiso de administrador?)` }));
+  });
+});
+// cfg = { path, uart } conecta; null desconecta.
+ipcMain.handle("com:set", async (_e, cfg) => {
+  await comBridge?.close();
+  comBridge = null;
+  if (!cfg?.path) return { current: null };
+  const b = new ComBridge({ path: cfg.path, uart: cfg.uart === 2 ? 2 : 0 });
+  try {
+    await b.open();
+  } catch (err) {
+    return { error: err.message, current: null };
+  }
+  b.on("error", (err) => forward("sim:stderr", `[jwsim] puerto ${b.path}: ${err.message}\n`));
+  b.on("closed", () => {
+    if (comBridge !== b) return;
+    comBridge = null;
+    forward("com:closed", b.path);
+  });
+  comBridge = b;
+  if (runner) b.attach(runner);
+  return { current: comStatus() };
 });
 
 ipcMain.handle("sim:stop", async () => {
@@ -879,5 +929,6 @@ app.on("window-all-closed", async () => {
   watcher?.close();
   builder?.terminate();
   await stopRunner();
+  await comBridge?.close();
   app.quit();
 });

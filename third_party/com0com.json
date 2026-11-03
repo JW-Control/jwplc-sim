@@ -1,0 +1,10 @@
+{
+  "comment": "Par de puertos COM virtuales (com0com) que el instalador de Windows ofrece como componente opcional: COM20 para JWPLC Sim y COM21 para JW Serial u otro programa. node scripts/fetch-com0com.mjs lo descarga y verifica su SHA-256.",
+  "name": "com0com",
+  "version": "2.2.2.0-x64-fre-signed",
+  "url": "https://sourceforge.net/projects/com0com/files/com0com/2.2.2.0/com0com-2.2.2.0-x64-fre-signed.zip/download",
+  "sha256": "3bc7313e8577774ce78cff4d1c816faf96cfa48c485bbcc5527d4569f7d5e373",
+  "license": "GPL-2.0-or-later (fuente en https://sourceforge.net/projects/com0com/); driver firmado por Steven William Hatchett",
+  "simPort": "COM20",
+  "userPort": "COM21"
+}
