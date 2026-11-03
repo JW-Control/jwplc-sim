@@ -70,6 +70,8 @@ if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAG
 const editorDir = existsSync(join(ROOT, ".jwsim", "editor")) ? ".jwsim/editor" : null;
 if (!editorDir) console.error("[dist] aviso: sin .jwsim/editor; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)");
 if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falta el toolchain (node scripts/fetch-toolchain.mjs)");
+// Puerto COM virtual (com0com): componente opcional del instalador de Windows.
+if (win) node([join("scripts", "fetch-com0com.mjs")]);
 // cc1/cc1plus sin ASLR ya en el instalador: instalada en Program Files la app
 // no puede corregirlos al compilar.
 if (win && !ensurePchFriendlyCompiler(bundledToolchainBin())) throw new Error("no se pudo preparar cc1/cc1plus del toolchain para el PCH");
@@ -99,7 +101,7 @@ const config = {
     res(pkgDir),
     res(".jwsim/third_party"),
     ...(editorDir ? [res(editorDir)] : []),
-    ...(win ? [res(".jwsim/toolchain")] : []),
+    ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
   ],
   win: {
     icon: join(ICON, "icon.ico"),
