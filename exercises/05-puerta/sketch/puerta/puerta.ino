@@ -12,8 +12,7 @@
 
 void setup()
 {
-    for (uint8_t i = 0; i < I0_COUNT; i++) pinMode(I0_X[i], INPUT);
-    for (uint8_t i = 0; i < Q0_COUNT; i++) pinMode(Q0_X[i], OUTPUT);
+    // Las entradas y salidas del JWPLC ya vienen configuradas: no hace falta pinMode.
 }
 
 void loop()

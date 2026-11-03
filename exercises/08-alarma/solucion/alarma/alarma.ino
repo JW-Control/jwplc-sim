@@ -10,8 +10,6 @@ static bool reconocida = false;
 
 void setup()
 {
-    for (uint8_t i = 0; i < I0_COUNT; i++) pinMode(I0_X[i], INPUT);
-    for (uint8_t i = 0; i < Q0_COUNT; i++) pinMode(Q0_X[i], OUTPUT);
 }
 
 void loop()

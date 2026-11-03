@@ -34,7 +34,7 @@
       }
     },
     {
-      "until_ms": 6508,
+      "until_ms": 6512,
       "stim": ["6500 uart0 \"RUNTIME\\n\""],
       "expect": {
         "console": [{ "match": "^\\[PASS\\] restauracion pendiente registrada$", "after_ms": 6500, "count": 1 }],

@@ -309,6 +309,11 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   // Cambios de bornera y bytes de UART acumulados hasta el próximo envío.
   std::map<std::string, bool> changed;
   std::string serial[3];
+  // Instante en que empieza cada línea de la consola (marcas de tiempo del
+  // monitor serie): una entrada por cada línea que empieza en serial[p].
+  std::deque<jwsim_ns_t> serial_lines[3];
+  bool serial_bol[3] = {true, true, true};
+  bool serial_bol_out[3] = {true, true, true};
   const auto names = board.signal_names();
   // Co-simulación con la escena: señales vigiladas, cambios desde el último
   // horizonte y el instante del último cambio.
@@ -426,6 +431,13 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
   std::string tap_buf[3];
   board.set_uart_sink([&](int port, const uint8_t *data, size_t len) {
     serial[port].append(reinterpret_cast<const char *>(data), len);
+    if (port >= 0 && port < 3) {
+      const jwsim_ns_t t_line = jwsim_now();
+      for (size_t i = 0; i < len; ++i) {
+        if (serial_bol[port]) serial_lines[port].push_back(t_line);
+        serial_bol[port] = data[i] == '\n';
+      }
+    }
     if (port >= 0 && port < 3 && tap_on[port]) tap_buf[port].append(reinterpret_cast<const char *>(data), len);
     if (!bus_on) return;
     const jwsim_ns_t now = jwsim_now();
@@ -532,7 +544,20 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       if (n == 0) continue;
       std::string m = "{\"type\":\"serial\",\"port\":" + std::to_string(p) + ",\"t_ns\":" + t + ",\"text\":\"";
       json_escape(m, serial[p].data(), n);
-      m += "\"}";
+      // "lines": instante de cada línea que empieza en este fragmento.
+      m += "\",\"lines\":[";
+      bool bol = serial_bol_out[p];
+      bool first_line = true;
+      for (size_t i = 0; i < n; ++i) {
+        if (bol && !serial_lines[p].empty()) {
+          m += (first_line ? "" : ",") + std::to_string(serial_lines[p].front());
+          serial_lines[p].pop_front();
+          first_line = false;
+        }
+        bol = serial[p][i] == '\n';
+      }
+      serial_bol_out[p] = bol;
+      m += "]}";
       send_json(m);
       serial[p].erase(0, n);
     }

@@ -16,6 +16,8 @@ import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
+import { formatSource } from "./lib/autoformat.mjs";
+import { syncExercise } from "./lib/exercise-copy.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -102,23 +104,34 @@ function readSketch(dir) {
   return { dir, name, files };
 }
 
+// Solo los ejemplos del JWPLC Basic: librerías propias (JWPLC_*, JW_*). Los
+// del core ESP32 (WiFi, BLE, Matter…), los de terceros (Adafruit_BusIO) y los
+// benchmarks de compilación de tools/ no corren en la placa o no son para el
+// usuario. JWPLC_GlobalPeripherals va primero (plantilla y curso), luego
+// las JWPLC_* y al final las JW_*.
+const EXAMPLE_LIBS = /^(JWPLC|JW)_/;
+const EXAMPLE_FIRST = ["JWPLC_GlobalPeripherals"];
+
 function listExamples() {
   const { root, lock } = resolvePackageRoot();
   const tree = join(root, lock.JWPLC_PACKAGE_TREE);
   const out = [];
-  const bench = join(root, "tools", "build-speed-benchmark", "sketches");
-  if (existsSync(bench)) {
-    for (const n of readdirSync(bench).sort()) out.push({ group: "Benchmark del package", name: n, dir: join(bench, n) });
-  }
   const libs = join(tree, "libraries");
-  for (const lib of readdirSync(libs).sort()) {
+  const names = readdirSync(libs)
+    .filter((n) => EXAMPLE_LIBS.test(n))
+    .sort((a, b) => {
+      const rank = (n) => (EXAMPLE_FIRST.includes(n) ? 0 : n.startsWith("JWPLC_") ? 1 : 2);
+      return rank(a) - rank(b) || a.localeCompare(b);
+    });
+  for (const lib of names) {
     const ex = join(libs, lib, "examples");
     if (!existsSync(ex)) continue;
     const walk = (d) => {
-      for (const e of readdirSync(d, { withFileTypes: true })) {
+      for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
         if (!e.isDirectory()) continue;
         const p = join(d, e.name);
-        if (existsSync(join(p, `${e.name}.ino`))) out.push({ group: lib, name: e.name, dir: p });
+        // Subcarpetas (Curso_JWPLC_Basic/1.Primeros_pasos/…) en el nombre.
+        if (existsSync(join(p, `${e.name}.ino`))) out.push({ group: lib, name: e.name, label: relative(ex, p).split(sep).join(" / "), dir: p });
         else walk(p);
       }
     };
@@ -200,6 +213,16 @@ async function detachDebugger() {
 
 const hasBreakpoints = () => [...breakpoints.values()].some((l) => l.length);
 
+// Autoformato (Ctrl+T): clang-format con el estilo del JWPLC o el
+// .clang-format de la carpeta del sketch.
+ipcMain.handle("code:format", (_e, { text, name, dir }) => {
+  try {
+    return formatSource(text, name, dir);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
 ipcMain.handle("app:info", () => {
   const lock = readLock();
   return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
@@ -243,7 +266,7 @@ ipcMain.handle("exercises:open", (_e, id) => {
   if (!/^[\w.-]+$/.test(id)) throw new Error(`ejercicio inválido: ${id}`);
   const src = join(EXERCISES, id);
   const dst = join(workspaceDir(), "Ejercicios", id);
-  if (!existsSync(dst)) cpSync(src, dst, { recursive: true, filter: (p) => !p.slice(src.length).split(/[\\/]/).includes("solucion") });
+  syncExercise(src, dst);
   return openProject(join(dst, `${id}.jwsim`));
 });
 
@@ -834,6 +857,10 @@ function buildMenu() {
         ],
       },
       {
+        label: "Herramientas",
+        submenu: [{ label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") }],
+      },
+      {
         label: "Simulación",
         submenu: [
           { label: "Compilar y ejecutar", accelerator: "F5", click: send("run") },
@@ -860,6 +887,8 @@ function buildMenu() {
       {
         label: "Ver",
         submenu: [
+          { label: "Panel inferior", accelerator: "CmdOrCtrl+J", click: send("dock") },
+          { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
           { type: "separator" },
           { role: "reload", label: "Recargar" },

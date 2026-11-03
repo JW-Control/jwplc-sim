@@ -1,7 +1,7 @@
 {
   "name": "jwplc-sim",
   "productName": "JWPLC Sim",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Simulador de escritorio del JWPLC Basic",
   "author": "JW Control <jw.control.peru@gmail.com>",
   "homepage": "https://github.com/JW-Control/jwplc-sim",
@@ -17,6 +17,7 @@
     "test:e2e:g7": "node tests/e2e-g7.mjs"
   },
   "dependencies": {
+    "@wasm-fmt/clang-format": "23.1.1",
     "monaco-editor": "0.57.0",
     "serialport": "13.0.0",
     "three": "0.186.1"

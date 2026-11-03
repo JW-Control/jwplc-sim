@@ -36,6 +36,12 @@ JWSIM_G2_ERROR_MAPPING=PASS         (5 errores en 2 pestañas)
 JWSIM_G2_UNSUPPORTED_LIB_MSG=PASS   (10 familias; mensaje con API y gate)
 JWSIM_G2_PROJECT_LINKING=PASS       (esquema jwsim-1, migración v0 → v1)
 JWSIM_G2_EXTERNAL_EDIT_RELOAD=PASS  (Windows CI, alpha.13: recarga 1,63 s con la escena; sketch en C++20)
+JWSIM_A17_UI=PASS                   (02/11, línea alpha.17: Ejemplos solo JWPLC_*/JW_*, autoformato Ctrl+T, divisor
+                                     arrastrable, panel de la escena plegable, Placa solo con el frente, sin el texto del
+                                     package; app/tests/e2e-a17-ui.mjs con xvfb en Linux)
+                                    (03/11, + DOCK: panel inferior a lo ancho con Problemas · Compilación · Serie ·
+                                     Tráfico · E/S y variables · Depuración, alto arrastrable y plegable; COM y
+                                     velocidad en la barra; Proyecto solo en el menú Archivo)
 JWSIM_G3_BREAKPOINTS_STEP=PASS     (gdb -i=dap; Windows CI y Linux; E2E en Electron)
 JWSIM_G3_FREEZE_TIME=PASS          (10 s detenido: millis() y tiempo virtual idénticos; sin perturbar el hash)
 JWSIM_G3_WATCH_FORCE_IO=PASS       (variables en vivo, forzado de I0/Q0 con marca visual, en la grabación)
@@ -55,6 +61,10 @@ JWSIM_EXPANSION_RTU=PASS           (01/11, alpha.16: esclavo JWPLC_Expansion en 
 JWSIM_COM_E2E=PASS                 (02/11, alpha.17: puerto COM virtual en la app (USB o RS-485 a un puerto de la PC); con un
                                     pty: eco RS-485 binario 00 ff 41 0a 7e y saludo por USB; app/tests/e2e-com.mjs. En Windows,
                                     com0com COM20 <-> COM21 del instalador: [no verificado] en una PC)
+JWSIM_SERIAL_FLOOD=PASS            (03/11, alpha.17: Serial.println(millis()) sin delay; la UART0 sale a 115200 (≈2300
+                                    líneas/s) y la consola pinta por bloques cada 50 ms con tope de 100 000 caracteres. En
+                                    la app, 12 s: ×1 atraso 64 ms y cuadros p95 50 ms (antes 250 ms); ×10 atraso 1 s; Máx
+                                    p95 100 ms; app/tests/e2e-serial-flood.mjs. En Windows: [no verificado] en una PC)
 JWSIM_WEBSCREEN=PASS               (01/11, alpha.16: JWPLC_WebScreen; página, teclas desde la web y cuadro idéntico píxel a
                                     píxel a la TFT; <1 KB por pedido con la pantalla quieta; scripts/gate-webscreen.mjs)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)
@@ -129,6 +139,7 @@ JWSIM_G10_*=PENDING
 | `JWSIM_G2_UNSUPPORTED_LIB_MSG` | Usar una librería o API no soportada (WiFi, BLE, ADC…) produce un mensaje en español que nombra la API/librería y el gate que la soportará (o que no está en el plan G0–G10), en compilación o al primer uso. | `node scripts/gate-g2-unsupported.mjs` sobre `tests/sketches/g2_unsupported`. |
 | `JWSIM_G2_PROJECT_LINKING` | `.jwsim` v1 abre un proyecto que vincula `.ino`, proyecto OpenPLC y `.hmi`; validación por JSON Schema; migración probada de un archivo de versión anterior. | `node --test tests/build/project_test.mjs` + criterio `PROJECT_LINKING` de la E2E. |
 | `JWSIM_G2_EXTERNAL_EDIT_RELOAD` | Editar el `.ino` fuera del simulador (Arduino IDE) provoca recompilación y recarga en < 2 s sin perder la escena. | Criterio `EXTERNAL_EDIT_RELOAD` de la E2E (escritura externa con una entrada activa). |
+| `JWSIM_A17_UI` | Mejoras de interfaz de la línea alpha.17: la lista de Ejemplos solo trae las librerías del JWPLC Basic (`JWPLC_*`, `JW_*`); Herramientas > Autoformato (Ctrl+T) formatea con clang-format (estilo de los ejemplos o el `.clang-format` del sketch) y se deshace con un Ctrl+Z; el divisor editor/simulación se arrastra y se recuerda, y la simulación llega siempre al borde derecho; la escena tiene a la derecha una barra de pestañas Agregar (lista con búsqueda) y Propiedades (la escena o lo seleccionado, con el diagnóstico), que se pliega con un clic en la pestaña activa, y Ajustar/Rearmar/Sonido flotan sobre el lienzo; la vista Placa muestra solo el frente con las salidas en una tira; sin el texto «JWPLC Basic · package …»; panel inferior a lo ancho con las pestañas Problemas · Compilación · Serie · Tráfico · E/S y variables · Depuración, de alto arrastrable (se recuerda) y que se oculta por completo (vuelve desde la barra de estado o con Ctrl+J), con el COM y la velocidad en la barra superior. | E2E `app/tests/e2e-a17-ui.mjs` → `JWSIM_A17_UI.json` (7 criterios). |
 
 ## G3 — Depuración
 

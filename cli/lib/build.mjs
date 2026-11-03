@@ -156,6 +156,26 @@ function hash(text) {
   return createHash("sha1").update(text).digest("hex").slice(0, 16);
 }
 
+// Headers propios del simulador (sim/hal/include*). Algunos reemplazan a
+// uno del core con el mismo nombre (pgmspace.h): agregar o quitar uno no
+// cambia el comando ni el .d de los objetos ya compilados, que siguen
+// apuntando al original. La lista de nombres entra en la clave de la caché.
+let halHeadersKey = null;
+function halHeaders() {
+  if (halHeadersKey) return halHeadersKey;
+  const names = [];
+  const walk = (dir, rel) => {
+    if (!existsSync(dir)) return;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(join(dir, e.name), `${rel}${e.name}/`);
+      else names.push(rel + e.name);
+    }
+  };
+  for (const d of ["include", "include-win32"]) walk(join(ROOT, "sim", "hal", d), `${d}/`);
+  halHeadersKey = hash(names.sort().join("\n"));
+  return halHeadersKey;
+}
+
 // Mensajes de GCC "archivo:línea:columna: error|warning|note: texto". Las
 // rutas del .ino llegan tal cual gracias a los #line del preprocesado.
 export function parseDiagnostics(text) {
@@ -492,7 +512,7 @@ export async function buildSketch(sketchDir, options = {}) {
     else inoFlags.push(f[i.v]);
   }
   const pchIncs = includeDirs.map((d) => `-I${d}`);
-  const pchKey = hash([tc.cxx[0], tc.pchTag ?? "", ...inoFlags, ...forced, ...pchIncs].join("\0"));
+  const pchKey = hash([tc.cxx[0], tc.pchTag ?? "", halHeaders(), ...inoFlags, ...forced, ...pchIncs].join("\0"));
   const pchDir = join(cacheDir, "pch", pchKey);
   const pchHeader = join(pchDir, "jwsim_sketch_prefix.h");
   // Marca de PCH inutilizable en este host (con la salida de GCC que lo
@@ -556,7 +576,7 @@ export async function buildSketch(sketchDir, options = {}) {
     // referencias se redirigen al VFS y al reloj del simulador (la tabla
     // forma parte de la clave de la caché).
     const fwLibc = u.group !== "jwsim";
-    const cmdHash = hash(cc[0] + "\0" + compile.join("\0") + (fwLibc ? "\0" + fwSyms.hash : ""));
+    const cmdHash = hash(cc[0] + "\0" + halHeaders() + "\0" + compile.join("\0") + (fwLibc ? "\0" + fwSyms.hash : ""));
     // Caché de objetos compartida entre sketches: la clave es el comando
     // completo (flags + include path + archivo). El sketch va en su carpeta.
     const obj =

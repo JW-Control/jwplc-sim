@@ -18,6 +18,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { resolvePackageRoot } from "../../scripts/fetch-package.mjs";
 import { _electron as electron } from "playwright";
 
 const APP = resolve(import.meta.dirname, "..");
@@ -49,7 +50,9 @@ await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForSelector(".tab.active:has-text('sketch_')", { timeout: 30000 });
 const fresh = await win.evaluate(() => window.monaco.editor.getModels()[0].getValue());
 criteria.NEW_SKETCH = { pass: /void setup\(\) \{[\s\S]*\}\s*void loop\(\) \{[\s\S]*\}/.test(fresh), source: fresh };
-await win.evaluate(() => window.jwsimTest.openExampleNamed("02_io_basic"));
+// 02_io_basic es un benchmark del package: ya no está en la lista de Ejemplos.
+const ioBasic = join(resolvePackageRoot().root, "tools", "build-speed-benchmark", "sketches", "02_io_basic");
+await win.evaluate((d) => window.jwsimTest.openSketchDir(d), ioBasic);
 await win.waitForSelector(".tab.active:has-text('02_io_basic.ino')", { timeout: 30000 });
 const coldMs = Date.now() - t0;
 await shot(win, "01-inicio.png");
@@ -157,9 +160,12 @@ writeFileSync(v0, JSON.stringify(raw, null, 2));
 await win.evaluate((f) => window.jwsimTest.openProjectFile(f), v0);
 await win.waitForSelector(".tab.active:has-text('marcha.ino')");
 const sb = await win.$eval("#sb-project", (e) => e.textContent);
-const migratedMsg = await win.$eval("#console", (e) => /migrado de la versión 0/.test(e.textContent));
+// La consola pinta una vez por cuadro: se espera el mensaje.
+const migratedMsg = await win
+  .waitForFunction(() => /migrado de la versión 0/.test(document.querySelector("#console").textContent), null, { timeout: 5000 })
+  .then(() => true, () => false);
 const pushMode = await win.$eval(".mode .seg[data-mode='push']", (e) => e.classList.contains("active"));
-const speed10 = await win.$eval(".speed .seg[data-speed='10']", (e) => e.classList.contains("active"));
+const speed10 = await win.$eval("#sel-speed", (e) => e.value === "10");
 await win.evaluate(() => window.jwsimTest.saveProject());
 await win.waitForTimeout(300);
 const saved = JSON.parse(readFileSync(v0, "utf8"));

@@ -33,10 +33,20 @@ body {
   overflow: hidden;
 }
 
+/* Barra, área de trabajo (editor | placa), divisor, panel inferior y estado. */
 body {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) 5px var(--dock-h, 260px) auto;
   grid-template-columns: minmax(0, 1fr);
+}
+/* Panel inferior plegado por completo: el área de trabajo llega a la barra
+   de estado; se vuelve a abrir desde ella (o con Ctrl+J). */
+body.dock-collapsed {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+body.dock-collapsed .dock,
+body.dock-collapsed .dock-splitter {
+  display: none;
 }
 
 button,
@@ -190,10 +200,37 @@ select:focus-visible {
   border-color: #7a2c2c;
 }
 
+/* Editor | divisor arrastrable | simulación. --code-w lo fija el divisor
+   (app.js, guardado por usuario); sin él, el reparto inicial. */
 .workspace {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(520px, 0.9fr);
+  grid-template-columns: var(--code-w, minmax(320px, 1fr)) 6px minmax(360px, 0.9fr);
   min-height: 0;
+}
+/* Con el ancho del editor fijado, la simulación toma TODO el resto (una sola
+   columna con 0.9fr se quedaba con el 90 % y dejaba un hueco a la derecha). */
+.workspace.code-w {
+  grid-template-columns: var(--code-w) 6px minmax(360px, 1fr);
+}
+.splitter {
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.12s;
+  touch-action: none;
+}
+.splitter:hover,
+.splitter.dragging,
+.splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing iframe,
+body.resizing #editor {
+  pointer-events: none;
 }
 .pane {
   min-height: 0;
@@ -201,7 +238,10 @@ select:focus-visible {
   flex-direction: column;
 }
 .code-pane {
-  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.sim-pane {
+  min-width: 0;
 }
 
 .code-head {
@@ -275,28 +315,20 @@ select:focus-visible {
   color: var(--err);
 }
 
-.build-output {
-  height: 190px;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
-}
-.build-output.collapsed {
-  height: auto;
-}
-.build-output.collapsed .problems,
-.build-output.collapsed .log {
-  display: none;
-}
 .problems {
   list-style: none;
   margin: 0;
   padding: 0;
-  flex: 0 0 auto;
-  max-height: 96px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  border-bottom: 1px solid var(--border);
+  background: #0e1114;
+}
+.problems:empty::before {
+  content: "Sin errores ni avisos de la última compilación.";
+  display: block;
+  padding: 8px 10px;
+  color: var(--muted);
 }
 .problems li {
   padding: 3px 10px;
@@ -331,23 +363,91 @@ select:focus-visible {
   color: #b9c4cf;
 }
 
+/* La placa ocupa todo su lado, hasta el borde derecho, como el editor. */
 .sim-pane {
-  padding: 12px;
-  gap: 12px;
   background: #121519;
 }
-.board-card,
-.console-card {
+.board-card {
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
   overflow: hidden;
 }
-.console-card {
-  flex: 1;
-  min-height: 140px;
+
+/* ---- Panel inferior ---- */
+.dock-splitter {
+  cursor: row-resize;
+  background: var(--border);
+  transition: background 0.12s;
+  touch-action: none;
+}
+.dock-splitter:hover,
+.dock-splitter.dragging,
+.dock-splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+body.resizing-v {
+  cursor: row-resize;
+}
+.dock {
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  background: var(--panel);
+}
+.dock-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.statusbar #sb-dock {
+  margin-left: 0;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  border-radius: 4px;
+}
+body:not(.dock-collapsed) #sb-dock {
+  display: none;
+}
+.dock .log {
+  background: #0e1114;
+}
+.dock-opt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dock-opt[hidden] {
+  display: none;
+}
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  letter-spacing: 0;
+}
+.badge:empty {
+  display: none;
+}
+.badge.error {
+  background: var(--err);
+  color: #fff;
+}
+.badge.warning {
+  background: var(--warn);
+  color: #1a1206;
 }
 .console {
   color: #c8f0d6;
@@ -374,9 +474,17 @@ select:focus-visible {
 }
 .tabbar #view-note {
   margin-left: 8px;
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.tabbar #btn-view-clear {
-  margin-left: auto;
+.tabbar #btn-view-clear[hidden] {
+  display: none;
+}
+#btn-dock-toggle {
+  margin-left: 0;
+  min-width: 28px;
 }
 .buses {
   flex: 1;
@@ -424,6 +532,10 @@ select:focus-visible {
   flex: 0 0 auto;
   font-size: 12px;
 }
+/* Bloques de la consola: el navegador solo recalcula los nuevos. */
+.console-chunk {
+  contain: layout style;
+}
 .console .sys {
   color: var(--muted);
 }
@@ -461,6 +573,8 @@ select:focus-visible {
 .plc-stage {
   position: relative;
   flex: none;
+  overflow: hidden;
+  border-radius: 14px;
 }
 .plc-art,
 .plc-art svg {
@@ -516,6 +630,41 @@ button.io.on {
 .io.output.on {
   background: rgba(255, 176, 32, 0.08);
   border-color: rgba(255, 176, 32, 0.6);
+}
+/* Tira de salidas bajo el frente de la placa (vista Placa). */
+.out-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.out-strip-title {
+  font-weight: 600;
+}
+.out-strip .io-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.out-strip .io.output {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-color: var(--border);
+}
+.out-strip .io.output .lamp {
+  position: static;
+  width: 11px;
+  transform: none;
+}
+.io-label {
+  font-family: var(--mono);
+  font-size: 11px;
 }
 .plc-leds {
   display: flex;
@@ -650,6 +799,36 @@ button.io.on {
   background: #0e1114;
   font-size: 12px;
 }
+/* E/S y variables: tres columnas (entradas, salidas, variables). */
+.watch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr)) minmax(280px, 1.2fr);
+  align-items: start;
+}
+.watch[hidden] {
+  display: none;
+}
+.watch-col {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  min-height: 100%;
+}
+.watch-col:last-child {
+  border-right: none;
+}
+.watch-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  color: #b7c2ce;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
 .watch-tools {
   display: flex;
   flex-wrap: wrap;
@@ -657,10 +836,44 @@ button.io.on {
   gap: 8px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--panel);
-  z-index: 1;
+}
+.watch-tools.rec-tools {
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+}
+.watch tr.empty td {
+  color: var(--muted);
+  font-family: var(--ui);
+}
+.io-table td.sig {
+  font-weight: 600;
+}
+.lvl {
+  display: inline-block;
+  min-width: 56px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  background: #262c33;
+  color: var(--muted);
+}
+.lvl.on {
+  background: #17402a;
+  color: #7df0aa;
+}
+.io-table td.state {
+  color: var(--muted);
+  font-family: var(--ui);
+  white-space: nowrap;
+}
+.io-table tr.forced td.state {
+  color: #ffb020;
+  font-weight: 600;
+}
+.io-table td.force {
+  white-space: nowrap;
 }
 #watch-add {
   display: flex;
@@ -718,6 +931,13 @@ button.io.on {
 .force .seg {
   font-size: 11px;
   padding: 2px 8px;
+}
+.force .seg.f1 {
+  border-radius: 0 6px 6px 0;
+}
+.force .seg.free {
+  margin-left: 6px;
+  border-radius: 6px;
 }
 .force .seg.active.f0,
 .force .seg.active.f1 {
@@ -922,18 +1142,116 @@ button.io.on {
 .view3d-empty[hidden] {
   display: none;
 }
-.scene-tools {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-}
 .scene-main {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(0, 1fr) 260px 36px;
+}
+/* Panel lateral plegado: queda solo la barra de pestañas. */
+.scene-main.side-collapsed {
+  grid-template-columns: minmax(0, 1fr) 36px;
+}
+.scene-main.side-collapsed .scene-side {
+  display: none;
+}
+.side-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel-2);
+}
+.side-tab {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.side-tab svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.side-tab:hover {
+  color: var(--text);
+}
+.side-tab.active {
+  color: #fff;
+  border-color: var(--accent);
+  background: #24364d;
+}
+.side-pane[hidden] {
+  display: none;
+}
+.side-title {
+  margin: -8px -10px 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  color: #b7c2ce;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+#scene-add-filter {
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--text);
+  background: #101316;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.palette-cat {
+  margin: 8px 0 3px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.palette-item {
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+  padding: 4px 8px;
+  text-align: left;
+  white-space: normal;
+  font-size: 12px;
+}
+.palette-item[hidden],
+.palette-cat[hidden] {
+  display: none;
+}
+/* Ajustar, Rearmar y Sonido: flotan sobre el lienzo, arriba a la izquierda. */
+.scene-float {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+}
+.scene-float button.icon {
+  min-width: 30px;
+  padding: 3px 6px;
+  font-size: 14px;
+  line-height: 1.2;
+  background: rgba(32, 37, 43, 0.92);
+}
+.scene-float button.off {
+  opacity: 0.6;
 }
 #scene-svg {
   width: 100%;
@@ -1440,19 +1758,57 @@ button.fault.on {
   gap: 2px;
 }
 
-/* Puerto COM virtual (barra bajo las pestañas de la consola) */
-.com-panel {
+/* Puerto COM virtual: estado en la barra superior y panel bajo el botón */
+.com-status {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
+  gap: 6px;
   font-size: 12px;
+  color: var(--muted);
+}
+.com-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a525c;
+}
+.com-status.on {
+  color: var(--text);
+  border-color: #2c6b45;
+}
+.com-status.on .com-dot {
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+}
+.com-panel {
+  position: fixed;
+  z-index: 50;
+  width: min(440px, calc(100vw - 16px));
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+}
+.com-panel #com-uart {
+  grid-column: 2 / 4;
+}
+.com-panel #com-connect,
+.com-panel #com-install,
+.com-panel #com-note {
+  grid-column: 1 / 4;
+}
+.com-panel #com-install[hidden] {
+  display: none;
 }
 .com-panel[hidden] {
   display: none;
 }
 .com-panel select {
-  max-width: 260px;
+  min-width: 0;
 }

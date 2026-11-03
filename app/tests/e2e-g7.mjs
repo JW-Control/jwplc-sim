@@ -190,7 +190,9 @@ try {
   log(`SCENE_DRAG ${JSON.stringify(criteria.SCENE_DRAG)}`);
 
   // ---- SCENE_EDIT
-  await win.selectOption("#scene-add", "jwsim/lamp");
+  await win.click("#scene-tab-add");
+  await win.fill("#scene-add-filter", "lámpara");
+  await win.click("#scene-add [data-add='jwsim/lamp']");
   const h = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.type === "jwsim/lamp" && d.id !== "H1")?.id));
   await t((id) => window.jwsimTest.scene.move(id, -200, 100), h);
   await win.click("#scene-fit");
