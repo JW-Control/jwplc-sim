@@ -6,7 +6,7 @@
 // Calibración: vueltas de loop() por segundo de tests/sketches/calibracion_loop
 // en el simulador contra la medición en un JWPLC Basic real
 // (tests/hardware/calibracion_loop.placa.json), error < 10 % en cada caso.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildSketch } from "../cli/lib/build.mjs";
@@ -17,6 +17,10 @@ import { ROOT } from "../cli/lib/build.mjs";
 const target = targetArg();
 const { root, lock } = resolvePackageRoot();
 const ex = (n) => join(root, lock.JWPLC_PACKAGE_TREE, "libraries", "JWPLC_GlobalPeripherals", "examples", n);
+// alpha.17 renombró 06.Runtime_Cache_Status y borró los ejemplos de bloques:
+// el gate usa el nombre que tenga el package fijado y omite los que ya no existen.
+const has = (n) => existsSync(ex(n));
+const firstOf = (...names) => names.find(has) ?? names[0];
 const STIM = join(ROOT, "tests", "poc", "io_patterns.stim");
 const PATTERN_T0 = 2000;
 const PATTERN_DT = 600;
@@ -69,11 +73,11 @@ function checkConsole(events, regex, parse) {
 }
 
 const criteria = {};
-for (const name of ["01.DigitalIO_Basic", "DigitalIO_BlockMirror", "JWPLC_IO_BlockMirror"]) {
+for (const name of ["01.DigitalIO_Basic", "DigitalIO_BlockMirror", "JWPLC_IO_BlockMirror"].filter((n, i) => i === 0 || has(n))) {
   const bad = checkMirror(await run(name));
   criteria[name] = { pass: bad.length === 0, failures: bad };
 }
-{
+if (has("DigitalIO_BlockRead")) {
   const ev = await run("DigitalIO_BlockRead");
   const bad = checkConsole(ev, /^IN: 0b([01]{8})$/, (m) => parseInt(m[1], 2));
   criteria["DigitalIO_BlockRead"] = { pass: bad.length === 0, failures: bad };
@@ -81,16 +85,17 @@ for (const name of ["01.DigitalIO_Basic", "DigitalIO_BlockMirror", "JWPLC_IO_Blo
 {
   // Imprime cada 1000 ms: cada línea debe coincidir con las entradas vigentes
   // (se descartan las que caen a menos de 100 ms de un cambio de patrón).
-  const ev = await run("06.Runtime_Cache_Status");
+  const io06 = firstOf("06.IO_Estado_Escaneo", "06.Runtime_Cache_Status");
+  const ev = await run(io06);
   const re = /^IO ready=1 IN=0x([0-9A-F]{2}) /;
   const changes = PATTERNS.map((_, i) => PATTERN_T0 + PATTERN_DT * i);
   const lines = ev.filter((e) => e.kind === "UART" && re.test(e.text) && !changes.some((c) => e.t >= c && e.t - c < 100));
   const bad = lines
     .filter((e) => parseInt(e.text.match(re)[1], 16) !== bitsAt(ev, "DI", e.t))
     .map((e) => `t=${e.t}: consola ${e.text.match(re)[1]} DI=${hex(bitsAt(ev, "DI", e.t))}`);
-  criteria["06.Runtime_Cache_Status"] = { pass: bad.length === 0 && lines.length >= 6, checked_lines: lines.length, failures: bad };
+  criteria[io06] = { pass: bad.length === 0 && lines.length >= 6, checked_lines: lines.length, failures: bad };
 }
-{
+if (has("DigitalIO_BlockWrite")) {
   // Secuencia 0x88 -> 0x11 -> 0x00 con periodo de 1000 ms tras setup().
   const ev = await run("DigitalIO_BlockWrite", []);
   const seq = [];
