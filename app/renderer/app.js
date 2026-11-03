@@ -690,7 +690,7 @@ function stopSim() {
 
 function setInputMode(mode) {
   state.inputMode = mode;
-  for (const o of document.querySelectorAll(".mode .seg")) {
+  for (const o of document.querySelectorAll(".mode .seg[data-mode]")) {
     o.classList.toggle("active", o.dataset.mode === mode);
     o.setAttribute("aria-checked", String(o.dataset.mode === mode));
   }
@@ -1595,7 +1595,7 @@ function wireUi() {
   $("btn-pause").addEventListener("click", togglePause);
   $("btn-stop").addEventListener("click", stopSim);
   $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
-  for (const b of document.querySelectorAll(".mode .seg")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
+  for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
   $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
   $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));

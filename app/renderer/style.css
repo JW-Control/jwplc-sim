@@ -352,15 +352,12 @@ body.resizing #editor {
   color: #b9c4cf;
 }
 
+/* La placa ocupa todo su lado, hasta el borde derecho, como el editor. */
 .sim-pane {
-  padding: 12px;
-  gap: 12px;
   background: #121519;
 }
 .board-card {
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
   overflow: hidden;
 }
 

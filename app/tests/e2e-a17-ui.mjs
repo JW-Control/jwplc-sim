@@ -113,6 +113,8 @@ criteria.SCENE_SIDE = { pass: open0 > 200 && closed === 0 && open1 > 200, open: 
 
 // ---- DOCK
 await win.click("[data-view=board]");
+// Cambiar de vista (Placa/Escena/3D) no toca el modo de las entradas.
+const modeKept = await win.$eval(".mode .seg[data-mode='toggle']", (e) => e.classList.contains("active"));
 const tabs = await win.$$eval("#dock .ptab:not([hidden])", (b) => b.map((x) => x.textContent.trim()));
 const dockBox = () => win.$eval("#dock", (e) => { const r = e.getBoundingClientRect(); return { y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; });
 const d0 = await dockBox();
@@ -137,8 +139,8 @@ criteria.DOCK = {
   pass:
     tabs.join("|") === "Problemas|Compilación|Serie|Tráfico|E/S y variables|Depuración" &&
     d0.w === viewport && Math.abs(d1.h - d0.h - 120) <= 4 && Number(dockStored) === d1.h &&
-    dFold.h < 60 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project,
-  tabs, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, reopened: dOpen.h, toolbar,
+    dFold.h < 60 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project && modeKept,
+  tabs, input_mode_kept: modeKept, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, reopened: dOpen.h, toolbar,
 };
 
 await app.close();
