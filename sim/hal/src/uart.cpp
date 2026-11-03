@@ -54,6 +54,11 @@ uart_struct_t *get(uint8_t n) { return n < SOC_UART_NUM ? &g_uart[n] : nullptr; 
 constexpr size_t kHwFifo = 128;   // SOC_UART_FIFO_LEN
 
 bool timed(const uart_struct_t *u) { return u->num != 0; }
+// La transmisión lleva tiempo de carácter en todas las UART: la UART0 sale
+// por el conversor USB-serie de la placa a la velocidad configurada, así que
+// un loop que imprime sin pausa queda limitado por los baudios, como en el
+// JWPLC Basic real. La recepción de la UART0 (consola) sigue inmediata.
+bool tx_timed(const uart_struct_t *) { return true; }
 
 // Bits por carácter según el config de arduino-esp32 (UART_CONF_*):
 // datos ((c >> 2) & 3) + 5, paridad (c & 3: 2 par, 3 impar), parada
@@ -197,7 +202,7 @@ uint32_t uartAvailable(uart_t *u) {
 uint32_t uartAvailableForWrite(uart_t *u) {
   if (!u) return 0;
   jwsim_cpu(jwsim_costs()->uart_call);
-  if (!timed(u)) return kHwFifo;
+  if (!tx_timed(u)) return kHwFifo;
   drop_sent(u, jwsim_now());
   const size_t cap = kHwFifo + u->tx_buffer;
   return static_cast<uint32_t>(cap > u->tx_ends.size() ? cap - u->tx_ends.size() : 0);
@@ -233,7 +238,7 @@ void uartWriteBuf(uart_t *u, const uint8_t *data, size_t len) {
   jwsim_trace_bytes(data, len);
   jwsim::board().uart_tx(u->num, data, len);
   jwsim_cpu(jwsim_costs()->uart_call);
-  if (!timed(u)) return;
+  if (!tx_timed(u)) return;
   const jwsim_ns_t ch = char_ns(u);
   const size_t cap = kHwFifo + u->tx_buffer;
   for (size_t i = 0; i < len; ++i) {
@@ -257,7 +262,7 @@ void uartWrite(uart_t *u, uint8_t c) { uartWriteBuf(u, &c, 1); }
 // descarta lo recibido, como el driver de ESP-IDF).
 void uartFlushTxOnly(uart_t *u, bool txOnly) {
   if (!u) return;
-  if (timed(u)) {
+  if (tx_timed(u)) {
     const jwsim_ns_t now = jwsim_now();
     if (u->tx_free_at > now) jwsim_wait(u->tx_free_at - now);
     drop_sent(u, jwsim_now());

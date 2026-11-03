@@ -161,19 +161,61 @@ function setStatus(kind, text) {
   window.JwsimScene?.onStatus(kind);
 }
 
+// La consola junta lo que llega y lo pinta una vez por cuadro: un sketch que
+// imprime sin pausa (más aún en ×10 o Máx) no traba la interfaz. Se guardan
+// los últimos kConsoleMax caracteres.
+const kConsoleMax = 200_000;
+const consoleQueue = [];
+let consoleFrame = 0;
+
 function consoleWrite(text, cls) {
+  const last = consoleQueue.at(-1);
+  if (last && last.cls === cls) last.text += text;
+  else consoleQueue.push({ text, cls });
+  consoleFrame ||= requestAnimationFrame(consoleFlush);
+}
+
+function consoleClear() {
+  consoleQueue.length = 0;
+  $("console").textContent = "";
+}
+
+function consoleFlush() {
+  consoleFrame = 0;
   const pre = $("console");
   const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
-  if (cls) {
-    const span = document.createElement("span");
-    span.className = cls;
-    span.textContent = text;
-    pre.appendChild(span);
-  } else {
-    pre.appendChild(document.createTextNode(text));
+  for (const { text, cls } of consoleQueue.splice(0)) {
+    // De un bloque más largo que el límite solo se ve el final.
+    const t = text.length > kConsoleMax ? text.slice(-kConsoleMax) : text;
+    const last = pre.lastChild;
+    if (!cls && last?.nodeType === Node.TEXT_NODE) {
+      last.appendData(t);
+    } else if (cls) {
+      const span = document.createElement("span");
+      span.className = cls;
+      span.textContent = t;
+      pre.appendChild(span);
+    } else {
+      pre.appendChild(document.createTextNode(t));
+    }
   }
-  // Límite para sketches que imprimen sin parar.
-  while (pre.childNodes.length > 4000) pre.removeChild(pre.firstChild);
+  // Recorta desde el principio lo que pase del límite.
+  let total = 0;
+  for (const n of pre.childNodes) total += n.textContent.length;
+  while (total > kConsoleMax && pre.firstChild) {
+    const first = pre.firstChild;
+    const extra = total - kConsoleMax;
+    if (first.nodeType === Node.TEXT_NODE && first.length > extra) {
+      // Corta en un salto de línea para no dejar media línea arriba.
+      const cut = first.data.indexOf("\n", extra);
+      const n = cut >= 0 ? cut + 1 : extra;
+      first.deleteData(0, n);
+      total -= n;
+    } else {
+      total -= first.textContent.length;
+      pre.removeChild(first);
+    }
+  }
   if (atBottom) pre.scrollTop = pre.scrollHeight;
 }
 
@@ -499,7 +541,7 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   }
   state.exe = r.exe;
   $("build-log").textContent += `\nOK · ${r.libraries.length} librerías del package\n`;
-  $("console").textContent = "";
+  consoleClear();
   resetBuses();
   // Breakpoints con las líneas actuales (las ediciones los desplazan).
   for (const name of state.models.keys()) await api.dbgSetBreakpoints(state.models.get(name).uri.fsPath, bpLines(name));
@@ -1306,7 +1348,7 @@ function wireUi() {
     clearDebugView();
   });
   $("btn-view-clear").addEventListener("click", () => {
-    if (state.view === "console") $("console").textContent = "";
+    if (state.view === "console") consoleClear();
     else if (state.view === "buses") resetBuses();
   });
   for (const b of document.querySelectorAll(".ptab")) b.addEventListener("click", () => setView(b.dataset.view));

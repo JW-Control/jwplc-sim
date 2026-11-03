@@ -157,7 +157,10 @@ writeFileSync(v0, JSON.stringify(raw, null, 2));
 await win.evaluate((f) => window.jwsimTest.openProjectFile(f), v0);
 await win.waitForSelector(".tab.active:has-text('marcha.ino')");
 const sb = await win.$eval("#sb-project", (e) => e.textContent);
-const migratedMsg = await win.$eval("#console", (e) => /migrado de la versión 0/.test(e.textContent));
+// La consola pinta una vez por cuadro: se espera el mensaje.
+const migratedMsg = await win
+  .waitForFunction(() => /migrado de la versión 0/.test(document.querySelector("#console").textContent), null, { timeout: 5000 })
+  .then(() => true, () => false);
 const pushMode = await win.$eval(".mode .seg[data-mode='push']", (e) => e.classList.contains("active"));
 const speed10 = await win.$eval(".speed .seg[data-speed='10']", (e) => e.classList.contains("active"));
 await win.evaluate(() => window.jwsimTest.saveProject());
