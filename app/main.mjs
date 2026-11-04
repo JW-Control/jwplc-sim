@@ -17,7 +17,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
-import { syncExercise } from "./lib/exercise-copy.mjs";
+import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -310,8 +310,9 @@ ipcMain.handle("exercise:grade", (_e, { file, sketchDir }) => {
 });
 
 ipcMain.handle("sketch:openExample", (_e, srcDir) => {
+  // La copia se pone al día con el package fijado (ver syncExample).
   const dst = join(workspaceDir(), basename(srcDir));
-  if (!existsSync(dst)) cpSync(srcDir, dst, { recursive: true });
+  syncExample(srcDir, dst);
   return readSketch(dst);
 });
 

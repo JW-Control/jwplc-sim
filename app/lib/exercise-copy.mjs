@@ -10,7 +10,7 @@
 // siempre y el sketch solo si sigue siendo la plantilla de antes (la que
 // configuraba las E/S con pinMode).
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 export const MARK = ".jwsim-ejercicio.json";
@@ -76,4 +76,36 @@ export function syncExercise(src, dst) {
   }
   if (statSync(dst).isDirectory()) writeFileSync(markFile, `${JSON.stringify({ files: hashes }, null, 2)}\n`);
   return updated;
+}
+
+// Ejemplo del package en la carpeta de trabajo. Igual que un ejercicio: lo
+// que el usuario no tocó se pone al día y lo que editó se conserva. Una copia
+// anterior a la marca que ya no coincide con el ejemplo no se puede separar
+// en «tocado» y «sin tocar»: se renombra a «<nombre> (anterior)» y se copia
+// el ejemplo de nuevo, para que se vea la versión del package sin perder nada.
+export function syncExample(src, dst) {
+  if (existsSync(dst) && !existsSync(join(dst, MARK))) {
+    const differs = listFiles(src).some((f) => {
+      const to = join(dst, f);
+      return !existsSync(to) || sha(readFileSync(to)) !== sha(readFileSync(join(src, f)));
+    });
+    if (differs) {
+      let old = `${dst} (anterior)`;
+      for (let i = 2; existsSync(old); i++) old = `${dst} (anterior ${i})`;
+      renameSync(dst, old);
+    }
+  }
+  if (!existsSync(dst)) {
+    mkdirSync(dst, { recursive: true });
+    const hashes = {};
+    for (const f of listFiles(src)) {
+      const to = join(dst, f);
+      mkdirSync(dirname(to), { recursive: true });
+      cpSync(join(src, f), to);
+      hashes[f] = sha(readFileSync(to));
+    }
+    writeFileSync(join(dst, MARK), `${JSON.stringify({ files: hashes }, null, 2)}\n`);
+    return [];
+  }
+  return syncExercise(src, dst);
 }

@@ -3,8 +3,9 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.16 publicada (02/11/2026): Runtime de panel, expansión RS-485, pantalla web,
-# JWPLC_TFT 0.5.0 y JWPLC_UI_Widgets; TFT/Display/MatrixButtons de nuevo precompiladas.
-JWPLC_PACKAGE_REF=v2.1.0-alpha.16
-JWPLC_PACKAGE_COMMIT=81e7e7b58c2ca9c09a1706db933858cd904075a6
+# 2.1.0-alpha.17 en curso (04/11/2026, sin publicar): ejemplos renombrados y numerados,
+# API con «.», JW Libraries sincronizadas, LogicRuntime retirado y Runtime con
+# Intermitente/loadDemo(). Se fija en la rama principal de la línea hasta su tag.
+JWPLC_PACKAGE_REF=v2.1.0-alpha.17/JWPLC-Sim/main
+JWPLC_PACKAGE_COMMIT=56950b3d1a8a68f25b2dc9795e51908c11afa2f2
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0

@@ -6,7 +6,7 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.3.0 · package JWPLC 2.1.0-alpha.16 (package.lock)
+Versión: 0.3.0 · package JWPLC 2.1.0-alpha.17 en curso (package.lock)
 Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS; botón «Simular» en el editor pendiente
 Matriz:  138 ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
