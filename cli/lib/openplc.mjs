@@ -6,7 +6,8 @@
 //
 //   project.json + pous/ + devices/        (formato del editor, sin cambios)
 //     -> parseProjectFiles, preprocessPous   (como el renderer del editor)
-//     -> runCompilePipeline del editor        (main process): xml2st -> ST,
+//     -> runCompilePipeline del editor        (main process): ST con el
+//        transpilador JSON del editor (st-transpiler, como desde 4.3),
 //        STruC++ -> C++, defines.h, esqueleto Baremetal + HAL del VPP
 //     -> sketch examples/Baremetal + librería src/   (lo que recibe arduino-cli)
 //     -> buildSketch con src/ como librería   (-std=gnu++17 -fno-rtti, como la
@@ -17,7 +18,6 @@
 // el core y las librerías (el simulador compila el package fijado) y llamar a
 // arduino-cli (se devuelve el sketch para compilarlo aquí).
 
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -54,7 +54,7 @@ const rd = (p) => (existsSync(p) ? readFileSync(p, "utf8") : "");
  * Genera el sketch del proyecto con la cadena del editor.
  * @returns {{ sketchDir: string, libDir: string, md5: string, programSt: string }}
  */
-export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => console.error(m), transpiler = "xml2st" } = {}) {
+export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => console.error(m) } = {}) {
   const { dir, ready } = await resolveEditor();
   const P = editorPaths(dir);
   const e = createRequire(import.meta.url)(P.pipeline);
@@ -123,22 +123,10 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
     },
     async transpileToSt(args) {
       const fail = (message) => ({ ok: false, errors: [{ message, line: 0, column: 0, severity: "error" }] });
-      if (transpiler === "json") {
-        const r = e.runJsonTranspiler(e.fromSchemaShape(args.projectData));
-        if (r.programSt === null || r.errors.length) return fail(r.errors.join("\n") || "no se generó el texto estructurado");
-        return { ok: true, programSt: (programSt = r.programSt) };
-      }
-      const xml = e.XmlGenerator(args.projectData, "old-editor");
-      if (!xml.ok || !xml.data) return fail(`XML: ${xml.message}`);
-      const src = join(outDir, "src");
-      mkdirSync(src, { recursive: true });
-      writeFileSync(join(src, "plc.xml"), xml.data);
-      try {
-        execFileSync(P.xml2st, ["--generate-st", join(src, "plc.xml"), "--keep-structs"], { stdio: ["ignore", "pipe", "pipe"] });
-      } catch (err) {
-        return fail(`xml2st: ${String(err.stderr || err.stdout || err.message).trim()}`);
-      }
-      return { ok: true, programSt: (programSt = rd(join(src, "program.st"))) };
+      // Como el compiler-module del editor: forma de esquema -> transpilador JSON.
+      const r = e.runJsonTranspiler(e.fromSchemaShape(args.projectData));
+      if (r.programSt === null || r.errors.length) return fail(r.errors.join("\n") || "no se generó el texto estructurado");
+      return { ok: true, programSt: (programSt = r.programSt) };
     },
     async installArduinoCore() {
       return { ok: true };
@@ -186,7 +174,7 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
     const detail = (result.errors ?? []).map((x) => (x.line ? `línea ${x.line}: ${x.message}` : x.message));
     throw new Error(`la cadena del editor falló: ${[...detail, ...errors].join(" | ") || "sin detalle"}`);
   }
-  const info = { editor: ready.editorRef, editorCommit: ready.editorCommit, vpp: ready.vppSha, xml2st: ready.xml2st, strucpp: ready.strucpp, transpiler, md5: result.md5 };
+  const info = { editor: ready.editorRef, editorCommit: ready.editorCommit, vpp: ready.vppSha, strucpp: ready.strucpp, md5: result.md5 };
   writeFileSync(join(outDir, "openplc.json"), JSON.stringify(info, null, 2) + "\n");
   return { sketchDir: join(outDir, "examples", "Baremetal"), libDir: join(outDir, "src"), md5: result.md5, programSt, info };
 }
@@ -195,7 +183,7 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
 export async function buildOpenPlcProject(projectDir, options = {}) {
   const log = options.log ?? ((m) => console.error(m));
   const outDir = options.outDir ?? join(resolve(projectDir), "build", "jwsim");
-  const gen = await generateOpenPlcSketch(projectDir, join(outDir, "openplc"), { log, transpiler: options.transpiler });
+  const gen = await generateOpenPlcSketch(projectDir, join(outDir, "openplc"), { log });
   const r = await buildSketch(gen.sketchDir, {
     ...options,
     outDir: join(outDir, options.target ?? "native"),

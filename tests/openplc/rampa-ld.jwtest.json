@@ -1,6 +1,6 @@
 {
   "$schema": "../../schema/jwsim-test-1.json",
-  "$comment": "G6 LADDER_CHAIN en Ladder: el peldaño CTUD con salida en paralelo de los tests del editor (ladder-xml.test.ts, fixture ctud-parallel-output-rung.json) con oscillator = %IX0.0, full_up = %QX0.0 y full_down = %QX0.1. Pulsos de 50 ms cada 100 ms desde 1 s: con 20 flancos llega a PV (full_up), con 20 más vuelve a 0 (full_down) y los 10 restantes no llegan otra vez al tope. La cadena del editor convierte el LD a ST con xml2st.",
+  "$comment": "G6 LADDER_CHAIN en Ladder: el peldaño CTUD con salida en paralelo de los tests del editor (ladder-xml.test.ts, fixture ctud-parallel-output-rung.json) con oscillator = %IX0.0, full_up = %QX0.0 y full_down = %QX0.1. Pulsos de 50 ms cada 100 ms desde 1 s: con 20 flancos llega a PV (full_up, 2,9 s). Al soltarse full_down, CD sube con el pulso 20 todavía en alto y el CTUD de STruC++ 0.7.0 (R_TRIG en CU y CD, como IEC 61131-3) ya cuenta esa bajada: vuelve a 0 con el pulso 39 (4,8 s), no con el 40 como el CTUD de STruC++ 0.5.13 (F_TRIG en CD). Los 11 pulsos restantes no llegan otra vez al tope. La cadena del editor 4.3 convierte el LD a ST con su transpilador JSON.",
   "sketch": "rampa-ld",
   "until_ms": 7000,
   "stim": [
@@ -120,11 +120,11 @@
         "DO": "0b00000001"
       },
       {
-        "at_ms": 4840,
+        "at_ms": 4780,
         "DO": "0b00000001"
       },
       {
-        "at_ms": 4900,
+        "at_ms": 4860,
         "DO": "0b00000010"
       },
       {

@@ -52,7 +52,7 @@ Con error: `"ok":false`, `error` y `diagnostics` (`file`, `line`, `column`,
 Con la carpeta de un proyecto del OpenPLC Editor (`project.json`), antes de
 compilar pasa por la cadena del editor fijado en `editor.lock` (G6,
 ARCHITECTURE §3.6); el informe JSON suma `openplc` con las versiones usadas
-(editor, VPP, xml2st, STruC++, MD5 del programa). `--library <dir>` (repetible)
+(editor, VPP, STruC++, MD5 del programa). `--library <dir>` (repetible)
 agrega una librería como en arduino-cli.
 
 ### run

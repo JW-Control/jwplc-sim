@@ -6,7 +6,6 @@
 //   src/, resources/sources/   fuentes del editor (sparse checkout del tag)
 //   vpp/                        VPP del JWPLC Basic en PLATFORM_VPP_SHA del editor
 //   deps/node_modules/          STruC++ y las dependencias exactas del editor
-//   bin/xml2st[.exe]            xml2st de binary-versions.json
 //   deps/pipeline.cjs           el pipeline del editor empaquetado con esbuild
 //   ready.json                  versiones de todo lo anterior
 //
@@ -30,13 +29,13 @@ const VPP_PATH = "openplc-editor-installers/v4.2.7/vpp";
 const PLATFORM_REPO = "https://github.com/JW-Control/platform-jwplc.git";
 
 // Lo que se exporta del editor: las mismas funciones que usa su main process
-// para compilar (compiler-module.ts y compiler-adapter.ts).
+// para compilar (compiler-module.ts y compiler-adapter.ts). Desde 4.3 el editor
+// pasa a ST con su transpilador JSON (st-transpiler) y ya no usa xml2st.
 const ENTRY = `
 export { runCompilePipeline } from '@root/backend/shared/compile/pipeline'
 export { mergeStrucppRuntimeIntoSkeleton } from '@root/backend/shared/compile/steps/merge-strucpp-runtime-into-skeleton'
 export { parseProjectFiles } from '@root/backend/shared/utils/parse-project-files'
 export { preprocessPous } from '@root/backend/shared/utils/PLC/preprocess-pous'
-export { XmlGenerator } from '@root/backend/shared/utils/PLC/xml-generator'
 export { fromSchemaShape, transpileToSt as runJsonTranspiler } from '@root/backend/shared/transpilers/st-transpiler'
 export { buildDefaultPinMapping } from '@root/frontend/store/slices/device/default-pin-mapping'
 export { buildProjectFileContent } from '@root/backend/shared/project/create-project-files'
@@ -123,21 +122,7 @@ export async function resolveEditor({ fetch = true } = {}) {
   writeFileSync(join(deps, "package.json"), JSON.stringify({ name: "jwsim-editor-deps", private: true }) + "\n");
   npm(["install", "--no-audit", "--no-fund", "--silent", ...exact, `esbuild@${ESBUILD}`, `./strucpp-${sv}.tgz`], deps);
 
-  // 4. xml2st para esta plataforma.
-  const win = process.platform === "win32";
-  if (!["linux", "win32"].includes(process.platform) || process.arch !== "x64") throw new Error(`xml2st: plataforma ${process.platform}-${process.arch} sin SHA fijado en editor.lock`);
-  const xsha = lock[win ? "XML2ST_SHA256_WIN32_X64" : "XML2ST_SHA256_LINUX_X64"];
-  const xurl = `https://github.com/${versions.xml2st.repository}/releases/download/${versions.xml2st.version}/xml2st-${process.platform}-x64.${win ? "zip" : "tar.gz"}`;
-  const bin = join(dir, "bin");
-  rmSync(bin, { recursive: true, force: true });
-  mkdirSync(bin, { recursive: true });
-  const archive = join(bin, win ? "xml2st.zip" : "xml2st.tar.gz");
-  writeFileSync(archive, await download(xurl, xsha));
-  // tar (bsdtar) viene con Windows 10+ y extrae .zip.
-  execFileSync("tar", ["-xf", archive, "-C", bin], { stdio: "inherit" });
-  rmSync(archive);
-
-  // 5. Pipeline del editor empaquetado (sin Electron).
+  // 4. Pipeline del editor empaquetado (sin Electron).
   writeFileSync(join(dir, "entry.ts"), ENTRY);
   writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: src, paths: { "@root/*": ["./src/*"] } } }) + "\n");
   const esbuild = createRequire(join(deps, "package.json"))("esbuild");
@@ -158,7 +143,6 @@ export async function resolveEditor({ fetch = true } = {}) {
     editorRef: lock.OPENPLC_EDITOR_REF,
     editorCommit: lock.OPENPLC_EDITOR_COMMIT,
     vppSha,
-    xml2st: versions.xml2st.version,
     strucpp: versions.strucpp.version,
     deps: exact,
     platform: process.platform,
@@ -174,7 +158,6 @@ export function editorPaths(dir) {
     sources: join(dir, "editor", "resources", "sources"),
     vpp: join(dir, "platform", VPP_PATH),
     strucpp: join(dir, "deps", "node_modules", "strucpp"),
-    xml2st: join(dir, "bin", "xml2st", process.platform === "win32" ? "xml2st.exe" : "xml2st"),
   };
 }
 
@@ -182,7 +165,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   resolveEditor({ fetch: !process.argv.includes("--print") })
     .then(({ dir, ready }) => {
       if (!process.argv.includes("--print")) {
-        console.error(`[fetch-editor] ${ready.editorRef} (${ready.editorCommit.slice(0, 12)}): xml2st ${ready.xml2st}, STruC++ ${ready.strucpp}, VPP @ ${ready.vppSha.slice(0, 12)}`);
+        console.error(`[fetch-editor] ${ready.editorRef} (${ready.editorCommit.slice(0, 12)}): STruC++ ${ready.strucpp}, VPP @ ${ready.vppSha.slice(0, 12)}`);
       }
       console.log(dir);
     })

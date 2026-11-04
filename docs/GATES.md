@@ -79,9 +79,10 @@ JWSIM_PACKAGE_SYNC_ALPHA14=PASS     (docs/reports/SYNC_ALPHA14.md; tag v2.1.0-al
                                      matriz 111/111)
 JWSIM_PACKAGE_SYNC_ALPHA15=PASS     (docs/reports/SYNC_ALPHA15.md; tag v2.1.0-alpha.15 @ cbeced0d: paridad sin diferencias,
                                      matriz 125/125)
-JWSIM_G6_LADDER_CHAIN=PASS          (28/10: cadena real del OpenPLC Editor 4.2.8-jwplc.8 fijada en editor.lock: xml2st v4.0.7,
-                                     STruC++ v0.5.13, HAL jwplcbasic.cpp del VPP @ a8458dcd; tests/openplc: ST (TON) y Ladder
-                                     (CTUD del fixture del editor) compilan contra la placa simulada y pasan; ARCHITECTURE §3.6)
+JWSIM_G6_LADDER_CHAIN=PASS          (04/11: cadena real del OpenPLC Editor 4.3.3-jwplc.1 fijada en editor.lock: transpilador JSON
+                                     del editor (sin xml2st), STruC++ v0.7.0, HAL jwplcbasic.cpp del VPP @ 0647a84c; tests/openplc:
+                                     ST (TON) y Ladder (CTUD del fixture del editor) compilan contra la placa simulada y pasan;
+                                     antes 28/10 con 4.2.8-jwplc.8, xml2st v4.0.7 y STruC++ v0.5.13; ARCHITECTURE §3.6)
 JWSIM_G6_RELOAD_FROM_EDITOR=PASS    (28/10: la app abre la carpeta del proyecto del editor (POU de solo lectura) o un .jwsim
                                      con program.kind openplc; al guardar en el editor recompila con su cadena y recarga en
                                      2,9 s conservando la escena; app/tests/e2e-g6.mjs)
@@ -180,7 +181,7 @@ JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G6_LADDER_CHAIN` | Un proyecto OpenPLC vinculado compila con la cadena real del editor (xml2st → ST, STruC++ → C++, HAL `jwplcbasic.cpp` del VPP; el editor 4.2.8 ya no usa matiec) contra el backend simulado y corre con la misma placa. | `node cli/jwsim-cli.mjs test tests/openplc` (ST y Ladder). |
+| `JWSIM_G6_LADDER_CHAIN` | Un proyecto OpenPLC vinculado compila con la cadena real del editor (transpilador JSON del editor → ST, STruC++ → C++, HAL `jwplcbasic.cpp` del VPP; desde 4.3 el editor no usa xml2st ni matiec) contra el backend simulado y corre con la misma placa. | `node cli/jwsim-cli.mjs test tests/openplc` (ST y Ladder). |
 | `JWSIM_G6_RELOAD_FROM_EDITOR` | Guardar en el editor OpenPLC recarga la simulación. | E2E `app/tests/e2e-g6.mjs` (OPEN_OPENPLC, RUN_OPENPLC, RELOAD_FROM_EDITOR). |
 | `JWSIM_G6_SIMULATE_BUTTON` | Botón "Simular" en el fork `JW-Control/openplc-editor` abre el proyecto en JWPLC Sim. | PR en el fork. |
 
