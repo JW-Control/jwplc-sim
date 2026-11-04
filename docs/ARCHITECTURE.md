@@ -122,7 +122,6 @@ nuevo del package sin clasificar hace fallar el build.
 `rom/ets_sys.h`, `soc/{gpio_reg,gpio_sig_map,rtc,uart_pins,spi_struct}.h`, `lwip/{ip_addr,netif}.h`.
 Contienen **solo** lo que el código del package consume (medido en G0
 compilando el cierre completo); cuando una alpha use algo nuevo, se agrega
-aquí.
 
 ### 2.4 FreeRTOS usado por el package (medido en G0)
 
@@ -350,9 +349,7 @@ la opción, sigue funcionando.
 Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
 `finalizeJwplcHmiSkeleton`) y el Modbus de la pantalla del VPP
 (`vppModbusState`) todavía no se pasan; los POU en C/C++ y Python no se
-probaron. Las variables ligadas a alias de E/S (`AT M_Q0`) no compilan: el
-editor resuelve esos alias en el renderer, antes de la cadena que se reproduce
-aquí.
+probaron.
 
 ### 3.7 Autocompletado del editor
 
