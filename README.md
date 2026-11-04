@@ -6,16 +6,27 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.3.0 · package JWPLC 2.1.0-alpha.17 en curso (package.lock)
+Versión: 0.4.0 · package JWPLC 2.1.0-alpha.17 en curso (package.lock)
 Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS; botón «Simular» en el editor pendiente
 Matriz:  138 ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-**[⬇ JWPLC Sim 0.3.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+**[⬇ JWPLC Sim 0.4.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
 package JWPLC, sus dependencias y el compilador GCC, así que no hace falta Node.js ni red. No tienen firma de
 código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
+
+Novedades de 0.4.0:
+
+- **Pestañas** arriba a lo ancho: **Programa** (editor y placa), **Esquema eléctrico**, **Planta 3D** y **Placa**
+  (Ctrl+1 … Ctrl+4, también en el menú Ver). La simulación sigue corriendo al cambiar de pestaña.
+- **Planta 3D**: arreglada la vista vacía del instalador 0.3.0 (faltaba un archivo de three.js); botones
+  «+ Cinta», «+ Tanque», «+ Puerta» y «+ Cilindro» y una mini placa con la pantalla y los LED.
+- **Ejercicios a lo ancho**: las escenas de los 8 ejercicios van en una fila y se encuadran centradas.
+- **Autocompletado**: Tab sobre una función escribe sus paréntesis (`Serial.println(|)`, `millis()`).
+- **Package 2.1.0-alpha.17**: ejemplos limpios y numerados, E/S con `digitalRead`/`digitalWrite`/
+  `digitalReadBlock`/`digitalWriteBlock`; los ejemplos ya abiertos se ponen al día con el package.
 
 Novedades de 0.3.0:
 
