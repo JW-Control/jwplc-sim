@@ -104,6 +104,11 @@ const config = {
     res(pkgDir),
     res(".jwsim/third_party"),
     ...(editorDir ? [res(editorDir)] : []),
+    // pipeline.cjs carga STruC++ de deps/node_modules, que `res` deja fuera.
+    // esbuild solo hace falta para armar la cadena, no para compilar.
+    ...(editorDir
+      ? [{ from: join(ROOT, editorDir, "deps", "node_modules"), to: `${editorDir}/deps/node_modules`, filter: ["**/*", "!esbuild/**", "!@esbuild/**"] }]
+      : []),
     ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
     // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,
@@ -116,6 +121,12 @@ const config = {
   afterPack: async ({ appOutDir }) => {
     const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js"];
     const missing = need.filter((f) => !existsSync(join(appOutDir, "resources", "app", "node_modules", ...f.split("/"))));
+    if (editorDir) {
+      const strucpp = join(appOutDir, "resources", ...editorDir.split("/"), "deps", "node_modules", "strucpp");
+      for (const f of ["package.json", "libs", "src/runtime/include"]) {
+        if (!existsSync(join(strucpp, ...f.split("/")))) missing.push(`strucpp/${f}`);
+      }
+    }
     if (missing.length) throw new Error(`faltan en la app armada: ${missing.join(", ")}`);
   },
   win: {
