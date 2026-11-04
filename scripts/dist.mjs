@@ -102,7 +102,19 @@ const config = {
     res(".jwsim/third_party"),
     ...(editorDir ? [res(editorDir)] : []),
     ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
+    // electron-builder deja fuera las carpetas «examples» de node_modules, y
+    // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,
+    // importado como three/addons/ en renderer/index.html). Sin esto la vista
+    // 3D del instalador queda vacía (0.3.0).
+    { from: join(APP, "node_modules", "three", "examples", "jsm", "controls"), to: "app/node_modules/three/examples/jsm/controls", filter: ["**/*"] },
   ],
+  // Lo que el renderer importa desde node_modules tiene que estar en la app
+  // armada, antes de empaquetar el instalador y el portable.
+  afterPack: async ({ appOutDir }) => {
+    const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js"];
+    const missing = need.filter((f) => !existsSync(join(appOutDir, "resources", "app", "node_modules", ...f.split("/"))));
+    if (missing.length) throw new Error(`faltan en la app armada: ${missing.join(", ")}`);
+  },
   win: {
     icon: join(ICON, "icon.ico"),
     // El .zip (portable) toma este nombre; el instalador, el de nsis.

@@ -1206,6 +1206,13 @@
     document.querySelector(".plc").hidden = view !== "board";
     document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
     window.Jwsim3D?.show(view === "3d");
+    // scene3d.js es un módulo: si no carga (falta three.js en la instalación),
+    // el aviso de «escena sin planta» engañaba; se dice qué pasa.
+    if (view === "3d" && !window.Jwsim3D) {
+      const msg = $("view3d-empty");
+      msg.textContent = "La vista 3D no se pudo cargar: falta three.js en esta instalación (Ver > Herramientas de desarrollo > Consola muestra el archivo). Reinstale JWPLC Sim.";
+      msg.hidden = false;
+    }
     if (view === "3d" && !S.snap && !S.running) analyze();
     if (view === "scene") {
       await loadBoard();
