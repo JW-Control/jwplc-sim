@@ -27,6 +27,9 @@ Novedades de 0.4.0:
 - **Autocompletado**: Tab sobre una función escribe sus paréntesis (`Serial.println(|)`, `millis()`).
 - **Package 2.1.0-alpha.17**: ejemplos limpios y numerados, E/S con `digitalRead`/`digitalWrite`/
   `digitalReadBlock`/`digitalWriteBlock`; los ejemplos ya abiertos se ponen al día con el package.
+- **OpenPLC Editor 4.3.3**: los proyectos OpenPLC (ST y Ladder) se compilan con la cadena del editor
+  4.3.3-jwplc.1 (STruC++ 0.7.0, ya sin xml2st). El contador CTUD sigue ahora la norma IEC: cuenta en el flanco
+  de subida de CU y de CD.
 
 Novedades de 0.3.0:
 
@@ -45,9 +48,9 @@ Va junto a:
 
 | Programa | Descarga |
 |---|---|
-| Package Arduino JWPLC 2.1.0-alpha.16 | [Release](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16) |
-| OpenPLC Editor – JWPLC Edition 4.2.8-jwplc.9 y VPP | [Release](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.2.8-jwplc.9) |
-| JWPLC HMI Designer 2.1.0-alpha.16 | adjunto a la [Release del package](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.16) |
+| Package Arduino JWPLC 2.1.0-alpha.17 | [Release](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.17) |
+| OpenPLC Editor – JWPLC Edition 4.3.3-jwplc.1 y VPP | [Release](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.3.3-jwplc.1) |
+| JWPLC HMI Designer 2.1.0-alpha.17 | adjunto a la [Release del package](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.17) |
 
 ## Qué hace
 
