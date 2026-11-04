@@ -94,6 +94,20 @@
     const globals = new Map(catalog.globals.map((g) => [g.name, g]));
     const doc = (s) => (s ? { value: s } : undefined);
     const item = (range, label, kind, extra = {}) => ({ label, kind, insertText: label, range, ...extra });
+    const Rule = monaco.languages.CompletionItemInsertTextRule;
+    // Funciones y métodos: al aceptar (Tab o Enter) se escriben los paréntesis
+    // con el cursor dentro y se abre la ayuda de parámetros; sin parámetros,
+    // el cursor queda después de «()». Si ya hay un «(» a la derecha, solo el nombre.
+    let parenNext = false;
+    const fnItem = (range, label, kind, params, extra = {}) =>
+      parenNext
+        ? item(range, label, kind, extra)
+        : item(range, label, kind, {
+            insertText: params && params.length === 0 ? `${label}()` : `${label}($0)`,
+            insertTextRules: Rule.InsertAsSnippet,
+            command: params && params.length === 0 ? undefined : { id: "editor.action.triggerParameterHints", title: "" },
+            ...extra,
+          });
 
     const pinItems = (range, which, alias) => {
       const pins = which === "input" ? catalog.pins.inputs : catalog.pins.outputs;
@@ -128,12 +142,13 @@
     function generalItems(range, sketch) {
       const out = [];
       for (const [name, info] of sketch.ids) {
-        out.push(item(range, name, info.kind === "function" ? K.Function : info.kind === "enum" ? K.EnumMember : info.kind === "define" ? K.Constant : K.Variable, { detail: info.detail, sortText: `0${name}` }));
+        if (info.kind === "function") out.push(fnItem(range, name, K.Function, undefined, { detail: info.detail, sortText: `0${name}` }));
+        else out.push(item(range, name, info.kind === "enum" ? K.EnumMember : info.kind === "define" ? K.Constant : K.Variable, { detail: info.detail, sortText: `0${name}` }));
       }
-      for (const f of ARDUINO) out.push(item(range, f.name, K.Function, { detail: sig(f), documentation: doc(f.doc), sortText: `1${f.name}` }));
+      for (const f of ARDUINO) out.push(fnItem(range, f.name, K.Function, f.params, { detail: sig(f), documentation: doc(f.doc), sortText: `1${f.name}` }));
       out.push(item(range, "Serial", K.Module, { detail: "consola USB", sortText: "1Serial" }));
       for (const g of catalog.globals) out.push(item(range, g.name, K.Module, { detail: g.cls, documentation: doc("Objeto global del package: no se declara otro."), sortText: `2${g.name}` }));
-      for (const f of catalog.functions) out.push(item(range, f.name, K.Function, { detail: f.signature, sortText: `2${f.name}` }));
+      for (const f of catalog.functions) out.push(fnItem(range, f.name, K.Function, f.params, { detail: f.signature, sortText: `2${f.name}` }));
       for (const p of [...catalog.pins.inputs, ...catalog.pins.outputs]) out.push(item(range, p, K.Constant, { detail: p[0] === "I" ? "entrada digital" : "salida a relé", sortText: `3${p}` }));
       for (const b of catalog.buttons) out.push(item(range, b, K.EnumMember, { detail: "tecla de la botonera", sortText: `3${b}` }));
       for (const v of ["HIGH", "LOW"]) out.push(item(range, v, K.Constant, { sortText: `3${v}` }));
@@ -142,10 +157,11 @@
     }
 
     function members(range, obj) {
-      if (obj === "Serial") return SERIAL.map((f) => item(range, f.name, K.Method, { detail: sig(f), documentation: doc(f.doc) }));
+      if (obj === "Serial") return SERIAL.map((f) => fnItem(range, f.name, K.Method, f.params, { detail: sig(f), documentation: doc(f.doc) }));
       const g = globals.get(obj);
       if (!g) return null;
-      return g.members.map((m) => item(range, m.name, K.Method, { detail: m.signatures.join("\n"), documentation: doc(m.doc) }));
+      // Con varias sobrecargas no se sabe si lleva argumentos: cursor dentro.
+      return g.members.map((m) => fnItem(range, m.name, K.Method, m.signatures.length > 1 ? undefined : m.params, { detail: m.signatures.join("\n"), documentation: doc(m.doc) }));
     }
 
     monaco.languages.registerCompletionItemProvider("cpp", {
@@ -154,7 +170,9 @@
         const word = model.getWordUntilPosition(position);
         const range = { startLineNumber: position.lineNumber, endLineNumber: position.lineNumber, startColumn: word.startColumn, endColumn: word.endColumn };
         const before = model.getValueInRange({ startLineNumber: Math.max(1, position.lineNumber - 40), startColumn: 1, endLineNumber: position.lineNumber, endColumn: word.startColumn });
-        const line = model.getLineContent(position.lineNumber).slice(0, word.startColumn - 1);
+        const full = model.getLineContent(position.lineNumber);
+        const line = full.slice(0, word.startColumn - 1);
+        parenNext = /^\s*\(/.test(full.slice(word.endColumn - 1));
         // Dentro de un comentario o de una cadena: nada.
         if (/\/\/[^\n]*$/.test(line) || (line.split('"').length - 1) % 2 === 1) return { suggestions: [] };
         const mem = line.match(/([A-Za-z_]\w*)\s*(\.|->)\s*$/);

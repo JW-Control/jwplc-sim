@@ -8,6 +8,8 @@
 //   MIEMBROS       JWPLC_Buzzer. ofrece beep y no los métodos del runtime (begin)
 //   SIN_RUIDO      fuera de una llamada no aparecen palabras sueltas del archivo
 //   FIRMA          al abrir el paréntesis se muestra la firma de digitalWrite
+//   TAB_PARENTESIS Tab sobre una función escribe sus paréntesis: «Serial.println(|)»,
+//                  «millis()|»; si ya hay un «(» a la derecha, solo el nombre
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-completion.mjs
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -95,6 +97,35 @@ try {
   const hint = await win.$eval(".parameter-hints-widget", (e) => e.textContent).catch(() => "");
   criteria.FIRMA = { pass: /digitalWrite\(uint8_t pin, uint8_t valor\)/.test(hint), texto: hint.slice(0, 160) };
   await win.screenshot({ path: join(OUT, "firma.png") });
+
+  // Tab acepta la sugerencia: la línea y la columna del cursor después.
+  const accept = async (code, filter, after = "") => {
+    await suggest(code);
+    await win.evaluate((t) => {
+      const ed = window.monaco.editor.getEditors()[0];
+      if (t) {
+        const m = ed.getModel();
+        const last = m.getLineCount();
+        const p = { lineNumber: last, column: m.getLineMaxColumn(last) };
+        m.applyEdits([{ range: { startLineNumber: p.lineNumber, startColumn: p.column, endLineNumber: p.lineNumber, endColumn: p.column }, text: t }]);
+        ed.setPosition(p);
+        ed.trigger("prueba", "editor.action.triggerSuggest", {});
+      }
+    }, after);
+    await sleep(after ? 700 : 0);
+    await win.keyboard.press("Tab");
+    await sleep(300);
+    return win.evaluate(() => {
+      const ed = window.monaco.editor.getEditors()[0];
+      const p = ed.getPosition();
+      const line = ed.getModel().getLineContent(p.lineNumber);
+      return line.slice(0, p.column - 1) + "|" + line.slice(p.column - 1);
+    });
+  };
+  const t1 = await accept(`${BASE}Serial.printl`);
+  const t2 = await accept(`${BASE}x = milli`);
+  const t3 = await accept(`${BASE}digitalWri`, "", "(Q0_0, HIGH);");
+  criteria.TAB_PARENTESIS = { pass: t1.trim() === "Serial.println(|)" && t2.trim() === "x = millis()|" && t3.trim() === "digitalWrite|(Q0_0, HIGH);", println: t1, millis: t2, ya_con_parentesis: t3 };
 } catch (err) {
   criteria.ERROR = { pass: false, error: String(err?.stack ?? err) };
 } finally {
