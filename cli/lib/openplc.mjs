@@ -50,6 +50,20 @@ function walk(dir, base = dir, out = []) {
 
 const rd = (p) => (existsSync(p) ? readFileSync(p, "utf8") : "");
 
+// Alias de E/S (`AT Out0`): el editor los resuelve en el renderer antes de
+// compilar (getCompileReadyProjectData), con las direcciones guardadas en el
+// proyecto. El pipeline solo entiende direcciones `%…`.
+function resolveAliases(e, parsed) {
+  const pinMapping = parsed.devicePinMapping;
+  const pins = Array.isArray(pinMapping) ? pinMapping : (pinMapping?.[parsed.deviceConfiguration?.deviceBoard] ?? []);
+  const registry = e.migrateToRegistry({
+    pinMapping: { pins },
+    vendorIoMapping: { entries: parsed.deviceConfiguration?.vendorScreenData?.["io-mapping"]?.entries ?? [] },
+    remoteDevices: parsed.projectData.remoteDevices,
+  });
+  return e.resolveProjectAliases(parsed.projectData, e.buildAliasIndex(e.recalculate(registry).registry));
+}
+
 /**
  * Genera el sketch del proyecto con la cadena del editor.
  * @returns {{ sketchDir: string, libDir: string, md5: string, programSt: string }}
@@ -76,7 +90,7 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
   for (const w of parsed.warnings ?? []) log(`[openplc] aviso: ${w}`);
 
   // 2. Preproceso y forma IPC, como compiler-adapter.ts del editor.
-  const pre = e.preprocessPous(parsed.projectData, false, (level, message) => log(`[openplc] ${message}`));
+  const pre = e.preprocessPous(resolveAliases(e, parsed), false, (level, message) => log(`[openplc] ${message}`));
   if (pre.validationFailed) throw new Error("validación de POU fallida (ver mensajes anteriores)");
   const pd = pre.projectData;
   const ipcData = {

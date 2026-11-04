@@ -315,7 +315,8 @@ lo que se descarga. `scripts/fetch-editor.mjs` deja en `.jwsim/editor/<tag>/`:
   editor (el mismo VPP que empaqueta esa versión).
 
 `cli/lib/openplc.mjs` hace lo que el editor: proyecto → datos
-(`parseProjectFiles`), preproceso y forma IPC (`compiler-adapter.ts`),
+(`parseProjectFiles`), alias de E/S a direcciones (`resolveProjectAliases`, con
+las direcciones guardadas en el proyecto), preproceso y forma IPC (`compiler-adapter.ts`),
 esqueleto `Baremetal` + runtime de STruC++ + HAL `jwplcbasic.cpp` del VPP
 como `src/arduino.cpp` (`compiler-module.ts`) y `runCompilePipeline`:
 ST con el transpilador JSON del editor (`st-transpiler`; desde 4.3 el editor

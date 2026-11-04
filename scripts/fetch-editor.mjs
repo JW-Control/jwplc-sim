@@ -39,6 +39,8 @@ export { preprocessPous } from '@root/backend/shared/utils/PLC/preprocess-pous'
 export { fromSchemaShape, transpileToSt as runJsonTranspiler } from '@root/backend/shared/transpilers/st-transpiler'
 export { buildDefaultPinMapping } from '@root/frontend/store/slices/device/default-pin-mapping'
 export { buildProjectFileContent } from '@root/backend/shared/project/create-project-files'
+export { resolveProjectAliases } from '@root/middleware/shared/utils/iec-address/resolve-project-aliases'
+export { buildAliasIndex, migrateToRegistry, recalculate } from '@root/middleware/shared/utils/iec-address/registry'
 `;
 
 export function readEditorLock() {
@@ -87,7 +89,7 @@ export async function resolveEditor({ fetch = true } = {}) {
   const readyFile = join(dir, "ready.json");
   if (existsSync(readyFile)) {
     const ready = JSON.parse(readFileSync(readyFile, "utf8"));
-    if (ready.editorCommit === lock.OPENPLC_EDITOR_COMMIT && ready.platform === process.platform) return { dir, lock, ready };
+    if (ready.editorCommit === lock.OPENPLC_EDITOR_COMMIT && ready.platform === process.platform && ready.entry === ENTRY) return { dir, lock, ready };
   }
   if (!fetch) throw new Error("Cadena del editor OpenPLC no descargada. Ejecute: node scripts/fetch-editor.mjs");
 
@@ -147,6 +149,7 @@ export async function resolveEditor({ fetch = true } = {}) {
     deps: exact,
     platform: process.platform,
   };
+  ready.entry = ENTRY; // Si cambia lo exportado, hay que volver a empaquetar.
   writeFileSync(readyFile, JSON.stringify(ready, null, 2) + "\n");
   return { dir, lock, ready };
 }
