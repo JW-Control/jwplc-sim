@@ -36,13 +36,13 @@ body {
 /* Barra, área de trabajo (editor | placa), divisor, panel inferior y estado. */
 body {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 5px var(--dock-h, 260px) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) 5px var(--dock-h, 260px) auto;
   grid-template-columns: minmax(0, 1fr);
 }
 /* Panel inferior plegado por completo: el área de trabajo llega a la barra
    de estado; se vuelve a abrir desde ella (o con Ctrl+J). */
 body.dock-collapsed {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 body.dock-collapsed .dock,
 body.dock-collapsed .dock-splitter {
@@ -1121,7 +1121,7 @@ button.io.on {
 .view3d[hidden] {
   display: none;
 }
-.view3d canvas {
+.view3d > canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1811,4 +1811,133 @@ button.fault.on {
 }
 .com-panel select {
   min-width: 0;
+}
+
+/* ------------------------------------------------------- pestañas (tabs.js) */
+.main-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 10px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.mtab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 16px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: -1px;
+}
+.mtab:hover {
+  color: var(--text);
+  background: var(--panel);
+}
+.mtab.active {
+  color: #fff;
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.mtab-sub {
+  margin-left: auto;
+  align-self: center;
+  display: flex;
+  padding-bottom: 4px;
+}
+.mtab-sub[hidden] {
+  display: none;
+}
+.mtab-sub .seg {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.mtab-sub .seg:disabled {
+  opacity: 0.55;
+  cursor: help;
+}
+/* Fuera de Programa la vista ocupa todo el ancho: sin editor ni divisor, y
+   el selector Placa/Escena/3D del panel no se muestra: lo hacen las pestañas. */
+body:not([data-tab="program"]) .code-pane,
+body:not([data-tab="program"]) .splitter {
+  display: none;
+}
+body:not([data-tab="program"]) .workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+#board-view {
+  display: none;
+}
+/* Planta 3D vacía: botones para agregar equipos de planta. */
+.view3d-add {
+  position: absolute;
+  left: 16px;
+  top: 76px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+/* Con la mini placa arriba a la derecha, el aviso no pasa por debajo. */
+body[data-tab="plant"] .view3d-empty {
+  right: 268px;
+}
+.view3d-add[hidden] {
+  display: none;
+}
+/* Mini placa sobre la planta 3D: pantalla y LED. */
+.mini-plc {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(32, 36, 42, 0.92);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+.mini-plc[hidden] {
+  display: none;
+}
+.mini-plc canvas {
+  width: 224px;
+  height: 119px;
+  image-rendering: pixelated;
+  border-radius: 3px;
+  background: #000;
+}
+.mini-leds {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.mini-leds i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6f767e;
+  margin-left: 6px;
+}
+.mini-leds i:first-child {
+  margin-left: 0;
+}
+.mini-leds i.on {
+  background: var(--ok);
+  box-shadow: 0 0 5px var(--ok);
+}
+.mini-leds i.err.on {
+  background: var(--err);
+  box-shadow: 0 0 5px var(--err);
 }

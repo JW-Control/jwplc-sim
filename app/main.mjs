@@ -888,6 +888,11 @@ function buildMenu() {
       {
         label: "Ver",
         submenu: [
+          { label: "Programa", accelerator: "CmdOrCtrl+1", click: send("tab:program") },
+          { label: "Esquema eléctrico", accelerator: "CmdOrCtrl+2", click: send("tab:schematic") },
+          { label: "Planta 3D", accelerator: "CmdOrCtrl+3", click: send("tab:plant") },
+          { label: "Placa", accelerator: "CmdOrCtrl+4", click: send("tab:board") },
+          { type: "separator" },
           { label: "Panel inferior", accelerator: "CmdOrCtrl+J", click: send("dock") },
           { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },

@@ -28,7 +28,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 300,
+        "x": 240,
         "y": 0
       },
       {
@@ -37,8 +37,8 @@
         "params": {
           "model": "MDR-60"
         },
-        "x": 40,
-        "y": 60
+        "x": 0,
+        "y": 0
       },
       {
         "id": "S1",
@@ -47,8 +47,8 @@
           "label": "Marcha",
           "color": "verde"
         },
-        "x": 300,
-        "y": -280
+        "x": 760,
+        "y": 0
       },
       {
         "id": "S0",
@@ -57,14 +57,14 @@
           "label": "Parada",
           "color": "rojo"
         },
-        "x": 500,
-        "y": -280
+        "x": 920,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 240,
-        "y": 620
+        "x": 1180,
+        "y": 0
       },
       {
         "id": "H1",
@@ -73,20 +73,20 @@
           "color": "verde",
           "label": "Marcha"
         },
-        "x": 480,
-        "y": 620
+        "x": 1400,
+        "y": 0
       },
       {
         "id": "L1",
         "type": "jwsim/power-230vac",
-        "x": 40,
-        "y": 1020
+        "x": 0,
+        "y": 440
       },
       {
         "id": "M1",
         "type": "jwsim/motor",
-        "x": 240,
-        "y": 1040
+        "x": 1180,
+        "y": 420
       }
     ],
     "wiring": [

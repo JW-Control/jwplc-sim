@@ -28,7 +28,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 300,
+        "x": 240,
         "y": 0
       },
       {
@@ -37,26 +37,26 @@
         "params": {
           "model": "MDR-60"
         },
-        "x": 40,
-        "y": 60
+        "x": 0,
+        "y": 0
       },
       {
         "id": "B1",
         "type": "jwsim/limit-switch",
-        "x": 300,
-        "y": -700
+        "x": 760,
+        "y": 0
       },
       {
         "id": "B2",
         "type": "jwsim/limit-switch",
-        "x": 500,
-        "y": -700
+        "x": 960,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 240,
-        "y": 620
+        "x": 1240,
+        "y": 0
       },
       {
         "id": "H1",
@@ -65,20 +65,20 @@
           "color": "rojo",
           "label": "Tanque bajo"
         },
-        "x": 480,
-        "y": 620
+        "x": 1460,
+        "y": 0
       },
       {
         "id": "L1",
         "type": "jwsim/power-230vac",
-        "x": 40,
-        "y": 1020
+        "x": 0,
+        "y": 440
       },
       {
         "id": "M1",
         "type": "jwsim/motor",
-        "x": 240,
-        "y": 1040
+        "x": 1240,
+        "y": 420
       }
     ],
     "wiring": [

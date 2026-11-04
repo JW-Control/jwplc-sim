@@ -6,7 +6,8 @@
 //   AUTOFORMAT       Herramientas > Autoformato (Ctrl+T) formatea con el estilo
 //                    JWPLC y se deshace con un solo Ctrl+Z
 //   SPLITTER         arrastrar el divisor cambia el ancho del editor y se recuerda
-//   SCENE_SIDE       el panel del dispositivo de la escena se pliega y se despliega
+//   SCENE_SIDE       el panel del dispositivo de la escena (pestaña Esquema
+//                    eléctrico) se pliega y se despliega
 //   BOARD_FRONT      la vista Placa muestra solo el frente (pantalla y botonera)
 //                    y las salidas en la tira inferior
 //   NO_PACKAGE_TEXT  sin el texto «JWPLC Basic · package …» arriba ni abajo
@@ -100,7 +101,7 @@ const w2 = await codeW();
 criteria.SPLITTER = { pass: simRight === vw && Math.abs(w0 - 250 - w1) <= 4 && Number(stored) === w1 && Math.abs(w2 - w0) <= 2, before: w0, after_drag: w1, stored, after_reset: w2, sim_right: simRight, window: vw };
 
 // ---- SCENE_SIDE
-await win.click("[data-view=scene]");
+await win.click(".mtab[data-tab=schematic]"); // la escena se abre en su pestaña
 await win.waitForTimeout(500);
 const sideW = () => win.$eval("#scene-side", (e) => e.getBoundingClientRect().width);
 const pane = () => win.$eval(".scene-main", (e) => e.dataset.pane);
@@ -132,7 +133,7 @@ criteria.SCENE_SIDE = {
 };
 
 // ---- DOCK
-await win.click("[data-view=board]");
+await win.click(".mtab[data-tab=program]");
 // Cambiar de vista (Placa/Escena/3D) no toca el modo de las entradas.
 const modeKept = await win.$eval(".mode .seg[data-mode='toggle']", (e) => e.classList.contains("active"));
 const tabs = await win.$$eval("#dock .ptab:not([hidden])", (b) => b.map((x) => x.textContent.trim()));
