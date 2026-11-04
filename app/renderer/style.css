@@ -1861,7 +1861,7 @@ button.fault.on {
   cursor: help;
 }
 /* Fuera de Programa la vista ocupa todo el ancho: sin editor ni divisor, y
-   sin el selector Placa/Escena/3D del panel (lo hacen las pestañas). */
+   el selector Placa/Escena/3D del panel no se muestra: lo hacen las pestañas. */
 body:not([data-tab="program"]) .code-pane,
 body:not([data-tab="program"]) .splitter {
   display: none;
@@ -1869,7 +1869,7 @@ body:not([data-tab="program"]) .splitter {
 body:not([data-tab="program"]) .workspace {
   grid-template-columns: minmax(0, 1fr);
 }
-body:not([data-tab="program"]) #board-view {
+#board-view {
   display: none;
 }
 /* Planta 3D vacía: botones para agregar equipos de planta. */

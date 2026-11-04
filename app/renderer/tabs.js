@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Pestañas de la ventana: Programa · Esquema eléctrico · Planta 3D · Placa.
 //
-//   Programa           el editor con el panel de la simulación al lado (placa,
-//                      o la escena si el proyecto la tiene, como siempre)
+//   Programa           el editor con la placa al lado
 //   Esquema eléctrico  la escena a todo el ancho (vista "scene" de scene.js)
 //   Planta 3D          la vista 3D a todo el ancho, con la mini placa
 //   Placa              el JWPLC Basic a todo el ancho
@@ -50,9 +49,8 @@
     storeSet(tab);
     paint();
     const scene = window.JwsimScene;
-    // Programa deja el panel derecho como estaba; si venía de una pestaña a
-    // todo el ancho, vuelve a la placa salvo que el proyecto tenga escena.
-    const view = VIEW[tab] ?? (scene?.view?.() === "3d" ? "board" : null);
+    // Programa: editor y placa.
+    const view = VIEW[tab] ?? "board";
     if (view && scene?.view?.() !== view) await scene?.setView(view);
     // El ancho cambió: Monaco y el lienzo 3D se reacomodan.
     window.dispatchEvent(new Event("resize"));
@@ -90,10 +88,10 @@
 
   window.JwsimTabs = {
     onView(view) {
-      // Una vista a todo el ancho elegida desde otro lado (menú, pruebas)
-      // lleva a su pestaña; la escena de un proyecto se abre en Programa.
-      if (tab === "program") return;
-      const want = Object.entries(VIEW).find(([, v]) => v === view)?.[0];
+      // Programa lleva siempre la placa al lado: la escena o el 3D elegidos
+      // desde otro lado (abrir un proyecto con escena, las pruebas) se ven en
+      // su pestaña, a todo el ancho.
+      const want = view === "board" && tab === "program" ? "program" : Object.entries(VIEW).find(([, v]) => v === view)?.[0];
       if (want && want !== tab) {
         tab = want;
         paint();

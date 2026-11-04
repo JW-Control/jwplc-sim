@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E de las pestañas de la ventana (alpha.17, fase 1):
 //   TABS        Programa · Esquema eléctrico · Planta 3D · Placa, arriba a lo ancho
-//   PROGRAM     Programa: editor y placa lado a lado (como siempre)
+//   PROGRAM     Programa: editor y placa lado a lado, sin Placa/Escena/3D en el
+//               panel; una escena pedida desde Programa se abre en Esquema
 //   FULL_WIDTH  Esquema (Ctrl+2), Planta 3D y Placa ocupan todo el ancho, sin
 //               editor ni el selector Placa/Escena/3D del panel
 //   PLANT_ADD   Planta 3D sin equipos de planta: botones para agregarlos; «+ Cinta»
@@ -50,7 +51,14 @@ try {
 
   const prog = { code: await visible(win, ".code-pane"), board: await visible(win, ".plc"), selector: await visible(win, "#board-view"), active: await t(() => window.JwsimTabs.current()) };
   await win.screenshot({ path: join(OUT, "01_programa.png") });
-  criteria.PROGRAM = { pass: prog.code && prog.board && prog.selector && prog.active === "program", ...prog };
+  // Una vista de escena pedida desde Programa (abrir un proyecto con escena) se va a su pestaña.
+  await t(() => window.jwsimTest.scene.view("scene"));
+  await sleep(800);
+  prog.sceneGoesTo = await t(() => window.JwsimTabs.current());
+  await t(() => window.JwsimTabs.select("program"));
+  await sleep(500);
+  prog.back = { tab: await t(() => window.JwsimTabs.current()), board: await visible(win, ".plc"), code: await visible(win, ".code-pane") };
+  criteria.PROGRAM = { pass: prog.code && prog.board && !prog.selector && prog.active === "program" && prog.sceneGoesTo === "schematic" && prog.back.board && prog.back.code, ...prog };
 
   await win.keyboard.press("Control+2");
   await sleep(1200);
