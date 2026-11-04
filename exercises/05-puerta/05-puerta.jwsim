@@ -28,7 +28,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 300,
+        "x": 240,
         "y": 0
       },
       {
@@ -37,8 +37,8 @@
         "params": {
           "model": "MDR-60"
         },
-        "x": 40,
-        "y": 60
+        "x": 0,
+        "y": 0
       },
       {
         "id": "S1",
@@ -47,8 +47,8 @@
           "label": "Abrir",
           "color": "verde"
         },
-        "x": 300,
-        "y": -280
+        "x": 760,
+        "y": 0
       },
       {
         "id": "S2",
@@ -57,8 +57,8 @@
           "label": "Cerrar",
           "color": "verde"
         },
-        "x": 500,
-        "y": -280
+        "x": 920,
+        "y": 0
       },
       {
         "id": "S0",
@@ -67,38 +67,38 @@
           "label": "Parada",
           "color": "rojo"
         },
-        "x": 700,
-        "y": -280
+        "x": 1100,
+        "y": 0
       },
       {
         "id": "B1",
         "type": "jwsim/limit-switch",
-        "x": 900,
-        "y": -700
+        "x": 1260,
+        "y": 0
       },
       {
         "id": "B2",
         "type": "jwsim/limit-switch",
-        "x": 1100,
-        "y": -700
+        "x": 1460,
+        "y": 0
       },
       {
         "id": "B3",
         "type": "jwsim/sensor-photoelectric",
-        "x": 1300,
-        "y": -160
+        "x": 1660,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 240,
-        "y": 620
+        "x": 1880,
+        "y": 0
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 480,
-        "y": 620
+        "x": 2100,
+        "y": 0
       },
       {
         "id": "H1",
@@ -107,8 +107,8 @@
           "color": "amarillo",
           "label": "Baliza"
         },
-        "x": 720,
-        "y": 620
+        "x": 2340,
+        "y": 0
       },
       {
         "id": "M1",
@@ -116,8 +116,8 @@
         "params": {
           "rating": "24VDC"
         },
-        "x": 240,
-        "y": 1040
+        "x": 1880,
+        "y": 420
       }
     ],
     "wiring": [

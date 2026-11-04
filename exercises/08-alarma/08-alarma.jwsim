@@ -28,7 +28,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 300,
+        "x": 240,
         "y": 0
       },
       {
@@ -37,14 +37,14 @@
         "params": {
           "model": "MDR-60"
         },
-        "x": 40,
-        "y": 60
+        "x": 0,
+        "y": 0
       },
       {
         "id": "B1",
         "type": "jwsim/limit-switch",
-        "x": 300,
-        "y": -700
+        "x": 920,
+        "y": 0
       },
       {
         "id": "S1",
@@ -53,14 +53,14 @@
           "label": "Reconocer",
           "color": "amarillo"
         },
-        "x": 500,
-        "y": -280
+        "x": 760,
+        "y": 0
       },
       {
         "id": "HA1",
         "type": "jwsim/buzzer",
-        "x": 240,
-        "y": 620
+        "x": 1200,
+        "y": 0
       },
       {
         "id": "H1",
@@ -69,8 +69,8 @@
           "color": "rojo",
           "label": "Alarma"
         },
-        "x": 440,
-        "y": 620
+        "x": 1360,
+        "y": 0
       }
     ],
     "wiring": [

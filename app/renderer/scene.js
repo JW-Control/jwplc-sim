@@ -1145,12 +1145,14 @@
     for (const d of S.spec.devices) {
       const s = symbolFor(d);
       x0 = Math.min(x0, d.x ?? 0);
-      y0 = Math.min(y0, (d.y ?? 0) - 20);
+      // Margen para los cables que pasan por encima y por debajo de los equipos.
+      y0 = Math.min(y0, (d.y ?? 0) - 70);
       x1 = Math.max(x1, (d.x ?? 0) + s.w);
-      y1 = Math.max(y1, (d.y ?? 0) + s.h + 24);
+      y1 = Math.max(y1, (d.y ?? 0) + s.h + 60);
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
-    S.pan = { x: 20 - x0 * S.zoom, y: 20 - y0 * S.zoom };
+    // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).
+    S.pan = { x: Math.max(20, (box.width - (x1 - x0) * S.zoom) / 2) - x0 * S.zoom, y: 20 - y0 * S.zoom };
     render();
   }
 
