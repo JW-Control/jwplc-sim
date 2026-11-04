@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Runtime con el programa «Escalonado»: I0.0 en 1 a los 1,5 s; Q0.0 y Q0.1 se encienden ~1 y 2 s después; al soltar I0.0 (6 s) se apagan. Luego OK, OK, DOWN, OK abre el Monitor y con I0.0 de nuevo en 1 se ve B01 activo y B02 contando.",
+  "sketch": "package:libraries/JWPLC_Runtime/examples/Runtime_Escalonado",
+  "until_ms": 13500,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-03T10:00:00"
+  ],
+  "expect": {
+    "signals": [
+      {
+        "at_ms": 1400,
+        "Q0_0": 0,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 2800,
+        "Q0_0": 1,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 3800,
+        "Q0_0": 1,
+        "Q0_1": 1
+      },
+      {
+        "at_ms": 6300,
+        "Q0_0": 0,
+        "Q0_1": 0
+      },
+      {
+        "at_ms": 13300,
+        "Q0_0": 1,
+        "Q0_1": 1
+      }
+    ],
+    "screen": [
+      {
+        "at_ms": 12300,
+        "ref": "screens/Runtime_Escalonado_monitor.png"
+      }
+    ]
+  },
+  "stim": [
+    "1500 I0_0=1",
+    "6000 I0_0=0",
+    "7000 BTN_OK=1",
+    "7100 BTN_OK=0",
+    "7600 BTN_OK=1",
+    "7700 BTN_OK=0",
+    "8200 BTN_DOWN=1",
+    "8300 BTN_DOWN=0",
+    "8800 BTN_OK=1",
+    "8900 BTN_OK=0",
+    "11000 I0_0=1"
+  ]
+}
