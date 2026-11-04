@@ -46,6 +46,24 @@
       </button>
     </header>
 
+    <!-- Pestañas de la ventana (tabs.js): Programa = editor con la placa (o la
+         escena) al lado; las demás ocupan todo el ancho. -->
+    <nav class="main-tabs" id="main-tabs" role="tablist" aria-label="Área de trabajo">
+      <button class="mtab active" role="tab" aria-selected="true" data-tab="program" title="Código del programa con la placa al lado (Ctrl+1)">Programa</button>
+      <button class="mtab" role="tab" aria-selected="false" data-tab="schematic" title="Tablero: la placa cableada a los equipos (Ctrl+2)">Esquema eléctrico</button>
+      <button class="mtab" role="tab" aria-selected="false" data-tab="plant" title="Planta en 3D movida por la simulación (Ctrl+3)">Planta 3D</button>
+      <button class="mtab" role="tab" aria-selected="false" data-tab="board" title="El JWPLC Basic de frente: pantalla, botonera y E/S (Ctrl+4)">Placa</button>
+      <div class="mtab-sub" id="mtab-sub-program" role="radiogroup" aria-label="Lenguaje">
+        <button class="seg active" id="lang-cpp" role="radio" aria-checked="true" title="Sketch de Arduino en C++">C++</button>
+        <button class="seg" id="lang-iec" role="radio" aria-checked="false" disabled
+          title="Proyecto del OpenPLC Editor: se edita en el editor; la vista Ladder con depuración en vivo llega en la fase 4">Ladder / IEC</button>
+      </div>
+      <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
+        <button class="seg active" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
+        <button class="seg" role="radio" aria-checked="false" disabled title="Símbolos IEC 60617 generados del mismo circuito: llega en la fase 3">Normalizado (IEC)</button>
+      </div>
+    </nav>
+
     <main class="workspace">
       <section class="pane code-pane">
         <div class="code-head">
@@ -124,9 +142,21 @@
           <div id="view3d" class="view3d" hidden>
             <canvas id="view3d-canvas"></canvas>
             <div id="view3d-empty" class="view3d-empty">
-              Agregue a la escena una cinta, un tanque, una puerta o una electroválvula 5/2 con cilindro (paleta «Planta»):
-              aquí se ven en 3D, movidos por la simulación. Arrastre para girar, rueda para acercar.
+              Agregue una cinta, un tanque, una puerta o una electroválvula 5/2 con cilindro (botones de abajo, o paleta
+              «Planta» en Esquema eléctrico): aquí se ven en 3D, movidos por la simulación. Arrastre para girar, rueda para acercar.
             </div>
+            <div class="view3d-add" id="view3d-add" hidden>
+              <span>Agregar a la planta:</span>
+              <button data-plant="jwsim/conveyor">+ Cinta</button>
+              <button data-plant="jwsim/tank">+ Tanque</button>
+              <button data-plant="jwsim/door">+ Puerta</button>
+              <button data-plant="jwsim/solenoid-valve-2">+ Cilindro 5/2</button>
+            </div>
+            <!-- Mini placa: la pantalla y los LED del JWPLC mientras se mira la planta. -->
+            <button class="mini-plc" id="mini-plc" title="Ir a la placa (Ctrl+4)" hidden>
+              <canvas id="mini-tft" width="320" height="170"></canvas>
+              <span class="mini-leds"><i data-led="led-pwr"></i>PWR<i data-led="led-run"></i>RUN<i data-led="led-err" class="err"></i>ERR</span>
+            </button>
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main">
@@ -319,6 +349,7 @@
     <script src="sound.js"></script>
     <script src="scene-symbols.js"></script>
     <script src="scene.js"></script>
+    <script src="tabs.js"></script>
     <script type="importmap">
       { "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }
     </script>

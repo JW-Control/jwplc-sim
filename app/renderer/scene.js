@@ -1205,6 +1205,7 @@
     $("view3d").hidden = view !== "3d";
     document.querySelector(".plc").hidden = view !== "board";
     document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
+    window.JwsimTabs?.onView(view);
     window.Jwsim3D?.show(view === "3d");
     if (view === "3d" && !S.snap && !S.running) analyze();
     if (view === "scene") {
@@ -1253,6 +1254,18 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    // Pestañas de la ventana (tabs.js): cambian la vista del panel derecho.
+    setView: (v) => setView(v),
+    view: () => S.view,
+    // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
+    // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
+    async addPlant(type) {
+      if (S.running) return null;
+      await loadBoard();
+      ensurePlc();
+      const right = Math.max(0, ...S.spec.devices.map((d) => (d.x ?? 0) + 400));
+      return addDevice(type, right + 80, 0);
+    },
     isRunning: () => S.running,
     owns(signal) {
       return S.running && !!S.snap && signal in (S.snap.inputs ?? {});

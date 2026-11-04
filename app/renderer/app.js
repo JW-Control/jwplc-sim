@@ -512,6 +512,7 @@ function loadSketch(sketch) {
   state.exe = null;
   // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
   editor.updateOptions({ readOnly: !!sketch.openplc });
+  window.JwsimTabs?.onProgram(!!sketch.openplc);
   if (sketch.openplc) consoleWrite(`[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor; al guardar allí se recompila aquí\n`, "sys");
   showFile(sketch.files[0].name);
   clearProblems();
@@ -1715,6 +1716,7 @@ function wireUi() {
     else if (cmd === "save") saveSketch();
     else if (cmd === "format") autoFormat();
     else if (cmd === "dock") $("sb-dock").click();
+    else if (cmd.startsWith("tab:")) window.JwsimTabs?.select(cmd.slice(4));
     else if (cmd === "run") buildAndRun();
     else if (cmd === "pause") togglePause();
     else if (cmd === "stop") stopSim();
