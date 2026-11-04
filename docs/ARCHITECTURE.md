@@ -307,8 +307,9 @@ lo que se descarga. `scripts/fetch-editor.mjs` deja en `.jwsim/editor/<tag>/`:
 - las fuentes del editor (sparse checkout) y su pipeline empaquetado con
   esbuild (`deps/pipeline.cjs`): las mismas funciones que usa el main process
   (`runCompilePipeline`, `parseProjectFiles`, `preprocessPous`,
-  `XmlGenerator`, `mergeStrucppRuntimeIntoSkeleton`, `buildDefaultPinMapping`);
-- xml2st y STruC++ en las versiones de `binary-versions.json` del editor, y las
+  `fromSchemaShape` y `transpileToSt`, `mergeStrucppRuntimeIntoSkeleton`,
+  `buildDefaultPinMapping`);
+- STruC++ en la versión de `binary-versions.json` del editor, y las
   `.stlib` incluidas de STruC++ (todas, como `LibraryManagerModule`);
 - el VPP del JWPLC Basic en `PLATFORM_VPP_SHA` del workflow de pre-release del
   editor (el mismo VPP que empaqueta esa versión).
@@ -317,7 +318,8 @@ lo que se descarga. `scripts/fetch-editor.mjs` deja en `.jwsim/editor/<tag>/`:
 (`parseProjectFiles`), preproceso y forma IPC (`compiler-adapter.ts`),
 esqueleto `Baremetal` + runtime de STruC++ + HAL `jwplcbasic.cpp` del VPP
 como `src/arduino.cpp` (`compiler-module.ts`) y `runCompilePipeline`:
-xml2st → ST, STruC++ → C++, `defines.h` (defines del HAL, MD5, pines por
+ST con el transpilador JSON del editor (`st-transpiler`; desde 4.3 el editor
+ya no usa xml2st), STruC++ → C++, `defines.h` (defines del HAL, MD5, pines por
 defecto del VPP), bundle. Solo cambia el port: no instala core ni librerías
 (se usa el package fijado) y, en vez de llamar a arduino-cli, devuelve el
 sketch (`examples/Baremetal/`) y la librería `src/`. `buildSketch` los compila
