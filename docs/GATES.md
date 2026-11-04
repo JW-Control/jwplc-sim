@@ -85,7 +85,8 @@ JWSIM_G6_LADDER_CHAIN=PASS          (28/10: cadena real del OpenPLC Editor 4.2.8
 JWSIM_G6_RELOAD_FROM_EDITOR=PASS    (28/10: la app abre la carpeta del proyecto del editor (POU de solo lectura) o un .jwsim
                                      con program.kind openplc; al guardar en el editor recompila con su cadena y recarga en
                                      2,9 s conservando la escena; app/tests/e2e-g6.mjs)
-JWSIM_G6_SIMULATE_BUTTON=DEFERRED   (02/11: pasa a la línea siguiente; alpha.16 se publica sin el botón)
+JWSIM_G6_SIMULATE_BUTTON=DEFERRED   (02/11: pasa a la línea siguiente; alpha.16 se publica sin el botón. 04/11: la app ya abre
+                                     con --jwsim-open; falta el botón en el fork del editor)
 JWSIM_G7_DEVICE_LIBRARY=PASS        (18 dispositivos, 23 pruebas de comportamiento; símbolos v2 en 13 de 18; docs/reports/G7.md)
 JWSIM_G7_NETLIST=PASS               (14 casos eléctricos + 3 co-simulaciones con firmware; mismo hash)
 JWSIM_G7_DEVICE_SDK=PASS            (contrato TS, ABI C, plantillas, relé temporizador y generador de pulsos)

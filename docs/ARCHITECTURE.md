@@ -338,10 +338,18 @@ del editor se agrupan (300 ms) y, con la simulación en marcha, se recompila
 con la cadena del editor y se reinicia conservando la escena, como la
 recarga de un sketch (G2 EXTERNAL_EDIT_RELOAD).
 
+El botón «Simular» del editor **[G6 SIMULATE_BUTTON]** lanza la app con
+`--jwsim-open=<carpeta del proyecto o project.json>` (`app/lib/open-arg.mjs`). Si
+ya hay una abierta, el proyecto se abre en ella y el proceso nuevo termina; si
+es el proyecto ya abierto, no se recarga. Abrir varias instancias a mano, sin
+la opción, sigue funcionando.
+
 Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
 `finalizeJwplcHmiSkeleton`) y el Modbus de la pantalla del VPP
 (`vppModbusState`) todavía no se pasan; los POU en C/C++ y Python no se
-probaron.
+probaron. Las variables ligadas a alias de E/S (`AT M_Q0`) no compilan: el
+editor resuelve esos alias en el renderer, antes de la cadena que se reproduce
+aquí.
 
 ### 3.7 Autocompletado del editor
 

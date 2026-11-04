@@ -17,6 +17,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
+import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
@@ -340,6 +341,9 @@ ipcMain.handle("sketch:openDialog", async () => {
   if (r.canceled || !r.filePaths[0]) return null;
   return readSketch(dirname(r.filePaths[0]));
 });
+
+// Proyecto pedido por el OpenPLC Editor (G6 SIMULATE_BUTTON).
+ipcMain.handle("sketch:openPlc", (_e, target) => readSketch(openPlcDir(target)));
 
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
   if (isOpenPlcProject(dir)) return true; // se edita en el OpenPLC Editor
@@ -913,7 +917,30 @@ function buildMenu() {
 // cae a SwiftShader por software en lugar de no estar disponible.
 app.commandLine.appendSwitch("enable-unsafe-swiftshader");
 
+// G6 SIMULATE_BUTTON: el OpenPLC Editor lanza la app con --jwsim-open. Si ya hay
+// una abierta, el proyecto se abre en ella y este proceso termina; abrir varias
+// a mano (sin la opción) sigue funcionando.
+let pendingOpen = openArg(process.argv);
+let rendererReady = false;
+const primary = app.requestSingleInstanceLock();
+if (!primary && pendingOpen) app.quit();
+app.on("second-instance", (_e, argv) => {
+  const target = openArg(argv);
+  if (!target) return;
+  if (win?.isMinimized()) win.restore();
+  win?.focus();
+  if (rendererReady) forward("app:openTarget", target);
+  else pendingOpen = target;
+});
+ipcMain.handle("app:takeOpenTarget", () => {
+  rendererReady = true;
+  const target = pendingOpen;
+  pendingOpen = null;
+  return target;
+});
+
 app.whenReady().then(() => {
+  if (!primary && pendingOpen) return;
   buildMenu();
   win = new BrowserWindow({
     width: 1440,

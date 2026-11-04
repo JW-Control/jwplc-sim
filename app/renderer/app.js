@@ -1182,6 +1182,22 @@ async function openProject() {
   }
 }
 
+// Botón «Simular» del OpenPLC Editor (G6 SIMULATE_BUTTON). Si ese proyecto ya
+// está abierto no se recarga: lo que se guardó ya llegó por el vigilante de
+// archivos, y así se conservan la simulación y la escena.
+async function openFromEditor(target) {
+  try {
+    const sketch = await api.openPlcProject(target);
+    if (state.sketch?.dir === sketch.dir) return;
+    const dirty = [...state.models].some(([name, model]) => model.getValue() !== state.saved.get(name));
+    if (dirty && !confirm(`Hay cambios sin guardar en ${state.sketch.name}. ¿Abrir ${sketch.name} y descartarlos?`)) return;
+    loadSketch(sketch);
+  } catch (err) {
+    consoleWrite(`[jwsim] ${err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "")}
+`, "fatal");
+  }
+}
+
 async function saveProjectFile() {
   if (!state.sketch) return;
   await saveSketch();
@@ -1609,6 +1625,7 @@ function wireUi() {
   $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
   for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
+  api.onOpenTarget(openFromEditor);
   $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
   $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));
   $("btn-dbg-in").addEventListener("click", () => dbgCommand("stepIn"));
@@ -1943,6 +1960,8 @@ async function main() {
   } catch (err) {
     fail("no se pudo crear el sketch nuevo", err);
   }
+  const target = await api.takeOpenTarget();
+  if (target) await openFromEditor(target);
 }
 
 main();
