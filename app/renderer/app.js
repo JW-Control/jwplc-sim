@@ -484,7 +484,34 @@ function resetBoard() {
 // ------------------------------------------------------------- editor
 function languageFor(name) {
   // ST/IL de OpenPLC: el resaltado de Pascal es el más parecido de Monaco.
-  return /\.(ino|c|cpp|h|hpp)$/i.test(name) ? "cpp" : /\.(st|il)$/i.test(name) ? "pascal" : "plaintext";
+  if (/\.(ino|c|cpp|h|hpp)$/i.test(name)) return "cpp";
+  if (/\.(st|il)$/i.test(name)) return "pascal";
+  return /\.md$/i.test(name) ? "markdown" : "plaintext";
+}
+// Código C/C++ del sketch (no las notas .md/.txt): autocompletado y breakpoints.
+const isCodeFile = (name) => /\.(ino|c|cpp|h|hpp)$/i.test(name);
+const mainFileName = () => (state.sketch && !state.sketch.openplc ? `${state.sketch.name}.ino` : null);
+
+function addModel(f) {
+  const model = monacoRef.editor.createModel(f.content, languageFor(f.name), monacoRef.Uri.file(f.path));
+  model.onDidChangeContent(() => renderTabs());
+  state.models.set(f.name, model);
+  state.saved.set(f.name, f.content);
+  return model;
+}
+
+function removeModel(name) {
+  const model = state.models.get(name);
+  if (!model) return;
+  if (state.bpDecos.get(name)?.length) api.dbgSetBreakpoints(model.uri.fsPath, []).catch(() => {});
+  if (state.lineDecos.has(name)) setCurrentLine(null);
+  state.models.delete(name);
+  state.saved.delete(name);
+  state.bpDecos.delete(name);
+  state.bpVerified.delete(name);
+  if (state.active === name) showFile(state.models.keys().next().value);
+  else renderTabs();
+  model.dispose();
 }
 
 function loadSketch(sketch) {
@@ -501,14 +528,9 @@ function loadSketch(sketch) {
   state.bpVerified.clear();
   state.lineDecos.clear();
   state.saved.clear();
+  state.naming = null;
   state.sketch = sketch;
-  for (const f of sketch.files) {
-    const uri = monacoRef.Uri.file(f.path);
-    const model = monacoRef.editor.createModel(f.content, languageFor(f.name), uri);
-    model.onDidChangeContent(() => renderTabs());
-    state.models.set(f.name, model);
-    state.saved.set(f.name, f.content);
-  }
+  for (const f of sketch.files) addModel(f);
   state.exe = null;
   // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
   editor.updateOptions({ readOnly: !!sketch.openplc });
@@ -536,9 +558,119 @@ function renderTabs() {
     t.className = "tab";
     if (name === state.active) t.classList.add("active");
     if (model.getValue() !== state.saved.get(name)) t.classList.add("dirty");
-    t.textContent = name;
+    t.dataset.file = name;
+    t.title = isCodeFile(name) ? name : `${name} · nota del sketch, no se compila`;
+    const label = document.createElement("span");
+    label.textContent = name;
+    t.appendChild(label);
     t.addEventListener("click", () => showFile(name));
+    if (mainFileName() && name !== mainFileName()) {
+      const x = document.createElement("button");
+      x.className = "tab-close";
+      x.textContent = "×";
+      x.title = `Eliminar ${name} del sketch`;
+      x.setAttribute("aria-label", `Eliminar ${name}`);
+      x.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteSketchFile(name);
+      });
+      t.appendChild(x);
+    }
     tabs.appendChild(t);
+  }
+  if (!mainFileName()) return;
+  if (state.naming) {
+    tabs.appendChild(state.naming);
+    return;
+  }
+  const add = document.createElement("button");
+  add.className = "tab-add";
+  add.id = "tab-add";
+  add.textContent = "+";
+  add.title = "Nuevo archivo en el sketch (Ctrl+Mayús+N): .ino, .h, .c, .cpp, .md o .txt";
+  add.setAttribute("aria-label", "Nuevo archivo en el sketch");
+  add.addEventListener("click", () => promptNewFile());
+  tabs.appendChild(add);
+}
+
+// ------------------------------------------------------------- archivos del sketch
+// Nuevo archivo: un campo en la barra de pestañas (Electron no tiene prompt()).
+// Enter lo crea; Esc o perder el foco lo cancela.
+function promptNewFile() {
+  if (!mainFileName()) return;
+  window.JwsimTabs?.select("program");
+  if (state.naming) return state.naming.querySelector("input").focus();
+  const box = document.createElement("form");
+  box.className = "tab-naming";
+  const input = document.createElement("input");
+  input.id = "tab-new-name";
+  input.placeholder = "nombre.h";
+  input.spellcheck = false;
+  input.title = "Sin extensión se crea una pestaña .ino. Enter para crear, Esc para cancelar";
+  box.appendChild(input);
+  const close = () => {
+    state.naming = null;
+    renderTabs();
+  };
+  let busy = false;
+  box.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    try {
+      await createSketchFile(input.value);
+      close();
+    } catch (err) {
+      input.classList.add("invalid");
+      input.title = cleanError(err);
+      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+      input.focus();
+    } finally {
+      busy = false;
+    }
+  });
+  input.addEventListener("input", () => input.classList.remove("invalid"));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+  input.addEventListener("blur", () => setTimeout(() => !busy && state.naming === box && close(), 0));
+  state.naming = box;
+  renderTabs();
+  input.focus();
+}
+
+async function createSketchFile(name) {
+  const f = await api.addFile(state.sketch.dir, name);
+  addModel(f);
+  showFile(f.name);
+  consoleWrite(`[jwsim] ${f.name} agregado al sketch${isCodeFile(f.name) ? "" : " (nota: no se compila)"}\n`, "sys");
+  return f.name;
+}
+
+async function importSketchFiles() {
+  if (!mainFileName()) return;
+  try {
+    const { added, skipped } = await api.importFiles(state.sketch.dir);
+    for (const f of added) addModel(f);
+    if (added.length) showFile(added[added.length - 1].name);
+    for (const f of added) consoleWrite(`[jwsim] ${f.name} agregado al sketch\n`, "sys");
+    for (const s of skipped) consoleWrite(`[jwsim] no se agregó ${s}\n`, "fatal");
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+}
+
+async function deleteSketchFile(name, { ask = true } = {}) {
+  if (!state.models.has(name)) return false;
+  if (ask && !confirm(`¿Eliminar ${name} del sketch?\n\nEl archivo se mueve a la papelera.`)) return false;
+  try {
+    await api.deleteFile(state.sketch.dir, name);
+    removeModel(name);
+    consoleWrite(`[jwsim] ${name} eliminado del sketch (está en la papelera)\n`, "sys");
+    return true;
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+    return false;
   }
 }
 
@@ -1216,10 +1348,28 @@ async function saveProjectFile() {
 
 // Edición externa (Arduino IDE u otro editor): se recarga el archivo y, si
 // la simulación estaba activa, se recompila y reinicia conservando la escena.
-async function onExternalChange({ name, content, at, openplc }) {
+async function onExternalChange({ name, path, content, deleted, at, openplc }) {
   if (openplc) return onOpenPlcChange({ name, content, at });
+  if (!state.sketch || state.sketch.openplc) return;
   const model = state.models.get(name);
-  if (!model || model.getValue() === content) return;
+  // Archivo borrado o creado fuera (Explorador, Arduino IDE): las pestañas lo siguen.
+  if (deleted) {
+    if (!model || name === mainFileName()) return;
+    if (model.getValue() !== state.saved.get(name)) {
+      consoleWrite(`[jwsim] ${name} se borró fuera del simulador, pero tiene cambios sin guardar aquí: Guardar lo vuelve a crear\n`, "sys");
+      return;
+    }
+    removeModel(name);
+    consoleWrite(`[jwsim] ${name} se borró fuera del simulador\n`, "sys");
+    return;
+  }
+  if (!model) {
+    addModel({ name, path, content });
+    renderTabs();
+    consoleWrite(`[jwsim] ${name} apareció en la carpeta del sketch\n`, "sys");
+    return;
+  }
+  if (model.getValue() === content) return;
   if (model.getValue() !== state.saved.get(name)) {
     consoleWrite(`[jwsim] ${name} cambió fuera del simulador, pero tiene cambios sin guardar aquí: se conservan los suyos\n`, "sys");
     return;
@@ -1731,6 +1881,8 @@ function wireUi() {
     if (cmd === "new") $("btn-new").click();
     else if (cmd === "open") $("btn-open").click();
     else if (cmd === "save") saveSketch();
+    else if (cmd === "newFile") promptNewFile();
+    else if (cmd === "importFiles") importSketchFiles();
     else if (cmd === "format") autoFormat();
     else if (cmd === "undo") {
       if (document.body.dataset.tab === "schematic") window.JwsimScene?.undo?.();
@@ -1751,7 +1903,7 @@ function wireUi() {
     else if (cmd === "stop") stopSim();
     else if (cmd === "openProject") openProject();
     else if (cmd === "saveProject") saveProjectFile();
-    else if (cmd === "dbgToggle" && state.active) toggleBreakpoint(state.active, editor.getPosition().lineNumber);
+    else if (cmd === "dbgToggle" && state.active && isCodeFile(state.active)) toggleBreakpoint(state.active, editor.getPosition().lineNumber);
     else if (cmd === "dbgContinue") dbgCommand("continue");
     else if (cmd === "dbgNext") dbgCommand("next");
     else if (cmd === "dbgStepIn") dbgCommand("stepIn");
@@ -1795,7 +1947,7 @@ function initMonaco() {
       });
       api
         .apiCatalog()
-        .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models.values()]))
+        .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models].filter(([n]) => isCodeFile(n)).map(([, m]) => m)))
         .catch((err) => consoleWrite(`[jwsim] autocompletado no disponible: ${err.message}\n`, "sys"));
       // Autoformato también desde el menú contextual del editor ("Dar formato
       // al documento", Mayús+Alt+F). Ctrl+T llega por el menú Herramientas.
@@ -1814,7 +1966,7 @@ function initMonaco() {
       editor.addCommand(monacoRef.KeyMod.CtrlCmd | monacoRef.KeyCode.KeyT, () => autoFormat());
       // Clic en el margen: alterna un breakpoint en esa línea.
       editor.onMouseDown((e) => {
-        if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active) {
+        if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active && isCodeFile(state.active)) {
           toggleBreakpoint(state.active, e.target.position.lineNumber);
         }
       });
@@ -1937,6 +2089,12 @@ window.jwsimTest = {
   setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
   grade: () => gradeExercise(),
   sketchDir: () => state.sketch?.dir ?? null,
+  // Archivos adicionales del sketch.
+  fileNames: () => [...state.models.keys()],
+  addFile: (name) => createSketchFile(name),
+  deleteFile: (name) => deleteSketchFile(name, { ask: false }),
+  showFile: (name) => showFile(name),
+  language: () => editor.getModel()?.getLanguageId() ?? null,
 };
 
 async function main() {

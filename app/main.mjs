@@ -42,7 +42,48 @@ if (app.isPackaged && process.platform === "win32") {
 // instalación para todos los usuarios): la caché de compilación va a los datos.
 if (app.isPackaged) process.env.JWSIM_CACHE_DIR ??= join(app.getPath("userData"), "cache");
 
+// Archivos del sketch que van al compilador: las pestañas .ino y los fuentes
+// de la raíz (cli/lib/build.mjs, como arduino-cli).
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
+// Notas que acompañan al sketch: se muestran y se editan, pero no se compilan.
+const SKETCH_TEXT_EXT = new Set([".md", ".txt"]);
+const isSketchFile = (name) => {
+  const ext = extname(name).toLowerCase();
+  return SKETCH_EXT.has(ext) || SKETCH_TEXT_EXT.has(ext);
+};
+// Contenido inicial de un archivo nuevo (Programa ▸ Nuevo archivo).
+function newFileContent(name) {
+  const ext = extname(name).toLowerCase();
+  if (ext === ".h" || ext === ".hpp") return `#pragma once\n\n#include <Arduino.h>\n\n`;
+  // Un .cpp se compila aparte: no recibe el #include <Arduino.h> del .ino.
+  if (ext === ".cpp") return `#include <Arduino.h>\n\n`;
+  if (ext === ".md") return `# ${basename(name, extname(name))}\n\n`;
+  return "";
+}
+// Nombre válido para un archivo del sketch, como Arduino IDE: sin extensión
+// es una pestaña .ino; solo letras, números, _ - y un punto antes de la extensión.
+function sketchFileName(raw) {
+  let name = String(raw ?? "").trim();
+  if (!name) throw new Error("escriba un nombre de archivo");
+  if (!extname(name)) name += ".ino";
+  if (!/^[A-Za-z0-9_][A-Za-z0-9_-]*\.[A-Za-z0-9]+$/.test(name)) {
+    throw new Error(`nombre no válido: «${name}» (use letras, números, _ o -, sin espacios ni carpetas)`);
+  }
+  if (!isSketchFile(name)) {
+    throw new Error(`tipo de archivo no admitido: ${extname(name)} (use .ino, .h, .hpp, .c, .cpp, .md o .txt)`);
+  }
+  return name;
+}
+// Windows no distingue mayúsculas: «Motor.h» y «motor.h» son el mismo archivo.
+const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
+function sketchEntry(dir, name) {
+  return readdirSync(dir).find((f) => sameName(f, name)) ?? null;
+}
+function editableSketchDir(dir) {
+  if (!dir || !existsSync(dir)) throw new Error("no hay un sketch abierto");
+  if (isOpenPlcProject(dir)) throw new Error("los archivos de un proyecto OpenPLC se crean en el OpenPLC Editor");
+  return resolve(dir);
+}
 // Sketch nuevo: el clásico de Arduino IDE.
 const TEMPLATE = `void setup() {
   // Escriba aquí su código de configuración; se ejecuta una vez:
@@ -98,7 +139,7 @@ function readSketch(dir) {
   if (isOpenPlcProject(dir)) return readOpenPlc(dir);
   const name = basename(dir);
   const files = readdirSync(dir)
-    .filter((f) => SKETCH_EXT.has(extname(f).toLowerCase()) && statSync(join(dir, f)).isFile())
+    .filter((f) => isSketchFile(f) && statSync(join(dir, f)).isFile())
     .sort((a, b) => (a === `${name}.ino` ? -1 : b === `${name}.ino` ? 1 : a.localeCompare(b)))
     .map((f) => ({ name: f, path: join(dir, f), content: readFileSync(join(dir, f), "utf8") }));
   if (!files.some((f) => f.name === `${name}.ino`)) throw new Error(`la carpeta ${dir} no contiene ${name}.ino`);
@@ -356,6 +397,69 @@ ipcMain.handle("sketch:save", (_e, { dir, files }) => {
   return true;
 });
 
+// Archivos adicionales del sketch (como las pestañas de Arduino IDE): .h, .c,
+// .cpp y .ino extra se compilan; .md y .txt solo se editan.
+ipcMain.handle("sketch:addFile", (_e, { dir, name }) => {
+  const root = editableSketchDir(dir);
+  const file = sketchFileName(name);
+  const taken = sketchEntry(root, file);
+  if (taken) throw new Error(`ya existe ${taken} en el sketch`);
+  const p = join(root, file);
+  const content = newFileContent(file);
+  ownWrites.set(p, content);
+  writeFileSync(p, content, { flag: "wx" });
+  return { name: file, path: p, content };
+});
+
+// Programa ▸ Agregar archivo…: copia archivos de otra carpeta al sketch.
+ipcMain.handle("sketch:importFiles", async (_e, dir) => {
+  const root = editableSketchDir(dir);
+  const r = await dialog.showOpenDialog(win, {
+    title: "Agregar archivos al sketch",
+    properties: ["openFile", "multiSelections"],
+    filters: [
+      { name: "Código y notas", extensions: ["ino", "h", "hpp", "c", "cpp", "md", "txt"] },
+      { name: "Todos los archivos", extensions: ["*"] },
+    ],
+  });
+  if (r.canceled) return { added: [], skipped: [] };
+  const added = [];
+  const skipped = [];
+  for (const src of r.filePaths) {
+    const file = basename(src);
+    if (!isSketchFile(file)) {
+      skipped.push(`${file}: tipo de archivo no admitido`);
+      continue;
+    }
+    if (dirname(resolve(src)) === root) {
+      skipped.push(`${file}: ya está en el sketch`);
+      continue;
+    }
+    const taken = sketchEntry(root, file);
+    if (taken) {
+      skipped.push(`${file}: ya existe ${taken} en el sketch`);
+      continue;
+    }
+    const p = join(root, file);
+    const content = readFileSync(src, "utf8");
+    ownWrites.set(p, content);
+    writeFileSync(p, content, { flag: "wx" });
+    added.push({ name: file, path: p, content });
+  }
+  return { added, skipped };
+});
+
+// El .ino principal no se borra: sin él la carpeta deja de ser un sketch.
+ipcMain.handle("sketch:deleteFile", (_e, { dir, name }) => {
+  const root = editableSketchDir(dir);
+  const file = String(name ?? "");
+  if (sameName(file, `${basename(root)}.ino`)) throw new Error(`${file} es el archivo principal del sketch: no se puede eliminar`);
+  const p = resolve(root, file);
+  if (dirname(p) !== root || !isSketchFile(file) || !existsSync(p)) throw new Error(`no existe ${file} en el sketch`);
+  // A la papelera, no un borrado definitivo.
+  return shell.trashItem(p).then(() => true);
+});
+
 // ---------------------------------------------------------------- proyectos
 ipcMain.handle("project:open", async () => {
   const r = await dialog.showOpenDialog(win, {
@@ -410,7 +514,7 @@ ipcMain.handle("watch:set", (_e, dir) => {
   // hmi/), en subcarpetas; nunca su salida (build/).
   const plc = isOpenPlcProject(dir);
   const relevant = (name) =>
-    plc ? !/^build[\\/]/.test(name) && (name === "project.json" || /^(pous|devices|hmi)[\\/]/.test(name)) : SKETCH_EXT.has(extname(name).toLowerCase());
+    plc ? !/^build[\\/]/.test(name) && (name === "project.json" || /^(pous|devices|hmi)[\\/]/.test(name)) : isSketchFile(name);
   watcher = watch(dir, { recursive: plc }, (_event, rawName) => {
     const name = rawName && String(rawName).split(sep).join("/");
     if (!name || !relevant(name)) return;
@@ -420,7 +524,15 @@ ipcMain.handle("watch:set", (_e, dir) => {
     pending.set(
       p,
       setTimeout(() => {
-        if (!existsSync(p)) return;
+        if (!existsSync(p)) {
+          // Sketch: un archivo borrado fuera se quita de las pestañas.
+          if (!plc) {
+            ownWrites.delete(p);
+            forward("fs:changed", { name, path: p, content: null, deleted: true, at: Date.now(), openplc: false });
+          }
+          return;
+        }
+        if (!statSync(p).isFile()) return;
         const content = readFileSync(p, "utf8");
         if (ownWrites.get(p) === content) return;
         ownWrites.set(p, content);
@@ -852,6 +964,9 @@ function buildMenu() {
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
           { label: "Guardar", accelerator: "CmdOrCtrl+S", click: send("save") },
+          { type: "separator" },
+          { label: "Nuevo archivo en el sketch…", accelerator: "CmdOrCtrl+Shift+N", click: send("newFile") },
+          { label: "Agregar archivos al sketch…", click: send("importFiles") },
           { type: "separator" },
           { label: "Abrir proyecto…", accelerator: "CmdOrCtrl+Shift+O", click: send("openProject") },
           { label: "Guardar proyecto", accelerator: "CmdOrCtrl+Shift+S", click: send("saveProject") },

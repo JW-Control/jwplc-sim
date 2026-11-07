@@ -264,6 +264,9 @@ body.resizing #editor {
   align-self: center;
 }
 .tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 6px 12px;
   border: 1px solid transparent;
   border-bottom: none;
@@ -279,9 +282,62 @@ body.resizing #editor {
   border-color: var(--border);
   color: var(--text);
 }
-.tab.dirty::after {
+.tab.dirty > span::after {
   content: " ●";
   color: var(--warn);
+}
+/* Archivos adicionales del sketch: × elimina (no en el .ino principal), + crea. */
+.tab-close {
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 16px;
+  cursor: pointer;
+  visibility: hidden;
+}
+.tab:hover .tab-close,
+.tab.active .tab-close {
+  visibility: visible;
+}
+.tab-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.tab-add {
+  align-self: center;
+  margin-left: 2px;
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+.tab-add:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+.tab-naming {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+}
+.tab-naming input {
+  width: 130px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.tab-naming input.invalid {
+  border-color: var(--err);
 }
 #editor {
   flex: 1;
