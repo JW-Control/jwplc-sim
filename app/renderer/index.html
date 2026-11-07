@@ -187,11 +187,21 @@
                 <button id="scene-sound" class="icon" title="Sonido de relés y contactores" aria-label="Sonido">🔊</button>
               </div>
               <aside class="scene-side" id="scene-side">
-                <section class="side-pane" data-pane="add" hidden>
-                  <div class="side-title">Agregar dispositivo</div>
-                  <input id="scene-add-filter" type="search" placeholder="Buscar…" spellcheck="false" aria-label="Buscar dispositivo" />
-                  <div id="scene-add" class="palette" role="list"></div>
-                  <p class="insp-desc muted">Clic: se agrega en el centro de la vista.</p>
+                <!-- Como Fritzing: panel «Equipos» (las miniaturas) y, debajo, la «Ficha» (el Inspector), con un divisor entre los dos. -->
+                <section class="side-pane parts-pane" data-pane="add" hidden>
+                  <div class="parts-panel">
+                    <div class="panel-bar">Equipos</div>
+                    <div class="parts-search">
+                      <input id="scene-add-filter" type="search" placeholder="Buscar…" spellcheck="false" aria-label="Buscar dispositivo" />
+                    </div>
+                    <div id="scene-add" class="palette" role="list"></div>
+                  </div>
+                  <div id="parts-splitter" class="parts-splitter" role="separator" aria-orientation="horizontal" aria-label="Alto de la ficha" title="Arrastre para cambiar el alto de la ficha (doble clic: restablecer)"></div>
+                  <div class="parts-inspector">
+                    <div class="panel-bar">Ficha del equipo</div>
+                    <!-- El equipo bajo el puntero o el del último clic. -->
+                    <div id="scene-part-info" class="part-info" aria-live="polite"></div>
+                  </div>
                 </section>
                 <section class="side-pane" data-pane="props">
                   <div class="side-title">Propiedades</div>

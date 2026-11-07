@@ -1203,7 +1203,7 @@ button.io.on {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px 36px;
+  grid-template-columns: minmax(0, 1fr) 340px 36px;
 }
 /* Panel lateral plegado: queda solo la barra de pestañas. */
 .scene-main.side-collapsed {
@@ -1269,26 +1269,294 @@ button.io.on {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
+/* Paleta «Agregar» como Fritzing: dos paneles con su barra de título,
+   «Equipos» (miniaturas por categoría) y «Ficha del equipo» (el Inspector),
+   separados por un divisor que se arrastra. Ocupan todo el panel lateral. */
+.side-pane.parts-pane:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% + 16px);
+  min-height: 0;
+  margin: -8px -10px;
+}
+.parts-panel,
+.parts-inspector {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+}
+.parts-panel {
+  flex: 1 1 auto;
+}
+.parts-inspector {
+  flex: 0 0 var(--info-h, 52%);
+}
+.panel-bar {
+  flex: none;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  color: #b7c2ce;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.parts-search {
+  flex: none;
+  padding: 8px 10px 4px;
+}
+.parts-search #scene-add-filter {
+  margin: 0;
+}
+.parts-splitter {
+  position: relative;
+  flex: none;
+  height: 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  cursor: row-resize;
+  touch-action: none;
+}
+/* Agarradera centrada. */
+.parts-splitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 36px;
+  height: 2px;
+  margin-left: -18px;
+  border-radius: 1px;
+  background: var(--muted);
+}
+.parts-splitter:hover,
+.parts-splitter.dragging {
+  background-color: #24364d;
+}
 .palette-cat {
-  margin: 8px 0 3px;
+  margin: 10px 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+.palette-cat:first-child {
+  margin-top: 2px;
+}
+.palette {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Aire para el contorno del seleccionado y la barra de desplazamiento. */
+  padding: 0 6px 8px 10px;
+  scrollbar-gutter: stable;
+}
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+}
 .palette-item {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: grab;
+}
+.palette-item svg {
   display: block;
   width: 100%;
-  margin: 2px 0;
-  padding: 4px 8px;
-  text-align: left;
-  white-space: normal;
-  font-size: 12px;
+  height: 100%;
+  pointer-events: none;
+}
+.palette-item:hover {
+  border-color: var(--accent);
+}
+.palette-item.pinned {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.palette-item.armed {
+  outline: 2px solid var(--ok);
+  background: #16281e;
+}
+.palette-badge {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
 }
 .palette-item[hidden],
-.palette-cat[hidden] {
+.palette-cat[hidden],
+.palette-grid[hidden] {
   display: none;
+}
+/* Ficha (Inspector): banda con el nombre, vista previa y secciones con su
+   título en color y una línea, como Placement / Properties de Fritzing. */
+.part-info {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 10px 12px;
+}
+.part-empty {
+  margin: 4px 0;
+  color: var(--muted);
+}
+.part-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #2a313a;
+  font-size: 14px;
+}
+.part-name.armed {
+  background: #1d3a29;
+}
+.part-state {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--ok);
+  color: #0d1a12;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.part-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.part-preview {
+  flex: 0 0 96px;
+  height: 96px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: grab;
+}
+.part-preview:hover {
+  border-color: var(--accent);
+}
+.part-preview svg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.part-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  word-break: break-all;
+}
+.part-sec {
+  margin: 12px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #5a3b33;
+  color: #f0805f;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.part-sub {
+  margin: 6px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.part-desc {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+.part-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.part-table th,
+.part-table td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.part-table th {
+  width: 40%;
+  color: var(--muted);
+  font-weight: 400;
+}
+.part-terms th {
+  width: 25%;
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.model-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 6px;
+}
+.model-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+.model-opt:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.model-opt svg {
+  width: 100%;
+  height: 56px;
+  border-radius: 4px;
+  background: var(--bg);
+  pointer-events: none;
+}
+.model-opt.on {
+  border-color: var(--ok);
+  color: var(--text);
+}
+.part-hint {
+  margin: 8px 0 0;
+  color: var(--ok);
+}
+.part-hint.muted {
+  color: var(--muted);
+}
+.part-hint.bad {
+  color: var(--err);
+}
+/* Colocando un equipo elegido en la paleta: cursor y vista previa. */
+#scene-svg.placing {
+  cursor: copy;
+}
+#scene-ghost {
+  opacity: 0.55;
+  pointer-events: none;
 }
 /* Ajustar, Rearmar y Sonido: flotan sobre el lienzo, arriba a la izquierda. */
 .scene-float {

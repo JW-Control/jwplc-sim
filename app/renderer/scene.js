@@ -52,6 +52,10 @@
     undoStack: [],
     redoStack: [],
     clipboard: null,
+    // Paleta «Agregar»: bajo el puntero, último clic, elegido para poner
+    // (doble clic, con el modelo escogido) y el que se está arrastrando.
+    pal: { hover: null, pinned: null, armed: null, dragType: null, shownRunning: false, choice: {} },
+    keepPane: false,
   };
 
   // ------------------------------------------------------------ símbolos
@@ -594,6 +598,11 @@
     renderWires();
     $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
     renderSide();
+    // La ficha de la paleta avisa si la simulación impide agregar equipos.
+    if (S.pal.shownRunning !== S.running) {
+      renderPartInfo();
+      if (S.running) showGhost(null);
+    }
   }
 
   // ------------------------------------------------------------ panel lateral
@@ -601,8 +610,9 @@
     const side = $("scene-inspector");
     const sel = S.sel;
     const selKey = sel ? `${sel.kind}:${sel.id}` : "";
-    if (selKey && selKey !== S.lastSelKey) window.JwsimScenePane?.showProps();
+    if (selKey && selKey !== S.lastSelKey && !S.keepPane) window.JwsimScenePane?.showProps();
     S.lastSelKey = selKey;
+    S.keepPane = false;
     let html = "";
     let stateHtml = "";
     if (sel?.kind === "device") {
@@ -671,7 +681,7 @@
           }
           html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
         }
-        if (dev.type !== "jwsim/jwplc-basic") html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar ${esc(dev.id)}</button>`;
+        if (dev.type !== "jwsim/jwplc-basic") html += `<p class="insp-desc muted">Supr o Ctrl+X lo quita; Ctrl+C / Ctrl+V lo copia; Ctrl+Z deshace.</p>`;
       }
     } else if (sel?.kind === "wire") {
       const w = S.spec.wiring[sel.id];
@@ -685,7 +695,7 @@
         }
         html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita.</p>`;
         if (w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
-        html += `<button class="small" id="scene-del" ${S.running ? "disabled" : ""}>Quitar cable</button>`;
+        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable; Ctrl+Z deshace.</p>`;
         if (S.running) {
           const cut = wireCut(w);
           html += `<div class="insp-sub">Fallas</div><div class="fault-btns"><button class="small fault${cut ? " on" : ""}" data-fault="${esc(JSON.stringify({ kind: "open", wire: `${w.from} ${w.to}` }))}" data-on="${cut ? 1 : 0}">${cut ? "Reparar cable" : "Cortar cable"}</button></div>`;
@@ -697,7 +707,7 @@
       const nWire = S.spec.wiring.length;
       html += `<div class="insp-title">Escena</div><table class="insp-vals"><tr><td>Dispositivos</td><td>${nDev}</td></tr><tr><td>Cables</td><td>${nWire}</td></tr>` +
         `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
-      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr quita lo seleccionado. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
+      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr o Ctrl+X quita lo seleccionado; Ctrl+C y Ctrl+V copian y pegan; Ctrl+Z y Ctrl+Y deshacen y rehacen. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
     }
     if (side.dataset.key !== html) {
       side.innerHTML = html;
@@ -828,6 +838,17 @@
     }
   }
 
+  // Cortar: un equipo queda en el portapapeles (Ctrl+V lo vuelve a poner);
+  // un cable solo se quita. La placa no se corta.
+  function cut() {
+    if (S.running || !S.sel) return;
+    if (S.sel.kind === "device") {
+      if (devById(S.sel.id)?.type === "jwsim/jwplc-basic") return;
+      copy();
+    }
+    removeSelected();
+  }
+
   function duplicate() {
     if (S.running || S.sel?.kind !== "device") return;
     const dev = devById(S.sel.id);
@@ -836,11 +857,11 @@
     paste();
   }
 
-  function addDevice(type, x, y, id = nextId(type)) {
+  function addDevice(type, x, y, id = nextId(type), params = {}) {
     if (type === "jwsim/jwplc-basic" && S.spec.devices.some((d) => d.type === type)) return null;
     pushHistory();
     const def = S.defs.get(type);
-    S.spec.devices.push({ id, type, version: def?.version, params: {}, x: snap(x), y: snap(y) });
+    S.spec.devices.push({ id, type, version: def?.version, params: structuredClone(params), x: snap(x), y: snap(y) });
     S.sel = { kind: "device", id };
     changed();
     return id;
@@ -989,6 +1010,14 @@
       const handle = e.target.closest(".wire-handle");
       const delV = e.target.closest(".wire-del");
       const w = toWorld(e);
+      // Equipo elegido en la paleta (doble clic): el clic lo pone ahí. Con
+      // Mayús sigue elegido para poner otro igual.
+      if (S.pal.armed && e.button === 0) {
+        e.preventDefault();
+        const { type, params } = S.pal.armed;
+        if (placePart(type, params, e) && !e.shiftKey) disarmPart();
+        return;
+      }
       // Puntos de doblez del cable seleccionado: quitar o arrastrar.
       if ((handle || delV) && S.sel?.kind === "wire" && !S.running) {
         e.preventDefault();
@@ -1090,6 +1119,7 @@
     });
     svg.addEventListener("pointermove", (e) => {
       const w = toWorld(e);
+      if (S.pal.armed && !S.drag) showGhost(e);
       if (S.wiring) {
         const a = termPos(S.wiring.from);
         if (a) $("scene-rubber").setAttribute("d", `M${a.x} ${a.y} L${w.x} ${w.y}`);
@@ -1191,6 +1221,9 @@
       } else if (ctrl && (e.key === "c" || e.key === "C")) {
         e.preventDefault();
         copy();
+      } else if (ctrl && (e.key === "x" || e.key === "X")) {
+        e.preventDefault();
+        cut();
       } else if (ctrl && (e.key === "v" || e.key === "V")) {
         e.preventDefault();
         paste();
@@ -1200,9 +1233,19 @@
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         removeSelected();
+      } else if (e.key === "Escape" && S.pal.armed) {
+        disarmPart();
       } else if (e.key === "Escape" && S.wiring) {
         S.wiring = null;
         $("scene-rubber").setAttribute("d", "");
+      }
+    });
+    // Edición ▸ Cortar (y Ctrl+X si lo atiende el menú).
+    window.addEventListener("cut", (e) => {
+      if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
+      if (S.sel) {
+        cut();
+        e.preventDefault();
       }
     });
     window.addEventListener("copy", (e) => {
@@ -1263,7 +1306,6 @@
       else api.sceneInject(f);
     });
     $("scene-inspector").addEventListener("click", (e) => {
-      if (e.target.id === "scene-del") removeSelected();
       if (e.target.id === "scene-wire-auto" && S.sel?.kind === "wire") {
         pushHistory();
         delete S.spec.wiring[S.sel.id].points;
@@ -1305,8 +1347,199 @@
     render();
   }
 
-  // Pestaña «Agregar»: lista por categoría, con búsqueda; clic agrega el
-  // equipo en el centro de la vista.
+  // ------------------------------------------------------------ paleta (como Fritzing)
+  // Pestaña «Agregar»: miniaturas por categoría, con búsqueda. Pasar el
+  // puntero o un clic muestra la ficha del equipo debajo; al salir el puntero
+  // queda la del último clic. Doble clic lo elige: se escoge el modelo y se
+  // coloca con un clic en el esquema (Mayús: sigue elegido para poner otro),
+  // o se arrastra al esquema. Esc lo suelta.
+  const DND = "application/x-jwsim-device";
+  const EMPTY_STATE = () => ({ outputs: {}, contacts: {}, actions: {}, damaged: [], id: "", wired: [] });
+  let thumbSeq = 0;
+  function thumbSvg(type, params = {}) {
+    const sym = symbolFor({ type, params });
+    const p = { ...defaultsOf(type), ...params };
+    // Ids propios en cada copia: las plantillas traen degradados (url(#…)) y
+    // un id repetido apuntaría al de otra copia, quizá oculta.
+    const pre = `th${++thumbSeq}-`;
+    const body = window.JwsimSymbols.draw(type, sym.lay, EMPTY_STATE(), p, S.defs.get(type))
+      .replace(/\bid="([^"]+)"/g, `id="${pre}$1"`)
+      .replace(/url\(#([^)]+)\)/g, `url(#${pre}$1)`)
+      .replace(/href="#([^"]+)"/g, `href="#${pre}$1"`);
+    return `<svg viewBox="-6 -6 ${sym.w + 12} ${sym.h + 12}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="dev">${body}</g></svg>`;
+  }
+
+  // Parámetros que cambian el dibujo: los que eligen una plantilla propia
+  // (<tipo>__<valor>.svg, p. ej. el modelo de la fuente) y el color.
+  const slugOf = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
+  function designParams(def) {
+    return (def?.parameters ?? []).filter(
+      (p) =>
+        p.type === "enum" &&
+        !p.group &&
+        p.options.length <= 8 &&
+        (p.id === "color" || p.options.some((o) => window.JwsimSymbols.templates.has(`${def.type}__${slugOf(o)}`))),
+    );
+  }
+
+  // Ficha del equipo, por secciones como el Inspector de Fritzing: nombre,
+  // vista previa, Modelo (se escoge con un clic), Propiedades, Descripción y
+  // Conexiones (bornes).
+  function renderPartInfo() {
+    const box = $("scene-part-info");
+    const pal = S.pal;
+    const type = pal.hover ?? pal.pinned;
+    const def = type && S.defs.get(type);
+    for (const b of $("scene-add").querySelectorAll(".palette-item")) {
+      b.classList.toggle("pinned", b.dataset.add === pal.pinned);
+      b.classList.toggle("armed", b.dataset.add === pal.armed?.type);
+    }
+    $("scene-svg").classList.toggle("placing", !!pal.armed && !S.running);
+    pal.shownRunning = S.running;
+    if (!def) {
+      box.innerHTML = `<p class="part-empty">Pase el puntero o haga clic en un equipo para ver su ficha. Doble clic para elegirlo y ponerlo en el esquema.</p>`;
+      pal.shownType = null;
+      return;
+    }
+    const armed = pal.armed?.type === type ? pal.armed : null;
+    const params = paramsFor(type);
+    const terms = def.terminals ?? [];
+    const design = designParams(def);
+    const sec = (title) => `<div class="part-sec">${esc(title)}</div>`;
+    const row = (k, v) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`;
+    let html =
+      `<div class="part-name insp-title${armed ? " armed" : ""}">${esc(def.name)}${armed ? `<span class="part-state">elegido</span>` : ""}</div>` +
+      `<div class="part-head"><div class="part-preview" draggable="true" data-drag-part="${esc(type)}" title="Arrastre al esquema">${thumbSvg(type, params)}</div>` +
+      `<div class="part-meta"><span>${esc(def.type)}</span><span>v. ${esc(def.version)}</span>${def.installed ? "<span>instalado</span>" : ""}</div></div>`;
+    if (S.running) html += `<p class="part-hint bad">Detenga la simulación para agregar equipos.</p>`;
+    else if (armed) html += `<p class="part-hint">Clic en el esquema para ponerlo (con Mayús queda elegido para poner otro) o arrástrelo. Esc cancela.</p>`;
+    else html += `<p class="part-hint muted">${design.length ? "Escoja un modelo o haga" : "Haga"} doble clic en la miniatura para elegirlo; también puede arrastrarlo al esquema.</p>`;
+    if (design.length) {
+      html += sec("Modelo");
+      for (const p of design) {
+        const cur = params[p.id] ?? p.default;
+        if (design.length > 1) html += `<div class="part-sub">${esc(p.label ?? p.id)}</div>`;
+        html += `<div class="model-pick">`;
+        for (const o of p.options) {
+          html +=
+            `<button class="model-opt${o === cur ? " on" : ""}" data-type="${esc(type)}" data-model-param="${esc(p.id)}" data-value="${esc(o)}" title="${esc(`${p.label ?? p.id}: ${o}`)}">` +
+            `${thumbSvg(type, { ...params, [p.id]: o })}<span>${esc(o)}</span></button>`;
+        }
+        html += `</div>`;
+      }
+    }
+    // Propiedades: la familia y los valores con que llega (se cambian luego en
+    // Propiedades del equipo puesto).
+    const shown = def.parameters.filter((p) => !p.group && !design.includes(p) && p.type !== "string").slice(0, 8);
+    html += sec("Propiedades") + `<table class="part-table">` + row("familia", esc(def.category));
+    for (const p of design) html += row(p.label ?? p.id, esc(params[p.id] ?? p.default));
+    for (const p of shown) html += row(p.label ?? p.id, `${esc(p.type === "boolean" ? (p.default ? "sí" : "no") : p.default)}${p.unit ? ` ${esc(p.unit)}` : ""}`);
+    const groups = new Set(def.parameters.filter((p) => p.group).map((p) => p.group));
+    if (groups.size) html += row("parámetros", `${def.parameters.length} en ${groups.size} grupos`);
+    if (def.presets?.length) html += row("plantillas", esc(def.presets.map((pr) => pr.label).join(", ")));
+    html += `</table>`;
+    if (def.description) html += sec("Descripción") + `<p class="part-desc">${esc(def.description)}</p>`;
+    if (terms.length) {
+      html += sec(`Conexiones (${terms.length})`) + `<table class="part-table part-terms">`;
+      for (const t of terms) html += row(t.id, esc(t.label && t.label !== t.id ? t.label : "—"));
+      html += `</table>`;
+    }
+    box.innerHTML = html;
+    // Otro equipo: la ficha empieza arriba (al escoger modelo se queda donde está).
+    if (pal.shownType !== type) box.scrollTop = 0;
+    pal.shownType = type;
+  }
+
+  // Divisor entre «Equipos» y la ficha: arrastrar cambia el alto de la ficha
+  // (se recuerda); doble clic vuelve al de fábrica.
+  const INFO_H_KEY = "jwsim.partsInfoHeight";
+  function wirePartsSplitter() {
+    const pane = document.querySelector(".parts-pane");
+    const bar = $("parts-splitter");
+    const clamp = (h) => Math.round(Math.max(120, Math.min(pane.clientHeight - 150, h)));
+    const set = (h, save) => {
+      if (h === null) pane.style.removeProperty("--info-h");
+      else pane.style.setProperty("--info-h", `${h}px`);
+      if (!save) return;
+      try {
+        if (h === null) localStorage.removeItem(INFO_H_KEY);
+        else localStorage.setItem(INFO_H_KEY, String(h));
+      } catch {}
+    };
+    let saved = null;
+    try {
+      saved = Number(localStorage.getItem(INFO_H_KEY)) || null;
+    } catch {}
+    if (saved) set(saved, false);
+    bar.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      const y0 = e.clientY;
+      const h0 = document.querySelector(".parts-inspector").getBoundingClientRect().height;
+      bar.classList.add("dragging");
+      const move = (ev) => set(clamp(h0 - (ev.clientY - y0)), false);
+      const up = (ev) => {
+        bar.removeEventListener("pointermove", move);
+        bar.removeEventListener("pointerup", up);
+        bar.classList.remove("dragging");
+        set(clamp(h0 - (ev.clientY - y0)), true);
+      };
+      bar.addEventListener("pointermove", move);
+      bar.addEventListener("pointerup", up);
+    });
+    bar.addEventListener("dblclick", () => set(null, true));
+  }
+
+  // Modelo con que se pone cada equipo: el último escogido en la ficha.
+  const paramsFor = (type) => (S.pal.armed?.type === type ? S.pal.armed.params : (S.pal.choice[type] ?? {}));
+
+  function armPart(type) {
+    if (!S.defs.has(type)) return;
+    S.pal.armed = { type, params: { ...(S.pal.choice[type] ?? {}) } };
+    S.pal.pinned = type;
+    if (S.wiring) {
+      S.wiring = null;
+      $("scene-rubber").setAttribute("d", "");
+    }
+    renderPartInfo();
+  }
+
+  function disarmPart() {
+    if (!S.pal.armed) return;
+    S.pal.armed = null;
+    showGhost(null);
+    renderPartInfo();
+  }
+
+  // Vista previa semitransparente que sigue al puntero mientras se coloca.
+  function showGhost(e, type = S.pal.armed?.type, params = S.pal.armed?.params ?? {}) {
+    const g = $("scene-ghost");
+    if (!g) return; // la paleta aún no se armó
+    if (!e || !type || S.running) {
+      g.setAttribute("visibility", "hidden");
+      return;
+    }
+    const key = JSON.stringify([type, params]);
+    const sym = symbolFor({ type, params });
+    if (g.dataset.key !== key) {
+      g.innerHTML = `<g class="dev">${window.JwsimSymbols.draw(type, sym.lay, EMPTY_STATE(), { ...defaultsOf(type), ...params }, S.defs.get(type))}</g>`;
+      g.dataset.key = key;
+    }
+    const w = toWorld(e);
+    g.setAttribute("transform", `translate(${snap(w.x - sym.w / 2)} ${snap(w.y - sym.h / 2)})`);
+    g.setAttribute("visibility", "visible");
+  }
+
+  // Pone el equipo con su centro bajo el puntero.
+  function placePart(type, params, e) {
+    if (S.running || !S.defs.has(type)) return null;
+    const w = toWorld(e);
+    const sym = symbolFor({ type, params });
+    // Se queda en «Agregar»: las propiedades se ven al hacer clic en el equipo.
+    S.keepPane = true;
+    return addDevice(type, w.x - sym.w / 2, w.y - sym.h / 2, nextId(type), params);
+  }
+
   function populatePalette() {
     const box = $("scene-add");
     const groups = new Map();
@@ -1318,26 +1551,107 @@
     box.innerHTML = [...groups]
       .map(
         ([cat, list]) =>
-          `<div class="palette-cat">${esc(cat)}</div>` +
-          list.map((d) => `<button class="palette-item" role="listitem" data-add="${esc(d.type)}" data-cat="${esc(cat)}" title="${esc(d.description)}">${esc(d.name)}${d.installed ? " (instalado)" : ""}</button>`).join(""),
+          `<div class="palette-cat" data-cat="${esc(cat)}">${esc(cat)}</div><div class="palette-grid" data-cat="${esc(cat)}">` +
+          list
+            .map(
+              (d) =>
+                `<button class="palette-item" role="listitem" draggable="true" data-add="${esc(d.type)}" data-cat="${esc(cat)}" ` +
+                `data-search="${esc(`${d.name} ${d.description} ${cat}`.toLowerCase())}" title="${esc(d.name)}" aria-label="${esc(d.name)}">` +
+                `${thumbSvg(d.type)}${d.installed ? `<span class="palette-badge">+</span>` : ""}</button>`,
+            )
+            .join("") +
+          `</div>`,
       )
       .join("");
-    box.addEventListener("click", (e) => {
-      const b = e.target.closest("[data-add]");
-      if (!b) return;
-      const r = $("scene-svg").getBoundingClientRect();
-      const c = toWorld({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 3 });
-      addDevice(b.dataset.add, c.x, c.y);
+    const itemOf = (e) => e.target.closest?.(".palette-item");
+    box.addEventListener("pointerover", (e) => {
+      const b = itemOf(e);
+      if (!b || S.pal.hover === b.dataset.add) return;
+      S.pal.hover = b.dataset.add;
+      renderPartInfo();
     });
+    box.addEventListener("pointerleave", () => {
+      if (S.pal.hover === null) return;
+      S.pal.hover = null;
+      renderPartInfo();
+    });
+    box.addEventListener("click", (e) => {
+      const b = itemOf(e);
+      if (!b) return;
+      S.pal.pinned = b.dataset.add;
+      renderPartInfo();
+    });
+    box.addEventListener("dblclick", (e) => {
+      const b = itemOf(e);
+      if (b) armPart(b.dataset.add);
+    });
+    // Arrastrar una miniatura (o la vista previa de la ficha) al esquema.
+    const dragStart = (e, type) => {
+      S.pal.dragType = type;
+      e.dataTransfer.setData(DND, type);
+      e.dataTransfer.effectAllowed = "copy";
+    };
+    const dragEnd = () => {
+      S.pal.dragType = null;
+      showGhost(null);
+    };
+    box.addEventListener("dragstart", (e) => {
+      const b = itemOf(e);
+      if (b) dragStart(e, b.dataset.add);
+    });
+    box.addEventListener("dragend", dragEnd);
+    const info = $("scene-part-info");
+    info.addEventListener("dragstart", (e) => {
+      const el = e.target.closest?.("[data-drag-part]");
+      if (el) dragStart(e, el.dataset.dragPart);
+    });
+    info.addEventListener("dragend", dragEnd);
+    // Escoger un modelo lo recuerda para ese equipo, lo deja elegido para
+    // ponerlo y actualiza su miniatura.
+    info.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-model-param]");
+      if (!b) return;
+      const type = b.dataset.type;
+      S.pal.choice[type] = { ...paramsFor(type), [b.dataset.modelParam]: b.dataset.value };
+      const tileEl = box.querySelector(`.palette-item[data-add="${CSS.escape(type)}"]`);
+      const old = tileEl?.querySelector("svg");
+      if (old) old.outerHTML = thumbSvg(type, S.pal.choice[type]);
+      armPart(type);
+    });
+    const svg = $("scene-svg");
+    const ghost = document.createElementNS(NS, "g");
+    ghost.id = "scene-ghost";
+    ghost.setAttribute("visibility", "hidden");
+    $("scene-root").appendChild(ghost);
+    svg.addEventListener("dragover", (e) => {
+      if (!e.dataTransfer.types.includes(DND) || S.running) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      showGhost(e, S.pal.dragType, paramsFor(S.pal.dragType));
+    });
+    svg.addEventListener("dragleave", (e) => {
+      if (!svg.contains(e.relatedTarget)) showGhost(null);
+    });
+    svg.addEventListener("drop", (e) => {
+      const type = e.dataTransfer.getData(DND);
+      if (!type) return;
+      e.preventDefault();
+      showGhost(null);
+      const id = placePart(type, paramsFor(type), e);
+      if (id && S.pal.armed?.type === type) disarmPart();
+    });
+    svg.addEventListener("pointerleave", () => showGhost(null));
     $("scene-add-filter").addEventListener("input", (e) => {
       const q = e.target.value.trim().toLowerCase();
       const shown = new Set();
       for (const b of box.querySelectorAll(".palette-item")) {
-        b.hidden = !!q && !`${b.textContent} ${b.title} ${b.dataset.cat}`.toLowerCase().includes(q);
+        b.hidden = !!q && !b.dataset.search.includes(q);
         if (!b.hidden) shown.add(b.dataset.cat);
       }
-      for (const c of box.querySelectorAll(".palette-cat")) c.hidden = !shown.has(c.textContent);
+      for (const c of box.querySelectorAll(".palette-cat, .palette-grid")) c.hidden = !shown.has(c.dataset.cat);
     });
+    wirePartsSplitter();
+    renderPartInfo();
   }
 
   // ------------------------------------------------------------ API para app.js
@@ -1423,6 +1737,7 @@
     copy,
     paste,
     duplicate,
+    cut,
     removeSelected,
     // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
     // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
@@ -1456,6 +1771,17 @@
     scene: {
       view: (v) => setView(v),
       add: (type, x, y, id) => addDevice(type, x, y, id),
+      // Paleta «Agregar»: estado (último clic, elegido con su modelo) y tamaño
+      // del símbolo (para calcular dónde quedó el centro).
+      palette: () => ({ hover: S.pal.hover, pinned: S.pal.pinned, armed: S.pal.armed && structuredClone(S.pal.armed) }),
+      symbolSize: (type, params = {}) => {
+        const s = symbolFor({ type, params });
+        return { w: s.w, h: s.h };
+      },
+      toScreen: (x, y) => {
+        const r = $("scene-svg").getBoundingClientRect();
+        return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
+      },
       wire: (a, b) => addWire(a, b),
       act: (id, action, value) => act(id, action, value),
       view3d: () => window.Jwsim3D?.objects() ?? [],

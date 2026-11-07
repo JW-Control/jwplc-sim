@@ -192,7 +192,10 @@ try {
   // ---- SCENE_EDIT
   await win.click("#scene-tab-add");
   await win.fill("#scene-add-filter", "lámpara");
-  await win.click("#scene-add [data-add='jwsim/lamp']");
+  // Paleta como Fritzing: doble clic elige la lámpara y un clic en el esquema la pone.
+  await win.dblclick("#scene-add [data-add='jwsim/lamp']");
+  const sv = await (await win.$("#scene-svg")).boundingBox();
+  await win.mouse.click(sv.x + sv.width / 2, sv.y + sv.height / 2);
   const h = await until(() => t(() => window.jwsimTest.scene.spec().devices.find((d) => d.type === "jwsim/lamp" && d.id !== "H1")?.id));
   await t((id) => window.jwsimTest.scene.move(id, -200, 100), h);
   await win.click("#scene-fit");
