@@ -49,6 +49,9 @@
     wiring: null, // { from, x, y }
     rendered: new Map(), // id -> firma del estado dibujado
     analyzeTimer: null,
+    undoStack: [],
+    redoStack: [],
+    clipboard: null,
   };
 
   // ------------------------------------------------------------ símbolos
@@ -732,8 +735,110 @@
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
+  function currentSnapshot() {
+    return {
+      spec: structuredClone(cleanSpec()),
+      sel: S.sel ? { ...S.sel } : null,
+    };
+  }
+
+  function updateUndoRedoButtons() {
+    const u = $("scene-undo");
+    const r = $("scene-redo");
+    if (u) u.disabled = S.running || !S.undoStack.length;
+    if (r) r.disabled = S.running || !S.redoStack.length;
+  }
+
+  function pushHistory() {
+    if (S.running) return;
+    const snapState = currentSnapshot();
+    const last = S.undoStack[S.undoStack.length - 1];
+    if (last && JSON.stringify(last.spec) === JSON.stringify(snapState.spec)) return;
+    S.undoStack.push(snapState);
+    if (S.undoStack.length > 50) S.undoStack.shift();
+    S.redoStack.length = 0;
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    if (S.running || !S.undoStack.length) return;
+    if (S.drag) S.drag = null;
+    if (S.wiring) {
+      S.wiring = null;
+      $("scene-rubber").setAttribute("d", "");
+    }
+    const curr = currentSnapshot();
+    S.redoStack.push(curr);
+    const prev = S.undoStack.pop();
+    S.spec = structuredClone(prev.spec);
+    S.sel = prev.sel ? { ...prev.sel } : null;
+    changed();
+    updateUndoRedoButtons();
+  }
+
+  function redo() {
+    if (S.running || !S.redoStack.length) return;
+    if (S.drag) S.drag = null;
+    if (S.wiring) {
+      S.wiring = null;
+      $("scene-rubber").setAttribute("d", "");
+    }
+    const curr = currentSnapshot();
+    S.undoStack.push(curr);
+    const next = S.redoStack.pop();
+    S.spec = structuredClone(next.spec);
+    S.sel = next.sel ? { ...next.sel } : null;
+    changed();
+    updateUndoRedoButtons();
+  }
+
+  function copy() {
+    if (S.running || !S.sel) return;
+    if (S.sel.kind === "device") {
+      const dev = devById(S.sel.id);
+      if (dev && dev.type !== "jwsim/jwplc-basic") {
+        S.clipboard = {
+          kind: "device",
+          type: dev.type,
+          version: dev.version,
+          params: structuredClone(dev.params ?? {}),
+          x: dev.x ?? 0,
+          y: dev.y ?? 0,
+        };
+      }
+    }
+  }
+
+  function paste() {
+    if (S.running || !S.clipboard) return;
+    if (S.clipboard.kind === "device") {
+      const type = S.clipboard.type;
+      const x = snap((S.clipboard.x ?? 0) + 40);
+      const y = snap((S.clipboard.y ?? 0) + 40);
+      const id = addDevice(type, x, y);
+      if (!id) return;
+      const dev = devById(id);
+      if (dev) {
+        if (S.clipboard.version) dev.version = S.clipboard.version;
+        dev.params = structuredClone(S.clipboard.params ?? {});
+      }
+      S.clipboard.x = x;
+      S.clipboard.y = y;
+      changed();
+    }
+  }
+
+  function duplicate() {
+    if (S.running || S.sel?.kind !== "device") return;
+    const dev = devById(S.sel.id);
+    if (!dev || dev.type === "jwsim/jwplc-basic") return;
+    copy();
+    paste();
+  }
+
   function addDevice(type, x, y, id = nextId(type)) {
     if (type === "jwsim/jwplc-basic" && S.spec.devices.some((d) => d.type === type)) return null;
+    pushHistory();
     const def = S.defs.get(type);
     S.spec.devices.push({ id, type, version: def?.version, params: {}, x: snap(x), y: snap(y) });
     S.sel = { kind: "device", id };
@@ -744,6 +849,7 @@
   function addWire(from, to) {
     if (from === to || from.split(".")[0] === to.split(".")[0] && from === to) return false;
     if (S.spec.wiring.some((w) => (w.from === from && w.to === to) || (w.from === to && w.to === from))) return false;
+    pushHistory();
     // El color se fija al crear (según el polo de las puntas; negro para el mando).
     const color = poleColor(from, S.staticPoles) ?? poleColor(to, S.staticPoles) ?? "negro";
     S.spec.wiring.push({ from, to, color });
@@ -754,6 +860,7 @@
 
   function removeSelected() {
     if (S.running || !S.sel) return;
+    pushHistory();
     if (S.sel.kind === "wire") S.spec.wiring.splice(S.sel.id, 1);
     else {
       const id = S.sel.id;
@@ -800,7 +907,8 @@
    * Cambia un parámetro. Si el cambio oculta bornes (la bornera del motor
    * pasa de «6 cables» a chapas), se quitan los cables que llegaban a ellos.
    */
-  function setParam(dev, id, value) {
+  function setParam(dev, id, value, record = true) {
+    if (record) pushHistory();
     dev.params = { ...(dev.params ?? {}), [id]: value };
     const def = S.defs.get(dev.type);
     const lay = window.JwsimSymbols.layout(dev.type, def, { ...defaultsOf(dev.type), ...dev.params });
@@ -819,6 +927,7 @@
 
   /** Aplica una plantilla: fábrica + sus parámetros (conserva los de `keep`). */
   function applyPreset(dev, def, pr) {
+    pushHistory();
     const kept = Object.fromEntries((pr.keep ?? []).filter((k) => dev.params?.[k] !== undefined).map((k) => [k, dev.params[k]]));
     dev.params = { ...kept, ...pr.params };
     changed();
@@ -953,7 +1062,7 @@
       if (devEl) {
         const dev = devById(devEl.dataset.id);
         S.sel = { kind: "device", id: dev.id };
-        S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false };
+        S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false, snapshot: currentSnapshot() };
         svg.setPointerCapture(e.pointerId);
         render();
         return;
@@ -963,8 +1072,9 @@
         // Clic sobre el cable ya seleccionado: agrega un punto de doblez ahí
         // (en la grilla) y empieza a arrastrarlo.
         if (S.sel?.kind === "wire" && S.sel.id === i && !S.running) {
+          const snapshot = currentSnapshot();
           const k = insertVertex(i, { x: snap(w.x), y: snap(w.y) });
-          S.drag = { kind: "vertex", i, k, moved: false };
+          S.drag = { kind: "vertex", i, k, moved: false, snapshot };
           svg.setPointerCapture(e.pointerId);
           renderWires();
           return;
@@ -1040,8 +1150,15 @@
         return;
       }
       const moved = S.drag?.moved;
+      const snapshot = S.drag?.snapshot;
       if (moved) S.dirty = true;
       S.drag = null;
+      if (moved && snapshot) {
+        S.undoStack.push(snapshot);
+        if (S.undoStack.length > 50) S.undoStack.shift();
+        S.redoStack.length = 0;
+        updateUndoRedoButtons();
+      }
       // Al soltar, todos los cables se vuelven a trazar con la escena nueva.
       if (moved) {
         S.routeKey = null;
@@ -1064,10 +1181,42 @@
     );
     window.addEventListener("keydown", (e) => {
       if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
-      if (e.key === "Delete" || e.key === "Backspace") removeSelected();
-      if (e.key === "Escape" && S.wiring) {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        undo();
+      } else if ((ctrl && (e.key === "y" || e.key === "Y")) || (ctrl && e.shiftKey && (e.key === "z" || e.key === "Z"))) {
+        e.preventDefault();
+        redo();
+      } else if (ctrl && (e.key === "c" || e.key === "C")) {
+        e.preventDefault();
+        copy();
+      } else if (ctrl && (e.key === "v" || e.key === "V")) {
+        e.preventDefault();
+        paste();
+      } else if (ctrl && (e.key === "d" || e.key === "D")) {
+        e.preventDefault();
+        duplicate();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        removeSelected();
+      } else if (e.key === "Escape" && S.wiring) {
         S.wiring = null;
         $("scene-rubber").setAttribute("d", "");
+      }
+    });
+    window.addEventListener("copy", (e) => {
+      if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
+      if (S.sel?.kind === "device") {
+        copy();
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("paste", (e) => {
+      if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
+      if (S.clipboard) {
+        paste();
+        e.preventDefault();
       }
     });
     $("scene-inspector").addEventListener("change", (e) => {
@@ -1116,17 +1265,17 @@
     $("scene-inspector").addEventListener("click", (e) => {
       if (e.target.id === "scene-del") removeSelected();
       if (e.target.id === "scene-wire-auto" && S.sel?.kind === "wire") {
+        pushHistory();
         delete S.spec.wiring[S.sel.id].points;
-        S.dirty = true;
-        render();
+        changed();
       }
       const sw = e.target.closest(".swatch");
       if (sw && S.sel?.kind === "wire") {
+        pushHistory();
         const w = S.spec.wiring[S.sel.id];
         if (sw.dataset.color) w.color = sw.dataset.color;
         else delete w.color;
-        S.dirty = true;
-        render();
+        changed();
       }
     });
     $("scene-diag").addEventListener("click", (e) => {
@@ -1234,6 +1383,9 @@
     // Escena del proyecto (campo "scene" del .jwsim).
     load(sc) {
       S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []) };
+      S.undoStack = [];
+      S.redoStack = [];
+      updateUndoRedoButtons();
       // Bornes renombrados (igual que migrateScene de scene/scene.mjs): la fuente
       // de 24 VDC 1.x tenía L+/M; desde la 2.0, +V1 +V2 −V1 −V2.
       const ren = { "L+": "+V1", M: "-V1" };
@@ -1266,6 +1418,12 @@
     // Pestañas de la ventana (tabs.js): cambian la vista del panel derecho.
     setView: (v) => setView(v),
     view: () => S.view,
+    undo,
+    redo,
+    copy,
+    paste,
+    duplicate,
+    removeSelected,
     // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
     // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
     async addPlant(type) {
@@ -1283,6 +1441,7 @@
       const run = kind === "running" || kind === "paused" || kind === "break";
       if (run === S.running) return;
       S.running = run;
+      updateUndoRedoButtons();
       if (!run) analyze();
       render(true);
     },
@@ -1339,6 +1498,12 @@
       },
       routes: () => (S.routes ?? []).map((r, i) => ({ wire: `${S.spec.wiring[i].from}-${S.spec.wiring[i].to}`, routed: r?.routed, mid: r?.mid })),
       wireColor: (i) => document.querySelector(`.wire[data-wire="${i}"]`)?.dataset.color ?? null,
+      undo,
+      redo,
+      copy,
+      paste,
+      duplicate,
+      removeSelected,
       wireLive: (i) => !!document.querySelector(`.wire[data-wire="${i}"]`)?.classList.contains("live"),
       // Punto medio del cable en pantalla (para hacer clic sobre él).
       wirePoint: (i) => {
@@ -1359,6 +1524,8 @@
     populatePalette();
     wirePointer();
     for (const b of document.querySelectorAll("#board-view .seg")) b.addEventListener("click", () => setView(b.dataset.view));
+    $("scene-undo")?.addEventListener("click", () => undo());
+    $("scene-redo")?.addEventListener("click", () => redo());
     $("scene-fit").addEventListener("click", fit);
     $("scene-rearm").addEventListener("click", () => api.sceneRearm());
     api.onSceneSnapshot((snap) => {

@@ -862,6 +862,21 @@ function buildMenu() {
         ],
       },
       {
+        label: "Edición",
+        submenu: [
+          { label: "Deshacer", accelerator: "CmdOrCtrl+Z", click: send("undo") },
+          { label: "Rehacer", accelerator: "CmdOrCtrl+Y", click: send("redo") },
+          { type: "separator" },
+          { role: "cut", label: "Cortar" },
+          { role: "copy", label: "Copiar" },
+          { role: "paste", label: "Pegar" },
+          { label: "Duplicar", accelerator: "CmdOrCtrl+D", click: send("duplicate") },
+          { label: "Eliminar", accelerator: "Delete", click: send("delete") },
+          { type: "separator" },
+          { role: "selectAll", label: "Seleccionar todo" },
+        ],
+      },
+      {
         label: "Herramientas",
         submenu: [{ label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") }],
       },

@@ -1732,6 +1732,18 @@ function wireUi() {
     else if (cmd === "open") $("btn-open").click();
     else if (cmd === "save") saveSketch();
     else if (cmd === "format") autoFormat();
+    else if (cmd === "undo") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.undo?.();
+      else editor?.trigger("menu", "undo");
+    } else if (cmd === "redo") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.redo?.();
+      else editor?.trigger("menu", "redo");
+    } else if (cmd === "duplicate") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.duplicate?.();
+      else editor?.trigger("menu", "editor.action.duplicateSelection");
+    } else if (cmd === "delete") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.removeSelected?.();
+    }
     else if (cmd === "dock") $("sb-dock").click();
     else if (cmd.startsWith("tab:")) window.JwsimTabs?.select(cmd.slice(4));
     else if (cmd === "run") buildAndRun();
