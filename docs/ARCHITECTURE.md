@@ -640,7 +640,9 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 | Tipo | Lee | Salidas | Acciones |
 |---|---|---|---|
 | `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
-| `jwsim/tank` (tanque con bomba) | `bomba` (p. ej. `M1.running`) | `nivel` (0-1) y `nivelPct` como segmentos, `rebalse`, `vacio`, `bombeando` | `consumo` (L/min) |
+| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
+
+**Modelo del tanque (1.1):** balance de volumen dV/dt = bomba × caudal − consumo − válvula × Cd·a·√(2gh) (descarga por gravedad de Torricelli con `salidaMm`). La `forma` (modelo en la paleta: cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera) da el área A(h) ∝ f(h/H); V(h) se tabula y se invierte para la altura. Se integra con RK4 a `pasoMs` (discretización configurable, 1-1000 ms) y el nivel se publica en tramos lineales de un paso, así los sensores ven el cruce exacto. Con área constante y sin descarga es lineal y exacto (un tramo), igual que la 1.0.
 | `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
 
 La cinta integra el avance con la regla del trapecio (exacta en la rampa

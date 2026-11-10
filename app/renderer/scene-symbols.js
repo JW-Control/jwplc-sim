@@ -53,7 +53,7 @@
     "power-230vac": [80, 120, [], ["L", "N"]],
     // Planta (G8): sin bornes; dibujo de proceso, no de un modelo comercial.
     conveyor: [280, 120, [], []],
-    tank: [140, 180, [], []],
+    tank: [200, 220, [], []],
     door: [260, 160, [], []],
   };
   // Segunda línea del rótulo (más chica): función del borne.
@@ -636,20 +636,74 @@
         );
       }
       case "tank": {
+        // Silueta de frente de cada forma (ancho relativo a cada altura x de 0
+        // a 1) y el agua recortada a la misma silueta hasta el nivel.
+        // «left»: la pared vertical a la izquierda (cuarto de círculo).
+        const forma = String(p.forma ?? "cilindro vertical");
+        const SIL = {
+          "cilindro vertical": [() => 1, false],
+          rectangular: [() => 1, false],
+          "cilindro horizontal": [(x) => 2 * Math.sqrt(Math.max(0, x * (1 - x))), false],
+          "cono (tolva)": [(x) => 0.08 + 0.92 * x, false],
+          "prisma en V": [(x) => 0.04 + 0.96 * x, false],
+          "cuarto de círculo": [(x) => Math.sqrt(Math.max(0, x * (2 - x))), true],
+          esfera: [(x) => 2 * Math.sqrt(Math.max(0, x * (1 - x))), false],
+        };
+        const [sil, left] = SIL[forma] ?? SIL["cilindro vertical"];
+        const round = forma === "cilindro horizontal" || forma === "esfera";
+        const th = 140;
+        const tw = round ? 140 : 112;
+        const tx = round ? 14 : 22;
+        const ty = 30;
+        const cx = tx + tw / 2;
+        const N = 48;
+        // Contorno entre las alturas x0 y x1 (0 = fondo).
+        const outline = (x0, x1) => {
+          const pts = [];
+          for (let i = 0; i <= N; i++) {
+            const x = x0 + ((x1 - x0) * i) / N;
+            const wd = sil(x) * tw;
+            pts.push([left ? tx + wd : cx + wd / 2, ty + th - x * th]);
+          }
+          for (let i = N; i >= 0; i--) {
+            const x = x0 + ((x1 - x0) * i) / N;
+            const wd = sil(x) * tw;
+            pts.push([left ? tx : cx - wd / 2, ty + th - x * th]);
+          }
+          return `M${pts.map(([a, b]) => `${a.toFixed(1)} ${b.toFixed(1)}`).join(" L")} Z`;
+        };
         const lv = Math.max(0, Math.min(1, Number(o.nivel ?? num(p.nivel0, 50) / 100)));
-        const tx = 24, ty = 30, tw = 80, th = 120;
-        const lh = lv * (th - 4);
+        const cap = num(p.volumen, 200);
+        const vol = Number(o.volumenL ?? NaN);
+        const drain = num(p.salidaMm, 0) > 0;
+        const ly = ty + th - lv * th;
         return (
           module(w, h, "#f4f5f7") +
-          `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}" rx="8" fill="#e4e7eb" stroke="${ink}" stroke-width="1.6"/>` +
-          `<rect x="${tx + 2}" y="${ty + th - 2 - lh}" width="${tw - 4}" height="${lh}" rx="6" fill="#3d8be0" opacity="0.85"/>` +
-          [0.25, 0.5, 0.75].map((f) => `<line x1="${tx + tw}" y1="${ty + th - 2 - f * (th - 4)}" x2="${tx + tw + 6}" y2="${ty + th - 2 - f * (th - 4)}" stroke="${ink}"/>`).join("") +
-          `<text class="sym-big" x="${tx + tw / 2}" y="${ty + th / 2 + 5}">${Math.round(lv * 100)} %</text>` +
-          // Bomba (abajo a la derecha) y caño de entrada por arriba.
-          `<path d="M${tx + tw + 22} ${ty + th - 10} V${ty - 12} H${tx + tw - 16} V${ty + 4}" fill="none" stroke="#7d8590" stroke-width="4"/>` +
-          `<circle cx="${tx + tw + 22}" cy="${ty + th - 4}" r="9" fill="${o.bombeando ? "#37d67a" : "#59606a"}" stroke="${ink}"/>` +
-          (o.bombeando ? `<path d="M${tx + tw - 16} ${ty + 6} v${th - 10 - lh}" stroke="#3d8be0" stroke-width="3" stroke-dasharray="4 3"/>` : "") +
-          (o.rebalse ? `<text class="sym-bad" x="${w / 2}" y="${h - 10}">REBALSE</text>` : o.vacio ? `<text class="sym-bad" x="${w / 2}" y="${h - 10}">VACÍO</text>` : `<text class="sym-tag" x="${w / 2}" y="${h - 10}">${Math.round(num(p.volumen, 200) * lv)} / ${num(p.volumen, 200)} L</text>`)
+          // Casco y agua.
+          `<path d="${outline(0, 1)}" fill="#e4e7eb" stroke="${ink}" stroke-width="1.6" stroke-linejoin="round"/>` +
+          (lv > 0.002 ? `<path d="${outline(0, lv)}" fill="#3d8be0" opacity="0.85"/>` : "") +
+          (lv > 0.002 ? `<line x1="${tx - 4}" y1="${ly}" x2="${tx + tw + 4}" y2="${ly}" stroke="#2f6fbf" stroke-width="1" stroke-dasharray="3 2"/>` : "") +
+          // Tapa del cilindro vertical y nervios del rectangular, para distinguirlos.
+          (forma === "cilindro vertical" ? `<ellipse cx="${cx}" cy="${ty}" rx="${tw / 2}" ry="6" fill="#eef0f3" stroke="${ink}" stroke-width="1.2"/>` : "") +
+          (forma === "rectangular" ? `<path d="M${tx} ${ty + th / 3}h${tw}M${tx} ${ty + (2 * th) / 3}h${tw}" stroke="${ink}" stroke-width=".8" opacity=".35"/>` : "") +
+          (forma === "prisma en V" ? `<path d="M${cx} ${ty + th}V${ty}" stroke="${ink}" stroke-width=".8" opacity=".35"/>` : "") +
+          // Escala de altura a la derecha.
+          [0, 0.25, 0.5, 0.75, 1].map((f) => `<line x1="${tx + tw + 8}" y1="${ty + th - f * th}" x2="${tx + tw + 14}" y2="${ty + th - f * th}" stroke="${ink}"/>`).join("") +
+          `<text class="sym-big" x="${cx}" y="${ty + th / 2 + 5}">${Math.round(lv * 100)} %</text>` +
+          // Bomba (abajo a la derecha) con el caño de entrada por arriba.
+          `<path d="M${w - 18} ${ty + th - 10} V${ty - 16} H${cx + 10} V${ty + 4}" fill="none" stroke="#7d8590" stroke-width="4"/>` +
+          `<circle cx="${w - 18}" cy="${ty + th - 4}" r="9" fill="${o.bombeando ? "#37d67a" : "#59606a"}" stroke="${ink}"/>` +
+          (o.bombeando ? `<path d="M${cx + 10} ${ty + 6} V${Math.max(ty + 8, ly - 2)}" stroke="#3d8be0" stroke-width="3" stroke-dasharray="4 3"/>` : "") +
+          // Descarga por gravedad: caño al fondo con su válvula.
+          (drain
+            ? `<path d="M${left ? tx + 10 : cx} ${ty + th} V${ty + th + 14} H${tx - 6}" fill="none" stroke="#7d8590" stroke-width="4"/>` +
+              `<rect x="${tx + 2}" y="${ty + th + 8}" width="12" height="12" rx="2" fill="${o.descargando ? "#3d8be0" : "#59606a"}" stroke="${ink}"/>`
+            : "") +
+          (o.rebalse
+            ? `<text class="sym-bad" x="${w / 2}" y="${h - 8}">REBALSE</text>`
+            : o.vacio
+              ? `<text class="sym-bad" x="${w / 2}" y="${h - 8}">VACÍO</text>`
+              : `<text class="sym-tag" x="${w / 2}" y="${h - 8}">${Number.isFinite(vol) ? Math.round(vol) : Math.round(cap * lv)} / ${cap} L · ${forma}</text>`)
         );
       }
       case "door": {

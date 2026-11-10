@@ -21,6 +21,8 @@ export interface ParameterSpec {
   hint?: string;
   /** Grupo del inspector ("01 Básicos"): los parámetros seguidos con el mismo grupo se muestran juntos. */
   group?: string;
+  /** "enum" que cambia el dibujo (p. ej. la forma del tanque): la paleta lo ofrece como modelo, con miniaturas. */
+  design?: boolean;
 }
 
 /** Plantilla de taller: parámetros que la app aplica de una vez sobre los de fábrica. */

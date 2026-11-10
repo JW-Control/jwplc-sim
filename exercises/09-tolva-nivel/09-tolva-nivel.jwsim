@@ -1,0 +1,72 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Nivel de una tolva con descarga por gravedad",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/tolva_nivel/tolva_nivel.ino"
+  },
+  "exercise": {
+    "level": 3,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/tolva_nivel"
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      { "id": "plc", "type": "jwsim/jwplc-basic", "x": 240, "y": 0 },
+      { "id": "PS1", "type": "jwsim/power-24vdc", "params": { "model": "MDR-60" }, "x": 0, "y": 0 },
+      { "id": "L1", "type": "jwsim/power-230vac", "x": 0, "y": 440 },
+      { "id": "S1", "type": "jwsim/selector-2", "params": { "label": "Habilitar" }, "x": 760, "y": 0 },
+      { "id": "B1", "type": "jwsim/sensor-capacitive", "params": { "material": "agua", "source": "T1.nivel", "min": 0.3, "max": 1 }, "x": 960, "y": 0 },
+      { "id": "B2", "type": "jwsim/sensor-capacitive", "params": { "material": "agua", "source": "T1.nivel", "min": 0.8, "max": 1 }, "x": 960, "y": 300 },
+      { "id": "KM1", "type": "jwsim/contactor", "x": 1640, "y": 0 },
+      { "id": "Y1", "type": "jwsim/water-valve", "x": 1880, "y": 0 },
+      { "id": "H1", "type": "jwsim/lamp", "params": { "color": "rojo", "label": "Nivel bajo" }, "x": 2040, "y": 0 },
+      { "id": "M1", "type": "jwsim/motor", "x": 1640, "y": 420 },
+      {
+        "id": "T1",
+        "type": "jwsim/tank",
+        "params": { "forma": "cono (tolva)", "volumen": 10, "alto": 0.6, "bomba": "M1.running", "caudal": 20, "consumo": 0, "salidaMm": 6, "valvula": "Y1.open", "nivel0": 10, "pasoMs": 100 },
+        "x": 1880,
+        "y": 420
+      }
+    ],
+    "wiring": [
+      { "from": "PS1.+V1", "to": "plc.24VDC" },
+      { "from": "PS1.-V1", "to": "plc.M0" },
+      { "from": "PS1.-V1", "to": "plc.M1" },
+      { "from": "PS1.+V1", "to": "S1.13" },
+      { "from": "S1.14", "to": "plc.I0_2" },
+      { "from": "PS1.+V1", "to": "B1.BN" },
+      { "from": "B1.BU", "to": "PS1.-V1" },
+      { "from": "B1.BK", "to": "plc.I0_0" },
+      { "from": "PS1.+V1", "to": "B2.BN" },
+      { "from": "B2.BU", "to": "PS1.-V1" },
+      { "from": "B2.BK", "to": "plc.I0_1" },
+      { "from": "PS1.+V2", "to": "plc.Q0_0.1" },
+      { "from": "plc.Q0_0.2", "to": "KM1.A1" },
+      { "from": "KM1.A2", "to": "PS1.-V2" },
+      { "from": "PS1.+V2", "to": "plc.Q0_1.1" },
+      { "from": "plc.Q0_1.2", "to": "Y1.A1" },
+      { "from": "Y1.A2", "to": "PS1.-V2" },
+      { "from": "PS1.+V2", "to": "plc.Q0_2.1" },
+      { "from": "plc.Q0_2.2", "to": "H1.X1" },
+      { "from": "H1.X2", "to": "PS1.-V2" },
+      { "from": "L1.L", "to": "KM1.1" },
+      { "from": "KM1.2", "to": "M1.U1" },
+      { "from": "M1.U2", "to": "L1.N" }
+    ]
+  }
+}

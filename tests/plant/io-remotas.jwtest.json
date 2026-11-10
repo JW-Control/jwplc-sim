@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Catálogo, tanda 3: el firmware maneja el módulo de E/S remotas por Modbus RTU con JWPLC_ModbusRTU (FC05 al arrancar, luego FC02, FC15 y FC01 cada 500 ms). Con S1 en I, DI1 enciende DO1 (H1); DO8 (H8) queda encendida.",
+  "sketch": "../sketches/io_remotas_modbus",
+  "scene": "../scenes/io_remotas.scene.json",
+  "until_ms": 4000,
+  "actions": [{ "at_ms": 2000, "device": "S1", "action": "position", "value": 1 }],
+  "expect": {
+    "console": [
+      { "match": "DO8 encendida \\(FC05\\)", "count": 1 },
+      { "match": "DI=00 DO=80$", "min": 1 },
+      { "match": "DI=01 DO=81$", "min": 1 }
+    ],
+    "scene": {
+      "state": [
+        { "at_ms": 1500, "H1.lit": false, "H8.lit": true },
+        { "at_ms": 3900, "H1.lit": true, "H8.lit": true, "IO1.salidas": 129 }
+      ],
+      "faults": []
+    }
+  }
+}

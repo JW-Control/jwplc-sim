@@ -1055,7 +1055,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
@@ -1811,7 +1811,8 @@
   }
 
   // Parámetros que cambian el dibujo: los que eligen una plantilla propia
-  // (<tipo>__<valor>.svg, p. ej. el modelo de la fuente) y el color.
+  // (<tipo>__<valor>.svg, p. ej. el modelo de la fuente), el color y los
+  // marcados como modelo en la definición (design: true, p. ej. la forma del tanque).
   const slugOf = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
   function designParams(def) {
     return (def?.parameters ?? []).filter(
@@ -1819,7 +1820,7 @@
         p.type === "enum" &&
         !p.group &&
         p.options.length <= 8 &&
-        (p.id === "color" || p.options.some((o) => window.JwsimSymbols.templates.has(`${def.type}__${slugOf(o)}`))),
+        (p.design || p.id === "color" || p.options.some((o) => window.JwsimSymbols.templates.has(`${def.type}__${slugOf(o)}`))),
     );
   }
 
