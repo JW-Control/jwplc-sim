@@ -16,7 +16,8 @@
     "test:e2e:g4": "node tests/e2e-g4.mjs",
     "test:e2e:g7": "node tests/e2e-g7.mjs",
     "test:e2e:archivos": "node tests/e2e-archivos.mjs",
-    "test:e2e:paleta": "node tests/e2e-paleta.mjs"
+    "test:e2e:paleta": "node tests/e2e-paleta.mjs",
+    "test:e2e:cables": "node tests/e2e-cables.mjs"
   },
   "dependencies": {
     "@wasm-fmt/clang-format": "23.1.1",

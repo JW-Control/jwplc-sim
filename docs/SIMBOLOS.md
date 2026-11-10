@@ -67,6 +67,18 @@ Cada borne se marca con un círculo de clase `jw-term`:
   dibujar la ranura o la boca de la bornera: el simulador pone encima el
   casquillo del terminal.
 
+Si el tornillo que se ve no está donde entra el cable (p. ej. la bornera de
+control del VFD-EL, cuyos cables entran abajo a la izquierda), se marca
+además con `jw-term-alt`, con el mismo `data-term`:
+
+```xml
+<circle class="jw-term-alt" data-term="MI1" cx="436.8" cy="386" r="6"/>
+```
+
+Un clic (o soltar un cable arrastrado) en ese punto conecta el mismo borne;
+el cable sigue entrando por su `jw-term`. `cx` y `cy` son libres (no van en
+la grilla) y el simulador también oculta el círculo.
+
 ## 3. Partes que dependen del estado
 
 Las expresiones leen el estado del dispositivo:
@@ -201,7 +213,9 @@ Sw2 AVI/ACI (su palanca sigue a `param.sw2`), la bornera de control verde en dos
 RC y el puerto RS-485, subidos para dejar paso al cableado; abajo U/T1 V/T2
 W/T3, + y - y la barra de tierra. Los puntos de conexión de la bornera de
 control están fuera del cuerpo, abajo a la izquierda, uno a continuación del
-otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-). El cable interno de
+otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-); el
+cable se lleva (o se suelta) en el tornillo verde de la bornera, marcado con
+`jw-term-alt`, y el resto del recorrido se dibuja solo. El cable interno de
 cada borne (baja, corre a la izquierda por su carril y baja por el costado,
 sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
 escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+

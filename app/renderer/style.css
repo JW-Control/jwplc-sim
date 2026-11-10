@@ -2265,3 +2265,130 @@ body[data-tab="plant"] .view3d-empty {
   background: var(--err);
   box-shadow: 0 0 5px var(--err);
 }
+
+/* Cable multipolar: funda gris oscura con brillo, prensaestopas en cada
+   salida y el nombre en una etiqueta; el ancho crece con los hilos. */
+.cable {
+  cursor: pointer;
+}
+.cable path {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.cable .cable-hit {
+  stroke: transparent;
+  stroke-width: calc(var(--cable-w) + 12px);
+}
+.cable .cable-outline {
+  stroke: #0d0f12;
+  stroke-width: calc(var(--cable-w) + 3px);
+}
+.cable .cable-sheath {
+  stroke: #3a4048;
+  stroke-width: var(--cable-w);
+}
+.cable .cable-shine {
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 2px;
+  transform: translate(-1.5px, -1.5px);
+  pointer-events: none;
+}
+.cable .cable-glow {
+  stroke: #ff5a2e;
+  stroke-width: calc(var(--cable-w) + 10px);
+  opacity: 0.5;
+  filter: url(#wire-glow-blur);
+  animation: wire-glow 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.cable.selected .cable-outline {
+  stroke: var(--accent);
+  stroke-width: calc(var(--cable-w) + 6px);
+}
+.cable-gland {
+  fill: #23272d;
+  stroke: #0d0f12;
+  stroke-width: 1;
+}
+.cable-label rect {
+  fill: #1b1f24;
+  stroke: #5b6470;
+  stroke-width: 1;
+}
+.cable.selected .cable-label rect {
+  stroke: var(--accent);
+}
+.cable-label text {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  pointer-events: none;
+}
+/* Referencias: tramo corto con flecha y el destino, que lleva al otro lado. */
+.ref-arrow {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.cable-arrow {
+  stroke: #8b939d;
+  stroke-width: 3;
+}
+.ref-label {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  cursor: pointer;
+}
+.ref-label:hover {
+  fill: var(--accent);
+  text-decoration: underline;
+}
+/* Otro punto de clic del mismo borne (tornillo de la bornera del VFD-EL). */
+.term.alt circle {
+  stroke-width: 1.5;
+}
+/* Inspector: casillas de hilos y muestras de color. */
+.insp-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+  line-height: 1.35;
+}
+.insp-check input {
+  flex: none;
+}
+.cable-pick {
+  margin: 2px 0 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.sw {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border: 1px solid #0d0f12;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.cable-wires tr {
+  cursor: pointer;
+}
+.cable-wires tr:hover td {
+  color: var(--accent);
+}
+.cable-wires td {
+  font-family: var(--mono);
+  font-size: 11px;
+}

@@ -234,9 +234,70 @@ await win.dblclick(tile("jwsim/lamp"));
 const remembered = (await pal()).armed?.params?.model;
 await blur();
 await win.keyboard.press("Escape");
+// ---- WIRE_PAN: con un cable en curso, mover la vista (clic derecho, rueda o
+// clic izquierdo arrastrando en un lugar vacío) y el zoom lo conservan; un
+// clic sin arrastrar lo suelta; el clic derecho sobre un equipo no lo mueve.
+const termAt = (end) => sc((e) => window.jwsimTest.scene.termScreen(e), end);
+const rubber = () => win.$eval("#scene-rubber", (p) => p.getAttribute("d") ?? "");
+const panXY = () => sc(() => document.getElementById("scene-root").getAttribute("transform"));
+// Un punto vacío del lienzo (debajo solo está el fondo).
+const emptyPoint = () =>
+  sc(() => {
+    const r = document.getElementById("scene-svg").getBoundingClientRect();
+    for (let y = r.top + 60; y < r.bottom - 20; y += 30)
+      for (let x = r.left + 60; x < r.right - 20; x += 30) if (document.elementFromPoint(x, y)?.id === "scene-bg") return { x, y };
+    return null;
+  });
+const dragWith = async (button, dx, dy, from) => {
+  const p = from ?? (await emptyPoint());
+  await win.mouse.move(p.x, p.y);
+  await win.mouse.down({ button });
+  await win.mouse.move(p.x + dx / 2, p.y + dy / 2, { steps: 4 });
+  await win.mouse.move(p.x + dx, p.y + dy, { steps: 4 });
+  await win.mouse.up({ button });
+};
+if ((await pal()).armed) await key("Escape");
+const startTerm = await termAt(`${ps.id}.+V2`);
+await win.mouse.click(startTerm.x, startTerm.y);
+await win.mouse.move(startTerm.x + 40, startTerm.y + 30, { steps: 3 }); // la goma se dibuja al mover
+const wp = {};
+wp.started = (await rubber()).length > 0;
+const t0 = await panXY();
+await dragWith("right", 120, 60);
+wp.right_drag_keeps = (await rubber()).length > 0 && (await panXY()) !== t0;
+await dragWith("middle", -80, 40);
+wp.middle_drag_keeps = (await rubber()).length > 0;
+await dragWith("left", 60, -50);
+wp.left_drag_empty_keeps = (await rubber()).length > 0;
+const ep = await emptyPoint();
+await win.mouse.move(ep.x, ep.y);
+await win.mouse.wheel(0, -200);
+await win.waitForTimeout(100);
+wp.wheel_keeps = (await rubber()).length > 0;
+const endTerm = await termAt(`${lampId}.X2`);
+const nWires = await wires();
+await win.mouse.click(endTerm.x, endTerm.y);
+wp.connected_after_pan = (await wires()) === nWires + 1 && (await spec()).wiring.some((w) => [w.from, w.to].sort().join() === [`${ps.id}.+V2`, `${lampId}.X2`].sort().join());
+// Un clic derecho sin arrastrar suelta el cable en curso.
+const s2 = await termAt(`${ps.id}.-V2`);
+await win.mouse.click(s2.x, s2.y);
+const ep2 = await emptyPoint();
+await win.mouse.click(ep2.x, ep2.y, { button: "right" });
+wp.right_click_cancels = (await rubber()) === "" && (await wires()) === nWires + 1;
+// Clic derecho arrastrando sobre un equipo: mueve la vista, no el equipo.
+const lampBefore = (await spec()).devices.find((d) => d.id === lampId);
+const lb = await (await win.$(`#scene-root .dev[data-id='${lampId}']`)).boundingBox();
+await dragWith("right", 70, 0, { x: lb.x + lb.width / 2, y: lb.y + lb.height / 2 });
+const lampAfter = (await spec()).devices.find((d) => d.id === lampId);
+wp.right_drag_on_device_pans = lampAfter.x === lampBefore.x && lampAfter.y === lampBefore.y;
+criteria.WIRE_PAN = { pass: Object.values(wp).every(Boolean), ...wp };
+await win.screenshot({ path: join(OUT, "08-cable-y-vista.png") });
+
 // ---- SPLITTER: paneles «Equipos» y «Ficha del equipo» con su barra de
 // título; el divisor cambia el alto de la ficha, se recuerda y doble clic lo
 // restablece.
+if ((await pane()) !== "add") await win.click("#scene-tab-add");
+await win.waitForTimeout(200);
 const bars = await win.$$eval(".parts-pane .panel-bar", (b) => b.map((x) => x.textContent));
 const infoH = () => win.$eval(".parts-inspector", (e) => Math.round(e.getBoundingClientRect().height));
 const h0 = await infoH();

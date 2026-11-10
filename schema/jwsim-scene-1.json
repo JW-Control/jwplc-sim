@@ -32,7 +32,22 @@
           "from": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*\\..+$", "description": "Borne '<dispositivo>.<borne>' (PS1.L+, plc.Q0_0.1)." },
           "to": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*\\..+$" },
           "color": { "type": "string" },
-          "points": { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } }
+          "points": { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } },
+          "cable": { "type": "string", "description": "Id del cable multipolar (cables) en que va este hilo. Solo dibujo: el simulador usa from/to." },
+          "ref": { "type": "boolean", "description": "Se dibuja como referencia: un tramo corto en cada borne con su destino, sin el recorrido largo." }
+        }
+      }
+    },
+    "cables": {
+      "type": "array",
+      "description": "Cables multipolares: hilos entre dos equipos que se dibujan juntos en una funda (solo dibujo).",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "description": "W1, W2…" },
+          "label": { "type": "string", "description": "Nombre o sección (p. ej. 4×1 mm² mando)." },
+          "ref": { "type": "boolean", "description": "Se dibuja como referencia: sin el tronco, un rótulo en cada salida." }
         }
       }
     }

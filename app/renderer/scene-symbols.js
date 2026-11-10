@@ -135,7 +135,21 @@
       terms[id] = { x, y: side === "t" ? 0 : h, side, screw: y };
     }
     if (!Object.keys(terms).length) return bad("no marca ningún borne (.jw-term)");
-    templates.set(type, { w, h, terms, svg, animated: !!svg.querySelector("[data-spin]") });
+    // Otro punto de clic para un borne (.jw-term-alt): p. ej. el tornillo de
+    // la bornera de control del VFD-EL, cuyo cable entra por otro lado. Un
+    // clic ahí conecta el mismo borne; el cable sigue entrando por .jw-term.
+    const alts = {};
+    for (const t of svg.querySelectorAll(".jw-term-alt")) {
+      const id = t.getAttribute("data-term");
+      const x = Number(t.getAttribute("cx"));
+      const y = Number(t.getAttribute("cy"));
+      if (!terms[id] || !Number.isFinite(x) || !Number.isFinite(y)) {
+        bad(`.jw-term-alt de un borne que no existe: ${id}`);
+        continue;
+      }
+      (alts[id] ??= []).push([x, y]);
+    }
+    templates.set(type, { w, h, terms, alts, svg, animated: !!svg.querySelector("[data-spin]") });
   }
 
   // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
@@ -212,7 +226,7 @@
   function drawTemplate(tpl, st, p) {
     const ctx = { o: st.outputs ?? {}, p, st, wired: new Set(st.wired ?? []) };
     const root = tpl.svg.cloneNode(true);
-    for (const el of root.querySelectorAll(".jw-term")) el.setAttribute("opacity", "0");
+    for (const el of root.querySelectorAll(".jw-term, .jw-term-alt")) el.setAttribute("opacity", "0");
     for (const el of root.querySelectorAll("[data-show]")) {
       if (!valueOf(el.getAttribute("data-show"), ctx)) el.setAttribute("display", "none");
     }
@@ -307,7 +321,7 @@
   function layout(type, def, p) {
     const key = templateKey(type, def, p);
     const tpl = key && templates.get(key);
-    if (tpl) return { w: tpl.w, h: tpl.h, terms: tpl.terms, template: key };
+    if (tpl) return { w: tpl.w, h: tpl.h, terms: tpl.terms, alts: tpl.alts, template: key };
     const short = type.split("/")[1];
     let [w, h, top, bottom] = type.startsWith("jwsim/") && LAYOUT[short] ? LAYOUT[short] : [];
     if (!w) {

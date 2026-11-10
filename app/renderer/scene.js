@@ -56,6 +56,7 @@
     // (doble clic, con el modelo escogido) y el que se está arrastrando.
     pal: { hover: null, pinned: null, armed: null, dragType: null, shownRunning: false, choice: {} },
     keepPane: false,
+    groupExclude: new Set(), // hilos desmarcados al agrupar en un cable multipolar
   };
 
   // ------------------------------------------------------------ símbolos
@@ -83,7 +84,7 @@
         screws[id] = [v.x, v.screw ?? (v.side === "t" ? v.y + k : v.y - k)];
         sides[id] = v.side;
       }
-      layouts.set(key, { w: lay.w, h: lay.h, terms, screws, sides, lay });
+      layouts.set(key, { w: lay.w, h: lay.h, terms, screws, sides, alts: lay.alts ?? {}, lay });
     }
     return layouts.get(key);
   }
@@ -204,6 +205,165 @@
   const shade = (hex, f) =>
     "#" + [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * f))).toString(16).padStart(2, "0")).join("");
 
+  // ------------------------------------------------------------ cables multipolares y referencias
+  // Solo cambian el dibujo: cada hilo sigue conectando sus dos bornes (el
+  // simulador no los ve). Un cable multipolar (spec.cables, hilos con
+  // cable: "W1") junta los hilos entre dos equipos en un tronco grueso que se
+  // abre en abanico junto a cada equipo. Una referencia (ref: true, en un
+  // hilo o en un cable) no traza el recorrido largo: en cada extremo queda un
+  // tramo corto con el destino («→ VF1.MI1»); un clic ahí lleva al otro lado.
+  const cablesOf = () => (S.spec.cables ??= []);
+  const cableById = (id) => cablesOf().find((c) => c.id === id);
+  const devOf = (end) => end.slice(0, end.indexOf("."));
+  const pairOf = (w) => [devOf(w.from), devOf(w.to)].sort().join(" — ");
+  const cableMembers = (id) => S.spec.wiring.flatMap((w, i) => (w.cable === id ? [i] : []));
+  const inCable = (w) => !!w.cable && !!cableById(w.cable);
+  // Recorrido propio (A* y puntos de doblez) solo para los cables sueltos.
+  const plainWire = (w) => !inCable(w) && !w.ref;
+
+  // Cables con menos de dos hilos o hilos de un cable que ya no existe: se
+  // deshacen (p. ej. tras borrar un equipo o sacar hilos). Si el cable se
+  // veía como referencia, el hilo que queda sigue como referencia.
+  function normalizeCables() {
+    const cables = cablesOf();
+    for (const c of [...cables]) {
+      if (cableMembers(c.id).length >= 2) continue;
+      if (c.ref) for (const w of S.spec.wiring) if (w.cable === c.id) w.ref = true;
+      cables.splice(cables.indexOf(c), 1);
+    }
+    for (const w of S.spec.wiring) if (w.cable && !cableById(w.cable)) delete w.cable;
+  }
+
+  function nextCableId() {
+    for (let n = 1; ; n++) if (!cableById(`W${n}`)) return `W${n}`;
+  }
+
+  // Hilos que pueden ir en el mismo cable que el hilo i: entre los mismos dos
+  // equipos (no un puente dentro de un equipo) y sin cable todavía.
+  function groupCandidates(i) {
+    const w = S.spec.wiring[i];
+    if (!w || inCable(w) || devOf(w.from) === devOf(w.to)) return [];
+    const key = pairOf(w);
+    return S.spec.wiring.flatMap((x, j) => (!inCable(x) && devOf(x.from) !== devOf(x.to) && pairOf(x) === key ? [j] : []));
+  }
+
+  function groupWires(indices) {
+    const list = [...new Set(indices)].filter((j) => S.spec.wiring[j] && !inCable(S.spec.wiring[j]));
+    if (S.running || list.length < 2 || new Set(list.map((j) => pairOf(S.spec.wiring[j]))).size !== 1) return null;
+    pushHistory();
+    const id = nextCableId();
+    // Si todos eran referencias, el cable también: el dibujo no cambia de golpe.
+    const allRef = list.every((j) => S.spec.wiring[j].ref);
+    cablesOf().push({ id, ...(allRef ? { ref: true } : {}) });
+    // Cada hilo conserva su referencia y sus puntos de doblez: dentro del
+    // cable no se usan y vuelven al desagrupar o al sacarlo del cable.
+    for (const j of list) S.spec.wiring[j].cable = id;
+    S.sel = { kind: "cable", id };
+    changed();
+    return id;
+  }
+
+  function ungroupCable(id) {
+    if (S.running || !cableById(id)) return;
+    pushHistory();
+    // Un cable que se veía como referencia deja sus hilos como referencias.
+    const ref = !!cableById(id).ref;
+    for (const w of S.spec.wiring) {
+      if (w.cable !== id) continue;
+      delete w.cable;
+      if (ref) w.ref = true;
+    }
+    S.spec.cables = cablesOf().filter((c) => c.id !== id);
+    S.sel = null;
+    changed();
+  }
+
+  function leaveCable(i) {
+    const w = S.spec.wiring[i];
+    if (S.running || !w?.cable) return;
+    pushHistory();
+    if (cableById(w.cable)?.ref) w.ref = true;
+    delete w.cable;
+    normalizeCables();
+    changed();
+  }
+
+  function setRef(target, on) {
+    if (S.running || !target) return;
+    pushHistory();
+    // Los puntos de doblez se conservan: al quitar la referencia vuelven.
+    if (on) target.ref = true;
+    else delete target.ref;
+    changed();
+  }
+
+  // Salida de un cable junto a un equipo: centrada bajo (o sobre) sus
+  // bornes, a dos pasos de grilla de la entrada más alejada.
+  function breakout(ps) {
+    const up = ps.filter((p) => p.up).length * 2 >= ps.length;
+    const x = snap(ps.reduce((s, p) => s + p.x, 0) / ps.length);
+    const y = up ? Math.floor((Math.min(...ps.map((p) => p.y)) - 30) / GRID) * GRID : Math.ceil((Math.max(...ps.map((p) => p.y)) + 30) / GRID) * GRID;
+    return { x, y, up };
+  }
+
+  // Geometría de un cable: extremos de cada hilo (lado A y lado B), sus
+  // salidas y el tronco (A* sobre la grilla, como un cable más).
+  function cableGeometry(c, ctx) {
+    const idx = cableMembers(c.id);
+    if (idx.length < 2) return null;
+    const ws = idx.map((i) => S.spec.wiring[i]);
+    const devA = devOf(ws[0].from);
+    const ends = ws.map((w) => (devOf(w.from) === devA ? [w.from, w.to] : [w.to, w.from]));
+    const A = ends.map(([a]) => termPos(a));
+    const B = ends.map(([, b]) => termPos(b));
+    if (A.some((p) => !p) || B.some((p) => !p)) return null;
+    const ba = breakout(A);
+    const bb = breakout(B);
+    let mid = null;
+    if (c.ref) mid = null;
+    else if (ctx) {
+      const g = (p) => ({ x: Math.round(p.x / GRID), y: Math.round(p.y / GRID) });
+      mid = astar(g(ba), g(bb), ba.up ? 3 : 2, bb.up ? 2 : 3, ctx.boxes, ctx.occ, new Set(ends.flat()), ctx.bounds, ctx.limit);
+    }
+    if (!mid && !c.ref) {
+      const ym = ba.up && bb.up ? Math.min(ba.y, bb.y) : !ba.up && !bb.up ? Math.max(ba.y, bb.y) : snap((ba.y + bb.y) / 2);
+      mid = [ba, { x: ba.x, y: ym }, { x: bb.x, y: ym }, bb];
+    }
+    let trunk = null;
+    if (mid) {
+      trunk = [];
+      for (const p of mid) {
+        if (trunk.length && trunk.at(-1).x === p.x && trunk.at(-1).y === p.y) continue;
+        if (trunk.length >= 2) {
+          const [q, r] = trunk.slice(-2);
+          if ((q.x === r.x && r.x === p.x) || (q.y === r.y && r.y === p.y)) trunk.pop();
+        }
+        trunk.push(p);
+      }
+      if (ctx) occupy(ctx, { from: `cable:${c.id}`, to: `cable:${c.id}` }, trunk);
+    }
+    return { id: c.id, idx, ends, A, B, ba, bb, trunk, devA, devB: devOf(ends[0][1]) };
+  }
+
+  // Abanico de un hilo: sale de su borne un tramo corto y va en diagonal
+  // hasta la salida del cable, en su carril dentro de la funda. Un borne del
+  // otro borde del equipo (p. ej. entradas arriba y salidas abajo en el mismo
+  // cable) rodea el equipo por el costado más cercano a la salida.
+  function fanPath(p, out, lane, dOff) {
+    const x = p.x + dOff;
+    const sy = p.up ? p.y - 10 : p.y + 10;
+    if (p.up === out.up) return [{ x, y: p.y }, { x, y: sy }, { x: out.x + lane, y: out.y }];
+    const side = out.x - p.box.x1 < p.box.x2 - out.x ? p.box.x1 - GRID : p.box.x2 + GRID;
+    return [{ x, y: p.y }, { x, y: sy }, { x: side, y: sy }, { x: side, y: out.y }, { x: out.x + lane, y: out.y }];
+  }
+
+  // Centra la vista en un punto de la escena (referencias: «ir al otro lado»).
+  function focusOn(x, y) {
+    const r = $("scene-svg").getBoundingClientRect();
+    S.pan = { x: r.width / 2 - x * S.zoom, y: r.height / 2 - y * S.zoom };
+    render();
+  }
+
   // ------------------------------------------------------------ ruteo
   // A* sobre la grilla (pasos de GRID): los cables esquivan las cajas de los
   // dispositivos, prefieren pocas curvas y no comparten tramos con otros
@@ -302,6 +462,7 @@
   const stubOf = (a) => ({ x: a.x, y: a.up ? Math.floor((a.y - 10) / GRID) * GRID : Math.ceil((a.y + 10) / GRID) * GRID });
 
   function route(w, ctx) {
+    if (!plainWire(w)) return null; // en un cable multipolar o como referencia
     const a = termPos(w.from);
     const b = termPos(w.to);
     if (!a || !b) return null;
@@ -419,7 +580,11 @@
     // doblez se vuelven a trazar solo los cables afectados, con A* y los
     // demás como ocupados: el cable esquiva los equipos también mientras se
     // mueve.
-    const layout = JSON.stringify([S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]), S.spec.wiring.map((w) => [w.from, w.to, w.points])]);
+    const layout = JSON.stringify([
+      S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]),
+      S.spec.wiring.map((w) => [w.from, w.to, w.points, w.cable, w.ref]),
+      cablesOf().map((c) => [c.id, c.ref]),
+    ]);
     if (S.routeKey !== layout) {
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
@@ -428,8 +593,10 @@
       if (moving) {
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
         ctx.limit = 40000;
+        S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w, i) => (affected(w, i) ? route(w, ctx) : S.routes[i]));
       } else {
+        S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w) => route(w, ctx));
       }
       S.routeKey = layout;
@@ -477,6 +644,104 @@
         `<path class="wire-shine" d="${d}"/>` +
         `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`;
     });
+    // Hilo (de un cable suelto o de un abanico): sus cuatro trazos.
+    const wireBody = (d, c, live) =>
+      `<path class="wire-hit" d="${d}"/>` +
+      (live ? `<path class="wire-glow" d="${d}"/>` : "") +
+      `<path class="wire-outline" d="${d}" stroke="${shade(c, 0.45)}"/>` +
+      `<path class="wire-core" d="${d}" stroke="${c}"/>` +
+      `<path class="wire-shine" d="${d}"/>`;
+    // Rótulo de una referencia: sigue la dirección del tramo (vertical) y
+    // lleva al otro extremo con un clic.
+    const refLabel = (x, y, up, text, jump, sel) =>
+      `<text class="ref-label" data-jump="${jump.x},${jump.y}" data-jump-sel="${esc(sel)}" transform="translate(${x} ${up ? y - 5 : y + 5}) rotate(-90)" text-anchor="${up ? "start" : "end"}" dominant-baseline="middle">${esc(text)}</text>`;
+    const REF_LEN = 34;
+    // Referencias: un tramo corto con flecha en cada extremo y el destino.
+    S.spec.wiring.forEach((w, i) => {
+      if (inCable(w) || !w.ref) return;
+      const sel = S.sel?.kind === "wire" && S.sel.id === i;
+      const c = WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
+      const cut = wireCut(w);
+      const live = wireLive(w) && !cut;
+      html += `<g class="wire ref${sel ? " selected" : ""}${live ? " live" : ""}${cut ? " cut" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">`;
+      for (const [end, other] of [[w.from, w.to], [w.to, w.from]]) {
+        const p = termPos(end);
+        const q = termPos(other);
+        if (!p || !q) continue;
+        const x = p.x + offset(end, i);
+        const y2 = p.up ? p.y - REF_LEN : p.y + REF_LEN;
+        const k = p.up ? 5 : -5;
+        html += wireBody(`M${x} ${p.y} L${x} ${y2}`, c, live);
+        html += `<path class="ref-arrow" d="M${x - 4} ${y2 + k} L${x} ${y2} L${x + 4} ${y2 + k}" stroke="${c}"/>`;
+        html += refLabel(x, y2, p.up, `→ ${other}`, { x: q.x, y: q.y }, `wire:${i}`);
+      }
+      html += `<title>${esc(w.from)} — ${esc(w.to)} (referencia)</title></g>`;
+    });
+    // Cables multipolares: los abanicos (cada hilo con su color, se puede
+    // elegir solo) y encima el tronco con su funda, sus prensaestopas y el
+    // nombre; o, si el cable es una referencia, un tramo corto en cada salida.
+    for (const geo of S.cableGeo ?? []) {
+      const cable = cableById(geo.id);
+      if (!cable) continue;
+      const n = geo.idx.length;
+      const selC = S.sel?.kind === "cable" && S.sel.id === geo.id;
+      const lane = (k) => (k - (n - 1) / 2) * 3;
+      const width = Math.min(18, 8 + 1.5 * n);
+      let liveAny = false;
+      geo.idx.forEach((i, k) => {
+        const w = S.spec.wiring[i];
+        const [ea, eb] = geo.ends[k];
+        const c = WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
+        const cut = wireCut(w);
+        const live = wireLive(w) && !cut;
+        liveAny ||= live;
+        const sel = selC || (S.sel?.kind === "wire" && S.sel.id === i);
+        const d = roundedPath(fanPath(geo.A[k], geo.ba, lane(k), offset(ea, i)), 6) + " " + roundedPath(fanPath(geo.B[k], geo.bb, lane(k), offset(eb, i)), 6);
+        html +=
+          `<g class="wire fan${sel ? " selected" : ""}${live ? " live" : ""}${cut ? " cut" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+          wireBody(d, c, live) +
+          `<title>${esc(w.from)} — ${esc(w.to)} (cable ${esc(geo.id)})</title></g>`;
+      });
+      const name = `${geo.id}${cable.label ? ` · ${cable.label}` : ""} · ${n} hilos`;
+      const gland = (b) => `<rect class="cable-gland" x="${b.x - width / 2 - 3}" y="${b.y - 5}" width="${width + 6}" height="10" rx="2"/>`;
+      html += `<g class="cable${selC ? " selected" : ""}${liveAny ? " live" : ""}${cable.ref ? " ref" : ""}" data-cable="${esc(geo.id)}" style="--cable-w:${width}px">`;
+      if (geo.trunk) {
+        const d = roundedPath(geo.trunk, 14);
+        // El nombre va en el tramo más largo del tronco.
+        let best = [geo.trunk[0], geo.trunk[1] ?? geo.trunk[0]];
+        for (let j = 1; j < geo.trunk.length; j++) {
+          const [a, b] = [geo.trunk[j - 1], geo.trunk[j]];
+          if (Math.hypot(b.x - a.x, b.y - a.y) > Math.hypot(best[1].x - best[0].x, best[1].y - best[0].y)) best = [a, b];
+        }
+        const mx = (best[0].x + best[1].x) / 2;
+        const my = (best[0].y + best[1].y) / 2;
+        const lw = name.length * 6.1 + 12;
+        html +=
+          `<path class="cable-hit" d="${d}"/>` +
+          (liveAny ? `<path class="cable-glow" d="${d}"/>` : "") +
+          `<path class="cable-outline" d="${d}"/>` +
+          `<path class="cable-sheath" d="${d}"/>` +
+          `<path class="cable-shine" d="${d}"/>` +
+          gland(geo.ba) +
+          gland(geo.bb) +
+          `<g class="cable-label" transform="translate(${mx} ${my})"><rect x="${-lw / 2}" y="-9" width="${lw}" height="18" rx="9"/><text text-anchor="middle" dominant-baseline="central">${esc(name)}</text></g>`;
+      } else {
+        for (const [b, q, other] of [[geo.ba, geo.bb, geo.devB], [geo.bb, geo.ba, geo.devA]]) {
+          const y2 = b.up ? b.y - REF_LEN : b.y + REF_LEN;
+          const d = `M${b.x} ${b.y} L${b.x} ${y2}`;
+          const k = b.up ? 6 : -6;
+          html +=
+            `<path class="cable-hit" d="${d}"/>` +
+            (liveAny ? `<path class="cable-glow" d="${d}"/>` : "") +
+            `<path class="cable-outline" d="${d}"/>` +
+            `<path class="cable-sheath" d="${d}"/>` +
+            gland(b) +
+            `<path class="ref-arrow cable-arrow" d="M${b.x - 7} ${y2 + k} L${b.x} ${y2} L${b.x + 7} ${y2 + k}"/>` +
+            refLabel(b.x, y2, b.up, `${geo.id} → ${other}`, q, `cable:${geo.id}`);
+        }
+      }
+      html += `<title>Cable ${esc(geo.id)}: ${n} hilos (${esc(geo.devA)} — ${esc(geo.devB)})${cable.ref ? ", como referencia" : ""}</title></g>`;
+    }
     // Casquillos: la parte plástica del terminal asoma de la entrada de la
     // bornera (uno por borne; más ancho si es un puente).
     for (const [t, list] of byTerm) {
@@ -587,6 +852,10 @@
       const what = sym.board ? S.boardTitles[id] : "";
       th += `<title>${esc(`${dev.id}.${id}${what ? ` · ${what}` : ""}`)}</title></g>`;
     }
+    // Otros puntos de clic del mismo borne (.jw-term-alt de la plantilla).
+    for (const [id, pts] of Object.entries(sym.alts ?? {})) {
+      for (const [x, y] of pts) th += `<g class="term alt" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="7"/><title>${esc(`${dev.id}.${id}`)}</title></g>`;
+    }
     t.innerHTML = th;
   }
 
@@ -611,6 +880,7 @@
     const sel = S.sel;
     const selKey = sel ? `${sel.kind}:${sel.id}` : "";
     if (selKey && selKey !== S.lastSelKey && !S.keepPane) window.JwsimScenePane?.showProps();
+    if (selKey !== S.lastSelKey) S.groupExclude = new Set();
     S.lastSelKey = selKey;
     S.keepPane = false;
     let html = "";
@@ -693,13 +963,57 @@
         for (const [name, hex] of Object.entries(WIRE_COLORS)) {
           html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
         }
-        html += `</div><p class="insp-desc">Actual: ${esc(cur)}. Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita.</p>`;
-        if (w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
+        html += `</div><p class="insp-desc">Actual: ${esc(cur)}.${plainWire(w) ? " Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita." : ""}</p>`;
+        if (plainWire(w) && w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
         html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable; Ctrl+Z deshace.</p>`;
+        // Cable multipolar y referencia: solo cambian el dibujo.
+        const dis = S.running ? "disabled" : "";
+        const swatch = (x) => `<span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>`;
+        if (inCable(w)) {
+          html +=
+            `<div class="insp-sub">Cable multipolar</div><p class="insp-desc">Va dentro del cable <b>${esc(w.cable)}</b> (${cableMembers(w.cable).length} hilos).</p>` +
+            `<button class="small" data-cable-act="show" data-cable="${esc(w.cable)}">Ver el cable ${esc(w.cable)}</button> <button class="small" data-cable-act="leave" ${dis}>Sacar del cable</button>`;
+        } else {
+          const cand = groupCandidates(sel.id);
+          html += `<div class="insp-sub">Cable multipolar</div>`;
+          if (cand.length >= 2) {
+            html += `<p class="insp-desc">Junte en un solo cable grueso los hilos entre ${esc(pairOf(w))}:</p><div class="cable-pick">`;
+            for (const j of cand) {
+              const x = S.spec.wiring[j];
+              const on = j === sel.id || !S.groupExclude?.has(j);
+              html += `<label class="insp-check"><input type="checkbox" data-group-wire="${j}" ${on ? "checked" : ""} ${j === sel.id || S.running ? "disabled" : ""}/>${swatch(x)}${esc(x.from)} — ${esc(x.to)}</label>`;
+            }
+            html += `</div><button class="small" id="scene-cable-group" ${dis}>Agrupar en cable (Ctrl+G)</button>`;
+          } else {
+            html += `<p class="insp-desc muted">Con dos o más cables entre los mismos dos equipos, aquí se juntan en un cable multipolar.</p>`;
+          }
+          html +=
+            `<div class="insp-sub">Referencia</div><label class="insp-check"><input type="checkbox" id="scene-wire-ref" ${w.ref ? "checked" : ""} ${dis}/>` +
+            `Mostrar como referencia: sin el recorrido largo, con «→ destino» en cada borne (clic: va al otro lado)</label>`;
+        }
         if (S.running) {
           const cut = wireCut(w);
           html += `<div class="insp-sub">Fallas</div><div class="fault-btns"><button class="small fault${cut ? " on" : ""}" data-fault="${esc(JSON.stringify({ kind: "open", wire: `${w.from} ${w.to}` }))}" data-on="${cut ? 1 : 0}">${cut ? "Reparar cable" : "Cortar cable"}</button></div>`;
         }
+      }
+    } else if (sel?.kind === "cable") {
+      const c = cableById(sel.id);
+      const idx = c ? cableMembers(c.id) : [];
+      if (c && idx.length) {
+        const dis = S.running ? "disabled" : "";
+        html += `<div class="insp-title">Cable ${esc(c.id)} <span class="muted">${idx.length} hilos · ${esc(pairOf(S.spec.wiring[idx[0]]))}</span></div>`;
+        html += `<p class="insp-desc">Cable multipolar: los hilos van juntos en una funda y se abren junto a cada equipo. Solo cambia el dibujo; cada hilo sigue uniendo sus dos bornes.</p>`;
+        html += `<label class="insp-row wide"><span>Nombre</span><input type="text" data-cable-field="label" value="${esc(c.label ?? "")}" placeholder="p. ej. 4×1 mm² mando" ${dis}/></label>`;
+        html +=
+          `<label class="insp-check"><input type="checkbox" id="scene-cable-ref" ${c.ref ? "checked" : ""} ${dis}/>` +
+          `Mostrar como referencia: sin el tronco, con «${esc(c.id)} → destino» en cada salida</label>`;
+        html += `<div class="insp-sub">Hilos</div><table class="insp-vals cable-wires">`;
+        for (const i of idx) {
+          const x = S.spec.wiring[i];
+          html += `<tr data-select-wire="${i}" title="Elegir este hilo"><td><span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>${esc(x.from)}</td><td>${esc(x.to)}</td></tr>`;
+        }
+        html += `</table><button class="small" data-cable-act="ungroup" ${dis}>Desagrupar (Ctrl+Mayús+G)</button>`;
+        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable con todos sus hilos; Ctrl+Z deshace.</p>`;
       }
     } else {
       // Nada seleccionado: información general de la escena.
@@ -883,7 +1197,11 @@
     if (S.running || !S.sel) return;
     pushHistory();
     if (S.sel.kind === "wire") S.spec.wiring.splice(S.sel.id, 1);
-    else {
+    else if (S.sel.kind === "cable") {
+      const id = S.sel.id;
+      S.spec.wiring = S.spec.wiring.filter((w) => w.cable !== id);
+      S.spec.cables = cablesOf().filter((c) => c.id !== id);
+    } else {
       const id = S.sel.id;
       if (devById(id)?.type === "jwsim/jwplc-basic") return;
       S.spec.devices = S.spec.devices.filter((d) => d.id !== id);
@@ -955,6 +1273,7 @@
   }
 
   function changed() {
+    normalizeCables();
     S.dirty = true;
     clearTimeout(S.analyzeTimer);
     S.analyzeTimer = setTimeout(analyze, 120);
@@ -974,7 +1293,16 @@
   function cleanSpec() {
     return {
       devices: S.spec.devices.map(({ id, type, version, params, x, y }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0 })),
-      wiring: S.spec.wiring.map(({ from, to, color, points }) => ({ from, to, ...(color ? { color } : {}), ...(points?.length ? { points } : {}) })),
+      wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
+        from,
+        to,
+        ...(color ? { color } : {}),
+        ...(points?.length ? { points } : {}),
+        ...(cable && cableById(cable) ? { cable } : {}),
+        ...(ref ? { ref: true } : {}),
+      })),
+      // Cables multipolares (solo dibujo: el simulador usa from/to de cada hilo).
+      ...(cablesOf().length ? { cables: cablesOf().map(({ id, label, ref }) => ({ id, ...(label ? { label } : {}), ...(ref ? { ref: true } : {}) })) } : {}),
     };
   }
 
@@ -999,8 +1327,24 @@
     }
   }
 
+  // Cable que se está tendiendo (de un borne al puntero).
+  function cancelWiring() {
+    if (!S.wiring) return;
+    S.wiring = null;
+    $("scene-rubber").setAttribute("d", "");
+  }
+  function updateRubber(e) {
+    if (!S.wiring) return;
+    const a = termPos(S.wiring.from);
+    const w = toWorld(e);
+    if (a) $("scene-rubber").setAttribute("d", `M${a.x} ${a.y} L${w.x} ${w.y}`);
+  }
+
   function wirePointer() {
     const svg = $("scene-svg");
+    // Rueda presionada (o clic derecho): sin desplazamiento automático ni menú.
+    svg.addEventListener("mousedown", (e) => e.button === 1 && e.preventDefault());
+    svg.addEventListener("contextmenu", (e) => e.preventDefault());
     svg.addEventListener("pointerdown", (e) => {
       const term = e.target.closest(".term");
       const actEl = e.target.closest(".act");
@@ -1009,13 +1353,34 @@
       const wireEl = e.target.closest(".wire");
       const handle = e.target.closest(".wire-handle");
       const delV = e.target.closest(".wire-del");
+      const cableEl = e.target.closest(".cable");
       const w = toWorld(e);
+      // Rueda presionada o clic derecho: siempre mueven la vista, también
+      // sobre un equipo o un borne; no cortan el cable que se está tendiendo
+      // ni cambian la selección. Un clic sin arrastrar sí corta el cable.
+      if (e.button === 1 || e.button === 2) {
+        e.preventDefault();
+        S.drag = { kind: "pan", x: e.clientX - S.pan.x, y: e.clientY - S.pan.y, sx: e.clientX, sy: e.clientY, panned: false };
+        svg.setPointerCapture(e.pointerId);
+        return;
+      }
       // Equipo elegido en la paleta (doble clic): el clic lo pone ahí. Con
       // Mayús sigue elegido para poner otro igual.
       if (S.pal.armed && e.button === 0) {
         e.preventDefault();
         const { type, params } = S.pal.armed;
         if (placePart(type, params, e) && !e.shiftKey) disarmPart();
+        return;
+      }
+      // Rótulo de una referencia: la vista va al otro extremo y lo elige.
+      const jump = e.target.closest("[data-jump]");
+      if (jump) {
+        e.preventDefault();
+        cancelWiring();
+        const [x, y] = jump.dataset.jump.split(",").map(Number);
+        const [kind, id] = jump.dataset.jumpSel.split(":");
+        S.sel = kind === "wire" ? { kind, id: Number(id) } : { kind, id };
+        focusOn(x, y);
         return;
       }
       // Puntos de doblez del cable seleccionado: quitar o arrastrar.
@@ -1041,17 +1406,16 @@
         if (S.running) return;
         if (S.wiring) {
           addWire(S.wiring.from, term.dataset.term);
-          S.wiring = null;
-          $("scene-rubber").setAttribute("d", "");
+          cancelWiring();
         } else {
-          S.wiring = { from: term.dataset.term };
+          // Clic en un borne y clic en otro, o arrastrar de uno a otro.
+          S.wiring = { from: term.dataset.term, pressed: true };
         }
         return;
       }
-      if (S.wiring) {
-        S.wiring = null;
-        $("scene-rubber").setAttribute("d", "");
-      }
+      // Clic en un equipo o un cable: corta el cable en curso. En un lugar
+      // vacío se decide al soltar (arrastrar mueve la vista y lo conserva).
+      if (actEl || devEl || wireEl || cableEl) cancelWiring();
       // Pieza arrastrable (data-kind="drag" con data-drag, lineal o por tramos):
       // en marcha mueve la acción; detenida, fija el parámetro del mismo nombre.
       if (actEl?.dataset.kind === "drag" && devEl && actEl.dataset.drag) {
@@ -1096,11 +1460,17 @@
         render();
         return;
       }
+      if (cableEl) {
+        S.sel = { kind: "cable", id: cableEl.dataset.cable };
+        render();
+        return;
+      }
       if (wireEl) {
         const i = Number(wireEl.dataset.wire);
         // Clic sobre el cable ya seleccionado: agrega un punto de doblez ahí
-        // (en la grilla) y empieza a arrastrarlo.
-        if (S.sel?.kind === "wire" && S.sel.id === i && !S.running) {
+        // (en la grilla) y empieza a arrastrarlo. Los hilos de un cable
+        // multipolar y las referencias no tienen recorrido propio.
+        if (S.sel?.kind === "wire" && S.sel.id === i && !S.running && S.routes?.[i]) {
           const snapshot = currentSnapshot();
           const k = insertVertex(i, { x: snap(w.x), y: snap(w.y) });
           S.drag = { kind: "vertex", i, k, moved: false, snapshot };
@@ -1112,18 +1482,17 @@
         render();
         return;
       }
-      S.sel = null;
-      S.drag = { kind: "pan", x: e.clientX - S.pan.x, y: e.clientY - S.pan.y };
+      // Lugar vacío: mover la vista. Con un cable en curso, la selección se
+      // conserva (solo se suelta el cable si el clic no arrastra).
+      if (!S.wiring) S.sel = null;
+      S.drag = { kind: "pan", x: e.clientX - S.pan.x, y: e.clientY - S.pan.y, sx: e.clientX, sy: e.clientY, panned: false };
       svg.setPointerCapture(e.pointerId);
       render();
     });
     svg.addEventListener("pointermove", (e) => {
       const w = toWorld(e);
       if (S.pal.armed && !S.drag) showGhost(e);
-      if (S.wiring) {
-        const a = termPos(S.wiring.from);
-        if (a) $("scene-rubber").setAttribute("d", `M${a.x} ${a.y} L${w.x} ${w.y}`);
-      }
+      if (S.drag?.kind !== "pan") updateRubber(e);
       if (!S.drag) return;
       if (S.drag.kind === "act") {
         const d = S.drag;
@@ -1143,8 +1512,11 @@
         return;
       }
       if (S.drag.kind === "pan") {
+        if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
         $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        // La punta del cable en curso sigue al puntero con la vista nueva.
+        updateRubber(e);
       } else if (S.drag.kind === "vertex") {
         const wire = S.spec.wiring[S.drag.i];
         const p = [snap(w.x), snap(w.y)];
@@ -1172,7 +1544,26 @@
         }
       }
     });
-    svg.addEventListener("pointerup", () => {
+    svg.addEventListener("pointerup", (e) => {
+      // Cable arrastrado desde un borne: al soltar sobre otro, se conecta; al
+      // soltar sobre el mismo, sigue como clic (el siguiente clic lo termina).
+      if (S.wiring?.pressed && e.button === 0) {
+        S.wiring.pressed = false;
+        const over = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".term");
+        if (over && over.dataset.term !== S.wiring.from) {
+          addWire(S.wiring.from, over.dataset.term);
+          cancelWiring();
+        }
+        return;
+      }
+      // Mover la vista: un clic sin arrastrar (cualquier botón) suelta el cable
+      // en curso; si hubo arrastre, el cable sigue.
+      if (S.drag?.kind === "pan") {
+        const clicked = !S.drag.panned;
+        S.drag = null;
+        if (clicked) cancelWiring();
+        return;
+      }
       if (S.drag?.kind === "act") {
         const changedParam = S.drag.changed;
         S.drag = null;
@@ -1206,6 +1597,7 @@
         S.pan = { x: mx - ((mx - S.pan.x) * z) / S.zoom, y: my - ((my - S.pan.y) * z) / S.zoom };
         S.zoom = z;
         $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        updateRubber(e);
       },
       { passive: false },
     );
@@ -1221,6 +1613,14 @@
       } else if (ctrl && (e.key === "c" || e.key === "C")) {
         e.preventDefault();
         copy();
+      } else if (ctrl && (e.key === "g" || e.key === "G")) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          const id = S.sel?.kind === "cable" ? S.sel.id : S.sel?.kind === "wire" ? S.spec.wiring[S.sel.id]?.cable : null;
+          if (id) ungroupCable(id);
+        } else if (S.sel?.kind === "wire") {
+          groupWires(groupCandidates(S.sel.id).filter((j) => j === S.sel.id || !S.groupExclude?.has(j)));
+        }
       } else if (ctrl && (e.key === "x" || e.key === "X")) {
         e.preventDefault();
         cut();
@@ -1260,6 +1660,45 @@
       if (S.clipboard) {
         paste();
         e.preventDefault();
+      }
+    });
+    // Cables multipolares y referencias.
+    $("scene-inspector").addEventListener("change", (e) => {
+      const el = e.target;
+      if (el.dataset.groupWire !== undefined) {
+        const j = Number(el.dataset.groupWire);
+        if (el.checked) S.groupExclude.delete(j);
+        else S.groupExclude.add(j);
+      } else if (el.id === "scene-wire-ref" && S.sel?.kind === "wire") setRef(S.spec.wiring[S.sel.id], el.checked);
+      else if (el.id === "scene-cable-ref" && S.sel?.kind === "cable") setRef(cableById(S.sel.id), el.checked);
+      else if (el.dataset.cableField === "label" && S.sel?.kind === "cable") {
+        const c = cableById(S.sel.id);
+        if (!c || S.running) return;
+        pushHistory();
+        const v = el.value.trim();
+        if (v) c.label = v;
+        else delete c.label;
+        changed();
+      }
+    });
+    $("scene-inspector").addEventListener("click", (e) => {
+      if (e.target.closest("#scene-cable-group") && S.sel?.kind === "wire") {
+        groupWires(groupCandidates(S.sel.id).filter((j) => j === S.sel.id || !S.groupExclude?.has(j)));
+        return;
+      }
+      const act = e.target.closest("[data-cable-act]");
+      if (act) {
+        const a = act.dataset.cableAct;
+        if (a === "show") S.sel = { kind: "cable", id: act.dataset.cable };
+        else if (a === "leave" && S.sel?.kind === "wire") return leaveCable(S.sel.id);
+        else if (a === "ungroup" && S.sel?.kind === "cable") return ungroupCable(S.sel.id);
+        render();
+        return;
+      }
+      const row = e.target.closest("[data-select-wire]");
+      if (row) {
+        S.sel = { kind: "wire", id: Number(row.dataset.selectWire) };
+        render();
       }
     });
     $("scene-inspector").addEventListener("change", (e) => {
@@ -1333,13 +1772,15 @@
     const box = $("scene-svg").getBoundingClientRect();
     if (!S.spec.devices.length || !box.width) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    // Margen para los cables que pasan por encima y por debajo de los equipos
+    // y, si hay referencias, para sus rótulos («→ destino»).
+    const refs = S.spec.wiring.some((w) => w.ref) || cablesOf().some((c) => c.ref) ? 60 : 0;
     for (const d of S.spec.devices) {
       const s = symbolFor(d);
       x0 = Math.min(x0, d.x ?? 0);
-      // Margen para los cables que pasan por encima y por debajo de los equipos.
-      y0 = Math.min(y0, (d.y ?? 0) - 70);
+      y0 = Math.min(y0, (d.y ?? 0) - 70 - refs);
       x1 = Math.max(x1, (d.x ?? 0) + s.w);
-      y1 = Math.max(y1, (d.y ?? 0) + s.h + 60);
+      y1 = Math.max(y1, (d.y ?? 0) + s.h + 60 + refs);
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
     // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).
@@ -1696,7 +2137,8 @@
   const Scene = {
     // Escena del proyecto (campo "scene" del .jwsim).
     load(sc) {
-      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []) };
+      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
+      normalizeCables();
       S.undoStack = [];
       S.redoStack = [];
       updateUndoRedoButtons();
@@ -1788,8 +2230,10 @@
       fps3d: () => window.Jwsim3D?.fps() ?? 0,
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
+      cables: () => structuredClone(cablesOf()),
+      group: (indices) => groupWires(indices),
       select: (id) => {
-        S.sel = typeof id === "number" ? { kind: "wire", id } : { kind: "device", id };
+        S.sel = typeof id === "number" ? { kind: "wire", id } : String(id).startsWith("cable:") ? { kind: "cable", id: id.slice(6) } : { kind: "device", id };
         render();
       },
       analyze: () => analyze(),
