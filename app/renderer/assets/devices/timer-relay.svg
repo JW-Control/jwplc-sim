@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Rele temporizador multifuncion de riel DIN (tipo Schneider RE22R2 / CHINT NJS2-Z), A1-A2, 15-16-18 y 25-26-28. 22,5 mm reales, aqui 30 mm para los cinco bornes de abajo. Escala 4 px/mm. Propuesta por aprobar. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 380">
+<defs>
+<linearGradient id="tmr-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="tmr-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="tmr-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="tmr-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="tmr-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="tmr-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="tmr-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="tmr-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="tmr-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="tmr-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="tmr-gry" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9cdd2"/><stop offset=".12" stop-color="#e6e9ec"/><stop offset=".88" stop-color="#e6e9ec"/><stop offset="1" stop-color="#bfc4c9"/></linearGradient>
+<radialGradient id="tmr-led" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="2" y="2" width="116" height="376" rx="5" fill="url(#tmr-gry)" stroke="#16181b" stroke-width="1.6"/>
+<rect x="6" y="8" width="108" height="28" rx="3" fill="#d5d9dd" stroke="#9aa1a8"/>
+<rect x="8.0" y="10.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="20" cy="22" r="9.0" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M15.1 22H24.9M20 17.1V26.9" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="A1" cx="20" cy="22" r="11"/>
+<rect x="15" y="0" width="10" height="3" fill="#000"/>
+<text x="20" y="46" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">A1</text>
+<rect x="48.0" y="10.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="60" cy="22" r="9.0" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M55.0 22H65.0M60 17.1V26.9" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="15" cx="60" cy="22" r="11"/>
+<rect x="55" y="0" width="10" height="3" fill="#000"/>
+<text x="60" y="46" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">15</text>
+<rect x="88.0" y="10.0" width="24.0" height="24.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="100" cy="22" r="9.0" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M95.0 22H105.0M100 17.1V26.9" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="25" cx="100" cy="22" r="11"/>
+<rect x="95" y="0" width="10" height="3" fill="#000"/>
+<text x="100" y="46" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">25</text>
+<rect x="6" y="344" width="108" height="28" rx="3" fill="#d5d9dd" stroke="#9aa1a8"/>
+<rect x="9.5" y="347.5" width="21.0" height="21.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="20" cy="358" r="7.5" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M15.9 358H24.1M20 353.9V362.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="A2" cx="20" cy="358" r="11"/>
+<rect x="15" y="377" width="10" height="3" fill="#000"/>
+<text x="20" y="340" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">A2</text>
+<rect x="29.5" y="347.5" width="21.0" height="21.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="40" cy="358" r="7.5" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M35.9 358H44.1M40 353.9V362.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="16" cx="40" cy="358" r="11"/>
+<rect x="35" y="377" width="10" height="3" fill="#000"/>
+<text x="40" y="340" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">16</text>
+<rect x="49.5" y="347.5" width="21.0" height="21.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="60" cy="358" r="7.5" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M55.9 358H64.1M60 353.9V362.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="18" cx="60" cy="358" r="11"/>
+<rect x="55" y="377" width="10" height="3" fill="#000"/>
+<text x="60" y="340" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">18</text>
+<rect x="69.5" y="347.5" width="21.0" height="21.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="80" cy="358" r="7.5" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M75.9 358H84.1M80 353.9V362.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="26" cx="80" cy="358" r="11"/>
+<rect x="75" y="377" width="10" height="3" fill="#000"/>
+<text x="80" y="340" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">26</text>
+<rect x="89.5" y="347.5" width="21.0" height="21.0" rx="2" fill="#aab0b7" stroke="#16181b" stroke-width="1.1"/><circle cx="100" cy="358" r="7.5" fill="url(#tmr-scr)" stroke="#16181b" stroke-width="1.3"/><path d="M95.9 358H104.1M100 353.9V362.1" stroke="#16181b" stroke-width="2.3" stroke-linecap="round"/>
+<circle class="jw-term" data-term="28" cx="100" cy="358" r="11"/>
+<rect x="95" y="377" width="10" height="3" fill="#000"/>
+<text x="100" y="340" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#16181b">28</text>
+<circle cx="36" cy="74" r="6" fill="#4a4f56" stroke="#16181b"/>
+<g data-show="out.energized"><circle cx="36" cy="74" r="13" fill="#2fbf5a" opacity=".35"/><circle cx="36" cy="74" r="6" fill="#2fbf5a"/><circle cx="36" cy="74" r="6" fill="url(#tmr-led)"/></g>
+<text x="36" y="94" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b">U</text>
+<circle cx="84" cy="74" r="6" fill="#4a4f56" stroke="#16181b"/>
+<g data-show="out.closed"><circle cx="84" cy="74" r="13" fill="#f2c230" opacity=".35"/><circle cx="84" cy="74" r="6" fill="#f2c230"/><circle cx="84" cy="74" r="6" fill="url(#tmr-led)"/></g>
+<text x="84" y="94" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#16181b">R</text>
+<rect x="10" y="104" width="100" height="26" rx="3" fill="#fff" stroke="#9aa1a8"/>
+<text x="60" y="114" text-anchor="middle" font-family="sans-serif" font-size="6.5" font-weight="700" fill="#59606a">FUNCIÓN</text>
+<text x="60" y="125" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="800" fill="#16181b" data-text="param.mode">retardo a la conexión</text>
+<circle cx="60" cy="196" r="44" fill="#fff" stroke="#9aa1a8" stroke-width="1.2"/>
+<line x1="34.5" y1="221.5" x2="30.3" y2="225.7" stroke="#16181b" stroke-width="1.6"/>
+<line x1="25.8" y1="207.1" x2="20.1" y2="209.0" stroke="#16181b" stroke-width="0.9"/>
+<line x1="24.4" y1="190.4" x2="18.5" y2="189.4" stroke="#16181b" stroke-width="0.9"/>
+<line x1="30.9" y1="174.8" x2="26.0" y2="171.3" stroke="#16181b" stroke-width="0.9"/>
+<line x1="43.7" y1="163.9" x2="40.9" y2="158.6" stroke="#16181b" stroke-width="0.9"/>
+<line x1="60.0" y1="160.0" x2="60.0" y2="154.0" stroke="#16181b" stroke-width="1.6"/>
+<line x1="76.3" y1="163.9" x2="79.1" y2="158.6" stroke="#16181b" stroke-width="0.9"/>
+<line x1="89.1" y1="174.8" x2="94.0" y2="171.3" stroke="#16181b" stroke-width="0.9"/>
+<line x1="95.6" y1="190.4" x2="101.5" y2="189.4" stroke="#16181b" stroke-width="0.9"/>
+<line x1="94.2" y1="207.1" x2="99.9" y2="209.0" stroke="#16181b" stroke-width="0.9"/>
+<line x1="85.5" y1="221.5" x2="89.7" y2="225.7" stroke="#16181b" stroke-width="1.6"/>
+<g data-rotate="out.progress:0:1:-135:135:60:196"><line x1="60" y1="196" x2="60" y2="158" stroke="#d62a1e" stroke-width="2.4" stroke-linecap="round"/></g>
+<circle cx="60" cy="196" r="16" fill="#2b2f35" stroke="#16181b"/><rect x="58" y="181" width="4" height="12" rx="1.5" fill="#e8eaed"/>
+<text x="60" y="258" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="800" fill="#16181b" data-text="out.timeTxt">5 s</text>
+<text x="60" y="272" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#59606a" data-text="param.coil">24VDC</text>
+<text x="60" y="292" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#59606a">15─┬─18 · 25─┬─28</text>
+<text x="60" y="302" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#59606a">  └─16      └─26</text>
+</svg>

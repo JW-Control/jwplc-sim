@@ -5,15 +5,16 @@
 // JWSIM_G7_DEVICE_LIBRARY) y registro por tipo y versión.
 
 import { buzzer, contactor, lamp, motor, motor1ph, motor3ph, relay, solenoidValve, solenoidValve2 } from "./loads.mjs";
-import { limitSwitch, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3 } from "./controls.mjs";
+import { emergencyStop, limitSwitch, pushbuttonLit, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3, selectorKey } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24, power3ph } from "./supplies.mjs";
-import { sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
+import { sensorCapacitive, sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
 import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
 import { motor2v, overloadRelay } from "./drives.mjs";
 import { vfdEl } from "./vfd-el.mjs";
 import { potentiometer, signalSource } from "./analog.mjs";
 import { conveyor, door, tank } from "./plant.mjs";
+import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
@@ -24,15 +25,22 @@ export const builtinDevices = [
   pushbuttonNC,
   pushbuttonNONO,
   pushbuttonNONC,
+  pushbuttonLit,
+  emergencyStop,
   selector2,
   selector3,
+  selectorKey,
   limitSwitch,
   sensorInductive,
+  sensorCapacitive,
   sensorPhotoelectric,
   lamp,
+  stackLight,
   buzzer,
   relay,
+  timerRelay,
   contactor,
+  ssr,
   solenoidValve,
   solenoidValve2,
   motor,
@@ -40,6 +48,8 @@ export const builtinDevices = [
   motor3ph,
   motor2v,
   overloadRelay,
+  breaker,
+  motorProtector,
   vfdEl,
   potentiometer,
   signalSource,

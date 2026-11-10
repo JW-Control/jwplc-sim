@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Torre de senalizacion LED 3 niveles con zumbador (tipo LTA-205-3, Ø50 mm), equipo de campo a 2 px/mm; cable de 5 hilos COM, R, A, V, Z. Propuesta por aprobar. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 460">
+<defs>
+<linearGradient id="stk-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
+<linearGradient id="stk-chr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#c9ced3"/><stop offset=".55" stop-color="#7f8790"/><stop offset=".75" stop-color="#eef0f2"/><stop offset="1" stop-color="#8a9199"/></linearGradient>
+<linearGradient id="stk-brs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9cf95"/><stop offset="1" stop-color="#9c7a3c"/></linearGradient>
+<linearGradient id="stk-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+<linearGradient id="stk-blk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c1e21"/><stop offset=".35" stop-color="#3a3e44"/><stop offset="1" stop-color="#202226"/></linearGradient>
+<radialGradient id="stk-off" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+<radialGradient id="stk-on" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".45"/><stop offset=".8" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></radialGradient>
+<radialGradient id="stk-burn" cx=".55" cy=".5" r=".6"><stop offset="0" stop-color="#1a1410" stop-opacity=".9"/><stop offset=".6" stop-color="#2b211a" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity=".8"/></radialGradient>
+<radialGradient id="stk-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+<linearGradient id="stk-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+<linearGradient id="stk-cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2d32"/><stop offset=".4" stop-color="#4a4f56"/><stop offset="1" stop-color="#1c1e22"/></linearGradient>
+<linearGradient id="stk-glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".05"/><stop offset=".3" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></linearGradient>
+</defs>
+<g data-show="out.buzzer" fill="none" stroke="#f2a51a" stroke-width="3" stroke-linecap="round" opacity=".9"><path d="M30 16 Q60 -2 90 16"/><path d="M20 26 Q60 0 100 26" opacity=".6"/></g>
+<rect x="10" y="20" width="100" height="44" rx="10" fill="url(#stk-cap)" stroke="#16181b" stroke-width="1.4"/>
+<rect x="24" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="35" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="46" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="57" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="68" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="79" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="90" y="34" width="5" height="16" rx="2.5" fill="#0d0e10"/>
+<rect x="10" y="64" width="100" height="86" fill="#5a1610" stroke="#16181b" stroke-width="1.2"/>
+<g data-show="out.red"><rect x="4" y="60" width="112" height="94" rx="10" fill="#e0392b" opacity=".3"/><rect x="10" y="64" width="100" height="86" fill="#e0392b"/><rect x="40" y="72" width="40" height="70" rx="8" fill="#fff" opacity=".55"/></g>
+<g data-show="!out.red"><circle cx="40" cy="107" r="4" fill="#000" opacity=".35"/><circle cx="60" cy="107" r="4" fill="#000" opacity=".35"/><circle cx="80" cy="107" r="4" fill="#000" opacity=".35"/></g>
+<rect x="10" y="64" width="100" height="86" fill="url(#stk-glass)"/>
+<rect x="8" y="146" width="104" height="8" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="10" y="154" width="100" height="86" fill="#5a3a08" stroke="#16181b" stroke-width="1.2"/>
+<g data-show="out.amber"><rect x="4" y="150" width="112" height="94" rx="10" fill="#f2a51a" opacity=".3"/><rect x="10" y="154" width="100" height="86" fill="#f2a51a"/><rect x="40" y="162" width="40" height="70" rx="8" fill="#fff" opacity=".55"/></g>
+<g data-show="!out.amber"><circle cx="40" cy="197" r="4" fill="#000" opacity=".35"/><circle cx="60" cy="197" r="4" fill="#000" opacity=".35"/><circle cx="80" cy="197" r="4" fill="#000" opacity=".35"/></g>
+<rect x="10" y="154" width="100" height="86" fill="url(#stk-glass)"/>
+<rect x="8" y="236" width="104" height="8" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="10" y="244" width="100" height="86" fill="#0f3a1c" stroke="#16181b" stroke-width="1.2"/>
+<g data-show="out.green"><rect x="4" y="240" width="112" height="94" rx="10" fill="#2fbf5a" opacity=".3"/><rect x="10" y="244" width="100" height="86" fill="#2fbf5a"/><rect x="40" y="252" width="40" height="70" rx="8" fill="#fff" opacity=".55"/></g>
+<g data-show="!out.green"><circle cx="40" cy="287" r="4" fill="#000" opacity=".35"/><circle cx="60" cy="287" r="4" fill="#000" opacity=".35"/><circle cx="80" cy="287" r="4" fill="#000" opacity=".35"/></g>
+<rect x="10" y="244" width="100" height="86" fill="url(#stk-glass)"/>
+<rect x="8" y="326" width="104" height="8" rx="2" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="10" y="334" width="100" height="26" rx="4" fill="url(#stk-cap)" stroke="#16181b" stroke-width="1.2"/>
+<rect x="48" y="360" width="24" height="44" fill="url(#stk-cap)" stroke="#16181b"/>
+<text x="60" y="351" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#c9cdd3" data-text="param.rating">24VDC</text>
+<path d="M60 404 C60 418 20 412 20 428 V446" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M60 404 C60 418 20 412 20 428 V446" fill="none" stroke="#1b1d20" stroke-width="3.4"/>
+<rect x="16" y="436" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="15" y="456" width="10" height="4" fill="#16181b"/>
+<text x="20" y="430" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e8eaed">COM</text>
+<circle class="jw-term" data-term="COM" cx="20" cy="442" r="11"/>
+<path d="M60 404 C60 418 40 412 40 428 V446" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M60 404 C60 418 40 412 40 428 V446" fill="none" stroke="#e0392b" stroke-width="3.4"/>
+<rect x="36" y="436" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="35" y="456" width="10" height="4" fill="#16181b"/>
+<text x="40" y="430" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e8eaed">R</text>
+<circle class="jw-term" data-term="R" cx="40" cy="442" r="11"/>
+<path d="M60 404 C60 418 60 412 60 428 V446" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M60 404 C60 418 60 412 60 428 V446" fill="none" stroke="#f2a51a" stroke-width="3.4"/>
+<rect x="56" y="436" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="55" y="456" width="10" height="4" fill="#16181b"/>
+<text x="60" y="430" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e8eaed">A</text>
+<circle class="jw-term" data-term="A" cx="60" cy="442" r="11"/>
+<path d="M60 404 C60 418 80 412 80 428 V446" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M60 404 C60 418 80 412 80 428 V446" fill="none" stroke="#2fbf5a" stroke-width="3.4"/>
+<rect x="76" y="436" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="75" y="456" width="10" height="4" fill="#16181b"/>
+<text x="80" y="430" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e8eaed">V</text>
+<circle class="jw-term" data-term="V" cx="80" cy="442" r="11"/>
+<path d="M60 404 C60 418 100 412 100 428 V446" fill="none" stroke="#6b737c" stroke-width="5"/>
+<path d="M60 404 C60 418 100 412 100 428 V446" fill="none" stroke="#eef1f4" stroke-width="3.4"/>
+<rect x="96" y="436" width="8" height="12" rx="1.5" fill="#c9ced5" stroke="#16181b" stroke-width=".8"/>
+<rect x="95" y="456" width="10" height="4" fill="#16181b"/>
+<text x="100" y="430" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="800" fill="#e8eaed">Z</text>
+<circle class="jw-term" data-term="Z" cx="100" cy="442" r="11"/>
+</svg>

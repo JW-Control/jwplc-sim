@@ -103,6 +103,8 @@ p.append(f'<line x1="{HX0}" y1="{CY + half(HX0):.1f}" x2="{HX0}" y2="{LY + 4}" s
 p.append(f'<line x1="{HX1}" y1="{CY + H1}" x2="{HX1}" y2="{LY + 4}" stroke="#f2c230" stroke-width="1.2"/>')
 p.append(f'<text x="{HX0 - 4}" y="{LY}" text-anchor="end" {F} font-size="10" font-weight="700" fill="#7fe3a8">detección 8,0 mm</text>')
 p.append(f'<text x="{HX1 + 4}" y="{LY}" {F} font-size="10" font-weight="700" fill="#f2c230">histéresis 8,8 mm</text>')
+# alcance real segun el material de la pieza (Sn x factor)
+p.append(f'<text x="{HX0 - 4}" y="{LY + 14}" text-anchor="end" {F} font-size="9" font-weight="700" fill="#c9cdd3" data-text="out.snTxt">Sn 8,0 mm · acero</text>')
 # eje
 p.append(f'<line x1="{FACE}" y1="{CY}" x2="{FACE + POS[-1] + 40}" y2="{CY}" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>')
 

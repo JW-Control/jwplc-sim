@@ -42,6 +42,7 @@ archivo `<nombre>__<valor>.svg`, con el valor en minúsculas y sin signos
 | `power-24vdc` | `model` | `power-24vdc__mdr60.svg` (por defecto), `__hdr60`, `__ndr120` |
 | `lamp` | `model` | `lamp.svg` (XB2, por defecto), `lamp__ad16.svg` |
 | `contactor` | `aux` | `contactor.svg` (10: 13-14 NA, CJX2-0910), `contactor__01.svg` (01: 21-22 NC, CJX2-0901) |
+| `breaker` | `poles` | `breaker.svg` (1P, por defecto), `breaker__2p.svg`, `breaker__3p.svg` |
 
 Cada variante puede tener otro tamaño y otros bornes. Una variante que no
 muestra un borne de la definición (p. ej. la HDR-60 no tiene PE) deja ese
@@ -144,6 +145,26 @@ el tamaño actual, sus bornes, parámetros, acciones y salidas, y los dibujos
 actuales en reposo y activos como punto de partida.
 
 ## 6. Estado de la biblioteca
+
+Catálogo, tanda 1 (propuesta del 10/11/2026, **por aprobar**, sin fotos propias
+todavía: medidas y aspecto de los catálogos de cada fabricante; hay que
+validarlas con fotos de JW Control según los lineamientos 2.1):
+
+- `gen_mando_tanda1.py` (familia XB2 de `fam22.py`): parada de emergencia
+  XB2-BS542 (hongo Ø40; suelta, deja ver el anillo verde del vástago;
+  enclavada, hundida y más oscura), pulsador luminoso XB2-BW33 (bloque LED
+  X1-X2) y selector de llave XB2-BG21 (la llave gira con `out.position`).
+- `gen_breaker_nxb63.py`: termomagnético NXB-63 de 1, 2 y 3 polos, el mismo
+  frente que la red de 230 VAC con los bornes de entrada cableables, la
+  palanca accionable, el calibre de `out.rating` y el rótulo DISPARÓ.
+- `gen_tablero_tanda1.py`: guardamotor NS2-25 (polos en x = 40, 80, 120,
+  sobre el contactor; auxiliar lateral; perilla O-TRIP-I y dial), relé
+  temporizador de riel DIN (LED U y R, función, dial y aguja de avance),
+  SSR Fotek SSR-40DA y torre de señalización LTA-205-3 (campo, 2 px/mm).
+- `gen_sensor_capacitivo_cr18.py`: capacitivo Autonics CR18, hecho a
+  partir del inductivo PR18: cuerpo de plástico, perilla SENS, histéresis
+  del 20 % y el material en la pieza. El inductivo y el capacitivo
+  muestran el alcance real (`out.snTxt`) bajo la zona.
 
 Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 `simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
