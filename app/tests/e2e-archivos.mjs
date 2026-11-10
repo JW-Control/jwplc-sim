@@ -40,8 +40,13 @@ const args = [APP];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
 const env = { ...process.env, JWSIM_WORKSPACE: workspace };
 delete env.ELECTRON_RUN_AS_NODE; // desde la terminal de VS Code, Electron arrancaría como Node
-const app = await electron.launch({ args, env });
+// Perfil propio (localStorage, cachés): la prueba no toca las preferencias
+// de la app del usuario (alto de la ficha, panel lateral…).
+const userData = mkdtempSync(join(tmpdir(), "jwsim-ud-"));
+const app = await electron.launch({ args: [...args, `--user-data-dir=${userData}`], env });
 const win = await app.firstWindow();
+// Tamaño fijo: con un perfil nuevo la ventana abre más chica.
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1600, 1000));
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForSelector(".tab.active:has-text('sketch_')", { timeout: 30000 });
 const dir = await win.evaluate(() => window.jwsimTest.sketchDir());

@@ -15,6 +15,7 @@ import { vfdEl } from "./vfd-el.mjs";
 import { potentiometer, signalSource } from "./analog.mjs";
 import { conveyor, door, tank } from "./plant.mjs";
 import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
+import { ammeter, floatSwitch, levelElectrodes, levelRelay, pressureSwitch, thermostat, voltmeter } from "./instruments.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
@@ -34,6 +35,10 @@ export const builtinDevices = [
   sensorInductive,
   sensorCapacitive,
   sensorPhotoelectric,
+  floatSwitch,
+  levelElectrodes,
+  pressureSwitch,
+  thermostat,
   lamp,
   stackLight,
   buzzer,
@@ -41,6 +46,7 @@ export const builtinDevices = [
   timerRelay,
   contactor,
   ssr,
+  levelRelay,
   solenoidValve,
   solenoidValve2,
   motor,
@@ -53,6 +59,8 @@ export const builtinDevices = [
   vfdEl,
   potentiometer,
   signalSource,
+  voltmeter,
+  ammeter,
   pt100Rs485,
   phRs485,
   fermenter,

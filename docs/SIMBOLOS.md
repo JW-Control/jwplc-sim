@@ -166,6 +166,16 @@ validarlas con fotos de JW Control según los lineamientos 2.1):
   del 20 % y el material en la pieza. El inductivo y el capacitivo
   muestran el alcance real (`out.snTxt`) bajo la zona.
 
+Tanda 2 (propuesta del 10/11/2026, **por aprobar**, igual sin fotos propias),
+`gen_instrumentos_tanda2.py`: interruptor de nivel tipo pera y
+porta-electrodos (campo, 2 px/mm, dentro de un corte del tanque con el agua;
+el agua de los electrodos se arrastra con `data-drag` y recorta con un
+`clipPath`), relé de nivel de riel DIN (como el temporizador, con el esquema
+del tanque que lee), presostato KP35 y termostato KP77 (escala de corte y
+diferencial, contacto 1-2-4 a la vista, valor medido y deslizador; sin el
+logo de la marca) y voltímetro y amperímetro AD16-22 (familia AD16, display
+LED con `out.lcd`).
+
 Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 `simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
 (familia XB2), pilotos XB2 y AD16, zumbador AD16-22SM, selectores de 2 y

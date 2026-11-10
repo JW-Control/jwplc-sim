@@ -31,9 +31,13 @@ process.on("unhandledRejection", (err) => {
 createRequire(import.meta.url)("electron");
 const env = { ...process.env, JWSIM_WORKSPACE: workspace };
 delete env.ELECTRON_RUN_AS_NODE;
-const app = await electron.launch({ args: [APP], env });
+// Perfil propio (localStorage, cachés): la prueba no toca las preferencias
+// de la app del usuario (alto de la ficha, panel lateral…).
+const userData = mkdtempSync(join(tmpdir(), "jwsim-ud-"));
+const app = await electron.launch({ args: [APP, `--user-data-dir=${userData}`], env });
 const win = await app.firstWindow();
-await win.setViewportSize?.({ width: 1600, height: 1000 }).catch(() => {});
+// Tamaño fijo: con un perfil nuevo la ventana abre más chica.
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1600, 1000));
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.click(".mtab[data-tab=schematic]");
 await win.waitForTimeout(500);
@@ -51,6 +55,14 @@ const NEW = [
   ["jwsim/breaker", { poles: "2P" }],
   ["jwsim/breaker", { poles: "3P", In: "16" }],
   ["jwsim/motor-protector", {}],
+  // Tanda 2
+  ["jwsim/float-switch", {}],
+  ["jwsim/level-electrodes", {}],
+  ["jwsim/level-relay", {}],
+  ["jwsim/pressure-switch", {}],
+  ["jwsim/thermostat", {}],
+  ["jwsim/voltmeter", {}],
+  ["jwsim/ammeter", {}],
 ];
 
 // Equipos en fila, sin cables.
@@ -109,12 +121,20 @@ const tmr = await textOf(ids[5], "out.timeTxt");
 const ns2 = await textOf(ids[10], "out.ajusteTxt");
 const snCap = await textOf(ids[3], "out.snTxt");
 const rating = await textOf(ids[9], "out.rating");
+const kp = await textOf(ids[14], "out.ajusteTxt");
+const kpVal = await textOf(ids[15], "out.texto");
+const lvl = await textOf(ids[12], "out.nivel|param.nivel:d0:%");
 criteria.STATIC = {
-  pass: tmr.includes("3 s") && ns2.some((t) => /3,2 A/.test(t)) && snCap.some((t) => /3,6 mm · plástico/.test(t)) && rating.includes("C16"),
+  pass:
+    tmr.includes("3 s") && ns2.some((t) => /3,2 A/.test(t)) && snCap.some((t) => /3,6 mm · plástico/.test(t)) && rating.includes("C16") &&
+    kp.includes("3,0 – 4,0 bar") && kpVal.includes("25,0 °C") && lvl.includes("50 %"),
   timer: tmr,
   protector: ns2,
   capacitive: snCap,
   breaker: rating,
+  pressure_switch: kp,
+  thermostat: kpVal,
+  electrodes: lvl,
 };
 
 await app.close();
