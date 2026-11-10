@@ -104,6 +104,8 @@ export interface LoadSpec {
   polar?: boolean;
   /** Bobina (para los avisos de "bobina sin alimentación"). */
   coil?: boolean;
+  /** Entrada de medición (voltímetro): lee cualquier tensión, sin tensión nominal ni avisos. */
+  meter?: boolean;
 }
 
 export interface Electrical {
@@ -267,6 +269,13 @@ export interface DeviceInstance {
    * número = ese código de excepción (03: valor fuera de rango).
    */
   modbusWrite?(start: number, values: number[], t: Ns): boolean | number | undefined;
+  /**
+   * Bits: bobinas ("coils", funciones 01) o entradas discretas ("discrete",
+   * 02) desde `start`, como 0/1. undefined = no responde; null = excepción 02.
+   */
+  modbusReadBits?(table: "coils" | "discrete", start: number, count: number, t: Ns): number[] | null | undefined;
+  /** Escritura de bobinas (05 y 15), como modbusWrite. */
+  modbusWriteBits?(start: number, bits: number[], t: Ns): boolean | number | undefined;
   /** Dirección, velocidad o demora que el equipo cambió en marcha (teclado); pisa a `modbus()`. */
   modbusConfig?(): Partial<ModbusSpec>;
 }

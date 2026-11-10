@@ -63,6 +63,10 @@ const NEW = [
   ["jwsim/thermostat", {}],
   ["jwsim/voltmeter", {}],
   ["jwsim/ammeter", {}],
+  // Tanda 3
+  ["jwsim/remote-io", {}],
+  ["jwsim/energy-meter", {}],
+  ["jwsim/temp-controller", {}],
 ];
 
 // Equipos en fila, sin cables.

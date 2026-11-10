@@ -15,10 +15,12 @@ import { vfdEl } from "./vfd-el.mjs";
 import { potentiometer, signalSource } from "./analog.mjs";
 import { conveyor, door, tank } from "./plant.mjs";
 import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
+import { energyMeter, remoteIo, tempController } from "./fieldbus.mjs";
 import { ammeter, floatSwitch, levelElectrodes, levelRelay, pressureSwitch, thermostat, voltmeter } from "./instruments.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
+  remoteIo,
   power24,
   power230,
   power3ph,
@@ -61,6 +63,8 @@ export const builtinDevices = [
   signalSource,
   voltmeter,
   ammeter,
+  energyMeter,
+  tempController,
   pt100Rs485,
   phRs485,
   fermenter,

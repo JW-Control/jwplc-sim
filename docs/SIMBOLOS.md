@@ -176,6 +176,13 @@ diferencial, contacto 1-2-4 a la vista, valor medido y deslizador; sin el
 logo de la marca) y voltímetro y amperímetro AD16-22 (familia AD16, display
 LED con `out.lcd`).
 
+Tanda 3 (propuesta del 10/11/2026, **por aprobar**), `gen_fieldbus_tanda3.py`:
+módulo de E/S remotas 8DI/8DO de riel DIN (LED por entrada y salida, PWR y
+dirección), medidor PZEM-016 (bornera L N A B, TC de anillo con CT1 y CT2 y
+la lectura en un rótulo, porque el equipo no tiene pantalla) y controlador
+de temperatura 48 × 48 (PV y SV, LED OUT y AL1, bornera trasera arriba y
+abajo).
+
 Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 `simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
 (familia XB2), pilotos XB2 y AD16, zumbador AD16-22SM, selectores de 2 y
