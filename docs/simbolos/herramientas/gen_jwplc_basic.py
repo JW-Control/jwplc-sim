@@ -25,7 +25,8 @@ Partes para la app (contrato con app/renderer/scene.js y app.js):
   .led-ancla      punto del LED de estado de cada entrada (I0_n) y relé (Q0_n)
   #tft            área de la pantalla (320 x 170)
   #btn-up …       teclas (class tecla, data-btn BTN_UP … BTN_OK)
-  #rj45, #usb     conectores
+  #rj45, #usb     conectores; en #usb, el borne USB (data-senal="USB", con
+                  <use href="#puerto-usb">) para el cable USB a PC de la escena
 
 Uso: gen_jwplc_basic.py <svg de la web> <salida.svg>
 """
@@ -70,7 +71,9 @@ p = ['<?xml version="1.0" encoding="UTF-8"?>',
      '  no editar a mano. Contrato con la app: ver el encabezado del generador.\n-->',
      f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{VX} {VY} {VW} {VH}" width="{VW}" height="{VH}" data-grid="{U}" role="img" aria-label="JWPLC Basic">',
      '<defs><g id="tornillo-borne"><circle r="22" fill="#e6e6e6" stroke="#8c8c8c" stroke-width="3"/>'
-     '<line x1="-14" y1="14" x2="14" y2="-14" stroke="#9e9e9e" stroke-width="4"/></g></defs>']
+     '<line x1="-14" y1="14" x2="14" y2="-14" stroke="#9e9e9e" stroke-width="4"/></g>'
+     '<g id="puerto-usb"><rect x="-30" y="-13" width="60" height="26" rx="13" fill="#3a3e44" stroke="#8c8c8c" stroke-width="3"/>'
+     '<rect x="-18" y="-4" width="36" height="8" rx="4" fill="#c9ced5"/></g></defs>']
 
 # ---------------------------------------------------------------- caja
 lower = el(65).replace('height="378.0"', f'height="{YB - 58 - 1380 + 1:.1f}"')   # baja hasta las borneras de relé
@@ -134,6 +137,10 @@ for i, (sig, name, tit) in enumerate([("RS485_GND", "GND", "GND · común del RS
     p.append(stripe(x, mt + 115 - 9, COL["gnd" if i == 0 else "rs"]))
     p.append(silk(x, mt + 115 + 28, name, 20))
     p.append(borne("med", i + 1, sig, x, YM, mt, tit))
+# USB-C: borne para el cable USB a PC (UART0); el cable entra por arriba de
+# la carcasa del conector, en la columna de la grilla más cercana a su centro.
+p.append('<g class="borne" data-bloque="med" data-pos="5" data-senal="USB" data-entrada="1398">'
+         '<title>USB-C · Monitor serie (UART0), cable USB a PC</title><use href="#puerto-usb" x="1504" y="1486"/></g>')
 # relés: un bloque de dos bornes por salida (COM y NO)
 ft = YB - 58
 for k in range(8):

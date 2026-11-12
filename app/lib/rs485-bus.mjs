@@ -18,14 +18,27 @@
 // Extremo del host (opcional): un flujo (socket TCP o puerto serie) por el
 // que una herramienta externa habla con el bus. Con un extremo del host el
 // bus avanza a la velocidad del reloj de pared.
+//
+// Fallas del conversor USB a RS-485 de la PC (como el equipo de la escena
+// jwsim/usb-rs485, para probar JW Modbus Tool):
+//   hostEcho      el host recibe de vuelta cada carácter que transmite, al
+//                 terminar en el bus (receptor del MAX485 encendido)
+//   hostInverted  A/B invertidos en el conversor: lo que el host pone en el
+//                 bus y lo que recibe llega con los bits invertidos (el eco no)
+//   errorRate     bus sin terminación: cada carácter del bus llega a todos con
+//                 un bit cambiado con esa probabilidad (semilla `seed`)
 import { EventEmitter } from "node:events";
 
 import { RunnerProcess } from "./sim-port.mjs";
 
 export class Rs485Bus extends EventEmitter {
   // baud: velocidad del bus (para espaciar lo que llega del host).
-  constructor({ baud = 115200, quantumNs = 1_000_000, port = 2 } = {}) {
+  constructor({ baud = 115200, quantumNs = 1_000_000, port = 2, hostEcho = false, hostInverted = false, errorRate = 0, seed = 1 } = {}) {
     super();
+    this.hostEcho = hostEcho;
+    this.hostInverted = hostInverted;
+    this.errorRate = errorRate;
+    this.seed = seed >>> 0 || 1;
     this.baud = baud;
     this.q = quantumNs;
     this.port = port;
@@ -100,7 +113,7 @@ export class Rs485Bus extends EventEmitter {
         const chars = this.hostIn.splice(0).map((byte) => {
           const start = Math.max(this.t, this.hostFreeAt ?? 0);
           this.hostFreeAt = start + this.charNs;
-          return { start, stop: this.hostFreeAt, byte, from: null };
+          return { start, stop: this.hostFreeAt, byte: this.hostInverted ? ~byte & 0xff : byte, sent: byte, from: null };
         });
         this.#launch(chars);
       }
@@ -112,8 +125,9 @@ export class Rs485Bus extends EventEmitter {
         // El protocolo lleva objetos planos: "t_ns:hh,t_ns:hh".
         if (rx.length) n.proc.send({ type: "uart_rx", port: this.port, data: rx.map((c) => `${c.stop + this.q}:${c.byte.toString(16).padStart(2, "0")}`).join(",") });
       }
-      const toHost = due.filter((c) => c.from);
-      if (toHost.length && this.host) this.host.write(Buffer.from(toHost.map((c) => c.byte)));
+      // Al host: lo que transmitieron los nodos y, con eco, lo suyo tal como lo envió.
+      const toHost = due.filter((c) => c.from || this.hostEcho).map((c) => (c.from ? (this.hostInverted ? ~c.byte & 0xff : c.byte) : c.sent));
+      if (toHost.length && this.host) this.host.write(Buffer.from(toHost));
       const reached = await Promise.all(this.nodes.map((n) => this.#runTo(n, end)));
       if (reached.some((r) => r === null)) throw new Error(`un nodo terminó: ${this.nodes.filter((n) => n.exited).map((n) => n.name).join(", ")}`);
       this.#launch(this.nodes.flatMap((n) => n.tx.splice(0).map(([start, stop, byte]) => ({ start, stop, byte, from: n }))));
@@ -135,6 +149,10 @@ export class Rs485Bus extends EventEmitter {
   #launch(chars) {
     chars.sort((a, b) => a.start - b.start || (a.from?.name ?? "").localeCompare(b.from?.name ?? ""));
     for (const c of chars) {
+      if (this.errorRate > 0 && this.#rand() < this.errorRate) {
+        c.byte ^= 1 << Math.floor(this.#rand() * 8);
+        c.noise = true;
+      }
       for (const o of this.#air) {
         if (o.from === c.from || o.start >= c.stop || c.start >= o.stop) continue;
         o.byte = c.byte = o.byte & c.byte;
@@ -144,6 +162,16 @@ export class Rs485Bus extends EventEmitter {
       this.#due.push(c);
       this.log.push(c);
     }
+  }
+
+  // xorshift32: los mismos errores en cada corrida.
+  #rand() {
+    let x = this.seed;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    this.seed = x >>> 0;
+    return this.seed / 0x100000000;
   }
 
   async stop() {

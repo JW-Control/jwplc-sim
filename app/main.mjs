@@ -22,6 +22,7 @@ import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
+import { HostLink, describeLink } from "./lib/host-link.mjs";
 import { NetBridge } from "./lib/net-bridge.mjs";
 import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
@@ -197,6 +198,9 @@ async function stopRunner() {
   ioBridge?.close();
   ioBridge = null;
   comBridge?.detach();
+  const links = hostLinks;
+  hostLinks = [];
+  await Promise.all(links.map((l) => l.close()));
   r?.removeAllListeners();
   // El resumen final (instante y hash de traza) sí llega a la interfaz.
   r?.on("message", (m) => m.type === "stopped" && forward("sim:message", m));
@@ -604,6 +608,9 @@ let bridge = null;
 let ioBridge = null;
 // Puerto COM virtual (JW Serial u otro programa): queda abierto entre corridas.
 let comBridge = null;
+// Enlaces de la escena con la PC (conversor USB a RS-485, cable USB): se
+// abren al iniciar la simulación y se cierran al detenerla.
+let hostLinks = [];
 let lastSceneInputs = null;
 function ioBridgeConfig(projectFile) {
   let cfg = {};
@@ -661,6 +668,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     sceneSession = new SceneSession(r, sceneObj);
     sceneSession.on("snapshot", (snap) => {
       lastSceneInputs = snap.inputs ?? null;
+      updateHostLinks(sceneObj);
       forward("scene:snapshot", snap);
     });
     sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
@@ -715,6 +723,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   }
   // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.
   if (comBridge && !stim) comBridge.attach(r);
+  if (sceneObj) await openHostLinks(sceneObj, r);
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
     try {
@@ -725,6 +734,45 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   }
   return { rtc: rtcArg };
 });
+
+// Abre el COM de cada conversor o cable USB de la escena y lo une al runner.
+// Un COM que no se puede abrir (o que ya tiene el botón COM) queda avisado en
+// la consola y la simulación sigue sin él.
+async function openHostLinks(scene, r) {
+  for (const p of scene.hostPorts()) {
+    if (!p.com) continue;
+    if (comBridge?.path?.toUpperCase() === p.com.toUpperCase() || hostLinks.some((l) => l.path.toUpperCase() === p.com.toUpperCase())) {
+      forward("sim:stderr", `[jwsim] ${p.device}: ${p.com} ya está en uso en el Sim (botón COM u otro equipo de la escena)\n`);
+      continue;
+    }
+    const link = new HostLink(p);
+    try {
+      await link.open();
+    } catch (err) {
+      forward("sim:stderr", `[jwsim] ${p.device}: ${err.message}\n`);
+      continue;
+    }
+    if (runner !== r) {
+      await link.close();
+      return;
+    }
+    link.on("error", (err) => forward("sim:stderr", `[jwsim] ${p.device} (${p.com}): ${err.message}\n`));
+    link.attach(r);
+    hostLinks.push(link);
+    forward("sim:stderr", `[jwsim] ${describeLink(p)}\n`);
+  }
+}
+
+// Un cable cortado o reparado en marcha cambia el enlace.
+function updateHostLinks(scene) {
+  if (!hostLinks.length) return;
+  for (const p of scene.hostPorts()) {
+    const link = hostLinks.find((l) => l.device === p.device);
+    if (!link || link.spec.wiring === p.wiring) continue;
+    link.update(p);
+    forward("sim:stderr", `[jwsim] ${describeLink(p)}\n`);
+  }
+}
 
 // ---------------------------------------------------------------- escena (G7)
 function registry() {

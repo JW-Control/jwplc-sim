@@ -170,6 +170,7 @@ export class Scene {
         links: def.links?.(params) ?? [],
         reads: (def.reads?.(params) ?? []).filter((r) => r.source),
         modbus: def.modbus?.(params) ?? null,
+        hostPort: def.hostPort?.(params) ?? null,
         probes: def.probes?.(params) ?? [],
         probeInputs: def.probeInputs?.(params) ?? [],
         currentSensors: def.currentSensors?.(params) ?? [],
@@ -582,6 +583,35 @@ export class Scene {
   /** ¿Hay esclavos Modbus en la escena? (la co-simulación enlaza el bus RS-485) */
   hasModbus() {
     return [...this.devices.values()].some((d) => d.modbus);
+  }
+
+  /**
+   * Enlaces con un puerto COM de la PC (conversor USB a RS-485, cable USB):
+   * qué UART de la placa, qué COM, sus fallas y cómo está cableado ahora.
+   * `wiring`: "ok" (cada borne con el suyo de la placa), "crossed" (dos
+   * bornes cruzados entre sí, p. ej. A con B: la señal llega invertida) u
+   * "open" (falta un cable o está cortado: no pasa nada).
+   * @returns {{ device: string, type: string, uart: number, com: string, echo: boolean, inverted: boolean, errorRate: number, wiring: "ok" | "crossed" | "open" }[]}
+   */
+  hostPorts() {
+    const plc = [...this.devices.values()].find((d) => d.def.type === "jwsim/jwplc-basic");
+    const { find } = this.#connections();
+    const out = [];
+    for (const d of this.devices.values()) {
+      if (!d.hostPort) continue;
+      const { to, ...rest } = d.hostPort;
+      const pairs = Object.entries(to ?? {});
+      let wiring = "open";
+      if (plc && pairs.length) {
+        const net = (dev, term) => (dev.wired.has(term) ? find(`${dev.id}.${term}`) : null);
+        const mine = pairs.map(([t]) => net(d, t));
+        const theirs = pairs.map(([, t]) => net(plc, t));
+        if (mine.every((n, k) => n !== null && n === theirs[k])) wiring = "ok";
+        else if (pairs.length === 2 && mine[0] !== null && mine[1] !== null && mine[0] === theirs[1] && mine[1] === theirs[0]) wiring = "crossed";
+      }
+      out.push({ device: d.id, type: d.def.type, ...rest, wiring });
+    }
+    return out;
   }
 
   /**
