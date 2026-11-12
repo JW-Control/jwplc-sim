@@ -11,6 +11,8 @@
 //   sin_terminacion  con 100 % de caracteres con error, ninguna respuesta
 //                    válida; con 0 % (la opción sin valor de la CLI usa 2 %)
 //                    igual que sin_eco
+//   trama_entera     la respuesta a «leer HR0-HR7» (21 bytes, 1,8 ms: más de
+//                    una ventana del bus) llega al host en un solo envío
 import { mkdirSync, rmSync } from "node:fs";
 import net from "node:net";
 import { join } from "node:path";
@@ -32,7 +34,7 @@ const REQ = Buffer.from(readHolding(2, 1, 1));
 const RESP = Buffer.from(withCrc([0x02, 0x03, 0x02, 0x00, 0x64]));
 
 /** Una petición con el conversor configurado así; devuelve lo que llegó a la herramienta. */
-async function ask(name, opts) {
+async function ask(name, opts, req = REQ) {
   const bus = new Rs485Bus({ baud: 115200, quantumNs: 1_000_000, ...opts });
   const dir = join(work, name);
   mkdirSync(dir, { recursive: true });
@@ -42,21 +44,26 @@ async function ask(name, opts) {
   const tool = net.connect(server.address().port, "127.0.0.1");
   await new Promise((r) => tool.once("connect", r));
   let rx = Buffer.alloc(0);
-  tool.on("data", (d) => (rx = Buffer.concat([rx, d])));
+  let chunks = 0;
+  tool.on("data", (d) => {
+    rx = Buffer.concat([rx, d]);
+    chunks++;
+  });
   let running = true;
   const loop = (async () => {
     while (running) await bus.runUntil(bus.t + 50e6, { realtime: true });
   })();
   await new Promise((r) => setTimeout(r, 1500));   // arranque del esclavo
   rx = Buffer.alloc(0);
-  tool.write(REQ);
+  chunks = 0;
+  tool.write(req);
   await new Promise((r) => setTimeout(r, 600));
   running = false;
   await loop;
   tool.destroy();
   server.close();
   await bus.stop();
-  return { rx, noisy: bus.log.filter((c) => c.noise).length };
+  return { rx, chunks, noisy: bus.log.filter((c) => c.noise).length };
 }
 
 const criteria = {};
@@ -77,6 +84,10 @@ const hex = (b) => Buffer.from(b).toString("hex");
   const a = await ask("sin-terminacion-100", { errorRate: 1 });
   const b = await ask("sin-terminacion-0", { errorRate: 0 });
   criteria.sin_terminacion = { pass: !a.rx.includes(RESP) && a.noisy >= REQ.length && b.rx.equals(RESP), recibido_100: hex(a.rx), caracteres_con_error: a.noisy, recibido_0: hex(b.rx) };
+}
+{
+  const { rx, chunks } = await ask("trama-entera", {}, Buffer.from(readHolding(2, 0, 8)));
+  criteria.trama_entera = { pass: rx.length === 21 && rx[0] === 2 && rx[2] === 16 && chunks === 1, bytes: rx.length, envios: chunks };
 }
 
 const pass = printCriteria("JWSIM_CONVERSOR_BUS", criteria);

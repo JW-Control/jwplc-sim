@@ -126,8 +126,19 @@ export class Rs485Bus extends EventEmitter {
         if (rx.length) n.proc.send({ type: "uart_rx", port: this.port, data: rx.map((c) => `${c.stop + this.q}:${c.byte.toString(16).padStart(2, "0")}`).join(",") });
       }
       // Al host: lo que transmitieron los nodos y, con eco, lo suyo tal como lo envió.
-      const toHost = due.filter((c) => c.from || this.hostEcho).map((c) => (c.from ? (this.hostInverted ? ~c.byte & 0xff : c.byte) : c.sent));
-      if (toHost.length && this.host) this.host.write(Buffer.from(toHost));
+      // Se juntan y salen enteras: una trama no se corta entre ventanas (con
+      // el bus atrasado respecto del reloj, dos write separados llegaban al
+      // host con decenas de ms entre sí). Se envía tras 3,5 caracteres de
+      // silencio hacia el host, como el fin de trama Modbus RTU.
+      for (const c of due) {
+        if (!c.from && !this.hostEcho) continue;
+        this.#hostOut.push(c.from ? (this.hostInverted ? ~c.byte & 0xff : c.byte) : c.sent);
+        this.#hostLast = c.stop + this.q;
+      }
+      if (this.#hostOut.length && end >= this.#hostLast + (this.charNs * 35) / 10) {
+        const out = Buffer.from(this.#hostOut.splice(0));
+        if (this.host) this.host.write(out);
+      }
       const reached = await Promise.all(this.nodes.map((n) => this.#runTo(n, end)));
       if (reached.some((r) => r === null)) throw new Error(`un nodo terminó: ${this.nodes.filter((n) => n.exited).map((n) => n.name).join(", ")}`);
       this.#launch(this.nodes.flatMap((n) => n.tx.splice(0).map(([start, stop, byte]) => ({ start, stop, byte, from: n }))));
@@ -141,6 +152,8 @@ export class Rs485Bus extends EventEmitter {
     // Lo que quedó en camino se entrega en la próxima llamada.
   }
 
+  #hostOut = [];   // bytes para el host de la trama en curso
+  #hostLast = 0;   // llegada del último de ellos
   #air = [];   // caracteres que aún no terminan
   #due = [];   // caracteres por entregar
 
