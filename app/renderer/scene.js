@@ -108,8 +108,9 @@
     const k = GRID / (Number(svg.getAttribute("data-grid")) || 64);
     S.board = { w: vw * k, h: vh * k, k };
     // Tornillos (clic para cablear) y entrada del cable: el borde de la
-    // bornera hacia afuera de la placa (data-entrada: arriba, abajo o el
-    // borde superior de la bornera RS-485).
+    // bornera hacia afuera de la placa (data-entrada: el borde de arriba de
+    // la bornera superior, el de abajo de los relés y del RS-485, la boca
+    // del USB-C).
     const terms = {};
     const titles = {};
     const entries = {};
@@ -119,10 +120,11 @@
       const sig = g.dataset.senal;
       const id = /^Q0_/.test(sig) ? `${sig}.${g.dataset.pos}` : sig;
       const x = (Number(u.getAttribute("x")) - vx) * k;
-      const block = g.dataset.bloque.split("-")[0];
       terms[id] = [x, (Number(u.getAttribute("y")) - vy) * k];
       entries[id] = [x, (Number(g.dataset.entrada) - vy) * k];
-      sides[id] = block === "inf" ? "b" : "t";
+      // El cable llega desde el lado de la entrada: arriba o abajo del tornillo
+      // (abajo: relés, RS-485 y el USB-C).
+      sides[id] = entries[id][1] > terms[id][1] ? "b" : "t";
       titles[id] = g.querySelector("title")?.textContent ?? "";
     }
     const leds = {};

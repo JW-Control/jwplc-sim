@@ -77,9 +77,9 @@ await win.click(".mtab[data-tab=schematic]");
 await win.waitForTimeout(300);
 await t(([rsPath, usbPath]) => {
   const sc = window.jwsimTest.scene;
-  sc.add("jwsim/usb-rs485", 620, 40, "U1");
+  sc.add("jwsim/usb-rs485", 560, 640, "U1");
   sc.setParam("U1", "com", rsPath);
-  sc.add("jwsim/usb-pc", 780, 120, "PC");
+  sc.add("jwsim/usb-pc", 400, 660, "PC");
   sc.setParam("PC", "com", usbPath);
   sc.wire("PC.USB", "plc.USB");
 }, [rs.path, usb.path]);
