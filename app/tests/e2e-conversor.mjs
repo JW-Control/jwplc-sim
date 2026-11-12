@@ -10,6 +10,8 @@
 //   CRUZADOS       A y B cruzados en la escena: tampoco responde
 //   SIN_CABLEAR    sin los cables A/B no pasa nada, ni con eco… salvo el eco
 //   CABLE_USB      el cable USB a PC lleva el Monitor serie a su COM
+//   PLACA_FORZADAS en la vista Placa, varias entradas forzadas siguen sobre
+//                  su borne
 // Informe en build/gates/JWSIM_CONVERSOR_E2E.json.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-conversor.mjs
 import { spawn } from "node:child_process";
@@ -149,6 +151,24 @@ await round("AB_INVERTIDOS", { params: { eco: false, abInvertidos: true }, wirin
 await round("CRUZADOS", { params: { abInvertidos: false }, wiring: [["U1.A", "plc.RS485_B"], ["U1.B", "plc.RS485_A"]], expect: [] });
 await round("CRUZADOS_E_INVERTIDOS", { params: { abInvertidos: true }, wiring: [["U1.A", "plc.RS485_B"], ["U1.B", "plc.RS485_A"]], expect: [RESP] });
 await round("SIN_CABLEAR_CON_ECO", { params: { eco: true, abInvertidos: false }, wiring: [], expect: [REQ] });
+
+// Placa: varias entradas forzadas siguen sobre su borne (antes, .io.forced
+// tenía position: relative y la segunda en adelante se corría a la derecha).
+log("PLACA_FORZADAS");
+await win.click(".mtab[data-tab=board]");
+await win.click("#btn-run");
+await until(async () => (await status()) === "running", 600000);
+for (const s of ["I0_0", "I0_3", "I0_5"]) await t((x) => window.jwsimTest.setForce(x, 1), s);
+await win.waitForTimeout(300);
+const off = await t(() =>
+  [...document.querySelectorAll(".io.input")].map((b) => {
+    const r = b.getBoundingClientRect();
+    const a = document.querySelector(`#plc-art .led-ancla[data-senal="${b.dataset.signal}"]`).getBoundingClientRect();
+    return [b.dataset.signal, Math.round(r.left + r.width / 2 - (a.left + a.width / 2)), b.classList.contains("forced")];
+  }),
+);
+await win.click("#btn-stop");
+criteria.PLACA_FORZADAS = { pass: off.every(([, d]) => Math.abs(d) <= 2) && off.filter(([, , f]) => f).length === 3, desvio_px: off };
 
 await app.close();
 rs.proc.kill();
