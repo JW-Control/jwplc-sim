@@ -183,6 +183,15 @@ la lectura en un rótulo, porque el equipo no tiene pantalla) y controlador
 de temperatura 48 × 48 (PV y SV, LED OUT y AL1, bornera trasera arriba y
 abajo).
 
+Comunicación con la PC (propuesta del 12/11/2026, **por aprobar**, dibujados
+a mano sin foto propia): conversor USB a RS-485 ZK-U485 (`usb-rs485.svg`,
+vertical a 4 px/mm: bornera A+ B− GND arriba, carcasa azul con MAX485,
+CH340G y LED TX/RX, el COM y las fallas activas en rótulos, USB-A abajo; el
+equipo real trae más bornes que estos tres) y cable USB a PC
+(`usb-pc.svg`, portátil esquemática con el COM en pantalla). En la placa,
+el borne `USB` sobre el conector USB-C (`#puerto-usb` de
+`gen_jwplc_basic.py`).
+
 Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 `simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
 (familia XB2), pilotos XB2 y AD16, zumbador AD16-22SM, selectores de 2 y

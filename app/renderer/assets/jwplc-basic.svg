@@ -8,7 +8,7 @@
   no editar a mano. Contrato con la app: ver el encabezado del generador.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="421 403 1311 1539" width="1311" height="1539" data-grid="57" role="img" aria-label="JWPLC Basic">
-<defs><g id="tornillo-borne"><circle r="22" fill="#e6e6e6" stroke="#8c8c8c" stroke-width="3"/><line x1="-14" y1="14" x2="14" y2="-14" stroke="#9e9e9e" stroke-width="4"/></g></defs>
+<defs><g id="tornillo-borne"><circle r="22" fill="#e6e6e6" stroke="#8c8c8c" stroke-width="3"/><line x1="-14" y1="14" x2="14" y2="-14" stroke="#9e9e9e" stroke-width="4"/></g><g id="puerto-usb"><rect x="-30" y="-13" width="60" height="26" rx="13" fill="#3a3e44" stroke="#8c8c8c" stroke-width="3"/><rect x="-18" y="-4" width="36" height="8" rx="4" fill="#c9ced5"/></g></defs>
 <rect x="449.0" y="1380.0" width="1241.0" height="391.0" rx="20" fill="#303030" stroke="#1c1c1c" stroke-width="3"/>
 <rect x="449.0" y="517.0" width="1241.0" height="881.0" rx="26" fill="#3a3a3a" stroke="#1c1c1c" stroke-width="3"/>
 <circle cx="503.0" cy="567.0" r="30" fill="#2b2b2b" stroke="#1b1b1b" stroke-width="3"/>
@@ -96,6 +96,7 @@
 <rect x="1252" y="1535" width="48" height="7" rx="2" fill="#8e44ad"/>
 <text x="1276" y="1572" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#b7bcc2">SH</text>
 <g class="borne" data-bloque="med" data-pos="4" data-senal="RS485_SHIELD" data-entrada="1429"><title>SHIELD · malla del cable RS-485</title><use href="#tornillo-borne" x="1276" y="1486"/></g>
+<g class="borne" data-bloque="med" data-pos="5" data-senal="USB" data-entrada="1398"><title>USB-C · Monitor serie (UART0), cable USB a PC</title><use href="#puerto-usb" x="1504" y="1486"/></g>
 <rect x="622" y="1770" width="112" height="116" rx="4" fill="#7ed98a" stroke="#3f9a4c" stroke-width="3"/>
 <rect x="625" y="1772" width="48" height="7" rx="2" fill="#f57c00"/>
 <text x="649" y="1758" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#b7bcc2">COM</text>
