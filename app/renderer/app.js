@@ -2132,6 +2132,8 @@ async function main() {
   }
   const target = await api.takeOpenTarget();
   if (target) await openFromEditor(target);
+  // Pantalla «Proyectos» (start.js), salvo si el OpenPLC Editor pidió un proyecto.
+  window.JwsimStart?.onReady({ openedFromEditor: !!target });
 }
 
 main();

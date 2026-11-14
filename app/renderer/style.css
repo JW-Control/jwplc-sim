@@ -2392,3 +2392,248 @@ body[data-tab="plant"] .view3d-empty {
   font-family: var(--mono);
   font-size: 11px;
 }
+
+/* Pantalla «Proyectos» y asistente de nuevo proyecto (start.js). */
+.start {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 13, 0.72);
+}
+.start[hidden] {
+  display: none;
+}
+.start-card {
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.start-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 15px;
+}
+.start-head .icon {
+  margin-left: auto;
+}
+.start-logo {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+}
+.start-body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+}
+.start-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.start-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.start-big,
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.start-big span,
+.choice span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.start-big:hover,
+.choice:hover {
+  border-color: var(--accent);
+}
+.start-big.primary {
+  border-color: var(--accent);
+  background: #1d2f45;
+}
+.choice.on {
+  border-color: var(--ok);
+  background: #16281e;
+}
+.start-sub {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.start-recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.start-recent li button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.start-recent li button:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+.start-recent small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+  word-break: break-all;
+}
+.tag {
+  grid-row: span 2;
+  align-self: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.tag.openplc {
+  background: #3a2a52;
+  color: #d5b8ff;
+}
+.tag.arduino {
+  background: #123a44;
+  color: #8fe3f0;
+}
+.start-steps {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-weight: 700;
+}
+.start-steps li.on {
+  color: var(--text);
+  border-bottom: 2px solid var(--accent);
+}
+.start-steps li.done {
+  color: var(--ok);
+}
+.start-q {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.start-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.start-langs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.start-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.start-field > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.start-field input {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.start-path {
+  display: flex;
+  gap: 6px;
+}
+.start-path input {
+  flex: 1;
+}
+.start-editor {
+  margin: 14px 0 0;
+  font-size: 12px;
+}
+.start-error {
+  margin: 12px 0 0;
+}
+.start-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.start .ok {
+  color: var(--ok);
+}
+.start .bad {
+  color: var(--err);
+}
+.start .muted {
+  color: var(--muted);
+}
+.start .small {
+  font-size: 12px;
+}
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .start-home,
+  .start-choices {
+    grid-template-columns: 1fr;
+  }
+}

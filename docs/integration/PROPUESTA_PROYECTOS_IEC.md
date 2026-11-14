@@ -80,3 +80,42 @@ dice «se edita en el OpenPLC Editor».
 - Las dos aplicaciones abiertas a la vez: memoria del equipo de los alumnos.
 - El orden de instalación (instalador del Sim que detecte o instale el
   editor).
+
+## Estado (2026-11-14)
+
+Ramas: `feature/alpha18-IntegracionOpenPlc` (jwplc-sim) y
+`v2.1.0-alpha.18/JWPLC-Sim/feature/integracion-openplc` (openplc-editor).
+
+| Etapa | Estado |
+|---|---|
+| 1. Pantalla Proyectos y asistente | Hecha: `app/renderer/start.js`, `app/lib/openplc-editor.mjs`; menú Archivo → «Proyectos (inicio)…» y «Nuevo proyecto…» (Ctrl+Alt+N). |
+| 2. `--open-project` en el editor | Hecha en la rama del editor: `src/main/open-project-arg.ts` (4 pruebas jest) y `main.ts` (al arrancar y con `second-instance`). Probada en vivo: el editor abre `marcha_ld` con el Ladder `main`. |
+| 3. Ida y vuelta | Parcial: botón «Abrir en OpenPLC Editor» y recientes de los dos tipos. Faltan los ejercicios IEC. |
+| 4. Vista Ladder en el Sim | Pendiente. |
+
+Cómo encuentra el Sim al editor, en orden: variable `JWSIM_OPENPLC_EDITOR`
+(.exe, carpeta del repo del editor o script de prueba), la ruta elegida con
+«Ubicar el OpenPLC Editor…» (se guarda en `openplc-editor.json` del perfil),
+la instalación por usuario y por máquina y, en desarrollo, el repo hermano
+`../openplc-editor`. La CLI deja la placa «OpenPLC Simulator»; el Sim la
+cambia a «JWPLC BASIC [2.0.0]» en `devices/configuration.json`.
+
+La pantalla de inicio sale al abrir la app (casilla «Mostrar al iniciar»);
+`JWSIM_START_SCREEN=0|1` la fuerza y se omite con `JWSIM_WORKSPACE` (pruebas)
+o al abrir desde el editor con `--jwsim-open`.
+
+Pruebas: `node tests/e2e-proyectos.mjs` (en `app/`, con un editor simulado):
+START_SCREEN, NAME_CHECK, OPENPLC_WIZARD, ARDUINO_WIZARD, RECENTS y
+OPEN_IN_EDITOR, todas PASS. También pasan las 135 pruebas de escena,
+e2e-archivos y e2e-g9.
+
+Notas:
+
+- e2e-g2 ahora usa un perfil temporal. Su criterio EXTERNAL_EDIT_RELOAD
+  (< 2 s) da unos 2,3 s en esta PC **también en la rama base**: es el
+  rendimiento del equipo, no este cambio.
+- Para probar el editor sin empaquetar con el bundle de producción
+  (`electron release/app/dist/main/main.js`), el preload debe estar en
+  `release/app/configs/dll/preload.js` (copiar `configs/dll/preload.js`);
+  si no, la ventana sale en blanco. Empaquetado no hace falta.
+- Merge y publicación de la rama del editor: con autorización de JW Control.

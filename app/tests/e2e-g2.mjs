@@ -43,8 +43,13 @@ const t0 = Date.now();
 const args = [APP];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
 // JWSIM_BUILD_TIMING: el log de compilación de la app incluye tiempos por fase.
-const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_BUILD_TIMING: "1" } });
+// Perfil temporal y tamaño fijo: no depende de la ventana guardada del usuario.
+args.push(`--user-data-dir=${mkdtempSync(join(tmpdir(), "jwsim-ud-"))}`);
+const env = { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_BUILD_TIMING: "1" };
+delete env.ELECTRON_RUN_AS_NODE;
+const app = await electron.launch({ args, env });
 const win = await app.firstWindow();
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1500, 950));
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 // Arranca con un sketch nuevo (setup y loop vacíos, como Arduino IDE).
 await win.waitForSelector(".tab.active:has-text('sketch_')", { timeout: 30000 });

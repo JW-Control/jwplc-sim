@@ -18,7 +18,8 @@
     "test:e2e:archivos": "node tests/e2e-archivos.mjs",
     "test:e2e:paleta": "node tests/e2e-paleta.mjs",
     "test:e2e:cables": "node tests/e2e-cables.mjs",
-    "test:e2e:catalogo": "node tests/e2e-catalogo.mjs"
+    "test:e2e:catalogo": "node tests/e2e-catalogo.mjs",
+    "test:e2e:proyectos": "node tests/e2e-proyectos.mjs"
   },
   "dependencies": {
     "@wasm-fmt/clang-format": "23.1.1",

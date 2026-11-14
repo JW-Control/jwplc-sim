@@ -15,6 +15,7 @@ import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
+import { checkProjectName, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
@@ -458,6 +459,72 @@ ipcMain.handle("sketch:deleteFile", (_e, { dir, name }) => {
   if (dirname(p) !== root || !isSketchFile(file) || !existsSync(p)) throw new Error(`no existe ${file} en el sketch`);
   // A la papelera, no un borrado definitivo.
   return shell.trashItem(p).then(() => true);
+});
+
+// ---------------------------------------------------------------- inicio y nuevo proyecto
+// Pantalla «Proyectos» al abrir (como el OpenPLC Editor) y asistente de 3
+// pasos: tipo (Arduino u OpenPLC), nombre y carpeta, lenguaje IEC. Los
+// proyectos IEC los crea y los edita el OpenPLC Editor (app/lib/openplc-editor.mjs).
+// En las pruebas (JWSIM_WORKSPACE) no se muestra, salvo JWSIM_START_SCREEN=1.
+ipcMain.handle("app:startScreen", () => (process.env.JWSIM_START_SCREEN ?? (process.env.JWSIM_WORKSPACE ? "0" : "1")) === "1");
+
+const editorCfgFile = () => join(app.getPath("userData"), "openplc-editor.json");
+function configuredEditor() {
+  try {
+    return JSON.parse(readFileSync(editorCfgFile(), "utf8")).path ?? null;
+  } catch {
+    return null;
+  }
+}
+const findEditor = () => locateEditor({ configured: configuredEditor(), packaged: app.isPackaged, simRoot: join(import.meta.dirname, "..") });
+function editorStatus() {
+  const ed = findEditor();
+  return { found: !!ed, label: ed?.label ?? null, source: ed?.source ?? null, languages: LANGUAGES, workspace: workspaceDir() };
+}
+ipcMain.handle("openplc:status", () => editorStatus());
+// Recientes: abrir un sketch o un proyecto OpenPLC por su carpeta, sin copiarlo.
+ipcMain.handle("sketch:openDir", (_e, dir) => {
+  if (!dir || !existsSync(dir)) throw new Error(`ya no existe ${dir}`);
+  return readSketch(dir);
+});
+
+ipcMain.handle("openplc:choose", async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: "Ubicar el OpenPLC Editor (JWPLC Edition)",
+    properties: ["openFile"],
+    filters: process.platform === "win32" ? [{ name: "Aplicación", extensions: ["exe"] }] : [],
+  });
+  if (!r.canceled && r.filePaths[0]) writeFileSync(editorCfgFile(), JSON.stringify({ path: r.filePaths[0] }, null, 2) + "\n");
+  return editorStatus();
+});
+
+ipcMain.handle("project:pickFolder", async (_e, current) => {
+  const r = await dialog.showOpenDialog(win, { title: "Carpeta del proyecto", defaultPath: current || workspaceDir(), properties: ["openDirectory", "createDirectory"] });
+  return r.canceled ? null : r.filePaths[0];
+});
+
+ipcMain.handle("project:createArduino", (_e, { name, parent }) => {
+  const bad = checkProjectName(name);
+  if (bad) throw new Error(`nombre no válido: ${bad}`);
+  const dir = join(resolve(parent || workspaceDir()), name);
+  if (existsSync(dir)) throw new Error(`ya existe ${dir}`);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${name}.ino`), TEMPLATE);
+  return readSketch(dir);
+});
+
+ipcMain.handle("project:createOpenPlc", async (_e, { name, parent, language, interval }) => {
+  const ed = findEditor();
+  if (!ed) throw new Error("no se encontró el OpenPLC Editor (JWPLC Edition): instálelo o ubíquelo con «Ubicar el OpenPLC Editor…»");
+  const dir = await createProject(ed, { name, parent: parent || workspaceDir(), language, interval });
+  return readSketch(dir);
+});
+
+ipcMain.handle("openplc:openInEditor", async (_e, dir) => {
+  const ed = findEditor();
+  if (!ed) throw new Error("no se encontró el OpenPLC Editor (JWPLC Edition): instálelo o ubíquelo con «Ubicar el OpenPLC Editor…»");
+  await openInEditor(ed, dir);
+  return ed.label;
 });
 
 // ---------------------------------------------------------------- proyectos
@@ -961,6 +1028,8 @@ function buildMenu() {
       {
         label: "Archivo",
         submenu: [
+          { label: "Proyectos (inicio)…", click: send("startScreen") },
+          { label: "Nuevo proyecto…", accelerator: "CmdOrCtrl+Alt+N", click: send("newProject") },
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
           { label: "Guardar", accelerator: "CmdOrCtrl+S", click: send("save") },
@@ -971,6 +1040,7 @@ function buildMenu() {
           { label: "Abrir proyecto…", accelerator: "CmdOrCtrl+Shift+O", click: send("openProject") },
           { label: "Guardar proyecto", accelerator: "CmdOrCtrl+Shift+S", click: send("saveProject") },
           { type: "separator" },
+          { label: "Abrir en OpenPLC Editor", click: send("openInEditor") },
           { label: "Abrir carpeta de trabajo", click: () => shell.openPath(workspaceDir()) },
           { type: "separator" },
           { role: "quit", label: "Salir" },
