@@ -41,6 +41,38 @@ node cli/jwsim-cli.mjs grade exercises/01-marcha-parada mi_sketch --runs 100 --j
 Código de salida: 0 calificado (con `--runs`, misma nota en todas), 1 notas
 distintas entre corridas, 3 el sketch no compila.
 
+## Objetivos en vivo
+
+Además de la nota, un ejercicio puede traer **objetivos en vivo** (sección
+`goals` de `rubrica.json`; por ahora en los ejercicios 01 y 09). En la
+pestaña **Ejercicio**, mientras la simulación corre y el alumno opera la
+escena a mano, cada objetivo muestra la lectura de sus señales, lo que se
+pide y una barra que se llena mientras la condición se sostiene (en tiempo
+simulado). El reto queda completo cuando se cumplen todos los obligatorios
+en la misma corrida; al volver a ejecutar se reinician. No cambian la nota:
+esa sigue saliendo de **Calificar**.
+
+```json
+"goals": [
+  { "id": "arranca", "description": "Pulse S1: el motor arranca y sigue en marcha al soltarlo",
+    "when": { "KM1.closed": true, "M1.running": true }, "hold_ms": 2000 },
+  { "id": "para", "description": "Pulse S0: el motor se detiene",
+    "when": { "KM1.closed": false }, "after": "arranca", "hold_ms": 1500 },
+  { "id": "nivel", "description": "Mantiene el nivel entre 60 y 80 %",
+    "when": { "T1.nivelPct": [60, 80] }, "hold_ms": 5000, "extra": "merit" }
+]
+```
+
+- `when`: señal → valor (igualdad; `true` = 1) o `[min, max]` (rango
+  cerrado). Las claves son las de los `cases`: `I0_k`, `Q0_k` y
+  `<equipo>.<salida>`.
+- `hold_ms`: cuánto tiene que sostenerse (0: basta un instante).
+- `after`: no empieza a contar hasta que se cumpla ese objetivo anterior.
+- `extra`: `merit` o `distinction`; se muestran, pero no impiden completar.
+
+Lógica en `app/lib/goals.mjs` (pruebas en `tests/app/goals_test.mjs`);
+prueba de la interfaz en `app/tests/e2e-objetivos.mjs`.
+
 ## Formato
 
 Cada ejercicio es una carpeta con un proyecto `.jwsim` (ARCHITECTURE §8):

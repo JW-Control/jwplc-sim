@@ -1,6 +1,8 @@
 # Propuesta: evaluaciones en vivo, con CRUMB como referencia
 
-Estado: propuesta (2026-11-14). Sin código todavía.
+Estado (2026-11-14): etapa 1 hecha en la rama `feature/alpha18-evaluaciones`
+(objetivos en vivo en los ejercicios 01 y 09; ver `docs/EJERCICIOS.md`).
+Etapas 2 a 4: pendientes.
 
 ## Qué hace CRUMB
 

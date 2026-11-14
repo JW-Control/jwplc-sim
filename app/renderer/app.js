@@ -1465,8 +1465,101 @@ function mdToHtml(text) {
   return out.join("");
 }
 
+// ---- Objetivos en vivo (rubrica.json "goals"): la barra de cada objetivo se
+// llena mientras su condición se sostiene en la simulación.
+const goalUi = { goals: [], progress: null, error: null };
+
+function fmtReading(key, v) {
+  if (v === undefined) return "—";
+  if (typeof v === "boolean") return v ? "sí" : "no";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return /Pct$/.test(key) ? `${n.toFixed(0)} %` : String(Math.round(n * 10) / 10);
+}
+
+function fmtWant(key, w) {
+  if (Array.isArray(w)) return /Pct$/.test(key) ? `${w[0]}–${w[1]} %` : `${w[0]}–${w[1]}`;
+  return typeof w === "boolean" ? (w ? "sí" : "no") : String(w);
+}
+
+// El panel se arma una vez por ejercicio (buildGoals) y cada snapshot solo
+// cambia clases, textos y anchos: las barras se deslizan y el aviso de reto
+// completado se anima una sola vez.
+function buildGoals() {
+  const box = $("ex-goals");
+  box.hidden = !goalUi.goals.length && !goalUi.error;
+  if (box.hidden) return;
+  if (goalUi.error) {
+    box.innerHTML = `<div class="goals-head"><b>Objetivos en vivo</b></div><p class="bad">${esc(goalUi.error)}</p>`;
+    return;
+  }
+  const extraLabel = { merit: "Mérito", distinction: "Distinción" };
+  let html = `<div class="goals-head"><b>Objetivos en vivo</b><span class="goals-count"></span><span class="goals-time muted"></span></div>`;
+  html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden>¡Reto completado! Cumplió todos los objetivos en la misma corrida.</div><ol class="goals">`;
+  for (const g of goalUi.goals) {
+    const sigs = Object.entries(g.when)
+      .map(([k, w]) => `<span class="goal-sig" data-sig="${esc(k)}"><code>${esc(k)}</code> <span class="goal-read"></span><small>→ ${esc(fmtWant(k, w))}</small></span>`)
+      .join("");
+    html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
+    html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
+    if (Number(g.hold_ms ?? 0) > 0) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    html += `</div></li>`;
+  }
+  box.innerHTML = html + `</ol>`;
+  renderGoals();
+}
+
+function renderGoals() {
+  const box = $("ex-goals");
+  if (box.hidden || goalUi.error) return;
+  const p = goalUi.progress;
+  const byId = new Map((p?.goals ?? []).map((g) => [g.id, g]));
+  const required = goalUi.goals.filter((g) => !g.extra);
+  const done = required.filter((g) => byId.get(g.id)?.state === "done").length;
+  const icon = { done: "✓", active: "◔", pending: "○", blocked: "🔒" };
+  box.querySelector(".goals-count").textContent = `${done}/${required.length}`;
+  box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Corra la simulación y opere la escena";
+  box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
+  box.querySelector(".goals-done").hidden = !p?.complete;
+  for (const g of goalUi.goals) {
+    const li = box.querySelector(`[data-goal="${CSS.escape(g.id)}"]`);
+    const s = byId.get(g.id);
+    const st = s?.state ?? (g.after ? "blocked" : "pending");
+    li.classList.remove("done", "active", "pending", "blocked");
+    li.classList.add(st);
+    li.querySelector(".goal-icon").textContent = icon[st];
+    for (const [k, w] of Object.entries(g.when)) {
+      const el = li.querySelector(`[data-sig="${CSS.escape(k)}"]`);
+      // Cumplido: se deja la condición, no la lectura que siguió cambiando.
+      el.querySelector(".goal-read").textContent = st === "done" ? "" : fmtReading(k, s?.reading?.[k]);
+      el.classList.toggle("ok", st === "done" || (!!s && st !== "blocked" && window.JwsimGoalMatch(s.reading[k], w)));
+    }
+    const hold = Number(g.hold_ms ?? 0);
+    if (hold > 0) {
+      li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+      li.querySelector(".goal-hold small").textContent = `${((s?.held_ms ?? 0) / 1000).toFixed(1)} / ${(hold / 1000).toFixed(1)} s`;
+    }
+  }
+}
+
+window.JwsimGoalMatch = (got, want) => {
+  if (got === undefined) return false;
+  const n = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
+  return Array.isArray(want) ? n(got) >= want[0] && n(got) <= want[1] : Math.abs(n(got) - n(want)) < 1e-6;
+};
+
+api.onGoalsProgress((p) => {
+  goalUi.progress = p;
+  renderGoals();
+});
+
 async function showExercise(file) {
   const info = file ? await api.exerciseInfo(file) : null;
+  goalUi.goals = info?.goals ?? [];
+  goalUi.error = info?.goalsError ?? null;
+  goalUi.progress = null;
+  await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
+  buildGoals();
   state.exercise = info ? { file } : null;
   $("tab-exercise").hidden = !info;
   $("grade-result").innerHTML = "";

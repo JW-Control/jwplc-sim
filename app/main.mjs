@@ -20,6 +20,7 @@ import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
+import { checkGoals, GoalTracker } from "./lib/goals.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -100,6 +101,8 @@ void loop() {
 let win = null;
 let runner = null;
 let sceneSession = null; // co-simulación con la escena (G7)
+let activeGoals = null; // objetivos en vivo del ejercicio abierto
+let goalTracker = null;
 let registryPromise = null; // biblioteca incluida + dispositivos de escena instalados
 let runnerExe = null;
 let debug = null; // DebugSession adjunta al runner actual
@@ -313,6 +316,13 @@ ipcMain.handle("exercises:open", (_e, id) => {
   return openProject(join(dst, `${id}.jwsim`));
 });
 
+// Objetivos en vivo del ejercicio abierto (null: ninguno). Cuentan desde la
+// corrida siguiente o, si ya corre, desde ahora.
+ipcMain.handle("goals:set", (_e, goals) => {
+  activeGoals = Array.isArray(goals) && goals.length ? goals : null;
+  goalTracker = activeGoals && sceneSession ? new GoalTracker(activeGoals) : null;
+});
+
 // Enunciado de un proyecto de ejercicio (o null si no lo es).
 ipcMain.handle("exercise:info", (_e, file) => {
   try {
@@ -320,7 +330,17 @@ ipcMain.handle("exercise:info", (_e, file) => {
     const ex = project.exercise;
     if (!ex) return null;
     const st = ex.statement ? resolve(dirname(file), ex.statement) : null;
-    return { title: project.name, level: ex.level ?? 1, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "" };
+    // Objetivos en vivo de la rúbrica (opcionales); si están mal, se avisa.
+    let goals = [];
+    let goalsError = null;
+    try {
+      const rub = ex.rubric ? JSON.parse(readFileSync(resolve(dirname(file), ex.rubric), "utf8")) : {};
+      checkGoals(rub.goals, ex.rubric);
+      goals = rub.goals ?? [];
+    } catch (err) {
+      goalsError = err.message;
+    }
+    return { title: project.name, level: ex.level ?? 1, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError };
   } catch {
     return null;
   }
@@ -727,9 +747,11 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out" && forward("sim:message", m));
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
+    goalTracker = activeGoals?.length ? new GoalTracker(activeGoals) : null;
     sceneSession.on("snapshot", (snap) => {
       lastSceneInputs = snap.inputs ?? null;
       forward("scene:snapshot", snap);
+      if (goalTracker) forward("goals:progress", goalTracker.update(snap));
     });
     sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
   }
