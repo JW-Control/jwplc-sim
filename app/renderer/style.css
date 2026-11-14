@@ -2762,3 +2762,18 @@ body[data-tab="plant"] .view3d-empty {
 .dev-msgs .bad { color: var(--err); }
 .dev-msgs .warn { color: var(--warn); }
 .dev-actions { display: flex; gap: 14px; margin-top: 6px; }
+
+/* ---- Asistente «Nuevo dispositivo» */
+.nb-blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.nb-form { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.nb-fields { display: grid; gap: 8px; }
+.nb-fields select, .nb-fields input { width: 100%; }
+.nb-preview { position: sticky; top: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #101317; background-image: radial-gradient(#2c333c 1.3px, transparent 1.3px); background-size: 20px 20px; }
+.nb-svg { display: flex; justify-content: center; padding: 10px 0; }
+.nb-svg svg { max-width: 100%; height: auto; }
+.nb-svg .jw-term { fill: transparent; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.nb-preview p { margin: 4px 0; }
+.devmgr-note { overflow-wrap: anywhere; }
+@media (max-width: 760px) { .nb-form { grid-template-columns: 1fr; } }
+/* Vista previa en reposo: sin evaluar data-show, se ocultan los estados activos. */
+.nb-svg [data-show]:not([data-show^="!"]) { display: none; }

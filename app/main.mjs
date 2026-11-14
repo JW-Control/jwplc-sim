@@ -11,6 +11,7 @@ import { Worker } from "node:worker_threads";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { buildApiCatalog } from "../cli/lib/api-catalog.mjs";
+import { BEHAVIORS, generateDevice, normalizeSpec, symbolLayout, writeDevice } from "../cli/lib/device-gen.mjs";
 import { checkDeviceDir, installedDevices, linkDevice, localDevices, registryWithInstalled, unlinkDevice } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
@@ -887,6 +888,30 @@ ipcMain.handle("devices:reload", async () => {
 });
 ipcMain.handle("devices:reveal", (_e, dir) => shell.openPath(dir));
 
+// ---- Nuevo dispositivo (etapa B): bloques de comportamiento → carpeta del
+// SDK generada (cli/lib/device-gen.mjs), enlazada y lista en la paleta.
+const devicesHome = () => join(workspaceDir(), "Dispositivos");
+ipcMain.handle("devices:behaviors", () => ({ behaviors: BEHAVIORS, parent: devicesHome() }));
+ipcMain.handle("devices:preview", (_e, spec) => {
+  try {
+    const o = normalizeSpec(spec);
+    const L = symbolLayout(o);
+    return { ok: true, type: o.type, svg: generateDevice(spec).files["symbol.svg"], w: L.w, h: L.h, top: L.top.map((t) => t.id), bottom: L.bottom.map((t) => t.id) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+ipcMain.handle("devices:pickParent", async (_e, current) => {
+  const r = await dialog.showOpenDialog(win, { title: "Carpeta donde crear el dispositivo", defaultPath: current || devicesHome(), properties: ["openDirectory", "createDirectory"] });
+  return r.canceled ? null : r.filePaths[0];
+});
+ipcMain.handle("devices:create", async (_e, { spec, parent }) => {
+  const r = writeDevice(parent || devicesHome(), spec);
+  await linkDevice(r.dir);
+  await reloadDevices();
+  return { dir: r.dir, type: r.spec.type, state: await devicesState() };
+});
+
 // Definiciones para la paleta y el inspector (sin funciones).
 ipcMain.handle("scene:devices", async () =>
   (await registry()).list().map((d) => ({
@@ -1153,6 +1178,7 @@ function buildMenu() {
           { label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") },
           { type: "separator" },
           { label: "Dispositivos propios…", click: send("devices") },
+          { label: "Nuevo dispositivo…", click: send("newDevice") },
         ],
       },
       {

@@ -274,6 +274,34 @@ Un dispositivo ejecuta su propio código en la computadora: se enlazan solo
 carpetas de confianza. Lo que se distribuye a otros va por el índice
 firmado (§4).
 
+### 2.7 Nuevo dispositivo desde un comportamiento (sin escribir código)
+
+**Herramientas → Nuevo dispositivo…** (o **Nuevo dispositivo…** en
+Dispositivos propios) genera la carpeta completa a partir de un bloque y la
+enlaza en modo desarrollador (§2.6):
+
+| Bloque | Bornes | Qué hace |
+|---|---|---|
+| Relé o contactor | A1 A2 y 1 a 4 NA (13-14, 23-24…) y NC (…1-…2) | La bobina con su tensión conmuta los contactos |
+| Carga | X1 X2 | Piloto, zumbador o actuador simple: se enciende con su tensión nominal |
+| Pulsador o selector | contactos NA/NC | El alumno lo acciona (vuelve solo o queda) |
+| Sensor con umbral | contactos NA/NC | Lee una salida de otro equipo (`links`, cruce exacto) y conmuta sobre el umbral, con histéresis |
+| Temporizador a la conexión | A1 A2, 15 16 18 | Con la bobina energizada, 15-18 cierra tras el tiempo (`nextEventNs`) |
+| Equipo de planta | sin bornes | Una variable de 0 a 100 % que sube mientras su entrada está activa y baja si no (segmentos `{ value, rate }`) |
+
+El asistente pide autor, nombre, nombre en la paleta, categoría y las
+opciones del bloque, y muestra la vista previa del símbolo con los bornes
+**siempre en la grilla de 20 px**. Genera `jwsim-device.json`,
+`device.mjs` (comentado, para seguir editándolo), `symbol.svg`,
+`device.test.mjs` y `README.md` en `Dispositivos/<nombre>` de la carpeta de
+trabajo (o la que se elija). Lo mismo por la CLI:
+
+```sh
+jwsim-cli device new <carpeta> rele utec/rele-dos-na --set no=2 --set nc=0 --set title="Relé 2 NA" --link
+```
+
+Bloques y plantillas de código: `cli/lib/device-gen.mjs`.
+
 ## 3. Dispositivos nativos (ABI C)
 
 La ABI está en [`sdk/native/jwsim_device.h`](../sdk/native/jwsim_device.h).

@@ -30,6 +30,7 @@ import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
+import { BEHAVIORS, writeDevice } from "./lib/device-gen.mjs";
 import { buildNativeDevice, checkDeviceDir, installedDevices, linkDevice, loadSceneDevice, localDevices, packDevice, readManifest, unlinkDevice } from "./lib/device.mjs";
 import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
@@ -85,6 +86,8 @@ function parse(argv) {
     else if (a === "--record") opts.record = true;
     else if (a === "--solution") opts.solution = true;
     else if (a === "--runs") opts.runs = Number(value(++i, a));
+    else if (a === "--set") (opts.set ??= []).push(value(++i, a));
+    else if (a === "--link") opts.link = true;
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -346,6 +349,22 @@ async function main() {
         emit({ ok: true, ...r });
         return code;
       }
+      // Nuevo dispositivo a partir de un bloque de comportamiento (lo mismo que
+      // el asistente de la app): device new <carpeta> <bloque> <autor/nombre>
+      // [--set clave=valor]… [--link].
+      if (sub === "new") {
+        const [, parent, behavior, type] = opts._;
+        if (!parent || !behavior || !type?.includes("/")) {
+          throw new CliError(EXIT.USAGE, `uso: device new <carpeta> <${BEHAVIORS.map((b) => b.id).join("|")}> <autor/nombre> [--set clave=valor]… [--link]`);
+        }
+        const [author, name] = type.split("/");
+        const extra = Object.fromEntries((opts.set ?? []).map((kv) => [kv.slice(0, kv.indexOf("=")), kv.slice(kv.indexOf("=") + 1)]));
+        const r = writeDevice(resolve(parent), { ...extra, behavior, author, name });
+        if (opts.link) await linkDevice(r.dir);
+        if (!opts.json) console.log(`[jwsim-cli] creado ${r.spec.type} en ${r.dir}${opts.link ? " (enlazado)" : ""}`);
+        emit({ ok: true, type: r.spec.type, dir: r.dir, files: Object.keys(r.files), linked: !!opts.link });
+        return code;
+      }
       // Modo desarrollador: una carpeta de dispositivo de escena se usa en el
       // simulador sin pasar por el índice firmado (ejecuta su código).
       if (sub === "link") {
@@ -381,7 +400,7 @@ async function main() {
         emit({ ok: true, installed, available });
         return code;
       }
-      throw new CliError(EXIT.USAGE, `device: subcomando desconocido '${sub ?? ""}' (build, test, pack, install, list, link, unlink)`);
+      throw new CliError(EXIT.USAGE, `device: subcomando desconocido '${sub ?? ""}' (build, test, pack, install, list, link, unlink, new)`);
     } catch (err) {
       if (err instanceof CliError) throw err;
       code = EXIT.FAIL;
