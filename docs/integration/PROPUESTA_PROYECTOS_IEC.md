@@ -114,8 +114,12 @@ Notas:
 - e2e-g2 ahora usa un perfil temporal. Su criterio EXTERNAL_EDIT_RELOAD
   (< 2 s) da unos 2,3 s en esta PC **también en la rama base**: es el
   rendimiento del equipo, no este cambio.
-- Para probar el editor sin empaquetar con el bundle de producción
-  (`electron release/app/dist/main/main.js`), el preload debe estar en
-  `release/app/configs/dll/preload.js` (copiar `configs/dll/preload.js`);
-  si no, la ventana sale en blanco. Empaquetado no hace falta.
+- El editor corrido desde su repo sin empaquetar (`electron release/app/dist/main/main.js`,
+  lo que hace el Sim si el editor no está instalado) salía en blanco porque buscaba
+  el preload de desarrollo. Corregido en la rama del editor (commit 96a11a98c):
+  si falta, usa `dist/main/preload.js`. Hay que volver a correr `npm.cmd run build:main`.
+- Lo recomendado es instalar el editor (`npm.cmd run package` genera
+  `release/build/OpenPLC Editor - JWPLC Edition_<versión>.exe`); el Sim lo
+  encuentra solo. Probado: crea `tanque_st` en ST (unos 9 s) y el editor
+  instalado lo abre. Ese instalador no trae VPP si `resources/jwplc-vpp` está vacío.
 - Merge y publicación de la rama del editor: con autorización de JW Control.
