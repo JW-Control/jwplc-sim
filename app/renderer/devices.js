@@ -28,8 +28,20 @@
     delayMs: { label: "Tiempo (ms)", type: "number", min: 1 },
     upPerS: { label: "Sube (%/s)", type: "number", min: 0 },
     downPerS: { label: "Baja (%/s)", type: "number", min: 0 },
+    tau: { label: "τ, constante de tiempo (s)", type: "number", min: 0.1 },
+    gain: { label: "K, subida a plena potencia (°C)", type: "number" },
+    theta: { label: "θ, tiempo muerto (s)", type: "number", min: 0 },
+    ambient: { label: "Temperatura ambiente (°C)", type: "number" },
+    tmax: { label: "Termostato de seguridad (°C)", type: "number" },
+    stepMs: { label: "Paso de discretización Ts (ms)", type: "number", min: 10, max: 10000 },
+    analogIn: { label: "Entrada analógica: consigna 0-10 V (AI+ AI-)", type: "checkbox" },
+    pt100: { label: "Salida analógica: sonda PT100 (PT1 PT2 PT3)", type: "checkbox" },
+    thermostat: { label: "Salida digital: termostato de seguridad (TS1 TS2)", type: "checkbox" },
   };
-  const DEFAULTS = { rating: "24VDC", color: "verde", mode: "momentary", no: 1, nc: 0, source: "", threshold: 50, hysteresis: 5, delayMs: 3000, upPerS: 10, downPerS: 5 };
+  const DEFAULTS = {
+    rating: "24VDC", color: "verde", mode: "momentary", no: 1, nc: 0, source: "", threshold: 50, hysteresis: 5, delayMs: 3000, upPerS: 10, downPerS: 5,
+    tau: 600, gain: 180, theta: 20, ambient: 25, tmax: 220, stepMs: 500, analogIn: true, pt100: true, thermostat: true,
+  };
 
   function el() {
     let box = $("devmgr");
@@ -48,7 +60,7 @@
       const k = e.target.dataset?.f;
       if (!k || !st.nb?.spec) return;
       if (k === "parent") st.nb.parent = e.target.value.trim();
-      else st.nb.spec[k] = e.target.type === "number" ? Number(e.target.value) : e.target.value;
+      else st.nb.spec[k] = e.target.type === "checkbox" ? e.target.checked : e.target.type === "number" ? Number(e.target.value) : e.target.value;
       refreshPreview();
     });
     box.addEventListener("keydown", (e) => e.key === "Escape" && close());
@@ -110,6 +122,7 @@
     const text = (id, ph = "") => `<input data-f="${id}" value="${esc(nb.spec[id] ?? "")}" placeholder="${esc(ph)}" spellcheck="false"/>`;
     const opt = (id) => {
       const F = FIELDS[id];
+      if (F.type === "checkbox") return `<label class="start-check"><input data-f="${id}" type="checkbox" ${nb.spec[id] ? "checked" : ""}/> ${esc(F.label)}</label>`;
       if (F.type === "select") return f(F.label, `<select data-f="${id}">${F.options.map(([v, l]) => `<option value="${esc(v)}" ${String(nb.spec[id]) === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`);
       const lim = `${F.min !== undefined ? ` min="${F.min}"` : ""}${F.max !== undefined ? ` max="${F.max}"` : ""}`;
       return f(F.label, `<input data-f="${id}" type="${F.type}" value="${esc(nb.spec[id])}"${lim} placeholder="${esc(F.placeholder ?? "")}" spellcheck="false"/>`);

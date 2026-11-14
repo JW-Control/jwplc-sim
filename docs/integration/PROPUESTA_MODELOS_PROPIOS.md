@@ -4,7 +4,7 @@ Estado (2026-11-14), rama `feature/alpha18-propiosModelos`: auditoría de la
 grilla (`app/tests/audit-grilla.mjs`) y **etapas A y B hechas**:
 modo desarrollador (`device link`/`unlink`, validación del símbolo, gestor
 «Dispositivos propios» con recarga; `docs/SDK.md` §2.6) y asistente «Nuevo
-dispositivo» con 6 bloques de comportamiento (`device new`; §2.7). Etapas C
+dispositivo» con 7 bloques de comportamiento, incluida la planta térmica de primer orden con tiempo muerto (`device new`; §2.7). Etapas C
 a E: pendientes.
 
 ## 1. Cómo funciona hoy

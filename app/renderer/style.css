@@ -2791,3 +2791,5 @@ body[data-tab="plant"] .view3d-empty {
 .nb-blocks { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .nb-blocks .choice { min-height: 104px; padding: 14px 16px; gap: 6px; justify-content: flex-start; }
 .nb-blocks .choice span { font-size: 12.5px; }
+.start-check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.start-check input { width: auto; }

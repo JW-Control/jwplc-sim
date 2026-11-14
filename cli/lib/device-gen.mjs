@@ -19,6 +19,13 @@ export const BEHAVIORS = [
   { id: "sensor", name: "Sensor con umbral", hint: "Lee una salida de otro equipo (p. ej. T1.nivelPct) y cierra su contacto sobre un umbral, con histéresis.", category: "Sensores", options: ["source", "threshold", "hysteresis", "no", "nc"] },
   { id: "temporizador", name: "Temporizador a la conexión", hint: "Con la bobina A1-A2 energizada, el contacto 15-18 cierra tras el tiempo (15-16 abre).", category: "Mando y protección", options: ["rating", "delayMs"] },
   { id: "planta", name: "Equipo de planta", hint: "Una variable de 0 a 100 % que sube mientras una entrada está activa y baja si no (llenado, temperatura).", category: "Planta", options: ["source", "upPerS", "downPerS"] },
+  {
+    id: "termica",
+    name: "Planta térmica",
+    hint: "Horno o tanque calefaccionado: primer orden con tiempo muerto, discretizado exacto. Resistencia (todo o nada) o consigna 0-10 V; salida PT100 y termostato de seguridad.",
+    category: "Planta",
+    options: ["rating", "tau", "gain", "theta", "ambient", "tmax", "stepMs", "analogIn", "pt100", "thermostat"],
+  },
 ];
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -26,7 +33,8 @@ const clampInt = (v, lo, hi, d) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d;
 };
-const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
+const num = (v, d) => (v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
+const bool = (v, d) => (v === undefined || v === "" ? d : v === true || v === "true" || v === 1 || v === "1");
 const js = (v) => JSON.stringify(v);
 const xml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -63,6 +71,16 @@ export function normalizeSpec(s) {
     delayMs: Math.max(1, num(s.delayMs, 3000)),
     upPerS: Math.max(0.01, num(s.upPerS, 10)),
     downPerS: Math.max(0, num(s.downPerS, 5)),
+    // Planta térmica (primer orden + tiempo muerto).
+    tau: Math.max(0.1, num(s.tau, 600)),
+    gain: num(s.gain, 180),
+    theta: Math.max(0, num(s.theta, 20)),
+    ambient: num(s.ambient, 25),
+    tmax: num(s.tmax, 220),
+    stepMs: Math.min(10000, Math.max(10, num(s.stepMs, 500))),
+    analogIn: bool(s.analogIn, true),
+    pt100: bool(s.pt100, true),
+    thermostat: bool(s.thermostat, true),
   };
   if (contacts && o.no + o.nc === 0) throw new Error("al menos un contacto (NA o NC)");
   if (["sensor", "planta"].includes(b.id) && !/^[A-Za-z][\w-]*\.[\w-]+$/.test(o.source)) throw new Error("la lectura es <equipo>.<salida>, p. ej. T1.nivelPct");
@@ -91,6 +109,13 @@ export function terminalsOf(o) {
       return { top: cs.map((c) => c.a), bottom: cs.map((c) => c.b), contacts: cs };
     case "temporizador":
       return { top: ["A1", "15"], bottom: ["A2", "16", "18"], contacts: [] };
+    case "termica":
+      // Arriba lo que entra (resistencia, consigna); abajo lo que sale (PT100, termostato).
+      return {
+        top: ["R1", "R2", ...(o.analogIn ? ["AI+", "AI-"] : [])],
+        bottom: [...(o.pt100 ? ["PT1", "PT2", "PT3"] : []), ...(o.thermostat ? ["TS1", "TS2"] : [])],
+        contacts: [],
+      };
     default:
       return { top: [], bottom: [], contacts: [] };
   }
@@ -148,6 +173,14 @@ export function symbolSvg(o) {
         `  <circle cx="${cx - 24}" cy="${cy}" r="6" fill="#3a3f45" data-show="!out.active"/>\n  <circle cx="${cx - 24}" cy="${cy}" r="6" fill="#ffcc00" data-show="out.active"/>\n` +
         `  <text x="${cx + 6}" y="${cy + 4}" font-size="11" text-anchor="middle" fill="#1b1e22" font-family="sans-serif" data-text="out.value:d1:">—</text>\n`;
       break;
+    case "termica":
+      // Resistencia que se enciende, temperatura y aviso del termostato.
+      body =
+        `  <path d="M${cx - 50} ${cy - 10}l8 -8l8 16l8 -16l8 16l8 -16l8 16l8 -16l8 16l8 -16l8 16l6 -8" fill="none" stroke="#5b636c" stroke-width="2.4" data-show="!out.calentando"/>\n` +
+        `  <path d="M${cx - 50} ${cy - 10}l8 -8l8 16l8 -16l8 16l8 -16l8 16l8 -16l8 16l8 -16l8 16l6 -8" fill="none" stroke="#ff5a2a" stroke-width="2.8" data-show="out.calentando"/>\n` +
+        `  <text x="${cx}" y="${cy + 18}" font-size="15" font-weight="700" text-anchor="middle" fill="#1b1e22" font-family="sans-serif" data-text="out.temp:d1:°C">— °C</text>\n` +
+        (o.thermostat ? `  <text x="${w - 10}" y="${cy + 18}" font-size="9" font-weight="700" text-anchor="end" fill="#d92b2b" font-family="sans-serif" data-show="out.sobretemp">SOBRETEMP.</text>\n` : "");
+      break;
     default:
       body =
         `  <rect x="20" y="30" width="${w - 40}" height="14" rx="3" fill="#cfd4da" stroke="#1b1e22"/>\n` +
@@ -166,6 +199,92 @@ export function symbolSvg(o) {
     body +
     `</svg>\n`
   );
+}
+
+/**
+ * Cuerpo de la planta térmica: primer orden con tiempo muerto (FOPDT),
+ *   τ·dT/dt = −(T − Ta) + K·u(t − θ),
+ * discretizado exacto con retención de orden cero (paso Ts):
+ *   T[k+1] = Tss + (T[k] − Tss)·e^(−Ts/τ),  Tss = Ta + K·u[k − d],  d = θ/Ts.
+ */
+function thermalBody(o, terminals) {
+  const L = [];
+  L.push(`  // Modelo: primer orden con tiempo muerto, discretizado exacto (estable con cualquier paso).`);
+  L.push(`  //   τ·dT/dt = −(T − Ta) + K·u(t − θ)   →   T[k+1] = Tss + (T[k] − Tss)·e^(−Ts/τ), Tss = Ta + K·u[k − d]`);
+  L.push(`  // u va de 0 a 1: la resistencia (todo o nada)${o.analogIn ? " o la consigna de 0-10 V en AI+/AI- (si está cableada, manda ella)" : ""}.`);
+  L.push(`  parameters: [`);
+  L.push(`    { id: "rating", label: "Resistencia", type: "enum", options: ["24VDC", "230VAC"], default: ${js(o.rating)}, group: "01 Entradas" },`);
+  L.push(`    { id: "tau", label: "τ (constante de tiempo)", type: "number", default: ${o.tau}, unit: "s", group: "02 Modelo" },`);
+  L.push(`    { id: "gain", label: "K (subida a plena potencia)", type: "number", default: ${o.gain}, unit: "°C", group: "02 Modelo" },`);
+  L.push(`    { id: "theta", label: "θ (tiempo muerto)", type: "number", default: ${o.theta}, unit: "s", group: "02 Modelo" },`);
+  L.push(`    { id: "ambient", label: "Ambiente (Ta)", type: "number", default: ${o.ambient}, unit: "°C", group: "02 Modelo" },`);
+  L.push(`    { id: "start", label: "Temperatura inicial", type: "number", default: ${o.ambient}, unit: "°C", group: "02 Modelo" },`);
+  L.push(`    { id: "stepMs", label: "Paso de discretización (Ts)", type: "number", default: ${o.stepMs}, unit: "ms", group: "02 Modelo" },`);
+  if (o.thermostat) L.push(`    { id: "tmax", label: "Termostato de seguridad", type: "number", default: ${o.tmax}, unit: "°C", group: "03 Salidas" },`);
+  L.push(`  ],`);
+  L.push(`  terminals: ${js(terminals)},`);
+  L.push(`  electrical: (p) => ({`);
+  L.push(`    // Entrada digital: la resistencia R1-R2 (la manda un relé, contactor o SSR del tablero).`);
+  L.push(`    loads: [{ id: "heater", a: "R1", b: "R2", rating: String(p.rating) }],`);
+  if (o.thermostat) L.push(`    // Salida digital: termostato de seguridad TS1-TS2 (cierra en sobretemperatura).`);
+  L.push(`    contacts: ${o.thermostat ? `{ TS: ["TS1", "TS2"] }` : "{}"},`);
+  L.push(`  }),`);
+  if (o.analogIn) {
+    L.push(`  // Entrada analógica: consigna de potencia 0-10 V (calibrador, potenciómetro con fuente, módulo AO).`);
+    L.push(`  probeInputs: () => [{ id: "u", kind: "0-10V", terminals: ["AI+", "AI-"] }],`);
+  }
+  if (o.pt100) {
+    L.push(`  // Salida analógica: sonda PT100 de 3 hilos (PT1-PT2-PT3 → R1-R2-R3 del transmisor pt100-rs485).`);
+    L.push(`  probes: () => [{ id: "pt", kind: "pt100", terminals: ["PT1", "PT2", "PT3"], output: "temp" }],`);
+  }
+  L.push(`  create(ctx) {`);
+  L.push(`    const p = ctx.params;`);
+  L.push(`    const Ts = Math.max(0.01, Number(p.stepMs) / 1000);`);
+  L.push(`    const STEP = ms(Ts * 1000);`);
+  L.push(`    const a = Math.exp(-Ts / Math.max(0.1, Number(p.tau)));`);
+  L.push(`    // Tiempo muerto: las entradas de los últimos d pasos.`);
+  L.push(`    const delay = new Array(Math.max(0, Math.round(Number(p.theta) / Ts))).fill(0);`);
+  L.push(`    let T = Number(p.start);`);
+  L.push(`    let k = 0n; // pasos integrados`);
+  L.push(`    let u = 0; // entrada retenida (ZOH) del paso en curso`);
+  L.push(`    const steady = (uu) => Number(p.ambient) + Number(p.gain) * uu;`);
+  L.push(`    return {`);
+  L.push(`      update(t, inp) {`);
+  L.push(`        // 1) Integrar los pasos vencidos con la entrada retenida (idempotente en el mismo t).`);
+  L.push(`        while ((k + 1n) * STEP <= t) {`);
+  L.push(`          delay.push(u);`);
+  L.push(`          const Tss = steady(delay.shift());`);
+  L.push(`          T = Tss + (T - Tss) * a;`);
+  L.push(`          k++;`);
+  L.push(`        }`);
+  L.push(`        // 2) Entrada para el paso siguiente.`);
+  if (o.analogIn) {
+    L.push(`        const v = inp.values?.u;`);
+    L.push(`        u = Number.isFinite(v) ? Math.min(1, Math.max(0, v / 10)) : inp.loads.heater.on ? 1 : 0;`);
+  } else {
+    L.push(`        u = inp.loads.heater.on ? 1 : 0;`);
+  }
+  L.push(`        // 3) Salidas: la temperatura como segmento hacia el próximo paso (los sensores la cruzan exacto).`);
+  L.push(`        const uNext = delay.length ? delay[0] : u;`);
+  L.push(`        const Tnext = steady(uNext) + (T - steady(uNext)) * a;`);
+  L.push(`        // Valor en este instante (puede ser a mitad de un paso): entre T[k] y T[k+1].`);
+  L.push(`        const rate = (Tnext - T) / Ts;`);
+  L.push(`        const Tt = T + rate * (Number(t - k * STEP) / 1e9);`);
+  L.push(`        const hot = ${o.thermostat ? "Tt >= Number(p.tmax) - 1e-6" : "false"};`);
+  L.push(`        return {`);
+  L.push(`          contacts: ${o.thermostat ? "{ TS: hot }" : "{}"},`);
+  L.push(`          outputs: { temp: { value: Tt, rate }, potencia: u, calentando: uNext > 0, sobretemp: hot },`);
+  L.push(`          // Despertar en el próximo paso del modelo${o.thermostat ? " o, antes, cuando la temperatura cruce el termostato" : ""}.`);
+  L.push(
+    o.thermostat
+      ? `          nextEventNs: ((n, c) => (c !== undefined && c > t && c < n ? c : n))((k + 1n) * STEP, rate !== 0 && (Number(p.tmax) - Tt) / rate > 0 ? t + ms(((Number(p.tmax) - Tt) / rate) * 1000) : undefined),`
+      : `          nextEventNs: (k + 1n) * STEP,`,
+  );
+  L.push(`        };`);
+  L.push(`      },`);
+  L.push(`    };`);
+  L.push(`  },`);
+  return L.join("\n") + "\n";
 }
 
 /** device.mjs: la definición, con comentarios para seguir editándola. */
@@ -243,6 +362,9 @@ export function deviceModule(o) {
         `        // Horizonte: la escena despierta al dispositivo justo al vencer el tiempo.\n` +
         `        return { contacts: { "15-18": done, "15-16": !done }, outputs: { energized: true, closed: done }, ...(done ? {} : { nextEventNs: since + delay }) };\n      },\n    };\n  },\n`;
       break;
+    case "termica":
+      body = thermalBody(o, terminals);
+      break;
     default:
       body =
         `  // La entrada se elige en Propiedades al colocarlo (vacía: no sube).\n` +
@@ -292,6 +414,25 @@ export function deviceTest(o) {
       return head + `test("en reposo no está pulsado", () => {\n  const s = sceneWith(device, ["S1:${T}"], []);\n  s.advanceTo(ms(10));\n  assert.equal(s.output("S1", "pressed"), false);\n});\n`;
     case "sensor":
       return head + `test("sin la lectura queda inactivo", () => {\n  const s = sceneWith(device, ["B1:${T}"], []);\n  s.advanceTo(ms(10));\n  assert.equal(s.output("B1", "active"), false);\n});\n`;
+    case "termica": {
+      const t63 = Math.round((o.theta + o.tau) * 1000);
+      return (
+        head +
+        `// Respuesta al escalón de un primer orden con tiempo muerto: a t = θ + τ llega al 63,2 % de K.\n` +
+        `test("escalón: a θ + τ llega a Ta + 0,632·K", () => {\n` +
+        `  const s = sceneWith(device, [${js(ps)}, "H1:${T}"], ["${plus} - H1.R1", "H1.R2 - ${minus}"]);\n` +
+        `  s.advanceTo(ms(${t63}));\n` +
+        `  const T = Number(s.output("H1", "temp"));\n` +
+        `  const esperado = ${o.ambient} + 0.632 * ${o.gain};\n` +
+        `  assert.ok(Math.abs(T - esperado) <= 0.02 * Math.abs(${o.gain}) + 0.01, \`T = \${T.toFixed(2)} °C; se esperaba \${esperado.toFixed(2)} °C\`);\n` +
+        `});\n\n` +
+        `test("sin la resistencia se queda a la temperatura ambiente", () => {\n` +
+        `  const s = sceneWith(device, ["H1:${T}"], []);\n` +
+        `  s.advanceTo(ms(${t63}));\n` +
+        `  assert.ok(Math.abs(Number(s.output("H1", "temp")) - ${o.ambient}) < 1e-6);\n` +
+        `});\n`
+      );
+    }
     default:
       return head + `test("sin la entrada se queda en el valor inicial", () => {\n  const s = sceneWith(device, ["P1:${T}"], []);\n  s.advanceTo(ms(1000));\n  assert.equal(s.output("P1", "valuePct"), 0);\n});\n`;
   }

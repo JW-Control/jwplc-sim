@@ -108,3 +108,47 @@ test("pulsador: momentary cierra mientras se pulsa; selector (toggle) queda", as
   s.advanceTo(ms(40));
   assert.equal(s.output("S9", "pressed"), false);
 });
+
+test("planta térmica: escalón FOPDT, PT100 al transmisor, consigna 0-10 V y termostato exacto", async () => {
+  const { def } = await make({ behavior: "termica", name: "horno", tau: 100, gain: 100, theta: 10, ambient: 20, tmax: 60, stepMs: 500 });
+  const Ta = 20;
+  const K = 100;
+  // Escalón con la resistencia a 24 VDC: a θ + τ = 110 s llega a Ta + 0,632·K (exacto con θ múltiplo de Ts).
+  const s = sceneWith(
+    def,
+    [
+      "PS:power-24vdc",
+      { id: "H1", type: "utec/horno" },
+      { id: "TT", type: "jwsim/pt100-rs485", params: { sonda: "cableada" } },
+    ],
+    ["PS.+V1 - H1.R1", "H1.R2 - PS.-V1", "PS.+V1 - TT.+", "TT.- - PS.-V1", "H1.PT1 - TT.R1", "H1.PT2 - TT.R2", "H1.PT3 - TT.R3"],
+  );
+  s.advanceTo(ms(10_000));
+  assert.ok(Math.abs(Number(s.output("H1", "temp")) - Ta) < 1e-6, "durante θ no cambia");
+  s.advanceTo(ms(110_000));
+  const T110 = Number(s.output("H1", "temp"));
+  assert.ok(Math.abs(T110 - (Ta + K * (1 - Math.exp(-1)))) < 0.05, `T(θ+τ) = ${T110}`);
+  // La PT100 cableada llega al transmisor (redondeado a 0,1 °C).
+  assert.ok(Math.abs(Number(s.output("TT", "temp")) - T110) <= 0.06, "el transmisor lee la sonda");
+  // Termostato a 60 °C: Ta + K(1 − e^(−(t−θ)/τ)) = 60 → t = θ − τ·ln(0,6) ≈ 61,08 s; cierra en ese instante.
+  const s2 = sceneWith(def, ["PS:power-24vdc", { id: "H1", type: "utec/horno" }], ["PS.+V1 - H1.R1", "H1.R2 - PS.-V1"]);
+  const tCross = 10 - 100 * Math.log(0.6);
+  s2.advanceTo(ms((tCross - 0.6) * 1000));
+  assert.equal(s2.output("H1", "sobretemp"), false);
+  s2.advanceTo(ms((tCross + 0.01) * 1000));
+  assert.equal(s2.output("H1", "sobretemp"), true, "cierra al cruzar, sin esperar el paso");
+  // Consigna 0-10 V al 50 %: régimen Ta + 0,5·K, aunque la resistencia no esté cableada.
+  const s3 = sceneWith(
+    def,
+    [{ id: "U", type: "jwsim/signal-source", params: { modo: "0-10 V", valor: 50 } }, { id: "H1", type: "utec/horno" }],
+    ["U.+ - H1.AI+", "U.- - H1.AI-"],
+  );
+  s3.advanceTo(ms(2_000_000));
+  assert.ok(Math.abs(Number(s3.output("H1", "temp")) - (Ta + 0.5 * K)) < 0.01, "u = 5 V / 10 V");
+});
+
+test("planta térmica sin las E/S opcionales: solo R1-R2", () => {
+  const g = generateDevice({ behavior: "termica", author: "a", name: "simple", analogIn: false, pt100: false, thermostat: false });
+  assert.match(g.files["device.mjs"], /terminals: \[\{"id":"R1"\},\{"id":"R2"\}\]/);
+  assert.doesNotMatch(g.files["device.mjs"], /probeInputs|probes:|TS1/);
+});

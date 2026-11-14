@@ -288,6 +288,7 @@ enlaza en modo desarrollador (§2.6):
 | Sensor con umbral | contactos NA/NC | Lee una salida de otro equipo (`links`, cruce exacto) y conmuta sobre el umbral, con histéresis |
 | Temporizador a la conexión | A1 A2, 15 16 18 | Con la bobina energizada, 15-18 cierra tras el tiempo (`nextEventNs`) |
 | Equipo de planta | sin bornes | Una variable de 0 a 100 % que sube mientras su entrada está activa y baja si no (segmentos `{ value, rate }`) |
+| Planta térmica | R1 R2 y, a elección, AI+ AI- (0-10 V), PT1 PT2 PT3 (PT100) y TS1 TS2 (termostato) | Primer orden con tiempo muerto τ·dT/dt = −(T − Ta) + K·u(t − θ), discretizado exacto con retención de orden cero y paso Ts: T[k+1] = Tss + (T[k] − Tss)·e^(−Ts/τ). u: la resistencia (todo o nada) o la consigna 0-10 V. La PT100 se cablea al transmisor `pt100-rs485` (al PLC por Modbus) y el termostato conmuta en el cruce exacto |
 
 El asistente pide autor, nombre, nombre en la paleta, categoría y las
 opciones del bloque, y muestra la vista previa del símbolo con los bornes

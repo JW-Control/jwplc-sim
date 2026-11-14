@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E del asistente «Nuevo dispositivo» (etapa B de
 // docs/integration/PROPUESTA_MODELOS_PROPIOS.md):
-//   BLOCKS     el asistente ofrece los 6 bloques de comportamiento
+//   BLOCKS     el asistente ofrece los 7 bloques de comportamiento
 //   NAME_CHECK un autor inválido se explica y no deja crear
 //   PREVIEW    relé 2 NA + 1 NC: vista previa con los bornes en la grilla
 //   CREATE     crea la carpeta (código, símbolo, prueba), la enlaza y aparece en la paleta
 //   SIMULATES  colocado y cableado a 24 VDC, su bobina se energiza
+//   THERMAL    planta térmica sin la entrada 0-10 V: bornes R1 R2 / PT1 PT2 PT3 TS1 TS2,
+//              creada y en la escena con su temperatura
 // Informe en build/gates/JWSIM_NUEVO_DISPOSITIVO_E2E.json.
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -51,7 +53,7 @@ try {
   await t(() => window.JwsimDevices.newDevice());
   const blocks = await until(() => win.$$eval('#devmgr [data-act="nb-block"]', (l) => (l.length ? l.map((b) => b.dataset.v) : null)));
   await win.screenshot({ path: join(OUT, "01-bloques.png") });
-  criteria.BLOCKS = { ok: blocks?.join() === "rele,carga,pulsador,sensor,temporizador,planta", blocks };
+  criteria.BLOCKS = { ok: blocks?.join() === "rele,carga,pulsador,sensor,temporizador,planta,termica", blocks };
   log(`BLOCKS ${JSON.stringify(criteria.BLOCKS)}`);
 
   // ---- NAME_CHECK
@@ -102,8 +104,31 @@ try {
   await win.screenshot({ path: join(OUT, "04-en-escena.png") });
   criteria.SIMULATES = { ok: !!energized && contacts?.["13-14"] === true && contacts?.["31-32"] === false, contacts };
   log(`SIMULATES ${JSON.stringify(criteria.SIMULATES)}`);
+
+  // ---- THERMAL
+  await t(() => window.JwsimDevices.newDevice());
+  await until(() => win.$('#devmgr [data-act="nb-block"][data-v="termica"]'));
+  await win.click('#devmgr [data-act="nb-block"][data-v="termica"]');
+  await win.fill('#devmgr [data-f="author"]', "utec");
+  await win.fill('#devmgr [data-f="name"]', "horno");
+  await win.fill('#devmgr [data-f="tau"]', "60");
+  await win.fill('#devmgr [data-f="parent"]', parent);
+  await win.click('#devmgr [data-f="analogIn"]');
+  const tprev = await until(async () => {
+    const txt = await previewText();
+    return /arriba: R1 R2 ·/.test(txt) && /abajo: PT1 PT2 PT3 TS1 TS2/.test(txt) ? txt : null;
+  });
+  await win.screenshot({ path: join(OUT, "05-termica.png") });
+  await win.click('#devmgr [data-act="nb-create"]');
+  await until(() => win.$eval("#devmgr", (e) => /utec\/horno/.test(e.textContent)), 15000);
+  await win.click('#devmgr [data-act="close"]');
+  await t(() => window.jwsimTest.scene.add("utec/horno", 600, 400, "H9"));
+  await t(() => window.jwsimTest.scene.analyze());
+  const temp = await until(() => t(() => window.jwsimTest.scene.snapshot()?.devices.find((d) => d.id === "H9")?.outputs?.temp));
+  criteria.THERMAL = { ok: !!tprev && Math.abs(Number(temp) - 25) < 1e-6, temp };
+  log(`THERMAL ${JSON.stringify(criteria.THERMAL)}`);
 } finally {
-  const ok = Object.values(criteria).length === 5 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 6 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_NUEVO_DISPOSITIVO_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_NUEVO_DISPOSITIVO_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();
