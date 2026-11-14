@@ -2715,3 +2715,26 @@ body[data-tab="plant"] .view3d-empty {
 .learn-main { min-width: 0; }
 .learn-main b, .learn-main small { white-space: normal; overflow-wrap: anywhere; }
 .learn { overflow-x: hidden; }
+
+/* ---- Reto en el panel derecho del esquema */
+.scene-main[data-pane="reto"]:not(.side-collapsed) { grid-template-columns: minmax(0, 1fr) 380px 36px; }
+.reto-pane .ex-brief { margin: 0 0 10px; padding: 10px; font-size: 12px; }
+.reto-pane .ex-brief.collapsed { white-space: normal; }
+.reto-pane .brief-sec p { font-size: 13px; }
+.reto-pane .brief-nav { flex-wrap: wrap; gap: 6px; }
+.reto-pane .ex-goals { margin: 0; padding: 10px; }
+.reto-pane .goals-head { flex-wrap: wrap; }
+.reto-pane .goal { padding: 7px 8px; gap: 8px; }
+.reto-pane .goal-title { font-size: 12.5px; }
+.reto-pane .goal-sigs { font-size: 11px; }
+.reto-pane .goals-done { font-size: 12.5px; }
+.reto-pane .learn-after { font-size: 12px; }
+.ex-reto-hint { margin: 10px 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 6px; color: var(--muted); }
+.ex-reto-hint[hidden] { display: none; }
+
+/* ---- Inicio: «Aprender» arriba de Recientes, en la columna derecha */
+.start-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.start-side .learn-card { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.start-side .learn-card-go { justify-self: end; }
+.reto-pane .brief-uses { gap: 4px; }
+.reto-pane .brief-uses li { padding: 1px 7px; font-size: 11px; }

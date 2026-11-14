@@ -45,8 +45,9 @@ distintas entre corridas, 3 el sketch no compila.
 
 Además de la nota, un ejercicio puede traer **objetivos en vivo** (sección
 `goals` de `rubrica.json`; por ahora en los ejercicios 01 y 09). En la
-pestaña **Ejercicio**, mientras la simulación corre y el alumno opera la
-escena a mano, cada objetivo muestra la lectura de sus señales, lo que se
+pestaña **Reto** del panel derecho del esquema eléctrico (la bandera, junto a
+Equipos y Propiedades; se abre sola con el ejercicio), mientras la simulación
+corre y el alumno opera la escena a mano, cada objetivo muestra la lectura de sus señales, lo que se
 pide y una barra que se llena mientras la condición se sostiene (en tiempo
 simulado). El reto queda completo cuando se cumplen todos los obligatorios
 en la misma corrida; al volver a ejecutar se reinician. No cambian la nota:
@@ -88,9 +89,11 @@ con **Calificar** (se guarda la mejor nota). Entonces se muestra **qué
 enseña** y el botón **Siguiente reto →**. El progreso se guarda en
 `aprendizaje.json`, en la carpeta de datos de la app.
 
-Al abrir un ejercicio, la pestaña **Ejercicio** muestra su ficha: el
-objetivo, los pasos y las señales y equipos con que se trabaja.
-**Empezar** la pliega y **Ver ficha del reto** la vuelve a abrir. La ficha
+Al abrir un ejercicio, la pestaña **Reto** del panel derecho muestra su
+ficha: el objetivo, los pasos y las señales y equipos con que se trabaja.
+**Empezar** la pliega (también se pliega sola al ejecutar, para que se vean
+los objetivos) y **Ver ficha del reto** la vuelve a abrir. Abajo, la pestaña
+**Ejercicio** queda para Calificar y el enunciado completo. La ficha
 está en el `.jwsim`:
 
 ```json

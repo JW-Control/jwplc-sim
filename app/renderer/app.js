@@ -1553,6 +1553,8 @@ window.JwsimGoalMatch = (got, want) => {
 };
 
 api.onGoalsProgress((p) => {
+  // Al empezar a correr, la ficha se pliega para que se vean los objetivos.
+  if (!goalUi.progress && !$("ex-brief").classList.contains("collapsed")) renderBrief(false);
   goalUi.progress = p;
   renderGoals();
 });
@@ -1568,6 +1570,10 @@ async function showExercise(file) {
   goalUi.reported = false;
   renderBrief(true);
   $("tab-exercise").hidden = !info;
+  $("scene-tab-reto").hidden = !info;
+  $("ex-reto-hint").hidden = !info;
+  if (info) window.JwsimShowReto?.();
+  else if (document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
   if (!info) {
@@ -1586,6 +1592,7 @@ function renderBrief(expanded) {
   if (!b) return;
   const list = (xs) => (xs ?? []).map((x) => `<li>${esc(x)}</li>`).join("");
   box.classList.toggle("collapsed", !expanded);
+  if (!expanded) $("scene-side").scrollTop = 0;
   box.innerHTML = expanded
     ? `<div class="brief-sec"><div class="brief-k">El objetivo</div><p>${esc(b.goal ?? "")}</p></div>` +
       `<div class="brief-sec"><div class="brief-k">Pasos</div><ol>${list(b.steps)}</ol></div>` +
@@ -1620,13 +1627,12 @@ window.openExerciseById = async (id) => {
 };
 
 document.addEventListener("click", (e) => {
+  if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
   const b = e.target.closest("[data-brief], [data-next]");
   if (!b) return;
   if (b.dataset.next) window.openExerciseById(b.dataset.next);
-  else if (b.dataset.brief === "start") {
-    renderBrief(false);
-    setView?.("exercise");
-  } else renderBrief(true);
+  else if (b.dataset.brief === "start") renderBrief(false);
+  else renderBrief(true);
 });
 
 function renderGrade(g) {
@@ -1830,10 +1836,16 @@ function setScenePane(pane, save = true) {
 function wireSceneSide() {
   const saved = storeGet(SIDE_KEY);
   setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  // Ir al reto: la vista del esquema con su pestaña abierta.
+  window.JwsimShowReto = () => {
+    window.JwsimScene?.setView("scene");
+    setScenePane("reto", false);
+  };
   for (const t of document.querySelectorAll(".side-tab"))
     t.addEventListener("click", () => setScenePane(document.querySelector(".scene-main").dataset.pane === t.dataset.pane ? null : t.dataset.pane));
   // Al seleccionar un equipo o un cable con el panel abierto, se ven sus propiedades.
-  window.JwsimScenePane = { showProps: () => document.querySelector(".scene-main").dataset.pane && setScenePane("props", false) };
+  // Con el reto abierto no se cambia: el alumno opera la escena mirando los objetivos.
+  window.JwsimScenePane = { showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false) };
 }
 
 // Panel inferior: alto ajustable con su divisor (se recuerda) y plegable.

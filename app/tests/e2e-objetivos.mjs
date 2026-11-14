@@ -86,7 +86,7 @@ try {
   const count = await win.$eval("#ex-goals .goals-count", (e) => e.textContent);
   await win.waitForTimeout(1000);
   await win.$eval("#ex-goals", (e) => e.scrollIntoView());
-  await (await win.$("#exercise")).screenshot({ path: join(OUT, "02-completado.png") });
+  await (await win.$("#scene-side")).screenshot({ path: join(OUT, "02-completado.png") });
   criteria.GOALS_COMPLETE = { ok: /Reto completado/.test(banner ?? "") && count === "3/3" && (await state("rearranca")) !== "done", count };
   log(`GOALS_COMPLETE ${JSON.stringify(criteria.GOALS_COMPLETE)}`);
 

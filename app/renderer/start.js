@@ -95,12 +95,13 @@
       `<button class="start-big" data-act="openJwsim"><b>Abrir proyecto JWPLC Sim…</b><span>Escena, simulación y programa (.jwsim)</span></button>` +
       `<button class="start-big" data-act="blank"><b>Sketch en blanco</b><span>Seguir con un sketch nuevo, como Arduino IDE</span></button>` +
       `</div>` +
+      `<div class="start-side">` +
       learnCard() +
       `<div class="start-recent"><div class="start-sub">Recientes</div>` +
       (list.length
         ? `<ul>${list.map((r, i) => `<li><button data-act="recent" data-i="${i}"><span class="tag ${r.kind}">${r.kind === "openplc" ? "IEC" : "C++"}</span><b>${esc(r.name)}</b><small>${esc(r.dir)}</small></button></li>`).join("")}</ul>`
         : `<p class="muted">Los proyectos que cree o abra aparecen aquí.</p>`) +
-      `</div></div>`
+      `</div></div></div>`
     );
   }
 
