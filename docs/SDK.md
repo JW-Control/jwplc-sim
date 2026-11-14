@@ -240,6 +240,40 @@ assert.equal(s.output("KT", "closed"), true);
 Ejemplo completo: [`sdk/examples/timer-relay`](../sdk/examples/timer-relay)
 (relé temporizador a la conexión y a la desconexión, IEC 61812).
 
+### 2.6 Usarlo en el simulador sin publicarlo (modo desarrollador)
+
+Mientras se desarrolla, la carpeta se **enlaza** y el simulador la usa sin
+pasar por el índice firmado:
+
+```sh
+jwsim-cli device link <carpeta>       # valida y la enlaza (~/.jwsim/devices-local.json)
+jwsim-cli device list                 # aparece como «enlazado»
+jwsim-cli device unlink <carpeta|tipo>
+```
+
+En la app: **Herramientas → Dispositivos propios…** (o **Propios…** en la
+barra de Equipos de la paleta). **Agregar carpeta…** la enlaza; el equipo
+aparece en la paleta con la marca `dev`. Tras editar `device.mjs` o
+`symbol.svg`, **Recargar** vuelve a leerlos sin reiniciar la app (una
+simulación en marcha sigue con lo que tenía; los módulos que el dispositivo
+importe a su vez se leen una vez). Cada carpeta muestra si está lista, con
+avisos o con errores, y por qué.
+
+Al enlazar, con `device test` y en el gestor se valida también el símbolo
+(`cli/lib/symbol-check.mjs`, las mismas reglas que aplica la app):
+
+- `viewBox="0 0 ANCHO ALTO"` con ANCHO y ALTO múltiplos de 20;
+- cada borne, un `.jw-term` con `data-term` y `cx` múltiplo de 20 (el
+  cable entra en la grilla por el borde de arriba o de abajo);
+- cada `data-term` es un borne de la definición, sin repetir; un borne de la
+  definición que no está dibujado es un aviso (no se podrá cablear);
+- lo que se quita al cargar (`<script>`, `on…`, imágenes externas) es un
+  aviso.
+
+Un dispositivo ejecuta su propio código en la computadora: se enlazan solo
+carpetas de confianza. Lo que se distribuye a otros va por el índice
+firmado (§4).
+
 ## 3. Dispositivos nativos (ABI C)
 
 La ABI está en [`sdk/native/jwsim_device.h`](../sdk/native/jwsim_device.h).

@@ -1,7 +1,10 @@
 # Propuesta: modelos de simulación propios (terceros)
 
-Estado: análisis y propuesta (2026-11-14), rama `feature/alpha18-propiosModelos`.
-Incluye la auditoría de la grilla (`app/tests/audit-grilla.mjs`).
+Estado (2026-11-14), rama `feature/alpha18-propiosModelos`: auditoría de la
+grilla (`app/tests/audit-grilla.mjs`) y **etapa A hecha** (modo
+desarrollador: `device link`/`unlink`, validación del símbolo, gestor
+«Dispositivos propios» con recarga; guía en `docs/SDK.md` §2.6). Etapas B a
+E: pendientes.
 
 ## 1. Cómo funciona hoy
 

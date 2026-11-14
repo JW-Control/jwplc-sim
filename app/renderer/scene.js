@@ -1999,12 +1999,20 @@
               (d) =>
                 `<button class="palette-item" role="listitem" draggable="true" data-add="${esc(d.type)}" data-cat="${esc(cat)}" ` +
                 `data-search="${esc(`${d.name} ${d.description} ${cat}`.toLowerCase())}" title="${esc(d.name)}" aria-label="${esc(d.name)}">` +
-                `${thumbSvg(d.type)}${d.installed ? `<span class="palette-badge">+</span>` : ""}</button>`,
+                `${thumbSvg(d.type)}${d.local ? `<span class="palette-badge dev" title="En desarrollo (carpeta enlazada)">dev</span>` : d.installed ? `<span class="palette-badge">+</span>` : ""}</button>`,
             )
             .join("") +
           `</div>`,
       )
       .join("");
+    // Recargar (gestor de dispositivos) solo rehace las miniaturas: los
+    // eventos se conectan una vez.
+    if (box.dataset.wired) {
+      $("scene-add-filter").dispatchEvent(new Event("input"));
+      renderPartInfo();
+      return;
+    }
+    box.dataset.wired = "1";
     const itemOf = (e) => e.target.closest?.(".palette-item");
     box.addEventListener("pointerover", (e) => {
       const b = itemOf(e);
@@ -2192,6 +2200,18 @@
       return addDevice(type, right + 80, 0);
     },
     isRunning: () => S.running,
+    // Gestor de dispositivos: vuelve a leer definiciones y símbolos (sin reiniciar).
+    async reloadDevices() {
+      const defs = await api.sceneDevices();
+      S.defs.clear();
+      for (const d of defs) S.defs.set(d.type, d);
+      for (const [type, text] of Object.entries((await api.sceneSymbols?.()) ?? {})) window.JwsimSymbols.registerTemplate(type, text);
+      layouts.clear();
+      populatePalette();
+      render(true);
+      if (!S.running) analyze();
+      return defs.length;
+    },
     owns(signal) {
       return S.running && !!S.snap && signal in (S.snap.inputs ?? {});
     },

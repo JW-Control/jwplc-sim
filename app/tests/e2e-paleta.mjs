@@ -303,7 +303,7 @@ await win.screenshot({ path: join(OUT, "08-cable-y-vista.png") });
 // restablece.
 if ((await pane()) !== "add") await win.click("#scene-tab-add");
 await win.waitForTimeout(200);
-const bars = await win.$$eval(".parts-pane .panel-bar", (b) => b.map((x) => x.textContent));
+const bars = await win.$$eval(".parts-pane .panel-bar", (b) => b.map((x) => x.firstChild?.textContent ?? ""));
 const infoH = () => win.$eval(".parts-inspector", (e) => Math.round(e.getBoundingClientRect().height));
 const h0 = await infoH();
 const spl = await (await win.$("#parts-splitter")).boundingBox();

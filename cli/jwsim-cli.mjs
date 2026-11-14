@@ -30,7 +30,7 @@ import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
-import { buildNativeDevice, installedDevices, loadSceneDevice, packDevice, readManifest } from "./lib/device.mjs";
+import { buildNativeDevice, checkDeviceDir, installedDevices, linkDevice, loadSceneDevice, localDevices, packDevice, readManifest, unlinkDevice } from "./lib/device.mjs";
 import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
 import { checkParity } from "./lib/parity.mjs";
@@ -315,6 +315,14 @@ async function main() {
           return code;
         }
         const { defs } = await loadSceneDevice(dir);
+        // Símbolos: la misma regla de grilla que aplica la app (docs/SIMBOLOS.md).
+        const chk = await checkDeviceDir(dir, { fresh: false });
+        const symbolErrors = chk.errors.filter((e) => /^symbol/.test(e));
+        if (!opts.json) {
+          for (const e of symbolErrors) console.error(`[jwsim-cli] símbolo: ${e}`);
+          for (const w of chk.warnings) console.error(`[jwsim-cli] aviso: ${w}`);
+        }
+        if (symbolErrors.length) code = EXIT.FAIL;
         let tests = { ran: 0, ok: true };
         if (sub === "test") {
           const files = readdirSync(dir).filter((f) => /\.test\.m?js$/.test(f)).map((f) => join(dir, f));
@@ -328,7 +336,7 @@ async function main() {
           if (!tests.ok) code = EXIT.FAIL;
         }
         if (!opts.json) console.log(`[jwsim-cli] ${m.type}@${m.version}: ${defs.length} definición(es) válidas${sub === "test" ? `, pruebas ${tests.ok ? "OK" : "con fallas"} (${tests.ran} archivos)` : ""}`);
-        emit({ ok: code === EXIT.OK, type: m.type, version: m.version, kind: m.kind, definitions: defs.map((d) => `${d.type}@${d.version}`), tests });
+        emit({ ok: code === EXIT.OK, type: m.type, version: m.version, kind: m.kind, definitions: defs.map((d) => `${d.type}@${d.version}`), tests, symbols: chk.symbols, warnings: chk.warnings });
         return code;
       }
       if (sub === "install") {
@@ -338,22 +346,42 @@ async function main() {
         emit({ ok: true, ...r });
         return code;
       }
+      // Modo desarrollador: una carpeta de dispositivo de escena se usa en el
+      // simulador sin pasar por el índice firmado (ejecuta su código).
+      if (sub === "link") {
+        if (!arg) throw new CliError(EXIT.USAGE, "falta la carpeta del dispositivo");
+        const r = await linkDevice(arg);
+        if (!opts.json) {
+          console.log(`[jwsim-cli] enlazado ${r.type}@${r.version} desde ${r.dir} (en desarrollo: la app lo recarga con Dispositivos → Recargar)`);
+          for (const w of r.warnings) console.error(`[jwsim-cli] aviso: ${w}`);
+        }
+        emit({ ok: true, ...r });
+        return code;
+      }
+      if (sub === "unlink") {
+        if (!arg) throw new CliError(EXIT.USAGE, "falta la carpeta o el tipo del dispositivo");
+        const gone = unlinkDevice(arg);
+        if (!opts.json) for (const d of gone) console.log(`[jwsim-cli] quitado el enlace a ${d}`);
+        emit({ ok: true, removed: gone });
+        return code;
+      }
       if (sub === "list") {
-        const installed = installedDevices().map(({ type, version, kind, dir }) => ({ type, version, kind, dir }));
+        const installed = installedDevices().map(({ type, version, kind, dir, local }) => ({ type, version, kind, dir, ...(local ? { local: true } : {}) }));
+        for (const d of localDevices().filter((x) => x.error)) installed.push({ dir: d.dir, local: true, error: d.error });
         let available;
         if (opts.index !== undefined || process.env.JWSIM_INDEX) {
           const { index } = await loadIndex(opts.index);
           available = index.packages.map((p) => ({ type: p.type, kind: p.kind, name: p.name, versions: p.versions.map((v) => v.version) }));
         }
         if (!opts.json) {
-          for (const d of installed) console.log(`instalado  ${d.type}@${d.version} (${d.kind})`);
+          for (const d of installed) console.log(d.error ? `enlazado   ${d.dir}: ${d.error}` : `${d.local ? "enlazado " : "instalado"}  ${d.type}@${d.version} (${d.kind})${d.local ? ` ${d.dir}` : ""}`);
           for (const p of available ?? []) console.log(`índice     ${p.type} ${p.versions.join(", ")} (${p.kind}) — ${p.name}`);
           if (!installed.length && !available) console.log("sin dispositivos instalados");
         }
         emit({ ok: true, installed, available });
         return code;
       }
-      throw new CliError(EXIT.USAGE, `device: subcomando desconocido '${sub ?? ""}' (build, test, pack, install, list)`);
+      throw new CliError(EXIT.USAGE, `device: subcomando desconocido '${sub ?? ""}' (build, test, pack, install, list, link, unlink)`);
     } catch (err) {
       if (err instanceof CliError) throw err;
       code = EXIT.FAIL;

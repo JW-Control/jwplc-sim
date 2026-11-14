@@ -11,7 +11,7 @@ import { Worker } from "node:worker_threads";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { buildApiCatalog } from "../cli/lib/api-catalog.mjs";
-import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
+import { checkDeviceDir, installedDevices, linkDevice, localDevices, registryWithInstalled, unlinkDevice } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
@@ -843,12 +843,49 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
 // ---------------------------------------------------------------- escena (G7)
 function registry() {
   // Un dispositivo instalado roto no deja a la app sin la biblioteca incluida.
-  registryPromise ??= registryWithInstalled().catch((err) => {
+  // Un dispositivo enlazado que no carga (error en su código) se avisa y se salta.
+  registryPromise ??= registryWithInstalled({ onError: (d, err) => forward("sim:stderr", `[jwsim] dispositivo ${d.type ?? d.dir}: ${err.message}\n`) }).catch((err) => {
     forward("sim:stderr", `[jwsim] dispositivos instalados: ${err.message}\n`);
     return new Registry();
   });
   return registryPromise;
 }
+
+// ---- Gestor de dispositivos (modo desarrollador): carpetas enlazadas sin el
+// índice firmado, validadas (contrato y símbolos en la grilla) y recargadas
+// sin reiniciar. Una simulación en marcha sigue con lo que tenía.
+async function devicesState() {
+  const reg = await registry();
+  const local = await Promise.all(localDevices().map((d) => (d.error ? { dir: d.dir, ok: false, errors: [d.error], warnings: [] } : checkDeviceDir(d.dir))));
+  for (const d of local) d.loaded = !!d.type && reg.list().some((x) => x.type === d.type);
+  const fromIndex = installedDevices().filter((d) => !d.local).map(({ type, version, kind, name }) => ({ type, version, kind, name }));
+  return { builtin: builtinDevices.length, installed: fromIndex, local };
+}
+function reloadDevices() {
+  registryPromise = null;
+  return registry();
+}
+ipcMain.handle("devices:list", () => devicesState());
+ipcMain.handle("devices:link", async (_e, dir) => {
+  if (!dir) {
+    const r = await dialog.showOpenDialog(win, { title: "Carpeta del dispositivo (con jwsim-device.json)", properties: ["openDirectory"] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    dir = r.filePaths[0];
+  }
+  await linkDevice(dir);
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:unlink", async (_e, dir) => {
+  unlinkDevice(dir);
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:reload", async () => {
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:reveal", (_e, dir) => shell.openPath(dir));
 
 // Definiciones para la paleta y el inspector (sin funciones).
 ipcMain.handle("scene:devices", async () =>
@@ -863,6 +900,7 @@ ipcMain.handle("scene:devices", async () =>
     terminals: d.terminals,
     actions: d.actions ?? [],
     installed: installedDevices().some((x) => x.type === d.type),
+    local: installedDevices().some((x) => x.type === d.type && x.local),
   })),
 );
 
@@ -1111,7 +1149,11 @@ function buildMenu() {
       },
       {
         label: "Herramientas",
-        submenu: [{ label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") }],
+        submenu: [
+          { label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") },
+          { type: "separator" },
+          { label: "Dispositivos propios…", click: send("devices") },
+        ],
       },
       {
         label: "Simulación",

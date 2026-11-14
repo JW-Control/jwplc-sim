@@ -1627,6 +1627,7 @@ window.openExerciseById = async (id) => {
 };
 
 document.addEventListener("click", (e) => {
+  if (e.target.closest("#scene-devmgr")) return window.JwsimDevices?.open();
   if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
   const b = e.target.closest("[data-brief], [data-next]");
   if (!b) return;
