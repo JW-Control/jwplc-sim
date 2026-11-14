@@ -4,8 +4,10 @@ Estado (2026-11-14), rama `feature/alpha18-propiosModelos`: auditoría de la
 grilla (`app/tests/audit-grilla.mjs`) y **etapas A y B hechas**:
 modo desarrollador (`device link`/`unlink`, validación del símbolo, gestor
 «Dispositivos propios» con recarga; `docs/SDK.md` §2.6) y asistente «Nuevo
-dispositivo» con 7 bloques de comportamiento, incluida la planta térmica de primer orden con tiempo muerto (`device new`; §2.7). Etapas C
-a E: pendientes.
+dispositivo» con 7 bloques de comportamiento, incluidas la planta térmica y
+el equipo de planta con el **orden del modelo a elección** (1.er a 4.º orden
+o 2.º orden oscilatorio, con tiempo muerto; `device new`; SDK §2.7). Etapas C
+a E: pendientes. Informe de cierre de la rama en el §6.
 
 ## 1. Cómo funciona hoy
 
@@ -135,7 +137,11 @@ Asistente **Nuevo dispositivo** que genera la carpeta (manifiesto,
    - pulsador o selector (acción del usuario → contactos);
    - sensor con umbral sobre una lectura (`reads`) o un enlace (`links`);
    - temporizador a la conexión / desconexión (`Delay` del `device-kit`);
-   - equipo de planta con una variable de estado integrada (como el tanque).
+   - equipo de planta con una variable de estado integrada (como el tanque):
+     rampa, o un modelo lineal de orden 1 a 4 u oscilatorio;
+   - planta térmica: resistencia calefactora (R1-R2), PT100 a 2 o 3 hilos,
+     entrada de consigna 0-10 V y termostato (TS), con el mismo modelo a
+     elección.
 4. **Símbolo:** una caja con los bornes y rótulos, lista para reemplazar por
    un `.svg` propio con el mismo contrato.
 
@@ -166,3 +172,49 @@ el contrato `update`), para poder abrir modelos de cualquiera sin riesgo.
 3. En la interfaz, ¿alcanza con **bloques de comportamiento** (etapa B) o se
    quiere también un editor de código dentro de la app?
 4. Orden sugerido: **A → B → C**, y D y E después.
+
+## 6. Informe de cierre de la rama (2026-11-14)
+
+Rama `feature/alpha18-propiosModelos`, subida a `origin`. Commits:
+
+| Commit | Qué entra |
+|---|---|
+| `845b855` | Etapa A: modo desarrollador (`device link`/`unlink`, validación del símbolo, gestor «Dispositivos propios» con recarga) |
+| `11455d7` | Etapa B: asistente «Nuevo dispositivo» desde un bloque de comportamiento (`device new`) |
+| `c39a92b` | Tarjetas del asistente: el texto se ajusta dentro del recuadro |
+| `6f07c0f` | Bloque «Planta térmica»: resistencia, PT100, 0-10 V y termostato |
+| `4bd5788` | Orden del modelo a elección en la planta térmica y el equipo de planta |
+
+### 6.1 Modelos de planta
+
+El parámetro `modelo` se elige en el asistente y se puede cambiar después en
+**Propiedades**, sin regenerar la carpeta.
+
+| Modelo | G(s) | Parámetros |
+|---|---|---|
+| 1.er orden | K·e^(−θs) / (τ1·s + 1) | K, τ1, θ |
+| 2.º a 4.º orden | K·e^(−θs) / [(τ1·s + 1)…(τn·s + 1)] | K, τ1…τn, θ |
+| 2.º orden oscilatorio | K·ωn²·e^(−θs) / (s² + 2ζωn·s + ωn²) | K, ωn, ζ, θ |
+| Rampa (solo equipo de planta, por defecto) | sube o baja a velocidad fija | %/s |
+
+Cada modelo pasa a espacio de estados y se discretiza **exacto** (entrada
+constante en cada paso Ts, exponencial de matriz): x[k+1] = Ad·x[k] +
+Bd·u[k−d], con θ como retardo de d = θ/Ts pasos. Es estable con cualquier
+paso. En la planta térmica la temperatura es T = Ta + y, y el termostato
+conmuta en el instante exacto del cruce (`nextEventNs`).
+
+### 6.2 Pruebas
+
+| Prueba | Resultado |
+|---|---|
+| `tests/app/device_gen_test.mjs` (11): 1.er y 2.º orden contra la solución analítica (error < 1e-6), forma en S del 3.er y 4.º, sobrepico teórico del oscilatorio (ζ = 0,2 → 52,7 %), rampa, PT100, 0-10 V y termostato | PASS |
+| Prueba generada con cada dispositivo (`device test`), en los 5 órdenes de la planta térmica | PASS |
+| `app/tests/e2e-nuevo-dispositivo.mjs` (7 criterios: BLOCKS, NAME_CHECK, PREVIEW, CREATE, SIMULATES, THERMAL, ORDER) | PASS |
+| `app/tests/e2e-dispositivos.mjs` y `app/tests/audit-grilla.mjs` | PASS |
+| Suite unitaria `tests/app` | 177 PASS, 1 FAIL ya existente en la rama base (`exercise_copy_test.mjs`) |
+
+### 6.3 Pendiente
+
+- Etapas C (editor visual de bornes), D (3D por manifiesto) y E
+  (aislamiento): propuestas, no iniciadas.
+- Decisiones del §5 para JW Control.
