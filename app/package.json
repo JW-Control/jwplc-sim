@@ -21,7 +21,8 @@
     "test:e2e:catalogo": "node tests/e2e-catalogo.mjs",
     "test:e2e:proyectos": "node tests/e2e-proyectos.mjs",
     "test:e2e:objetivos": "node tests/e2e-objetivos.mjs",
-    "test:e2e:aprender": "node tests/e2e-aprender.mjs"
+    "test:e2e:aprender": "node tests/e2e-aprender.mjs",
+    "audit:grilla": "node tests/audit-grilla.mjs"
   },
   "dependencies": {
     "@wasm-fmt/clang-format": "23.1.1",
