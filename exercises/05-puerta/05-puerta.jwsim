@@ -17,7 +17,28 @@
     "level": 2,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/puerta"
+    "solution": "./solucion/puerta",
+    "brief": {
+      "goal": "Un portón que abre y cierra hasta sus finales de carrera y vuelve a abrir si detecta un obstáculo.",
+      "steps": [
+        "S1 abre hasta B1; S2 cierra hasta B2; cada final detiene el motor.",
+        "S0 detiene el portón donde esté.",
+        "Si B3 detecta un obstáculo al cerrar, pare y vuelva a abrir.",
+        "Nunca KM1 y KM2 a la vez; baliza H1 mientras se mueve."
+      ],
+      "teaches": "Máquina de estados, finales de carrera y sensor de seguridad.",
+      "uses": [
+        "I0_0 · S1, pulsador NA: Abrir",
+        "I0_1 · S2, pulsador NA: Cerrar",
+        "I0_2 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "I0_3 · B1, final de carrera NA: Portón abierto",
+        "I0_4 · B2, final de carrera NA: Portón cerrado",
+        "I0_5 · B3, sensor fotoeléctrico: Obstáculo en el paso",
+        "Q0_0 · KM1, contactor: Motor: abrir",
+        "Q0_1 · KM2, contactor: Motor: cerrar",
+        "Q0_2 · H1, piloto amarillo: Baliza de movimiento"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,

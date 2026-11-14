@@ -73,6 +73,34 @@ esa sigue saliendo de **Calificar**.
 Lógica en `app/lib/goals.mjs` (pruebas en `tests/app/goals_test.mjs`);
 prueba de la interfaz en `app/tests/e2e-objetivos.mjs`.
 
+## Centro de aprendizaje y ficha del reto
+
+En **Proyectos** (y en Archivo → Centro de aprendizaje…) los ejercicios se
+ordenan por nivel: 1 · Fundamentos, 2 · Secuencias y procesos, 3 · Alarmas
+y procesos continuos. Un nivel se abre al terminar todos los retos del
+anterior; dentro de un nivel abierto se hacen en cualquier orden. El
+siguiente sugerido lleva «A continuación», los terminados un visto y los
+bloqueados un candado. La casilla «Desbloquear todos los niveles (docente)»
+o `JWSIM_UNLOCK_ALL=1` abren todo.
+
+Un reto queda hecho al cumplir sus objetivos en vivo o al sacar 14 o más
+con **Calificar** (se guarda la mejor nota). Entonces se muestra **qué
+enseña** y el botón **Siguiente reto →**. El progreso se guarda en
+`aprendizaje.json`, en la carpeta de datos de la app.
+
+Al abrir un ejercicio, la pestaña **Ejercicio** muestra su ficha: el
+objetivo, los pasos y las señales y equipos con que se trabaja.
+**Empezar** la pliega y **Ver ficha del reto** la vuelve a abrir. La ficha
+está en el `.jwsim`:
+
+```json
+"exercise": { "level": 1, "rubric": "./rubrica.json",
+  "brief": { "goal": "…", "steps": ["…"], "uses": ["I0_0 · S1, pulsador NA verde: Marcha"], "teaches": "…" } }
+```
+
+Lógica en `app/lib/learning.mjs` (pruebas en `tests/app/learning_test.mjs`);
+prueba de la interfaz en `app/tests/e2e-aprender.mjs`.
+
 ## Formato
 
 Cada ejercicio es una carpeta con un proyecto `.jwsim` (ARCHITECTURE §8):

@@ -2667,3 +2667,51 @@ body[data-tab="plant"] .view3d-empty {
 .goal.blocked { opacity: 0.55; }
 .goal.extra.done { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
 @keyframes goal-pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---- Ficha del reto */
+.ex-brief { margin: 10px 0 0; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+.ex-brief.collapsed { padding: 6px 12px; border-color: var(--border); background: var(--panel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brief-sec { margin-bottom: 10px; }
+.brief-k { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.brief-sec p { margin: 0; font-size: 14px; }
+.brief-sec ol { margin: 0; padding-left: 20px; }
+.brief-sec li { margin: 2px 0; }
+.brief-uses { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.brief-uses li { padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; }
+.brief-nav { display: flex; align-items: center; gap: 12px; }
+.brief-nav .muted { font-size: 12px; }
+.learn-after { margin-top: 6px; font-weight: 400; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.learn-teaches { color: var(--text); }
+.grade-pass { margin-bottom: 10px; padding: 8px 10px; border-radius: 6px; background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+
+/* ---- Centro de aprendizaje (pantalla Proyectos) */
+.learn-card { display: flex; align-items: center; gap: 16px; width: 100%; margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); color: var(--text); text-align: left; cursor: pointer; }
+.learn-card:hover { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.learn-card-txt { flex: 1; display: grid; gap: 4px; }
+.learn-card-txt > span { color: var(--muted); font-size: 12px; }
+.learn-card-go { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.learn-bar { height: 6px; border-radius: 3px; background: var(--strip); overflow: hidden; }
+.learn-bar i { display: block; height: 100%; background: var(--ok); }
+.learn { display: grid; gap: 12px; }
+.learn-level { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--panel); }
+.learn-level header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.learn-count { color: var(--accent); font-weight: 700; }
+.learn-level.locked { opacity: 0.6; }
+.learn-level ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.learn-item { display: flex; gap: 10px; width: 100%; height: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); text-align: left; cursor: pointer; }
+.learn-item:hover:not(:disabled) { border-color: var(--accent); }
+.learn-item:disabled { cursor: not-allowed; }
+.learn-ico { width: 18px; text-align: center; color: var(--muted); }
+.learn-main { display: grid; gap: 3px; }
+.learn-main small { color: var(--muted); font-size: 12px; }
+.learn-item.done { border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+.learn-item.done .learn-ico { color: var(--ok); font-weight: 700; }
+.learn-item.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.learn-item.next .learn-ico { color: var(--accent); }
+.up-next { justify-self: start; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border-radius: 8px; background: var(--accent); color: #fff; }
+.learn-grade { justify-self: start; font-size: 11px; color: var(--ok); }
+.learn-unlock { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.learn-item { min-width: 0; overflow: hidden; }
+.learn-main { min-width: 0; }
+.learn-main b, .learn-main small { white-space: normal; overflow-wrap: anywhere; }
+.learn { overflow-x: hidden; }

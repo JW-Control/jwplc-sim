@@ -21,6 +21,7 @@ import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
+import { levels, loadProgress, markDone, nextAfter, saveProgress } from "./lib/learning.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -290,7 +291,7 @@ ipcMain.handle("api:catalog", () => {
 // ---------------------------------------------------------------- ejercicios (G9)
 const EXERCISES = join(import.meta.dirname, "..", "exercises");
 
-ipcMain.handle("exercises:list", () => {
+function listExercises() {
   if (!existsSync(EXERCISES)) return [];
   const out = [];
   for (const d of readdirSync(EXERCISES).sort()) {
@@ -298,12 +299,34 @@ ipcMain.handle("exercises:list", () => {
     if (!existsSync(f)) continue;
     try {
       const { project } = loadProject(f);
-      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1 });
+      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1, brief: project.exercise.brief ?? null });
     } catch {
       // un ejercicio roto no impide listar los demás
     }
   }
   return out;
+}
+ipcMain.handle("exercises:list", () => listExercises());
+
+// ---- Centro de aprendizaje: progreso del alumno en el perfil.
+const progressFile = () => join(app.getPath("userData"), "aprendizaje.json");
+const unlockOpts = (p) => ({ unlockAll: p.unlockAll || process.env.JWSIM_UNLOCK_ALL === "1" });
+ipcMain.handle("learn:state", () => {
+  const p = loadProgress(progressFile());
+  return levels(listExercises(), p, unlockOpts(p));
+});
+ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
+  const p = loadProgress(progressFile());
+  const changed = markDone(p, String(id), via === "grade" ? "grade" : "goals", grade);
+  if (changed) saveProgress(progressFile(), p);
+  const ex = listExercises();
+  return { changed, done: !!p.done[id], next: nextAfter(ex, p, String(id), unlockOpts(p)), teaches: ex.find((e) => e.id === id)?.brief?.teaches ?? "" };
+});
+ipcMain.handle("learn:unlockAll", (_e, on) => {
+  const p = loadProgress(progressFile());
+  p.unlockAll = !!on;
+  saveProgress(progressFile(), p);
+  return levels(listExercises(), p, unlockOpts(p));
 });
 
 // Abre una copia del ejercicio en la carpeta de trabajo (sin la solución):
@@ -340,7 +363,8 @@ ipcMain.handle("exercise:info", (_e, file) => {
     } catch (err) {
       goalsError = err.message;
     }
-    return { title: project.name, level: ex.level ?? 1, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError };
+    // id: carpeta del ejercicio (la copia de trabajo se llama igual).
+    return { id: basename(dirname(file)), title: project.name, level: ex.level ?? 1, brief: ex.brief ?? null, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError };
   } catch {
     return null;
   }
@@ -1052,6 +1076,7 @@ function buildMenu() {
         label: "Archivo",
         submenu: [
           { label: "Proyectos (inicio)…", click: send("startScreen") },
+          { label: "Centro de aprendizaje…", click: send("learnCenter") },
           { label: "Nuevo proyecto…", accelerator: "CmdOrCtrl+Alt+N", click: send("newProject") },
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },

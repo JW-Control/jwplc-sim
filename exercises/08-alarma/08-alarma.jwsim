@@ -17,7 +17,23 @@
     "level": 3,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/alarma"
+    "solution": "./solucion/alarma",
+    "brief": {
+      "goal": "Una alarma con bocina y piloto intermitente que el operador debe reconocer.",
+      "steps": [
+        "Con B1 cerrado suene HA1 y haga parpadear H1 (0,5 s / 0,5 s).",
+        "S1 (reconocer) calla la bocina; con la alarma presente, H1 queda fijo.",
+        "Si la alarma desaparece después de reconocerla, H1 se apaga.",
+        "Si desaparece sin reconocerla, todo sigue hasta que se reconozca."
+      ],
+      "teaches": "Secuencia de alarma: bocina, parpadeo, reconocimiento y memoria.",
+      "uses": [
+        "I0_0 · B1, presostato (interruptor NA): Cerrado: presión alta (alarma)",
+        "I0_1 · S1, pulsador NA: Reconocer",
+        "Q0_0 · HA1, zumbador: Bocina",
+        "Q0_1 · H1, piloto rojo: Alarma"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,

@@ -18,7 +18,7 @@
   // Programa abierto (const state de app.js, global del documento).
   // eslint-disable-next-line no-undef
   const current = () => (typeof state !== "undefined" ? state.sketch : null);
-  const st = { view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
+  const st = { learn: null, view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
 
   const store = {
     get(k, d) {
@@ -95,12 +95,58 @@
       `<button class="start-big" data-act="openJwsim"><b>Abrir proyecto JWPLC Sim…</b><span>Escena, simulación y programa (.jwsim)</span></button>` +
       `<button class="start-big" data-act="blank"><b>Sketch en blanco</b><span>Seguir con un sketch nuevo, como Arduino IDE</span></button>` +
       `</div>` +
+      learnCard() +
       `<div class="start-recent"><div class="start-sub">Recientes</div>` +
       (list.length
         ? `<ul>${list.map((r, i) => `<li><button data-act="recent" data-i="${i}"><span class="tag ${r.kind}">${r.kind === "openplc" ? "IEC" : "C++"}</span><b>${esc(r.name)}</b><small>${esc(r.dir)}</small></button></li>`).join("")}</ul>`
         : `<p class="muted">Los proyectos que cree o abra aparecen aquí.</p>`) +
       `</div></div>`
     );
+  }
+
+  // ------------------------------------------------------------ aprender
+  // Centro de aprendizaje: ejercicios por nivel, con el progreso del alumno
+  // (app/lib/learning.mjs). Un nivel se abre al terminar el anterior.
+  const titleOf = (id) => st.learn?.levels.flatMap((l) => l.items).find((x) => x.id === id)?.title ?? "";
+  function learnCard() {
+    const L = st.learn;
+    if (!L?.total) return "";
+    const pct = Math.round((100 * L.done) / L.total);
+    return (
+      `<button class="learn-card" data-act="learn"><div class="learn-card-txt"><b>Aprender</b><span>${L.done} de ${L.total} retos</span>` +
+      `<div class="learn-bar"><i style="width:${pct}%"></i></div>` +
+      `<small>${L.next ? `A continuación: <b>${esc(titleOf(L.next))}</b>` : "Completó todos los retos"}</small></div>` +
+      `<span class="learn-card-go">Centro de aprendizaje →</span></button>`
+    );
+  }
+  function learnView() {
+    const L = st.learn;
+    if (!L) return `<p class="muted">Cargando…</p>`;
+    const icon = { done: "✓", next: "▶", open: "○", locked: "🔒" };
+    let html = `<div class="learn">`;
+    for (const lv of L.levels) {
+      html += `<section class="learn-level${lv.open ? "" : " locked"}"><header><b>Nivel ${lv.level} · ${esc(lv.name)}</b><span class="learn-count">${lv.done}/${lv.total}</span>`;
+      if (!lv.open) html += `<span class="muted small">🔒 Se abre al terminar el nivel anterior</span>`;
+      html += `</header><ul>`;
+      for (const x of lv.items) {
+        html +=
+          `<li><button class="learn-item ${x.state}" data-act="ex" data-id="${esc(x.id)}" ${x.state === "locked" ? "disabled" : ""}>` +
+          `<span class="learn-ico">${icon[x.state]}</span><span class="learn-main"><b>${esc(x.title)}</b>${x.state === "next" ? `<span class="up-next">A continuación</span>` : ""}` +
+          `${x.grade !== null ? `<span class="learn-grade">${String(x.grade).replace(".", ",")}/20</span>` : ""}<small>${esc(x.teaches)}</small></span></button></li>`;
+      }
+      html += `</ul></section>`;
+    }
+    html += `<label class="learn-unlock"><input type="checkbox" id="learn-unlock" ${L.unlockAll ? "checked" : ""}/> Desbloquear todos los niveles (docente)</label>`;
+    html += `<div class="start-nav"><button data-act="home">Atrás</button></div></div>`;
+    return html;
+  }
+  async function refreshLearn() {
+    try {
+      st.learn = await api.learnState();
+    } catch {
+      st.learn = null;
+    }
+    if (!$("start")?.hidden) render();
   }
 
   function wizard() {
@@ -151,9 +197,9 @@
     const caret = document.activeElement?.selectionStart;
     box.innerHTML =
       `<div class="start-card">` +
-      `<header class="start-head"><span class="start-logo">JW</span><b>${st.view === "home" ? "Proyectos" : "Nuevo proyecto"}</b>` +
+      `<header class="start-head"><span class="start-logo">JW</span><b>${{ home: "Proyectos", learn: "Centro de aprendizaje" }[st.view] ?? "Nuevo proyecto"}</b>` +
       `<button class="icon" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>` +
-      `<div class="start-body">${st.view === "home" ? home() : wizard()}</div>` +
+      `<div class="start-body">${st.view === "home" ? home() : st.view === "learn" ? learnView() : wizard()}</div>` +
       `<footer class="start-foot"><label><input type="checkbox" id="start-show" ${store.get(SHOW_KEY, true) ? "checked" : ""}/> Mostrar al iniciar</label>` +
       `<span class="muted small">Ejemplos y ejercicios: en la barra de arriba.</span></footer></div>`;
     if (focus && $(focus)) {
@@ -181,6 +227,7 @@
     el().hidden = false;
     render();
     refreshStatus();
+    refreshLearn();
   }
   function close() {
     if (st.busy) return;
@@ -246,10 +293,25 @@
     if (e.target === el()) return;
     const b = e.target.closest("[data-act]");
     if (e.target.id === "start-show") store.set(SHOW_KEY, e.target.checked);
+    if (e.target.id === "learn-unlock") {
+      st.learn = await api.learnUnlockAll(e.target.checked);
+      render();
+      return;
+    }
     if (!b || b.disabled) return;
     const act = b.dataset.act;
     if (act === "close") close();
     else if (act === "new") open("wizard");
+    else if (act === "learn") {
+      st.view = "learn";
+      render();
+    } else if (act === "home") {
+      st.view = "home";
+      render();
+    } else if (act === "ex") {
+      close();
+      window.openExerciseById?.(b.dataset.id);
+    }
     else if (act === "blank") close();
     else if (act === "open") {
       close();
@@ -293,6 +355,7 @@
   $("btn-open-editor").addEventListener("click", () => current()?.openplc && openEditor(current().dir));
   api.onMenu((cmd) => {
     if (cmd === "startScreen") open("home");
+    else if (cmd === "learnCenter") open("learn");
     else if (cmd === "newProject") open("wizard");
     else if (cmd === "openInEditor") {
       if (current()?.openplc) openEditor(current().dir);

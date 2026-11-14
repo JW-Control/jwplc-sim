@@ -1495,7 +1495,7 @@ function buildGoals() {
   }
   const extraLabel = { merit: "Mérito", distinction: "Distinción" };
   let html = `<div class="goals-head"><b>Objetivos en vivo</b><span class="goals-count"></span><span class="goals-time muted"></span></div>`;
-  html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden>¡Reto completado! Cumplió todos los objetivos en la misma corrida.</div><ol class="goals">`;
+  html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden><b>¡Reto completado!</b> Cumplió todos los objetivos en la misma corrida.<div class="learn-after"></div></div><ol class="goals">`;
   for (const g of goalUi.goals) {
     const sigs = Object.entries(g.when)
       .map(([k, w]) => `<span class="goal-sig" data-sig="${esc(k)}"><code>${esc(k)}</code> <span class="goal-read"></span><small>→ ${esc(fmtWant(k, w))}</small></span>`)
@@ -1521,6 +1521,10 @@ function renderGoals() {
   box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Corra la simulación y opere la escena";
   box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
   box.querySelector(".goals-done").hidden = !p?.complete;
+  if (p?.complete && !goalUi.reported && state.exercise?.id) {
+    goalUi.reported = true;
+    reportDone("goals").then((r) => fillAfter(box.querySelector(".learn-after"), r));
+  }
   for (const g of goalUi.goals) {
     const li = box.querySelector(`[data-goal="${CSS.escape(g.id)}"]`);
     const s = byId.get(g.id);
@@ -1560,7 +1564,9 @@ async function showExercise(file) {
   goalUi.progress = null;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
-  state.exercise = info ? { file } : null;
+  state.exercise = info ? { file, id: info.id, brief: info.brief } : null;
+  goalUi.reported = false;
+  renderBrief(true);
   $("tab-exercise").hidden = !info;
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
@@ -1571,6 +1577,57 @@ async function showExercise(file) {
   $("ex-statement").innerHTML = mdToHtml(info.statement);
   setView("exercise");
 }
+
+// ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
+function renderBrief(expanded) {
+  const box = $("ex-brief");
+  const b = state.exercise?.brief;
+  box.hidden = !b;
+  if (!b) return;
+  const list = (xs) => (xs ?? []).map((x) => `<li>${esc(x)}</li>`).join("");
+  box.classList.toggle("collapsed", !expanded);
+  box.innerHTML = expanded
+    ? `<div class="brief-sec"><div class="brief-k">El objetivo</div><p>${esc(b.goal ?? "")}</p></div>` +
+      `<div class="brief-sec"><div class="brief-k">Pasos</div><ol>${list(b.steps)}</ol></div>` +
+      `<div class="brief-sec"><div class="brief-k">Con qué trabaja</div><ul class="brief-uses">${list(b.uses)}</ul></div>` +
+      `<div class="brief-nav"><button class="primary" data-brief="start">Empezar</button><span class="muted">Programe, pulse ▶ Ejecutar y opere la escena: los objetivos se marcan en vivo.</span></div>`
+    : `<button class="link" data-brief="show">Ver ficha del reto</button><span class="muted"> · ${esc(b.goal ?? "")}</span>`;
+}
+
+async function reportDone(via, grade) {
+  try {
+    return await api.learnComplete(state.exercise.id, via, grade);
+  } catch {
+    return null;
+  }
+}
+
+function fillAfter(el, r, lead = "") {
+  if (!el || !r) return;
+  el.innerHTML =
+    (lead ? `<b>${esc(lead)}</b> ` : "") +
+    (r.teaches ? `<span class="learn-teaches">Qué enseña: ${esc(r.teaches)}</span>` : "") +
+    (r.next ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>` : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
+}
+
+window.openExerciseById = async (id) => {
+  try {
+    applyProject(await api.openExercise(id));
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}
+`, "fatal");
+  }
+};
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-brief], [data-next]");
+  if (!b) return;
+  if (b.dataset.next) window.openExerciseById(b.dataset.next);
+  else if (b.dataset.brief === "start") {
+    renderBrief(false);
+    setView?.("exercise");
+  } else renderBrief(true);
+});
 
 function renderGrade(g) {
   if (!g.ok) {
@@ -1597,6 +1654,12 @@ async function gradeExercise() {
     const g = await api.gradeExercise(state.exercise.file, state.sketch.dir);
     $("grade-result").innerHTML = renderGrade(g);
     $("grade-note").textContent = g.ok ? `Calificado en ${(g.wall_ms / 1000).toFixed(1)} s` : "";
+    if (g.ok && g.grade >= 14 && state.exercise?.id) {
+      const box = document.createElement("div");
+      box.className = "learn-after grade-pass";
+      $("grade-result").prepend(box);
+      fillAfter(box, await reportDone("grade", g.grade), "Reto aprobado.");
+    }
   } catch (err) {
     $("grade-note").textContent = cleanError(err);
   } finally {

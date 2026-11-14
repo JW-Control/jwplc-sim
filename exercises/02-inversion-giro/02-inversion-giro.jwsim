@@ -17,7 +17,25 @@
     "level": 1,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/inversion_giro"
+    "solution": "./solucion/inversion_giro",
+    "brief": {
+      "goal": "Un motor que gira a la izquierda con S1 o a la derecha con S2, sin que KM1 y KM2 cierren juntos.",
+      "steps": [
+        "Enclave KM1 con S1 y KM2 con S2.",
+        "Para cambiar de sentido hay que pasar por parada (S0).",
+        "Enclavamiento: nunca KM1 y KM2 a la vez; con S1 y S2 juntos, ninguno.",
+        "H1 encendido mientras el motor gira."
+      ],
+      "teaches": "Enclavamiento entre contactores y paso obligado por parada.",
+      "uses": [
+        "I0_0 · S1, pulsador NA: Giro a la izquierda",
+        "I0_1 · S2, pulsador NA: Giro a la derecha",
+        "I0_2 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Motor a la izquierda",
+        "Q0_1 · KM2, contactor: Motor a la derecha",
+        "Q0_2 · H1, piloto amarillo: Motor en marcha"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,

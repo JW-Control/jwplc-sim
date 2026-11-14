@@ -17,7 +17,23 @@
     "level": 2,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/bomba_niveles"
+    "solution": "./solucion/bomba_niveles",
+    "brief": {
+      "goal": "Mantener un tanque entre dos niveles: la bomba arranca bajo B1 y para en B2.",
+      "steps": [
+        "Arranque la bomba cuando el agua baje de B1.",
+        "Manténgala hasta llegar a B2 (histéresis).",
+        "Con el tanque lleno vaciándose, no arranque hasta bajar de B1.",
+        "H1 encendido con el agua bajo B1."
+      ],
+      "teaches": "Histéresis entre dos sensores.",
+      "uses": [
+        "I0_0 · B1, interruptor de nivel bajo: Cerrado: hay agua a la altura de B1",
+        "I0_1 · B2, interruptor de nivel alto: Cerrado: tanque lleno",
+        "Q0_0 · KM1, contactor: Bomba M1 (230 VAC)",
+        "Q0_1 · H1, piloto rojo: Tanque bajo"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,

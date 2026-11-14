@@ -1,8 +1,10 @@
 # Propuesta: evaluaciones en vivo, con CRUMB como referencia
 
-Estado (2026-11-14): etapa 1 hecha en la rama `feature/alpha18-evaluaciones`
-(objetivos en vivo en los ejercicios 01 y 09; ver `docs/EJERCICIOS.md`).
-Etapas 2 a 4: pendientes.
+Estado (2026-11-14), rama `feature/alpha18-evaluaciones`: etapa 1 (objetivos
+en vivo en los ejercicios 01 y 09) y etapa 2 (ficha del reto y centro de
+aprendizaje, en los 9 ejercicios) hechas; ver `docs/EJERCICIOS.md`.
+Etapas 3 y 4: pendientes. Decisiones tomadas por defecto: niveles con
+candado y casilla del docente para abrir todo; progreso solo local.
 
 ## Qué hace CRUMB
 

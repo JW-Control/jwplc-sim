@@ -17,7 +17,25 @@
     "level": 2,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/estrella_triangulo"
+    "solution": "./solucion/estrella_triangulo",
+    "brief": {
+      "goal": "Arrancar un motor en estrella y pasar a triángulo a los 3 s, con la pausa obligatoria entre ambos.",
+      "steps": [
+        "Con S1 cierre KM1 (línea) y KM2 (estrella).",
+        "A los 3 s abra KM2, espere 100 ms y cierre KM3 (triángulo).",
+        "KM2 y KM3 nunca juntos, ni un instante.",
+        "S0 abre los tres; H1 encendido en marcha."
+      ],
+      "teaches": "Secuencia temporizada con pausa obligatoria entre contactores.",
+      "uses": [
+        "I0_0 · S1, pulsador NA: Marcha",
+        "I0_1 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Línea",
+        "Q0_1 · KM2, contactor: Estrella",
+        "Q0_2 · KM3, contactor: Triángulo",
+        "Q0_3 · H1, piloto verde: En marcha"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,
