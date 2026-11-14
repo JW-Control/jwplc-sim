@@ -2777,3 +2777,17 @@ body[data-tab="plant"] .view3d-empty {
 @media (max-width: 760px) { .nb-form { grid-template-columns: 1fr; } }
 /* Vista previa en reposo: sin evaluar data-show, se ocultan los estados activos. */
 .nb-svg [data-show]:not([data-show^="!"]) { display: none; }
+
+/* Tarjetas de elección (asistentes): el texto se ajusta dentro del recuadro
+   (los botones de la app no cortan línea por defecto). */
+.start-big,
+.choice { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+.start-big b,
+.choice b { font-size: 14px; }
+.start-big span,
+.choice span { line-height: 1.4; }
+.devmgr-card { width: min(940px, calc(100vw - 32px)); max-width: none; }
+.devmgr-card .start-body { overflow-x: hidden; }
+.nb-blocks { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.nb-blocks .choice { min-height: 104px; padding: 14px 16px; gap: 6px; justify-content: flex-start; }
+.nb-blocks .choice span { font-size: 12.5px; }
