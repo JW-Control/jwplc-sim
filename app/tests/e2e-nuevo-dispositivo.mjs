@@ -9,8 +9,9 @@
 //   SIMULATES  colocado y cableado a 24 VDC, su bobina se energiza
 //   THERMAL    planta térmica sin la entrada 0-10 V: bornes R1 R2 / PT1 PT2 PT3 TS1 TS2,
 //              creada y en la escena con su temperatura
+//   ORDER      el orden del modelo cambia los campos (τ1…τn u ωn y ζ) y queda en el dispositivo
 // Informe en build/gates/JWSIM_NUEVO_DISPOSITIVO_E2E.json.
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -127,8 +128,35 @@ try {
   const temp = await until(() => t(() => window.jwsimTest.scene.snapshot()?.devices.find((d) => d.id === "H9")?.outputs?.temp));
   criteria.THERMAL = { ok: !!tprev && Math.abs(Number(temp) - 25) < 1e-6, temp };
   log(`THERMAL ${JSON.stringify(criteria.THERMAL)}`);
+
+  // ---- ORDER
+  await t(() => window.JwsimDevices.newDevice());
+  await until(() => win.$('#devmgr [data-act="nb-block"][data-v="termica"]'));
+  await win.click('#devmgr [data-act="nb-block"][data-v="termica"]');
+  const fieldsNow = () => win.$$eval("#devmgr [data-f]", (l) => l.map((e) => e.dataset.f).filter((f) => /^(tau\d?|wn|zeta)$/.test(f)).join(","));
+  const first = await fieldsNow();
+  await win.selectOption('#devmgr [data-f="modelo"]', "2.º orden oscilatorio");
+  const osc = await until(async () => ((await fieldsNow()) === "wn,zeta" ? "wn,zeta" : null));
+  await win.selectOption('#devmgr [data-f="modelo"]', "3.er orden");
+  const third = await until(async () => ((await fieldsNow()) === "tau,tau2,tau3" ? "tau,tau2,tau3" : null));
+  const note = await win.$eval("#devmgr .nb-model-note", (e) => e.textContent);
+  await win.fill('#devmgr [data-f="author"]', "utec");
+  await win.fill('#devmgr [data-f="name"]', "horno-3");
+  await win.fill('#devmgr [data-f="parent"]', parent);
+  await win.screenshot({ path: join(OUT, "06-orden.png") });
+  await until(() => win.$eval('#devmgr [data-act="nb-create"]', (b) => !b.disabled));
+  await win.click('#devmgr [data-act="nb-create"]');
+  await until(() => win.$eval("#devmgr", (e) => /utec\/horno-3/.test(e.textContent)), 15000);
+  const code = existsSync(join(parent, "horno-3", "device.mjs")) ? readFileSync(join(parent, "horno-3", "device.mjs"), "utf8") : "";
+  criteria.ORDER = {
+    ok: first === "tau" && osc === "wn,zeta" && third === "tau,tau2,tau3" && /\(τ1s \+ 1\)\(τ2s \+ 1\)\(τ3s \+ 1\)/.test(note) && /id: "modelo".*default: "3\.er orden"/.test(code),
+    first,
+    osc,
+    third,
+  };
+  log(`ORDER ${JSON.stringify(criteria.ORDER)}`);
 } finally {
-  const ok = Object.values(criteria).length === 6 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 7 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_NUEVO_DISPOSITIVO_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_NUEVO_DISPOSITIVO_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();

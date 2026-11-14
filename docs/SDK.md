@@ -287,8 +287,24 @@ enlaza en modo desarrollador (§2.6):
 | Pulsador o selector | contactos NA/NC | El alumno lo acciona (vuelve solo o queda) |
 | Sensor con umbral | contactos NA/NC | Lee una salida de otro equipo (`links`, cruce exacto) y conmuta sobre el umbral, con histéresis |
 | Temporizador a la conexión | A1 A2, 15 16 18 | Con la bobina energizada, 15-18 cierra tras el tiempo (`nextEventNs`) |
-| Equipo de planta | sin bornes | Una variable de 0 a 100 % que sube mientras su entrada está activa y baja si no (segmentos `{ value, rate }`) |
-| Planta térmica | R1 R2 y, a elección, AI+ AI- (0-10 V), PT1 PT2 PT3 (PT100) y TS1 TS2 (termostato) | Primer orden con tiempo muerto τ·dT/dt = −(T − Ta) + K·u(t − θ), discretizado exacto con retención de orden cero y paso Ts: T[k+1] = Tss + (T[k] − Tss)·e^(−Ts/τ). u: la resistencia (todo o nada) o la consigna 0-10 V. La PT100 se cablea al transmisor `pt100-rs485` (al PLC por Modbus) y el termostato conmuta en el cruce exacto |
+| Equipo de planta | sin bornes | Una variable en % movida por lo que lee: rampa (sube y baja a velocidad fija, como antes) o la dinámica lineal del orden elegido (ver abajo) |
+| Planta térmica | R1 R2 y, a elección, AI+ AI- (0-10 V), PT1 PT2 PT3 (PT100) y TS1 TS2 (termostato) | T = Ta + y, con y la dinámica lineal del orden elegido (ver abajo). u: la resistencia (todo o nada) o la consigna 0-10 V. La PT100 se cablea al transmisor `pt100-rs485` (al PLC por Modbus) y el termostato conmuta en el cruce exacto |
+
+**Modelo (orden)** de las plantas, en el asistente y después en Propiedades
+(parámetro `modelo`):
+
+| Modelo | G(s) | Parámetros |
+|---|---|---|
+| 1.er a 4.º orden | K·e^(−θs) / [(τ1·s + 1)…(τn·s + 1)] | K, τ1…τn, θ |
+| 2.º orden oscilatorio | K·ωn²·e^(−θs) / (s² + 2ζωn·s + ωn²) | K, ωn, ζ (con ζ < 1 hay sobrepico), θ |
+| Rampa (solo Equipo de planta) | integrador con límites 0-100 % | sube y baja en %/s |
+
+Se lleva a espacio de estados y se discretiza **exacto** con retención de
+orden cero y el paso Ts: `x[k+1] = Ad·x[k] + Bd·u[k − d]`, con
+`[Ad Bd; 0 1] = exp([A B; 0 0]·Ts)` (exponencial de matriz por escalado y
+cuadrado) y d = θ/Ts pasos de tiempo muerto. Es estable con cualquier paso;
+entre pasos la salida se interpola. Las pruebas comparan con las respuestas
+analíticas (1.er y 2.º orden exactos a 1e-6, sobrepico del oscilatorio).
 
 El asistente pide autor, nombre, nombre en la paleta, categoría y las
 opciones del bloque, y muestra la vista previa del símbolo con los bornes

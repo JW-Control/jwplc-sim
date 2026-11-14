@@ -18,13 +18,13 @@ export const BEHAVIORS = [
   { id: "pulsador", name: "Pulsador o selector", hint: "El alumno lo acciona con la simulación en marcha y conmuta sus contactos.", category: "Mando y protección", options: ["mode", "no", "nc"] },
   { id: "sensor", name: "Sensor con umbral", hint: "Lee una salida de otro equipo (p. ej. T1.nivelPct) y cierra su contacto sobre un umbral, con histéresis.", category: "Sensores", options: ["source", "threshold", "hysteresis", "no", "nc"] },
   { id: "temporizador", name: "Temporizador a la conexión", hint: "Con la bobina A1-A2 energizada, el contacto 15-18 cierra tras el tiempo (15-16 abre).", category: "Mando y protección", options: ["rating", "delayMs"] },
-  { id: "planta", name: "Equipo de planta", hint: "Una variable de 0 a 100 % que sube mientras una entrada está activa y baja si no (llenado, temperatura).", category: "Planta", options: ["source", "upPerS", "downPerS"] },
+  { id: "planta", name: "Equipo de planta", hint: "Una variable en % movida por lo que lee: rampa (sube y baja) o un modelo de 1.er a 4.º orden u oscilatorio, con tiempo muerto.", category: "Planta", options: ["source", "modelo", "gain", "tau", "tau2", "tau3", "tau4", "wn", "zeta", "theta", "stepMs", "upPerS", "downPerS"] },
   {
     id: "termica",
     name: "Planta térmica",
-    hint: "Horno o tanque calefaccionado: primer orden con tiempo muerto, discretizado exacto. Resistencia (todo o nada) o consigna 0-10 V; salida PT100 y termostato de seguridad.",
+    hint: "Horno o tanque calefaccionado: modelo de 1.er a 4.º orden u oscilatorio, con tiempo muerto, discretizado exacto. Resistencia (todo o nada) o consigna 0-10 V; salida PT100 y termostato.",
     category: "Planta",
-    options: ["rating", "tau", "gain", "theta", "ambient", "tmax", "stepMs", "analogIn", "pt100", "thermostat"],
+    options: ["rating", "modelo", "gain", "tau", "tau2", "tau3", "tau4", "wn", "zeta", "theta", "ambient", "tmax", "stepMs", "analogIn", "pt100", "thermostat"],
   },
 ];
 
@@ -71,10 +71,16 @@ export function normalizeSpec(s) {
     delayMs: Math.max(1, num(s.delayMs, 3000)),
     upPerS: Math.max(0.01, num(s.upPerS, 10)),
     downPerS: Math.max(0, num(s.downPerS, 5)),
-    // Planta térmica (primer orden + tiempo muerto).
-    tau: Math.max(0.1, num(s.tau, 600)),
-    gain: num(s.gain, 180),
-    theta: Math.max(0, num(s.theta, 20)),
+    // Plantas: modelo (orden) y sus constantes; los valores por defecto según el bloque.
+    modelo: [...(b.id === "planta" ? [RAMP] : []), ...MODELS].includes(s.modelo) ? s.modelo : b.id === "planta" ? RAMP : MODELS[0],
+    tau: Math.max(0.001, num(s.tau, b.id === "planta" ? 10 : 600)),
+    tau2: Math.max(0.001, num(s.tau2, b.id === "planta" ? 5 : 120)),
+    tau3: Math.max(0.001, num(s.tau3, b.id === "planta" ? 3 : 60)),
+    tau4: Math.max(0.001, num(s.tau4, b.id === "planta" ? 2 : 30)),
+    wn: Math.max(1e-6, num(s.wn, b.id === "planta" ? 0.5 : 0.02)),
+    zeta: Math.max(0, num(s.zeta, 0.3)),
+    gain: num(s.gain, b.id === "planta" ? 100 : 180),
+    theta: Math.max(0, num(s.theta, b.id === "planta" ? 0 : 20)),
     ambient: num(s.ambient, 25),
     tmax: num(s.tmax, 220),
     stepMs: Math.min(10000, Math.max(10, num(s.stepMs, 500))),
@@ -201,6 +207,86 @@ export function symbolSvg(o) {
   );
 }
 
+// ---------------------------------------------------------------- dinámica lineal
+// Modelos de planta con el orden a elección (también en Propiedades):
+//   n.º orden:           G(s) = K·e^(−θs) / [(τ1·s + 1)…(τn·s + 1)], n = 1 … 4
+//   2.º orden oscilatorio: G(s) = K·ωn²·e^(−θs) / (s² + 2ζωn·s + ωn²)
+// En espacio de estados y discretizado exacto con retención de orden cero:
+//   x[k+1] = Ad·x[k] + Bd·u[k − d],  [Ad Bd; 0 1] = exp([A B; 0 0]·Ts),  d = θ/Ts.
+export const MODELS = ["1.er orden", "2.º orden", "3.er orden", "4.º orden", "2.º orden oscilatorio"];
+export const RAMP = "Rampa (sube/baja)";
+
+/** Código de la dinámica, común a las plantas (va arriba de la definición). */
+const LTI_HELPERS = [
+  `// ---- Dinámica lineal (generada): orden a elección, discretizada exacta (ZOH).`,
+  `//   n.º orden:            G(s) = K·e^(−θs) / [(τ1·s + 1)…(τn·s + 1)]`,
+  `//   2.º orden oscilatorio: G(s) = K·ωn²·e^(−θs) / (s² + 2ζωn·s + ωn²)`,
+  `//   x[k+1] = Ad·x[k] + Bd·u[k − d],  [Ad Bd; 0 1] = exp([A B; 0 0]·Ts),  d = θ/Ts`,
+  `const MODELS = ${js(MODELS)};`,
+  `const mul = (X, Y) => X.map((r) => Y[0].map((_, j) => r.reduce((s, v, k) => s + v * Y[k][j], 0)));`,
+  `// exp(M) por escalado y cuadrado con Taylor (exacto en doble precisión para estos tamaños).`,
+  `function expm(M) {`,
+  `  const norm = Math.max(...M.map((r) => r.reduce((s, v) => s + Math.abs(v), 0)));`,
+  `  const sq = Math.max(0, Math.ceil(Math.log2(norm || 1)) + 1);`,
+  `  const S = M.map((r) => r.map((v) => v / 2 ** sq));`,
+  `  let E = S.map((r, i) => r.map((_, j) => (i === j ? 1 : 0)));`,
+  `  let term = E;`,
+  `  for (let k = 1; k <= 20; k++) {`,
+  `    term = mul(term, S).map((r) => r.map((v) => v / k));`,
+  `    E = E.map((r, i) => r.map((v, j) => v + term[i][j]));`,
+  `  }`,
+  `  for (let i = 0; i < sq; i++) E = mul(E, E);`,
+  `  return E;`,
+  `}`,
+  `// Modelo de los parámetros: matrices discretas, salida y estado inicial para y0.`,
+  `function linearModel(p, Ts, y0) {`,
+  `  const K = Number(p.gain);`,
+  `  const tau = [p.tau1, p.tau2, p.tau3, p.tau4].map((v) => Math.max(1e-3, Number(v)));`,
+  `  let A;`,
+  `  let B;`,
+  `  let out;`,
+  `  let x0;`,
+  `  if (p.modelo === "2.º orden oscilatorio") {`,
+  `    const wn = Math.max(1e-6, Number(p.wn));`,
+  `    const z = Math.max(0, Number(p.zeta));`,
+  `    A = [[0, 1], [-wn * wn, -2 * z * wn]];`,
+  `    B = [0, K * wn * wn];`,
+  `    out = 0;`,
+  `    x0 = [y0, 0];`,
+  `  } else {`,
+  `    // Etapas de primer orden en serie: x1 sigue a K·u, cada xi sigue a x(i−1); y = xn.`,
+  `    const n = Math.max(1, MODELS.indexOf(p.modelo) + 1);`,
+  `    A = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? -1 / tau[i] : j === i - 1 ? 1 / tau[i] : 0)));`,
+  `    B = Array.from({ length: n }, (_, i) => (i === 0 ? K / tau[0] : 0));`,
+  `    out = n - 1;`,
+  `    x0 = new Array(n).fill(y0);`,
+  `  }`,
+  `  const n = A.length;`,
+  `  const M = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => (i < n ? (j < n ? A[i][j] : B[i]) : 0)).map((v) => v * Ts));`,
+  `  const E = expm(M);`,
+  `  return { Ad: E.slice(0, n).map((r) => r.slice(0, n)), Bd: E.slice(0, n).map((r) => r[n]), out, x0 };`,
+  `}`,
+  `const stepModel = (m, x, u) => m.Ad.map((r, i) => r.reduce((s, v, j) => s + v * x[j], 0) + m.Bd[i] * u);`,
+  ``,
+].join("\n");
+
+/** Parámetros del modelo (grupo «Modelo» en Propiedades). */
+function modelParams(o, { ramp = false, gainLabel, gainUnit, group = "02 Modelo" }) {
+  const g = js(group);
+  return [
+    `    { id: "modelo", label: "Modelo (orden)", type: "enum", options: ${js(ramp ? [RAMP, ...MODELS] : MODELS)}, default: ${js(o.modelo)}, group: ${g} },`,
+    `    { id: "gain", label: ${js(gainLabel)}, type: "number", default: ${o.gain}, unit: ${js(gainUnit)}, group: ${g} },`,
+    `    { id: "tau1", label: "τ1", type: "number", default: ${o.tau}, unit: "s", group: ${g}, hint: "1.er a 4.º orden" },`,
+    `    { id: "tau2", label: "τ2", type: "number", default: ${o.tau2}, unit: "s", group: ${g}, hint: "2.º orden en adelante" },`,
+    `    { id: "tau3", label: "τ3", type: "number", default: ${o.tau3}, unit: "s", group: ${g}, hint: "3.er orden en adelante" },`,
+    `    { id: "tau4", label: "τ4", type: "number", default: ${o.tau4}, unit: "s", group: ${g}, hint: "4.º orden" },`,
+    `    { id: "wn", label: "ωn (frecuencia natural)", type: "number", default: ${o.wn}, unit: "rad/s", group: ${g}, hint: "2.º orden oscilatorio" },`,
+    `    { id: "zeta", label: "ζ (amortiguamiento)", type: "number", default: ${o.zeta}, group: ${g}, hint: "2.º orden oscilatorio; < 1 oscila" },`,
+    `    { id: "theta", label: "θ (tiempo muerto)", type: "number", default: ${o.theta}, unit: "s", group: ${g} },`,
+    `    { id: "stepMs", label: "Paso de discretización (Ts)", type: "number", default: ${o.stepMs}, unit: "ms", group: ${g} },`,
+  ];
+}
+
 /**
  * Cuerpo de la planta térmica: primer orden con tiempo muerto (FOPDT),
  *   τ·dT/dt = −(T − Ta) + K·u(t − θ),
@@ -209,17 +295,14 @@ export function symbolSvg(o) {
  */
 function thermalBody(o, terminals) {
   const L = [];
-  L.push(`  // Modelo: primer orden con tiempo muerto, discretizado exacto (estable con cualquier paso).`);
-  L.push(`  //   τ·dT/dt = −(T − Ta) + K·u(t − θ)   →   T[k+1] = Tss + (T[k] − Tss)·e^(−Ts/τ), Tss = Ta + K·u[k − d]`);
+  L.push(`  // Modelo: T = Ta + y, con y la salida de la dinámica elegida (orden 1 a 4 u oscilatorio),`);
+  L.push(`  // discretizada exacta (estable con cualquier paso). Con 1.er orden: τ·dT/dt = −(T − Ta) + K·u(t − θ).`);
   L.push(`  // u va de 0 a 1: la resistencia (todo o nada)${o.analogIn ? " o la consigna de 0-10 V en AI+/AI- (si está cableada, manda ella)" : ""}.`);
   L.push(`  parameters: [`);
   L.push(`    { id: "rating", label: "Resistencia", type: "enum", options: ["24VDC", "230VAC"], default: ${js(o.rating)}, group: "01 Entradas" },`);
-  L.push(`    { id: "tau", label: "τ (constante de tiempo)", type: "number", default: ${o.tau}, unit: "s", group: "02 Modelo" },`);
-  L.push(`    { id: "gain", label: "K (subida a plena potencia)", type: "number", default: ${o.gain}, unit: "°C", group: "02 Modelo" },`);
-  L.push(`    { id: "theta", label: "θ (tiempo muerto)", type: "number", default: ${o.theta}, unit: "s", group: "02 Modelo" },`);
+  L.push(...modelParams(o, { gainLabel: "K (subida a plena potencia)", gainUnit: "°C" }));
   L.push(`    { id: "ambient", label: "Ambiente (Ta)", type: "number", default: ${o.ambient}, unit: "°C", group: "02 Modelo" },`);
   L.push(`    { id: "start", label: "Temperatura inicial", type: "number", default: ${o.ambient}, unit: "°C", group: "02 Modelo" },`);
-  L.push(`    { id: "stepMs", label: "Paso de discretización (Ts)", type: "number", default: ${o.stepMs}, unit: "ms", group: "02 Modelo" },`);
   if (o.thermostat) L.push(`    { id: "tmax", label: "Termostato de seguridad", type: "number", default: ${o.tmax}, unit: "°C", group: "03 Salidas" },`);
   L.push(`  ],`);
   L.push(`  terminals: ${js(terminals)},`);
@@ -241,22 +324,22 @@ function thermalBody(o, terminals) {
   L.push(`    const p = ctx.params;`);
   L.push(`    const Ts = Math.max(0.01, Number(p.stepMs) / 1000);`);
   L.push(`    const STEP = ms(Ts * 1000);`);
-  L.push(`    const a = Math.exp(-Ts / Math.max(0.1, Number(p.tau)));`);
+  L.push(`    const Ta = Number(p.ambient);`);
+  L.push(`    const m = linearModel(p, Ts, Number(p.start) - Ta);`);
+  L.push(`    let x = m.x0; // estado del modelo (y = x[m.out] = T − Ta)`);
   L.push(`    // Tiempo muerto: las entradas de los últimos d pasos.`);
   L.push(`    const delay = new Array(Math.max(0, Math.round(Number(p.theta) / Ts))).fill(0);`);
-  L.push(`    let T = Number(p.start);`);
   L.push(`    let k = 0n; // pasos integrados`);
   L.push(`    let u = 0; // entrada retenida (ZOH) del paso en curso`);
-  L.push(`    const steady = (uu) => Number(p.ambient) + Number(p.gain) * uu;`);
   L.push(`    return {`);
   L.push(`      update(t, inp) {`);
   L.push(`        // 1) Integrar los pasos vencidos con la entrada retenida (idempotente en el mismo t).`);
   L.push(`        while ((k + 1n) * STEP <= t) {`);
   L.push(`          delay.push(u);`);
-  L.push(`          const Tss = steady(delay.shift());`);
-  L.push(`          T = Tss + (T - Tss) * a;`);
+  L.push(`          x = stepModel(m, x, delay.shift());`);
   L.push(`          k++;`);
   L.push(`        }`);
+  L.push(`        const T = Ta + x[m.out];`);
   L.push(`        // 2) Entrada para el paso siguiente.`);
   if (o.analogIn) {
     L.push(`        const v = inp.values?.u;`);
@@ -266,7 +349,7 @@ function thermalBody(o, terminals) {
   }
   L.push(`        // 3) Salidas: la temperatura como segmento hacia el próximo paso (los sensores la cruzan exacto).`);
   L.push(`        const uNext = delay.length ? delay[0] : u;`);
-  L.push(`        const Tnext = steady(uNext) + (T - steady(uNext)) * a;`);
+  L.push(`        const Tnext = Ta + stepModel(m, x, uNext)[m.out];`);
   L.push(`        // Valor en este instante (puede ser a mitad de un paso): entre T[k] y T[k+1].`);
   L.push(`        const rate = (Tnext - T) / Ts;`);
   L.push(`        const Tt = T + rate * (Number(t - k * STEP) / 1e9);`);
@@ -281,6 +364,77 @@ function thermalBody(o, terminals) {
       : `          nextEventNs: (k + 1n) * STEP,`,
   );
   L.push(`        };`);
+  L.push(`      },`);
+  L.push(`    };`);
+  L.push(`  },`);
+  return L.join("\n") + "\n";
+}
+
+/**
+ * Equipo de planta genérico (sin bornes): una variable en % que mueve lo que
+ * lee. Modelo «Rampa»: sube y baja a velocidad fija (integrador con límites,
+ * como antes). Los demás: la dinámica lineal del orden elegido, con u de 0 a 1.
+ */
+function plantBody(o) {
+  const L = [];
+  L.push(`  // La entrada se elige en Propiedades al colocarlo (vacía: no se mueve). u = valor leído (booleano: 0 o 1).`);
+  L.push(`  parameters: [`);
+  L.push(`    { id: "source", label: "Entrada", type: "string", default: "", hint: ${js(`<equipo>.<salida>, p. ej. ${o.source}`)}, group: "01 Entrada" },`);
+  L.push(...modelParams(o, { ramp: true, gainLabel: "K (valor con la entrada a pleno)", gainUnit: "%" }));
+  L.push(`    { id: "upPerS", label: "Sube (rampa)", type: "number", default: ${o.upPerS}, unit: "%/s", group: "02 Modelo", hint: "solo el modelo Rampa" },`);
+  L.push(`    { id: "downPerS", label: "Baja (rampa)", type: "number", default: ${o.downPerS}, unit: "%/s", group: "02 Modelo", hint: "solo el modelo Rampa" },`);
+  L.push(`    { id: "start", label: "Valor inicial", type: "number", default: 0, unit: "%", group: "02 Modelo" },`);
+  L.push(`  ],`);
+  L.push(`  // Equipo de planta: sin bornes; lo mueve lo que lee y lo leen los sensores por sus salidas.`);
+  L.push(`  terminals: [],`);
+  L.push(`  reads: (p) => (p.source ? [{ id: "input", source: String(p.source) }] : []),`);
+  L.push(`  create(ctx) {`);
+  L.push(`    const p = ctx.params;`);
+  L.push(`    const out = (x, rate) => ({ value: { value: x / 100, rate: rate / 100 }, valuePct: { value: x, rate }, full: x >= 100, empty: x <= 0 });`);
+  L.push(`    if (p.modelo === ${js(RAMP)}) {`);
+  L.push(`      // Rampa: tramo lineal, valor x0 en t0 con pendiente rate (%/s), entre 0 y 100 %.`);
+  L.push(`      let x0 = Math.min(100, Math.max(0, Number(p.start)));`);
+  L.push(`      let t0 = 0n;`);
+  L.push(`      let rate = 0;`);
+  L.push(`      const at = (t) => Math.min(100, Math.max(0, x0 + (rate * Number(t - t0)) / 1e9));`);
+  L.push(`      return {`);
+  L.push(`        update(t, inp) {`);
+  L.push(`          const x = at(t);`);
+  L.push(`          const on = Number(inp.values?.input ?? 0) > 0;`);
+  L.push(`          let r = on ? Number(p.upPerS) : -Number(p.downPerS);`);
+  L.push(`          if ((r > 0 && x >= 100) || (r < 0 && x <= 0)) r = 0;`);
+  L.push(`          if (r !== rate) {`);
+  L.push(`            x0 = x;`);
+  L.push(`            t0 = t;`);
+  L.push(`            rate = r;`);
+  L.push(`          }`);
+  L.push(`          // Próximo cambio solo: al llegar a 0 o a 100 %.`);
+  L.push(`          const next = rate > 0 ? t + ms(((100 - x) / rate) * 1000) : rate < 0 ? t + ms((x / -rate) * 1000) : undefined;`);
+  L.push(`          return { outputs: out(x, rate), ...(next !== undefined && next > t ? { nextEventNs: next } : {}) };`);
+  L.push(`        },`);
+  L.push(`      };`);
+  L.push(`    }`);
+  L.push(`    // Dinámica lineal del orden elegido: y = x[m.out] en %, partiendo del valor inicial.`);
+  L.push(`    const Ts = Math.max(0.01, Number(p.stepMs) / 1000);`);
+  L.push(`    const STEP = ms(Ts * 1000);`);
+  L.push(`    const m = linearModel(p, Ts, Number(p.start));`);
+  L.push(`    let x = m.x0;`);
+  L.push(`    const delay = new Array(Math.max(0, Math.round(Number(p.theta) / Ts))).fill(0);`);
+  L.push(`    let k = 0n;`);
+  L.push(`    let u = 0;`);
+  L.push(`    return {`);
+  L.push(`      update(t, inp) {`);
+  L.push(`        while ((k + 1n) * STEP <= t) {`);
+  L.push(`          delay.push(u);`);
+  L.push(`          x = stepModel(m, x, delay.shift());`);
+  L.push(`          k++;`);
+  L.push(`        }`);
+  L.push(`        const v = Number(inp.values?.input ?? 0);`);
+  L.push(`        u = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;`);
+  L.push(`        const y = x[m.out];`);
+  L.push(`        const yNext = stepModel(m, x, delay.length ? delay[0] : u)[m.out];`);
+  L.push(`        const rate = (yNext - y) / Ts;`);
+  L.push(`        return { outputs: out(y + rate * (Number(t - k * STEP) / 1e9), rate), nextEventNs: (k + 1n) * STEP };`);
   L.push(`      },`);
   L.push(`    };`);
   L.push(`  },`);
@@ -366,25 +520,10 @@ export function deviceModule(o) {
       body = thermalBody(o, terminals);
       break;
     default:
-      body =
-        `  // La entrada se elige en Propiedades al colocarlo (vacía: no sube).\n` +
-        `  parameters: [\n    { id: "source", label: "Entrada", type: "string", default: "", hint: ${js(`<equipo>.<salida>, p. ej. ${o.source}`)} },\n` +
-        `    { id: "upPerS", label: "Sube", type: "number", default: ${o.upPerS}, unit: "%/s" },\n` +
-        `    { id: "downPerS", label: "Baja", type: "number", default: ${o.downPerS}, unit: "%/s" },\n` +
-        `    { id: "start", label: "Valor inicial", type: "number", default: 0, unit: "%" },\n  ],\n` +
-        `  // Equipo de planta: sin bornes; lo mueve lo que lee y lo leen los sensores por sus salidas.\n` +
-        `  terminals: [],\n` +
-        `  reads: (p) => (p.source ? [{ id: "input", source: String(p.source) }] : []),\n` +
-        `  create(ctx) {\n    // Tramo lineal: valor x0 en t0 con pendiente rate (%/s).\n    let x0 = Math.min(100, Math.max(0, Number(ctx.params.start)));\n    let t0 = 0n;\n    let rate = 0;\n` +
-        `    const at = (t) => Math.min(100, Math.max(0, x0 + (rate * Number(t - t0)) / 1e9));\n` +
-        `    return {\n      update(t, inp) {\n        const x = at(t);\n        const on = Number(inp.values?.input ?? 0) > 0;\n` +
-        `        let r = on ? Number(ctx.params.upPerS) : -Number(ctx.params.downPerS);\n        if ((r > 0 && x >= 100) || (r < 0 && x <= 0)) r = 0;\n` +
-        `        if (r !== rate) {\n          x0 = x;\n          t0 = t;\n          rate = r;\n        }\n` +
-        `        // Próximo cambio solo: al llegar a 0 o a 100 %.\n` +
-        `        const next = rate > 0 ? t + ms(((100 - x) / rate) * 1000) : rate < 0 ? t + ms((x / -rate) * 1000) : undefined;\n` +
-        `        return { outputs: { value: { value: x / 100, rate: rate / 100 }, valuePct: { value: x, rate }, full: x >= 100, empty: x <= 0 }, ...(next !== undefined && next > t ? { nextEventNs: next } : {}) };\n      },\n    };\n  },\n`;
+      body = plantBody(o);
   }
-  return `${head}const device = {\n${ident}${body}};\n\nexport default device;\n`;
+  const helpers = ["planta", "termica"].includes(o.behavior) ? LTI_HELPERS + "\n" : "";
+  return `${head}${helpers}const device = {\n${ident}${body}};\n\nexport default device;\n`;
 }
 
 /** Prueba básica con sdk/testing.mjs (jwsim-cli device test). */
@@ -415,15 +554,20 @@ export function deviceTest(o) {
     case "sensor":
       return head + `test("sin la lectura queda inactivo", () => {\n  const s = sceneWith(device, ["B1:${T}"], []);\n  s.advanceTo(ms(10));\n  assert.equal(s.output("B1", "active"), false);\n});\n`;
     case "termica": {
-      const t63 = Math.round((o.theta + o.tau) * 1000);
+      // 1.er orden: a θ + τ llega al 63,2 % de K. Otros órdenes: régimen Ta + K tras ~20 constantes de tiempo.
+      const first = o.modelo === MODELS[0];
+      const n = MODELS.indexOf(o.modelo) + 1;
+      const slow = o.modelo === "2.º orden oscilatorio" ? 1 / Math.max(1e-6, o.zeta * o.wn) : [o.tau, o.tau2, o.tau3, o.tau4].slice(0, n).reduce((a, b) => a + b, 0);
+      const t63 = Math.round((o.theta + (first ? o.tau : 20 * slow)) * 1000);
       return (
         head +
-        `// Respuesta al escalón de un primer orden con tiempo muerto: a t = θ + τ llega al 63,2 % de K.\n` +
-        `test("escalón: a θ + τ llega a Ta + 0,632·K", () => {\n` +
+        (first
+          ? `// Respuesta al escalón de un primer orden con tiempo muerto: a t = θ + τ llega al 63,2 % de K.\ntest("escalón: a θ + τ llega a Ta + 0,632·K", () => {\n`
+          : `// Respuesta al escalón (${o.modelo}): tras varias constantes de tiempo llega al régimen Ta + K.\ntest("escalón: llega al régimen Ta + K", () => {\n`) +
         `  const s = sceneWith(device, [${js(ps)}, "H1:${T}"], ["${plus} - H1.R1", "H1.R2 - ${minus}"]);\n` +
         `  s.advanceTo(ms(${t63}));\n` +
         `  const T = Number(s.output("H1", "temp"));\n` +
-        `  const esperado = ${o.ambient} + 0.632 * ${o.gain};\n` +
+        `  const esperado = ${o.ambient} + ${first ? 0.632 : 1} * ${o.gain};\n` +
         `  assert.ok(Math.abs(T - esperado) <= 0.02 * Math.abs(${o.gain}) + 0.01, \`T = \${T.toFixed(2)} °C; se esperaba \${esperado.toFixed(2)} °C\`);\n` +
         `});\n\n` +
         `test("sin la resistencia se queda a la temperatura ambiente", () => {\n` +

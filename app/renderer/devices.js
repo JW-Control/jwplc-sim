@@ -28,8 +28,14 @@
     delayMs: { label: "Tiempo (ms)", type: "number", min: 1 },
     upPerS: { label: "Sube (%/s)", type: "number", min: 0 },
     downPerS: { label: "Baja (%/s)", type: "number", min: 0 },
-    tau: { label: "τ, constante de tiempo (s)", type: "number", min: 0.1 },
-    gain: { label: "K, subida a plena potencia (°C)", type: "number" },
+    modelo: { label: "Modelo (orden)", type: "select", options: [] },
+    tau: { label: "τ1, constante de tiempo (s)", type: "number", min: 0.001 },
+    tau2: { label: "τ2 (s)", type: "number", min: 0.001 },
+    tau3: { label: "τ3 (s)", type: "number", min: 0.001 },
+    tau4: { label: "τ4 (s)", type: "number", min: 0.001 },
+    wn: { label: "ωn, frecuencia natural (rad/s)", type: "number", min: 0 },
+    zeta: { label: "ζ, amortiguamiento (< 1 oscila)", type: "number", min: 0 },
+    gain: { label: "K, ganancia (°C en la térmica; % en la planta)", type: "number" },
     theta: { label: "θ, tiempo muerto (s)", type: "number", min: 0 },
     ambient: { label: "Temperatura ambiente (°C)", type: "number" },
     tmax: { label: "Termostato de seguridad (°C)", type: "number" },
@@ -61,6 +67,8 @@
       if (!k || !st.nb?.spec) return;
       if (k === "parent") st.nb.parent = e.target.value.trim();
       else st.nb.spec[k] = e.target.type === "checkbox" ? e.target.checked : e.target.type === "number" ? Number(e.target.value) : e.target.value;
+      // Otro orden: otros campos (τ2…τ4, ωn y ζ, o la rampa).
+      if (k === "modelo") render();
       refreshPreview();
     });
     box.addEventListener("keydown", (e) => e.key === "Escape" && close());
@@ -122,6 +130,12 @@
     const text = (id, ph = "") => `<input data-f="${id}" value="${esc(nb.spec[id] ?? "")}" placeholder="${esc(ph)}" spellcheck="false"/>`;
     const opt = (id) => {
       const F = FIELDS[id];
+      if (!visible(id)) return "";
+      if (id === "modelo") {
+        const opts = [...(nb.spec.behavior === "planta" ? [nb.ramp] : []), ...nb.models];
+        return f(F.label, `<select data-f="modelo">${opts.map((v) => `<option value="${esc(v)}" ${nb.spec.modelo === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>`) +
+          `<p class="muted small nb-model-note">${esc(modelNote(nb.spec.modelo))}</p>`;
+      }
       if (F.type === "checkbox") return `<label class="start-check"><input data-f="${id}" type="checkbox" ${nb.spec[id] ? "checked" : ""}/> ${esc(F.label)}</label>`;
       if (F.type === "select") return f(F.label, `<select data-f="${id}">${F.options.map(([v, l]) => `<option value="${esc(v)}" ${String(nb.spec[id]) === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`);
       const lim = `${F.min !== undefined ? ` min="${F.min}"` : ""}${F.max !== undefined ? ` max="${F.max}"` : ""}`;
@@ -141,6 +155,29 @@
       `<div class="start-nav"><button data-act="nb-back">Atrás</button>` +
       `<button class="primary" data-act="nb-create" ${nb.busy || !nb.preview?.ok ? "disabled" : ""}>${nb.busy ? "Creando…" : "Crear y agregar a la paleta"}</button></div>`
     );
+  }
+
+  // Qué campos del modelo se ven según el orden elegido.
+  function visible(id) {
+    const m = st.nb.spec.modelo;
+    const ramp = m === st.nb.ramp;
+    const osc = m === "2.º orden oscilatorio";
+    const order = st.nb.models.indexOf(m) + 1;
+    if (["upPerS", "downPerS"].includes(id)) return ramp;
+    if (["gain", "theta", "stepMs"].includes(id)) return !ramp;
+    if (id === "tau") return !ramp && !osc;
+    if (id === "tau2") return !ramp && !osc && order >= 2;
+    if (id === "tau3") return !ramp && !osc && order >= 3;
+    if (id === "tau4") return !ramp && !osc && order >= 4;
+    if (["wn", "zeta"].includes(id)) return osc;
+    return true;
+  }
+  function modelNote(m) {
+    if (m === st.nb.ramp) return "Sube y baja a velocidad fija entre 0 y 100 % (integrador con límites).";
+    if (m === "2.º orden oscilatorio") return "G(s) = K·ωn²·e^(−θs) / (s² + 2ζωn·s + ωn²): con ζ < 1 oscila y tiene sobrepico.";
+    const n = st.nb.models.indexOf(m) + 1;
+    const den = Array.from({ length: n }, (_, i) => `(τ${i + 1}s + 1)`).join("");
+    return `G(s) = K·e^(−θs) / ${den}: discretizado exacto con el paso Ts. Se puede cambiar después en Propiedades.`;
   }
 
   function previewHtml() {
@@ -175,6 +212,8 @@
     render();
     const r = await api.devicesBehaviors();
     st.nb.behaviors = r.behaviors;
+    st.nb.models = r.models;
+    st.nb.ramp = r.ramp;
     st.nb.parent = r.parent;
     render();
   }
@@ -242,7 +281,13 @@
       render();
     } else if (act === "nb-block") {
       const beh = st.nb.behaviors.find((x) => x.id === b.dataset.v);
-      st.nb.spec = { behavior: beh.id, author: st.nb.spec?.author ?? "", name: "", title: "", category: "", ...DEFAULTS, nc: beh.id === "rele" ? 1 : 0 };
+      const plant = beh.id === "planta";
+      st.nb.spec = {
+        behavior: beh.id, author: st.nb.spec?.author ?? "", name: "", title: "", category: "", ...DEFAULTS, nc: beh.id === "rele" ? 1 : 0,
+        // Valores por defecto del modelo según el bloque (como en device-gen.mjs).
+        modelo: plant ? st.nb.ramp : st.nb.models[0], gain: plant ? 100 : 180, theta: plant ? 0 : 20,
+        tau: plant ? 10 : 600, tau2: plant ? 5 : 120, tau3: plant ? 3 : 60, tau4: plant ? 2 : 30, wn: plant ? 0.5 : 0.02, zeta: 0.3,
+      };
       st.nb.step = 2;
       st.nb.preview = null;
       render();
