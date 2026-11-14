@@ -15,7 +15,7 @@ import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
-import { checkProjectName, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
+import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
@@ -524,6 +524,7 @@ ipcMain.handle("openplc:openInEditor", async (_e, dir) => {
   const ed = findEditor();
   if (!ed) throw new Error("no se encontró el OpenPLC Editor (JWPLC Edition): instálelo o ubíquelo con «Ubicar el OpenPLC Editor…»");
   await openInEditor(ed, dir);
+  editorLinked = true;
   return ed.label;
 });
 
@@ -1121,12 +1122,16 @@ app.commandLine.appendSwitch("enable-unsafe-swiftshader");
 // una abierta, el proyecto se abre en ella y este proceso termina; abrir varias
 // a mano (sin la opción) sigue funcionando.
 let pendingOpen = openArg(process.argv);
+// Sim y editor van juntos (abierto con Simular o el Sim abrió el editor): al
+// cerrar el Sim se pide cerrar también el editor.
+let editorLinked = !!pendingOpen;
 let rendererReady = false;
 const primary = app.requestSingleInstanceLock();
 if (!primary && pendingOpen) app.quit();
 app.on("second-instance", (_e, argv) => {
   const target = openArg(argv);
   if (!target) return;
+  editorLinked = true;
   if (win?.isMinimized()) win.restore();
   win?.focus();
   if (rendererReady) forward("app:openTarget", target);
@@ -1167,4 +1172,13 @@ app.on("window-all-closed", async () => {
   await stopRunner();
   await comBridge?.close();
   app.quit();
+});
+
+// Cerrar la ventana, Archivo ▸ Salir o app.quit(): todos pasan por will-quit.
+// El pedido sale en un proceso aparte que sigue aunque el Sim termine.
+app.on("will-quit", () => {
+  if (!editorLinked || process.env.JWSIM_CLOSE_EDITOR === "0") return;
+  editorLinked = false;
+  const ed = findEditor();
+  if (ed) closeEditor(ed).catch(() => {});
 });

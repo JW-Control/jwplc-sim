@@ -10,6 +10,7 @@
 //   ARDUINO_WIZARD  Arduino → nombre: sketch nuevo en la carpeta elegida
 //   RECENTS         los dos aparecen en recientes y se vuelven a abrir
 //   OPEN_IN_EDITOR  el botón «Abrir en OpenPLC Editor» lo pide otra vez
+//   CLOSE_EDITOR    al cerrar el Sim se pide cerrar el editor (--jwsim-close)
 // Informe en build/gates/JWSIM_PROYECTOS_E2E.json.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -127,6 +128,9 @@ const after = editorCalls().filter((c) => c.cmd === "open").length;
 criteria.OPEN_IN_EDITOR = { pass: after === before + 1, opens: after };
 
 await app.close();
+// ---- CLOSE_EDITOR
+await new Promise((r) => setTimeout(r, 1500));
+criteria.CLOSE_EDITOR = { pass: editorCalls().filter((c) => c.cmd === "close").length === 1 };
 const pass = Object.values(criteria).every((c) => c.pass);
 for (const [name, v] of Object.entries(criteria)) console.log(`${name}: ${v.pass ? "OK" : "FALLA"} ${JSON.stringify(v)}`);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_PROYECTOS_E2E.json"), JSON.stringify({ result: pass ? "PASS" : "FAIL", platform: process.platform, criteria }, null, 2) + "\n");

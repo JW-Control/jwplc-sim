@@ -4,7 +4,7 @@
 // este script): responde como la CLI del editor real a
 //   --cli create <nombre> --path <carpeta> --language <l> --time <t> --json
 // con la misma estructura de archivos que crea el editor, y a
-//   --open-project=<carpeta>
+//   --open-project=<carpeta> y --jwsim-close
 // dejando cada pedido en JWSIM_FAKE_EDITOR_LOG (una línea JSON por pedido).
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,6 +16,10 @@ const flag = (f) => {
   return i >= 0 ? argv[i + 1] : undefined;
 };
 
+if (argv.includes("--jwsim-close")) {
+  log({ cmd: "close" });
+  process.exit(0);
+}
 const open = argv.find((a) => a.startsWith("--open-project="));
 if (open) {
   log({ cmd: "open", dir: open.slice("--open-project=".length) });

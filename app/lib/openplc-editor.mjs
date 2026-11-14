@@ -36,10 +36,11 @@ function commandFor(target) {
   if (!target || !existsSync(target)) return null;
   const st = statSync(target);
   if (st.isDirectory()) {
-    // Repositorio del editor (desarrollo).
+    // Repositorio del editor (desarrollo): se corre release/app, que se llama
+    // igual que `npm run dev`; si ese está abierto, el pedido le llega a él.
     const main = join(target, "release", "app", "dist", "main", "main.js");
     const electron = join(target, "node_modules", "electron", "dist", process.platform === "win32" ? "electron.exe" : "electron");
-    if (existsSync(main) && existsSync(electron)) return { cmd: electron, prefix: [main], node: false, label: `repositorio ${target}` };
+    if (existsSync(main) && existsSync(electron)) return { cmd: electron, prefix: [join(target, "release", "app")], node: false, label: `repositorio ${target}` };
     return null;
   }
   // Editor simulado (pruebas): un script de Node.
@@ -57,9 +58,10 @@ export function locateEditor({ configured = null, packaged = true, simRoot = "" 
   const candidates = [
     ["variable JWSIM_OPENPLC_EDITOR", process.env.JWSIM_OPENPLC_EDITOR],
     ["ruta elegida", configured],
+    // En desarrollo, la build del repo va antes que el editor instalado.
+    ...(!packaged && simRoot ? [["repositorio de desarrollo", join(simRoot, "..", "openplc-editor")]] : []),
     ["instalado", local && join(local, "Programs", PRODUCT, `${PRODUCT}.exe`)],
     ["instalado", process.env.ProgramFiles && join(process.env.ProgramFiles, PRODUCT, `${PRODUCT}.exe`)],
-    ...(!packaged && simRoot ? [["repositorio de desarrollo", join(simRoot, "..", "openplc-editor")]] : []),
   ];
   for (const [source, target] of candidates) {
     const c = commandFor(String(target ?? ""));
@@ -139,8 +141,23 @@ export function setBoard(dir, board = JWPLC_BOARD) {
  * @param {{ cmd: string, prefix: string[], node: boolean }} ed @param {string} dir
  */
 export function openInEditor(ed, dir) {
+  return launchDetached(ed, [`--open-project=${resolve(dir)}`]);
+}
+
+/**
+ * Pide cerrar el OpenPLC Editor abierto (`--jwsim-close`): cierra como
+ * Archivo ▸ Salir, con su aviso de cambios sin guardar. Si no hay editor
+ * abierto, el proceso nuevo termina sin mostrar nada.
+ * @param {{ cmd: string, prefix: string[], node: boolean }} ed
+ */
+export function closeEditor(ed) {
+  return launchDetached(ed, ["--jwsim-close"]);
+}
+
+/** @param {{ cmd: string, prefix: string[], node: boolean }} ed @param {string[]} args */
+function launchDetached(ed, args) {
   return new Promise((ok, fail) => {
-    const p = spawn(ed.cmd, [...ed.prefix, `--open-project=${resolve(dir)}`], { env: envFor(ed), detached: true, stdio: "ignore", windowsHide: false });
+    const p = spawn(ed.cmd, [...ed.prefix, ...args], { env: envFor(ed), detached: true, stdio: "ignore", windowsHide: false });
     p.on("error", (e) => fail(new Error(`no se pudo abrir el OpenPLC Editor: ${e.message}`)));
     p.on("spawn", () => {
       p.unref();
