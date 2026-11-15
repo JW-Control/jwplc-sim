@@ -550,6 +550,8 @@ botones de la interfaz.
 | `remote-io` | +, −, A, B; DC, DI1-DI8; C1, DO1-DO4; C2, DO5-DO8 | Módulo de E/S remotas Modbus RTU (dir. 3): bobinas 0-7 = DO1-DO8 (01, 05, 15), entradas discretas 0-7 = DI1-DI8 (02), holding 0 / input 0 = máscaras (03, 04, 06, 16). Entradas de 24 VDC al común DC; relés en dos grupos. Sin alimentación sueltan y no responde |
 | `energy-meter` | L, N, A, B, CT1-CT2 | Medidor PZEM-016 (dir. 1): se alimenta de L-N (carga de medición), la fase pasa por el TC (CT1-CT2, `currentSensors` en CT2). Input 0-9 como su hoja de datos (V × 10, A × 1000 y W × 10 en 32 bits, Wh integrados en el tiempo, Hz × 10, fp × 100 con el parámetro `fp`, alarma); holding 1 = umbral de alarma |
 | `temp-controller` | L, N, A, B, R1 R2 R3, 11-14, 21-24 | Controlador 48 × 48 con RS-485 (dir. 4): PT100 cableada (sonda `pt100`, p. ej. la del fermentador) o simulada; ON-OFF con histéresis, calentar o enfriar; alarma por desvío o sonda abierta. Input 0 = PV × 10, 1 = estado; holding 0-3 = SV, histéresis, modo y desvío (06, 16) |
+| `usb-rs485` | A, B, GND | Conversor USB a RS-485 de la PC tipo ZK-U485 (CH340G + MAX485): con A y B cableados a RS485_A/B de la placa, la app abre su COM (`com`, COM20 por defecto: el otro programa abre COM21 del par com0com) y lo une a la UART2 (`app/lib/host-link.mjs`). Fallas: `eco` (la PC recibe lo que transmite), `abInvertidos` (bits invertidos en los dos sentidos; cruzar A y B en la escena hace lo mismo y ambas cosas se anulan) y `sinTerminacion` (`tasaErrores` % de bytes con un bit cambiado, con semilla). Sin cablear no pasa nada salvo el eco. `Scene.hostPorts()` da el enlace y su cableado |
+| `usb-pc` | USB | Cable USB del puerto USB-C de la placa (borne `USB`) a la PC: el Monitor serie (UART0) en el COM del parámetro `com` |
 | `potentiometer` | 1 2 3 | Potenciómetro de panel de 22 mm, 5 kΩ lineal: sonda `pot` (3, 2 cursor, 1) con la posición de la perilla (acción `pos`, se arrastra; queda en el parámetro `posicion`). Para la referencia de un variador: 3 a 10V, 2 a AVI y 1 a ACM |
 | `signal-source` | + - | Calibrador de lazo 4-20 mA / 0-10 V (parámetro `modo`), ajustable de 0 a 100 % (acción `valor`): sonda `4-20mA` o `0-10V` en + y -; salida `texto` («12.00 mA») |
 | `motor-1ph` | U1 U2 PE (+ Z1 Z2) | Monofásico WEG 220 V con capacitor de arranque: principal U1-U2 y auxiliar Z1-Z2. Parámetro `bornera`: «2 cables» (auxiliar puenteado de fábrica, adelante) o «4 cables» (Z1 y Z2 al tablero, para invertir el giro). El auxiliar solo actúa bajo el 75 % de la velocidad (interruptor centrífugo): sin él el motor zumba (`bloqueado`); el sentido lo da su polaridad respecto del principal y a velocidad no se invierte. Corriente: principal 6 × In al arrancar o zumbando y auxiliar 2 × In mientras actúa (`In` 5,6 A, `carga`). `jwsim/motor` queda como motor genérico de 230 VAC o 24 VDC (U1-U2) de los ejercicios |
@@ -1059,6 +1061,14 @@ par COM virtual como com0com). Lo que llega del host sale al bus a su
 velocidad desde el comienzo de la ventana siguiente; con él el bus avanza
 a la par del reloj de pared. CLI: `node cli/jwsim-bus.mjs <sketch>...
 [--tcp puerto | --com ruta]`.
+
+Fallas del conversor USB a RS-485 de la PC en el extremo del host (las
+mismas del equipo `usb-rs485` de la escena, para probar JW Modbus Tool con y
+sin eco): `--eco` (el host recibe cada carácter que transmite al terminar en
+el bus), `--ab-invertidos` (lo del host y lo que recibe llega con los bits
+invertidos; el eco no) y `--sin-terminacion [%]` (cada carácter del bus, a
+todos, con un bit cambiado con esa probabilidad, 2 % por defecto; semilla
+`--semilla`). Prueba: `node scripts/gate-conversor-bus.mjs`.
 
 ### 7.4 Ethernet: el W5500 y la red del host **[G4]**
 

@@ -171,7 +171,11 @@ Periféricos (G4), modelados por registros contra sus hojas de datos:
   RTC, salidas del expansor y pantalla).
 - **RS-485**: varios PLC simulados en un mismo bus Modbus RTU, y una
   herramienta externa (JW Modbus Tool) conectada al bus por un socket TCP o
-  un puerto COM virtual: `node cli/jwsim-bus.mjs`.
+  un puerto COM virtual: `node cli/jwsim-bus.mjs` (con `--eco`,
+  `--ab-invertidos` o `--sin-terminacion` simula las fallas del conversor
+  USB a RS-485). En el esquema eléctrico, el **Conversor USB a RS-485 (PC)**
+  cableado a A/B de la placa lleva el bus a un puerto COM de la PC, con esas
+  mismas fallas, y el **Cable USB a PC** lleva el Monitor serie a otro.
 - **Ethernet (W5500)**: la placa lo trae poblado. En la app (o con
   `node cli/jwsim-net.mjs <sketch>`) el PLC está en una red virtual con
   DHCP cuya puerta de enlace es el PC; sus puertos de escucha se publican en

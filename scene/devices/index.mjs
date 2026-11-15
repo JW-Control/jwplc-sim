@@ -16,6 +16,7 @@ import { potentiometer, signalSource } from "./analog.mjs";
 import { conveyor, door, tank } from "./plant.mjs";
 import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
 import { energyMeter, remoteIo, tempController } from "./fieldbus.mjs";
+import { usbPc, usbRs485 } from "./comms.mjs";
 import { ammeter, floatSwitch, levelElectrodes, levelRelay, pressureSwitch, thermostat, voltmeter } from "./instruments.mjs";
 
 export const builtinDevices = [
@@ -65,6 +66,8 @@ export const builtinDevices = [
   ammeter,
   energyMeter,
   tempController,
+  usbRs485,
+  usbPc,
   pt100Rs485,
   phRs485,
   fermenter,

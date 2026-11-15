@@ -171,6 +171,26 @@ export interface ModbusSpec {
   b?: string;
 }
 
+/**
+ * Enlace con un puerto COM de la PC (conversor USB a RS-485, cable USB): la
+ * app abre el COM y une sus bytes con la UART de la placa cuando los bornes
+ * de `to` están cableados a los de la placa.
+ */
+export interface HostPortSpec {
+  /** UART de la placa: 0 (USB, Monitor serie) o 2 (RS-485). */
+  uart: 0 | 2;
+  /** Puerto de la PC ("COM20", "/dev/pts/3"); vacío = sin abrir. */
+  com: string;
+  /** Borne propio → borne de la placa ({ A: "RS485_A", B: "RS485_B" }). */
+  to: Record<string, string>;
+  /** La PC recibe de vuelta lo que transmite (conversor con eco). */
+  echo?: boolean;
+  /** Polaridad invertida (A/B cruzados): los bytes llegan con los bits invertidos. */
+  inverted?: boolean;
+  /** Probabilidad (0..1) de que un byte llegue con un bit cambiado (bus sin terminación). */
+  errorRate?: number;
+}
+
 export interface LoadState {
   on: boolean;
   /** 1: `a` en el positivo; -1: invertida; 0: sin tensión. */
@@ -312,6 +332,8 @@ export interface DeviceDefinition {
   probeInputs?(params: Record<string, any>): ProbeInputSpec[];
   /** Esclavo Modbus RTU en el bus RS-485 (bornes A y B). */
   modbus?(params: Record<string, any>): ModbusSpec;
+  /** Enlace con un puerto COM de la PC (ver HostPortSpec). */
+  hostPort?(params: Record<string, any>): HostPortSpec;
   electrical?(params: Record<string, any>): Electrical;
   create(ctx: DeviceContext): DeviceInstance;
 }

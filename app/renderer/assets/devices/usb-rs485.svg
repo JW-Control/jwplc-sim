@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Conversor USB a RS-485 tipo ZK-U485 (CH340G + MAX485, carcasa azul translúcida, 70 x 26,5 mm). Vertical: bornera arriba, USB-A abajo. Escala 4 px/mm. Por aprobar (sin foto propia). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 340">
+<defs>
+<linearGradient id="zku-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f6fd1"/><stop offset=".45" stop-color="#4c9cf0"/><stop offset="1" stop-color="#1958a8"/></linearGradient>
+<linearGradient id="zku-usb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a9199"/><stop offset=".5" stop-color="#eef0f2"/><stop offset="1" stop-color="#7f8790"/></linearGradient>
+<linearGradient id="zku-scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#a5acb4"/></linearGradient>
+</defs>
+<!-- bornera verde (5,08 mm) -->
+<rect x="14" y="2" width="92" height="40" rx="3" fill="#2f9e55" stroke="#1d6a37" stroke-width="1.5"/>
+<g fill="#1d6a37"><rect x="32" y="2" width="16" height="9" rx="1"/><rect x="52" y="2" width="16" height="9" rx="1"/><rect x="72" y="2" width="16" height="9" rx="1"/></g>
+<circle cx="40" cy="24" r="8" fill="url(#zku-scr)" stroke="#16181b" stroke-width="1.1"/><path d="M35 24H45M40 19V29" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle cx="60" cy="24" r="8" fill="url(#zku-scr)" stroke="#16181b" stroke-width="1.1"/><path d="M55 24H65M60 19V29" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle cx="80" cy="24" r="8" fill="url(#zku-scr)" stroke="#16181b" stroke-width="1.1"/><path d="M75 24H85M80 19V29" stroke="#16181b" stroke-width="2" stroke-linecap="round"/>
+<circle class="jw-term" data-term="A" cx="40" cy="24" r="9"/>
+<circle class="jw-term" data-term="B" cx="60" cy="24" r="9"/>
+<circle class="jw-term" data-term="GND" cx="80" cy="24" r="9"/>
+<!-- carcasa -->
+<path d="M8 44 H112 V230 Q112 262 86 270 H34 Q8 262 8 230 Z" fill="url(#zku-body)" stroke="#123f7a" stroke-width="1.8" opacity=".95"/>
+<g font-family="sans-serif" font-weight="800" text-anchor="middle" fill="#ffffff">
+<text x="40" y="58" font-size="10">A+</text><text x="60" y="58" font-size="10">B−</text><text x="80" y="58" font-size="9">GND</text>
+</g>
+<!-- placa vista a través de la carcasa: MAX485, CH340G, cristal -->
+<rect x="28" y="74" width="34" height="22" rx="2" fill="#1b1e22" opacity=".85"/>
+<text x="45" y="88" font-family="sans-serif" font-size="7" font-weight="700" text-anchor="middle" fill="#c9ced5">MAX485</text>
+<rect x="24" y="120" width="72" height="30" rx="2" fill="#1b1e22" opacity=".85"/>
+<text x="60" y="139" font-family="sans-serif" font-size="8" font-weight="700" text-anchor="middle" fill="#c9ced5">CH340G</text>
+<rect x="44" y="164" width="32" height="10" rx="5" fill="#c9ced5" stroke="#6d757d" stroke-width=".8"/>
+<!-- LED TX / RX -->
+<circle cx="80" cy="84" r="4" fill="#7a1010" stroke="#3a0808" stroke-width=".8"/><text x="90" y="87" font-family="sans-serif" font-size="7" font-weight="800" fill="#ffffff">TX</text>
+<circle cx="80" cy="100" r="4" fill="#0f5a1e" stroke="#06300f" stroke-width=".8"/><text x="90" y="103" font-family="sans-serif" font-size="7" font-weight="800" fill="#ffffff">RX</text>
+<text x="60" y="196" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#ffffff">ZK-U485</text>
+<text x="60" y="212" font-family="sans-serif" font-size="8" font-weight="700" text-anchor="middle" fill="#dbe9fb">USB ↔ RS-485</text>
+<!-- COM de la PC y fallas activas -->
+<rect x="22" y="220" width="76" height="16" rx="3" fill="#0d2f5a" opacity=".85"/>
+<text x="60" y="232" font-family="sans-serif" font-size="9" font-weight="800" text-anchor="middle" fill="#ffffff" data-text="param.com">COM20</text>
+<g data-show="param.eco"><rect x="16" y="240" width="26" height="12" rx="2" fill="#f5b400"/><text x="29" y="249" font-family="sans-serif" font-size="7" font-weight="800" text-anchor="middle" fill="#1b1e22">ECO</text></g>
+<g data-show="param.abInvertidos"><rect x="46" y="240" width="28" height="12" rx="2" fill="#e05252"/><text x="60" y="249" font-family="sans-serif" font-size="7" font-weight="800" text-anchor="middle" fill="#ffffff">A⇄B</text></g>
+<g data-show="param.sinTerminacion"><rect x="78" y="240" width="26" height="12" rx="2" fill="#e05252"/><text x="91" y="249" font-family="sans-serif" font-size="7" font-weight="800" text-anchor="middle" fill="#ffffff">120Ω</text></g>
+<!-- USB-A macho -->
+<rect x="36" y="270" width="48" height="66" rx="2" fill="url(#zku-usb)" stroke="#4a4f56" stroke-width="1.4"/>
+<rect x="44" y="290" width="12" height="8" fill="#2b2f35"/><rect x="64" y="290" width="12" height="8" fill="#2b2f35"/>
+</svg>

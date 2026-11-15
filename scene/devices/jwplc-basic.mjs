@@ -9,6 +9,7 @@
 //   Q0_x.1, Q0_x.2   salida a relé con su propia bornera de 2 contactos
 //                    (contacto seco NA)
 //   RS485_*          bornes del bus (sin modelo eléctrico en la netlist)
+//   USB              puerto USB-C (para el cable USB a PC; sin modelo eléctrico)
 // Las entradas y salidas se intercambian con el firmware simulado: la escena
 // envía I0_x al runner y recibe Q0_x.
 
@@ -39,6 +40,7 @@ export const jwplcBasic = {
       { id: `Q0_${k}.2`, label: `Salida Q0.${k}, contacto 2` },
     ]),
     ...["RS485_GND", "RS485_A", "RS485_B", "RS485_SHIELD"].map((id) => ({ id })),
+    { id: "USB", label: "Puerto USB-C (Monitor serie, UART0)" },
   ],
   signals: { in: K.map((k) => `Q0_${k}`), out: K.map((k) => `I0_${k}`) },
   electrical: () => ({

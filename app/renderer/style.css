@@ -1004,10 +1004,12 @@ button.io.on {
   font-size: 11px;
   padding: 1px 6px;
 }
+/* Sin position propia: cada .io ya está posicionada (absoluta sobre el dibujo
+   de la placa, relativa en la tira de salidas) y la «F» se ancla a ella. Un
+   position: relative aquí sacaba de su lugar a la entrada forzada. */
 .io.forced {
   outline: 2px solid #ffb020;
   outline-offset: 1px;
-  position: relative;
 }
 .io.forced::after {
   content: "F";

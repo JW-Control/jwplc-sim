@@ -108,8 +108,9 @@
     const k = GRID / (Number(svg.getAttribute("data-grid")) || 64);
     S.board = { w: vw * k, h: vh * k, k };
     // Tornillos (clic para cablear) y entrada del cable: el borde de la
-    // bornera hacia afuera de la placa (data-entrada: arriba, abajo o el
-    // borde superior de la bornera RS-485).
+    // bornera hacia afuera de la placa (data-entrada: el borde de arriba de
+    // la bornera superior, el de abajo de los relés y del RS-485, la boca
+    // del USB-C).
     const terms = {};
     const titles = {};
     const entries = {};
@@ -119,10 +120,11 @@
       const sig = g.dataset.senal;
       const id = /^Q0_/.test(sig) ? `${sig}.${g.dataset.pos}` : sig;
       const x = (Number(u.getAttribute("x")) - vx) * k;
-      const block = g.dataset.bloque.split("-")[0];
       terms[id] = [x, (Number(u.getAttribute("y")) - vy) * k];
       entries[id] = [x, (Number(g.dataset.entrada) - vy) * k];
-      sides[id] = block === "inf" ? "b" : "t";
+      // El cable llega desde el lado de la entrada: arriba o abajo del tornillo
+      // (abajo: relés, RS-485 y el USB-C).
+      sides[id] = entries[id][1] > terms[id][1] ? "b" : "t";
       titles[id] = g.querySelector("title")?.textContent ?? "";
     }
     const leds = {};
@@ -1055,7 +1057,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 

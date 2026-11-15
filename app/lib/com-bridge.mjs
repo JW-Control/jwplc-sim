@@ -62,16 +62,21 @@ export async function comAvailable() {
 
 export class ComBridge extends EventEmitter {
   // path: "COM20" o "/dev/pts/3"; uart: 0 (USB) o 2 (RS-485).
-  constructor({ path, uart = 0, baudRate = 115200 }) {
+  // filter: lo que el equipo entre la PC y la placa hace con los bytes
+  // (app/lib/host-link.mjs: eco, polaridad, errores); sin él pasan tal cual.
+  constructor({ path, uart = 0, baudRate = 115200, filter = null }) {
     super();
     this.path = path;
     this.uart = uart;
     this.baudRate = baudRate;
+    this.filter = filter;
     this.port = null;
     this.proc = null;
     this.onMessage = (m) => {
       if (m.type === "uart_out" && m.port === this.uart && this.port?.isOpen) {
-        this.port.write(Buffer.from(m.hex.replaceAll(" ", ""), "hex"));
+        const buf = Buffer.from(m.hex.replaceAll(" ", ""), "hex");
+        const out = this.filter ? this.filter.fromPlc(buf) : buf;
+        if (out?.length) this.port.write(out);
       }
     };
   }
@@ -84,7 +89,9 @@ export class ComBridge extends EventEmitter {
       this.port.open((err) => (err ? reject(new Error(`no se pudo abrir ${this.path}: ${err.message}`)) : resolve()));
     });
     this.port.on("data", (buf) => {
-      if (this.proc) this.proc.send({ type: "uart", port: this.uart, hex: buf.toString("hex") });
+      const { toPlc, toHost } = this.filter ? this.filter.fromHost(buf) : { toPlc: buf, toHost: null };
+      if (toHost?.length && this.port?.isOpen) this.port.write(toHost);
+      if (toPlc?.length && this.proc) this.proc.send({ type: "uart", port: this.uart, hex: toPlc.toString("hex") });
     });
     this.port.on("error", (err) => this.emit("error", err));
     this.port.on("close", () => this.emit("closed"));

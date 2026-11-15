@@ -15,6 +15,13 @@
 //     --state <dir>     carpeta de estado por nodo (<dir>/nodo-N)
 //     --target <t>      destino de compilación (native)
 //
+//   Fallas del conversor USB a RS-485 de la PC (pruebas de JW Modbus Tool):
+//     --eco             el host recibe de vuelta lo que transmite
+//     --ab-invertidos   A/B invertidos: el host y el bus se ven basura
+//     --sin-terminacion [<%>]  bus sin terminación: % de caracteres con un
+//                       bit cambiado (2 por defecto)
+//     --semilla <n>     semilla de los errores (1)
+//
 // Cada nodo imprime su consola con el prefijo [N]. Con un extremo del host
 // el bus avanza a la par del reloj de pared hasta Ctrl+C.
 import { closeSync, createReadStream, createWriteStream, mkdirSync, openSync } from "node:fs";
@@ -40,12 +47,33 @@ const com = opt("--com");
 const untilMs = Number(opt("--until", tcp || com ? Infinity : 10000));
 const stateRoot = opt("--state");
 const target = opt("--target", "native");
+const flag = (name) => {
+  const i = args.indexOf(name);
+  if (i < 0) return false;
+  args.splice(i, 1);
+  return true;
+};
+const hostEcho = flag("--eco");
+const hostInverted = flag("--ab-invertidos");
+let errorRate = 0;
+{
+  const i = args.indexOf("--sin-terminacion");
+  if (i >= 0) {
+    const v = args[i + 1];
+    const pct = v !== undefined && /^\d+(\.\d+)?$/.test(v) ? Number(v) : 2;
+    args.splice(i, v !== undefined && /^\d+(\.\d+)?$/.test(v) ? 2 : 1);
+    errorRate = Math.min(100, pct) / 100;
+  }
+}
+const seed = Number(opt("--semilla", 1));
 if (!args.length) {
   console.error("uso: node cli/jwsim-bus.mjs <sketch_dir> [<sketch_dir>...] [--tcp puerto | --com ruta] [--until ms]");
   process.exit(2);
 }
 
-const bus = new Rs485Bus({ baud, quantumNs: q });
+const bus = new Rs485Bus({ baud, quantumNs: q, hostEcho, hostInverted, errorRate, seed });
+const faults = [hostEcho && "eco", hostInverted && "A/B invertidos", errorRate && `sin terminación (${errorRate * 100} %)`].filter(Boolean);
+if (faults.length) console.log(`[bus] conversor de la PC: ${faults.join(", ")}`);
 for (const [i, dir] of args.entries()) {
   const { exe } = await buildSketch(resolve(dir), { target, log: () => {} });
   const extra = [];
@@ -95,5 +123,6 @@ await bus.stop();
 server?.close();
 for (const n of bus.nodes) console.log(`[bus] nodo ${n.name}: t=${(bus.t / 1e6).toFixed(3)} ms hash=${n.hash}`);
 const collisions = bus.log.filter((e) => e.collision).length;
-console.log(`[bus] ${bus.log.length} caracteres en el bus${collisions ? `, ${collisions} en choques` : ""}`);
+const noisy = bus.log.filter((e) => e.noise).length;
+console.log(`[bus] ${bus.log.length} caracteres en el bus${collisions ? `, ${collisions} en choques` : ""}${noisy ? `, ${noisy} con error de línea` : ""}`);
 process.exit(0);
