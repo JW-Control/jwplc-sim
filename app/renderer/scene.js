@@ -156,7 +156,11 @@
   function copyTft() {
     const dst = $("scene-tft");
     const src = $("tft");
-    if (dst && src && S.view === "scene") dst.getContext("2d").drawImage(src, 0, 0);
+    if (dst && src && S.view === "scene") {
+      dst.getContext("2d").drawImage(src, 0, 0);
+      // La escena se acerca y aleja con la rueda: la nitidez sigue al zoom.
+      window.JwsimTft?.fitRendering(dst);
+    }
   }
 
   // ------------------------------------------------------------ dibujo

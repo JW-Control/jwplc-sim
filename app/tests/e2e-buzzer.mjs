@@ -6,6 +6,9 @@
 //   BUZZER_LED     el LED «BUZ» de la placa se enciende mientras suena
 //   BUZZER_TIMING  en ×1 las notas conservan su separación en tiempo virtual
 //   BUZZER_MUTE    con el sonido apagado no se agenda nada (el LED sigue)
+//   TFT_RENDERING  la pantalla achicada se dibuja suavizada (sin perder filas)
+//                  y la ampliada, pixelada
+//   TFT_ZOOM       doble clic abre la pantalla a escala entera (k×320 px)
 // Sketch: JWPLC_GlobalPeripherals/07.Buzzer_Basic (OK pitido, UP melodía).
 // Informe en build/gates/JWSIM_BUZZER_E2E.json y capturas en build/gates/buzzer/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-buzzer.mjs
@@ -97,6 +100,19 @@ const muted = await win.evaluate(() => !window.JwsimSound.enabled && document.ge
   document.getElementById("scene-sound").textContent === "🔇");
 await win.click("#buz-sound");
 criteria.BUZZER_MUTE = { pass: muted };
+
+// Nitidez: la placa a 1500×950 deja la TFT por debajo de 320 px.
+const small = await win.evaluate(() => window.jwsimTest.tftZoom());
+await win.locator("#tft").screenshot({ path: join(OUT, "02-tft-placa.png") });
+await win.dblclick("#tft");
+await win.waitForTimeout(400);
+const zoom = await win.evaluate(() => window.jwsimTest.tftZoom());
+await win.screenshot({ path: join(OUT, "03-tft-ampliada.png") });
+await win.locator("#tft-zoom-canvas").screenshot({ path: join(OUT, "04-tft-ampliada-recorte.png") });
+await win.click("#tft-zoom-close");
+const closed = await win.evaluate(() => window.jwsimTest.tftZoom().open);
+criteria.TFT_RENDERING = { pass: small.tftPx < 320 ? small.rendering === "auto" : small.rendering === "pixelated", ...small };
+criteria.TFT_ZOOM = { pass: zoom.open && zoom.px >= 640 && zoom.px % 320 === 0 && !closed, ...zoom };
 
 await win.click("#btn-stop");
 await app.close();

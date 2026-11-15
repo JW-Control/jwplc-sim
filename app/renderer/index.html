@@ -119,6 +119,7 @@
               <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
               <span class="led-sm buz" id="led-buz" title="Buzzer (GPIO26): encendido mientras suena"></span><span>BUZ</span>
               <button class="buz-sound" id="buz-sound" title="Sonido del buzzer, relés y contactores" aria-label="Sonido">🔊</button>
+              <button class="buz-sound" id="tft-zoom-open" title="Ampliar la pantalla a escala exacta (también doble clic en la pantalla)" aria-label="Ampliar pantalla">⛶</button>
               <button class="sd-slot on" id="sd-slot" data-signal="SD_CARD" disabled
                 title="Zócalo microSD: clic para quitar o poner la tarjeta (detección por GPIO39)">microSD</button>
             </div>
@@ -368,6 +369,20 @@
       <button id="sb-dock" class="ghost" title="Mostrar el panel inferior (Ctrl+J)">▴ Panel inferior</button>
     </footer>
 
+    <!-- Pantalla ampliada: la TFT a escala entera (cada píxel del ST7789 =
+         k×k píxeles de la pantalla de la PC), nítida para mirar o grabar. -->
+    <div id="tft-zoom" class="tft-zoom" hidden>
+      <div class="tft-zoom-box">
+        <canvas id="tft-zoom-canvas" width="320" height="170" tabindex="0"
+          title="Pantalla ampliada (con foco: flechas, Enter = OK, Esc = ESC)"></canvas>
+        <div class="tft-zoom-bar">
+          <span id="tft-zoom-scale"></span>
+          <button id="tft-zoom-minus" title="Más chica">−</button>
+          <button id="tft-zoom-plus" title="Más grande">+</button>
+          <button id="tft-zoom-close" title="Cerrar (clic fuera de la pantalla también cierra)">Cerrar</button>
+        </div>
+      </div>
+    </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
     <script src="completion.js"></script>
