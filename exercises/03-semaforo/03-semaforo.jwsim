@@ -17,7 +17,24 @@
     "level": 1,
     "statement": "./ENUNCIADO.md",
     "rubric": "./rubrica.json",
-    "solution": "./solucion/semaforo"
+    "solution": "./solucion/semaforo",
+    "brief": {
+      "goal": "Un semáforo que repite verde 4 s, ámbar 1 s y rojo 4 s mientras está en marcha.",
+      "steps": [
+        "Arranque el ciclo con S1, empezando en verde.",
+        "Cambie de luz con temporizadores sin bloquear el programa (millis()).",
+        "Nunca dos luces a la vez.",
+        "S0 apaga todo; marcha vuelve a empezar en verde."
+      ],
+      "teaches": "Tiempos con millis() sin bloquear el programa.",
+      "uses": [
+        "I0_0 · S1, pulsador NA: Marcha",
+        "I0_1 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · H1, piloto rojo: Luz roja",
+        "Q0_1 · H2, piloto amarillo: Luz ámbar",
+        "Q0_2 · H3, piloto verde: Luz verde"
+      ]
+    }
   },
   "simulation": {
     "seed": 1,

@@ -14,7 +14,17 @@
     "test:e2e": "node tests/e2e-g2.mjs",
     "test:e2e:g3": "node tests/e2e-g3.mjs",
     "test:e2e:g4": "node tests/e2e-g4.mjs",
-    "test:e2e:g7": "node tests/e2e-g7.mjs"
+    "test:e2e:g7": "node tests/e2e-g7.mjs",
+    "test:e2e:archivos": "node tests/e2e-archivos.mjs",
+    "test:e2e:paleta": "node tests/e2e-paleta.mjs",
+    "test:e2e:cables": "node tests/e2e-cables.mjs",
+    "test:e2e:catalogo": "node tests/e2e-catalogo.mjs",
+    "test:e2e:proyectos": "node tests/e2e-proyectos.mjs",
+    "test:e2e:objetivos": "node tests/e2e-objetivos.mjs",
+    "test:e2e:aprender": "node tests/e2e-aprender.mjs",
+    "audit:grilla": "node tests/audit-grilla.mjs",
+    "test:e2e:dispositivos": "node tests/e2e-dispositivos.mjs",
+    "test:e2e:nuevo-dispositivo": "node tests/e2e-nuevo-dispositivo.mjs"
   },
   "dependencies": {
     "@wasm-fmt/clang-format": "23.1.1",

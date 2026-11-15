@@ -1,0 +1,43 @@
+{
+  "deviceBoard": "JWPLC BASIC [2.0.0]",
+  "communicationPort": "",
+  "runtimeIpAddress": "",
+  "vendorScreenData": {
+    "io-mapping": {
+      "entries": [
+        {
+          "slot": 0,
+          "moduleId": "jwplc-basic-controller",
+          "moduleName": "JWPLC Basic v2.0.0",
+          "channelName": "I0_0",
+          "channelType": "digitalInput",
+          "dataType": "BOOL",
+          "iecAddress": "%IX0.0",
+          "alias": "Int0"
+        },
+        {
+          "slot": 0,
+          "moduleId": "jwplc-basic-controller",
+          "moduleName": "JWPLC Basic v2.0.0",
+          "channelName": "Q0_0",
+          "channelType": "digitalOutput",
+          "dataType": "BOOL",
+          "iecAddress": "%QX0.0",
+          "alias": "Out0"
+        },
+        {
+          "slot": 0,
+          "moduleId": "jwplc-basic-controller",
+          "moduleName": "JWPLC Basic v2.0.0",
+          "channelName": "Q0_1",
+          "channelType": "digitalOutput",
+          "dataType": "BOOL",
+          "iecAddress": "%QX0.1",
+          "alias": "Out1"
+        }
+      ]
+    }
+  },
+  "vendorScreenDataByBoard": {},
+  "selectedPlatformOptions": {}
+}

@@ -484,7 +484,34 @@ function resetBoard() {
 // ------------------------------------------------------------- editor
 function languageFor(name) {
   // ST/IL de OpenPLC: el resaltado de Pascal es el más parecido de Monaco.
-  return /\.(ino|c|cpp|h|hpp)$/i.test(name) ? "cpp" : /\.(st|il)$/i.test(name) ? "pascal" : "plaintext";
+  if (/\.(ino|c|cpp|h|hpp)$/i.test(name)) return "cpp";
+  if (/\.(st|il)$/i.test(name)) return "pascal";
+  return /\.md$/i.test(name) ? "markdown" : "plaintext";
+}
+// Código C/C++ del sketch (no las notas .md/.txt): autocompletado y breakpoints.
+const isCodeFile = (name) => /\.(ino|c|cpp|h|hpp)$/i.test(name);
+const mainFileName = () => (state.sketch && !state.sketch.openplc ? `${state.sketch.name}.ino` : null);
+
+function addModel(f) {
+  const model = monacoRef.editor.createModel(f.content, languageFor(f.name), monacoRef.Uri.file(f.path));
+  model.onDidChangeContent(() => renderTabs());
+  state.models.set(f.name, model);
+  state.saved.set(f.name, f.content);
+  return model;
+}
+
+function removeModel(name) {
+  const model = state.models.get(name);
+  if (!model) return;
+  if (state.bpDecos.get(name)?.length) api.dbgSetBreakpoints(model.uri.fsPath, []).catch(() => {});
+  if (state.lineDecos.has(name)) setCurrentLine(null);
+  state.models.delete(name);
+  state.saved.delete(name);
+  state.bpDecos.delete(name);
+  state.bpVerified.delete(name);
+  if (state.active === name) showFile(state.models.keys().next().value);
+  else renderTabs();
+  model.dispose();
 }
 
 function loadSketch(sketch) {
@@ -501,14 +528,9 @@ function loadSketch(sketch) {
   state.bpVerified.clear();
   state.lineDecos.clear();
   state.saved.clear();
+  state.naming = null;
   state.sketch = sketch;
-  for (const f of sketch.files) {
-    const uri = monacoRef.Uri.file(f.path);
-    const model = monacoRef.editor.createModel(f.content, languageFor(f.name), uri);
-    model.onDidChangeContent(() => renderTabs());
-    state.models.set(f.name, model);
-    state.saved.set(f.name, f.content);
-  }
+  for (const f of sketch.files) addModel(f);
   state.exe = null;
   // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
   editor.updateOptions({ readOnly: !!sketch.openplc });
@@ -536,9 +558,119 @@ function renderTabs() {
     t.className = "tab";
     if (name === state.active) t.classList.add("active");
     if (model.getValue() !== state.saved.get(name)) t.classList.add("dirty");
-    t.textContent = name;
+    t.dataset.file = name;
+    t.title = isCodeFile(name) ? name : `${name} · nota del sketch, no se compila`;
+    const label = document.createElement("span");
+    label.textContent = name;
+    t.appendChild(label);
     t.addEventListener("click", () => showFile(name));
+    if (mainFileName() && name !== mainFileName()) {
+      const x = document.createElement("button");
+      x.className = "tab-close";
+      x.textContent = "×";
+      x.title = `Eliminar ${name} del sketch`;
+      x.setAttribute("aria-label", `Eliminar ${name}`);
+      x.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteSketchFile(name);
+      });
+      t.appendChild(x);
+    }
     tabs.appendChild(t);
+  }
+  if (!mainFileName()) return;
+  if (state.naming) {
+    tabs.appendChild(state.naming);
+    return;
+  }
+  const add = document.createElement("button");
+  add.className = "tab-add";
+  add.id = "tab-add";
+  add.textContent = "+";
+  add.title = "Nuevo archivo en el sketch (Ctrl+Mayús+N): .ino, .h, .c, .cpp, .md o .txt";
+  add.setAttribute("aria-label", "Nuevo archivo en el sketch");
+  add.addEventListener("click", () => promptNewFile());
+  tabs.appendChild(add);
+}
+
+// ------------------------------------------------------------- archivos del sketch
+// Nuevo archivo: un campo en la barra de pestañas (Electron no tiene prompt()).
+// Enter lo crea; Esc o perder el foco lo cancela.
+function promptNewFile() {
+  if (!mainFileName()) return;
+  window.JwsimTabs?.select("program");
+  if (state.naming) return state.naming.querySelector("input").focus();
+  const box = document.createElement("form");
+  box.className = "tab-naming";
+  const input = document.createElement("input");
+  input.id = "tab-new-name";
+  input.placeholder = "nombre.h";
+  input.spellcheck = false;
+  input.title = "Sin extensión se crea una pestaña .ino. Enter para crear, Esc para cancelar";
+  box.appendChild(input);
+  const close = () => {
+    state.naming = null;
+    renderTabs();
+  };
+  let busy = false;
+  box.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    try {
+      await createSketchFile(input.value);
+      close();
+    } catch (err) {
+      input.classList.add("invalid");
+      input.title = cleanError(err);
+      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+      input.focus();
+    } finally {
+      busy = false;
+    }
+  });
+  input.addEventListener("input", () => input.classList.remove("invalid"));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+  input.addEventListener("blur", () => setTimeout(() => !busy && state.naming === box && close(), 0));
+  state.naming = box;
+  renderTabs();
+  input.focus();
+}
+
+async function createSketchFile(name) {
+  const f = await api.addFile(state.sketch.dir, name);
+  addModel(f);
+  showFile(f.name);
+  consoleWrite(`[jwsim] ${f.name} agregado al sketch${isCodeFile(f.name) ? "" : " (nota: no se compila)"}\n`, "sys");
+  return f.name;
+}
+
+async function importSketchFiles() {
+  if (!mainFileName()) return;
+  try {
+    const { added, skipped } = await api.importFiles(state.sketch.dir);
+    for (const f of added) addModel(f);
+    if (added.length) showFile(added[added.length - 1].name);
+    for (const f of added) consoleWrite(`[jwsim] ${f.name} agregado al sketch\n`, "sys");
+    for (const s of skipped) consoleWrite(`[jwsim] no se agregó ${s}\n`, "fatal");
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+}
+
+async function deleteSketchFile(name, { ask = true } = {}) {
+  if (!state.models.has(name)) return false;
+  if (ask && !confirm(`¿Eliminar ${name} del sketch?\n\nEl archivo se mueve a la papelera.`)) return false;
+  try {
+    await api.deleteFile(state.sketch.dir, name);
+    removeModel(name);
+    consoleWrite(`[jwsim] ${name} eliminado del sketch (está en la papelera)\n`, "sys");
+    return true;
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+    return false;
   }
 }
 
@@ -1182,6 +1314,22 @@ async function openProject() {
   }
 }
 
+// Botón «Simular» del OpenPLC Editor (G6 SIMULATE_BUTTON). Si ese proyecto ya
+// está abierto no se recarga: lo que se guardó ya llegó por el vigilante de
+// archivos, y así se conservan la simulación y la escena.
+async function openFromEditor(target) {
+  try {
+    const sketch = await api.openPlcProject(target);
+    if (state.sketch?.dir === sketch.dir) return;
+    const dirty = [...state.models].some(([name, model]) => model.getValue() !== state.saved.get(name));
+    if (dirty && !confirm(`Hay cambios sin guardar en ${state.sketch.name}. ¿Abrir ${sketch.name} y descartarlos?`)) return;
+    loadSketch(sketch);
+  } catch (err) {
+    consoleWrite(`[jwsim] ${err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "")}
+`, "fatal");
+  }
+}
+
 async function saveProjectFile() {
   if (!state.sketch) return;
   await saveSketch();
@@ -1200,10 +1348,28 @@ async function saveProjectFile() {
 
 // Edición externa (Arduino IDE u otro editor): se recarga el archivo y, si
 // la simulación estaba activa, se recompila y reinicia conservando la escena.
-async function onExternalChange({ name, content, at, openplc }) {
+async function onExternalChange({ name, path, content, deleted, at, openplc }) {
   if (openplc) return onOpenPlcChange({ name, content, at });
+  if (!state.sketch || state.sketch.openplc) return;
   const model = state.models.get(name);
-  if (!model || model.getValue() === content) return;
+  // Archivo borrado o creado fuera (Explorador, Arduino IDE): las pestañas lo siguen.
+  if (deleted) {
+    if (!model || name === mainFileName()) return;
+    if (model.getValue() !== state.saved.get(name)) {
+      consoleWrite(`[jwsim] ${name} se borró fuera del simulador, pero tiene cambios sin guardar aquí: Guardar lo vuelve a crear\n`, "sys");
+      return;
+    }
+    removeModel(name);
+    consoleWrite(`[jwsim] ${name} se borró fuera del simulador\n`, "sys");
+    return;
+  }
+  if (!model) {
+    addModel({ name, path, content });
+    renderTabs();
+    consoleWrite(`[jwsim] ${name} apareció en la carpeta del sketch\n`, "sys");
+    return;
+  }
+  if (model.getValue() === content) return;
   if (model.getValue() !== state.saved.get(name)) {
     consoleWrite(`[jwsim] ${name} cambió fuera del simulador, pero tiene cambios sin guardar aquí: se conservan los suyos\n`, "sys");
     return;
@@ -1299,10 +1465,115 @@ function mdToHtml(text) {
   return out.join("");
 }
 
+// ---- Objetivos en vivo (rubrica.json "goals"): la barra de cada objetivo se
+// llena mientras su condición se sostiene en la simulación.
+const goalUi = { goals: [], progress: null, error: null };
+
+function fmtReading(key, v) {
+  if (v === undefined) return "—";
+  if (typeof v === "boolean") return v ? "sí" : "no";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return /Pct$/.test(key) ? `${n.toFixed(0)} %` : String(Math.round(n * 10) / 10);
+}
+
+function fmtWant(key, w) {
+  if (Array.isArray(w)) return /Pct$/.test(key) ? `${w[0]}–${w[1]} %` : `${w[0]}–${w[1]}`;
+  return typeof w === "boolean" ? (w ? "sí" : "no") : String(w);
+}
+
+// El panel se arma una vez por ejercicio (buildGoals) y cada snapshot solo
+// cambia clases, textos y anchos: las barras se deslizan y el aviso de reto
+// completado se anima una sola vez.
+function buildGoals() {
+  const box = $("ex-goals");
+  box.hidden = !goalUi.goals.length && !goalUi.error;
+  if (box.hidden) return;
+  if (goalUi.error) {
+    box.innerHTML = `<div class="goals-head"><b>Objetivos en vivo</b></div><p class="bad">${esc(goalUi.error)}</p>`;
+    return;
+  }
+  const extraLabel = { merit: "Mérito", distinction: "Distinción" };
+  let html = `<div class="goals-head"><b>Objetivos en vivo</b><span class="goals-count"></span><span class="goals-time muted"></span></div>`;
+  html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden><b>¡Reto completado!</b> Cumplió todos los objetivos en la misma corrida.<div class="learn-after"></div></div><ol class="goals">`;
+  for (const g of goalUi.goals) {
+    const sigs = Object.entries(g.when)
+      .map(([k, w]) => `<span class="goal-sig" data-sig="${esc(k)}"><code>${esc(k)}</code> <span class="goal-read"></span><small>→ ${esc(fmtWant(k, w))}</small></span>`)
+      .join("");
+    html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
+    html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
+    if (Number(g.hold_ms ?? 0) > 0) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    html += `</div></li>`;
+  }
+  box.innerHTML = html + `</ol>`;
+  renderGoals();
+}
+
+function renderGoals() {
+  const box = $("ex-goals");
+  if (box.hidden || goalUi.error) return;
+  const p = goalUi.progress;
+  const byId = new Map((p?.goals ?? []).map((g) => [g.id, g]));
+  const required = goalUi.goals.filter((g) => !g.extra);
+  const done = required.filter((g) => byId.get(g.id)?.state === "done").length;
+  const icon = { done: "✓", active: "◔", pending: "○", blocked: "🔒" };
+  box.querySelector(".goals-count").textContent = `${done}/${required.length}`;
+  box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Corra la simulación y opere la escena";
+  box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
+  box.querySelector(".goals-done").hidden = !p?.complete;
+  if (p?.complete && !goalUi.reported && state.exercise?.id) {
+    goalUi.reported = true;
+    reportDone("goals").then((r) => fillAfter(box.querySelector(".learn-after"), r));
+  }
+  for (const g of goalUi.goals) {
+    const li = box.querySelector(`[data-goal="${CSS.escape(g.id)}"]`);
+    const s = byId.get(g.id);
+    const st = s?.state ?? (g.after ? "blocked" : "pending");
+    li.classList.remove("done", "active", "pending", "blocked");
+    li.classList.add(st);
+    li.querySelector(".goal-icon").textContent = icon[st];
+    for (const [k, w] of Object.entries(g.when)) {
+      const el = li.querySelector(`[data-sig="${CSS.escape(k)}"]`);
+      // Cumplido: se deja la condición, no la lectura que siguió cambiando.
+      el.querySelector(".goal-read").textContent = st === "done" ? "" : fmtReading(k, s?.reading?.[k]);
+      el.classList.toggle("ok", st === "done" || (!!s && st !== "blocked" && window.JwsimGoalMatch(s.reading[k], w)));
+    }
+    const hold = Number(g.hold_ms ?? 0);
+    if (hold > 0) {
+      li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+      li.querySelector(".goal-hold small").textContent = `${((s?.held_ms ?? 0) / 1000).toFixed(1)} / ${(hold / 1000).toFixed(1)} s`;
+    }
+  }
+}
+
+window.JwsimGoalMatch = (got, want) => {
+  if (got === undefined) return false;
+  const n = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
+  return Array.isArray(want) ? n(got) >= want[0] && n(got) <= want[1] : Math.abs(n(got) - n(want)) < 1e-6;
+};
+
+api.onGoalsProgress((p) => {
+  // Al empezar a correr, la ficha se pliega para que se vean los objetivos.
+  if (!goalUi.progress && !$("ex-brief").classList.contains("collapsed")) renderBrief(false);
+  goalUi.progress = p;
+  renderGoals();
+});
+
 async function showExercise(file) {
   const info = file ? await api.exerciseInfo(file) : null;
-  state.exercise = info ? { file } : null;
+  goalUi.goals = info?.goals ?? [];
+  goalUi.error = info?.goalsError ?? null;
+  goalUi.progress = null;
+  await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
+  buildGoals();
+  state.exercise = info ? { file, id: info.id, brief: info.brief } : null;
+  goalUi.reported = false;
+  renderBrief(true);
   $("tab-exercise").hidden = !info;
+  $("scene-tab-reto").hidden = !info;
+  $("ex-reto-hint").hidden = !info;
+  if (info) window.JwsimShowReto?.();
+  else if (document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
   if (!info) {
@@ -1312,6 +1583,58 @@ async function showExercise(file) {
   $("ex-statement").innerHTML = mdToHtml(info.statement);
   setView("exercise");
 }
+
+// ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
+function renderBrief(expanded) {
+  const box = $("ex-brief");
+  const b = state.exercise?.brief;
+  box.hidden = !b;
+  if (!b) return;
+  const list = (xs) => (xs ?? []).map((x) => `<li>${esc(x)}</li>`).join("");
+  box.classList.toggle("collapsed", !expanded);
+  if (!expanded) $("scene-side").scrollTop = 0;
+  box.innerHTML = expanded
+    ? `<div class="brief-sec"><div class="brief-k">El objetivo</div><p>${esc(b.goal ?? "")}</p></div>` +
+      `<div class="brief-sec"><div class="brief-k">Pasos</div><ol>${list(b.steps)}</ol></div>` +
+      `<div class="brief-sec"><div class="brief-k">Con qué trabaja</div><ul class="brief-uses">${list(b.uses)}</ul></div>` +
+      `<div class="brief-nav"><button class="primary" data-brief="start">Empezar</button><span class="muted">Programe, pulse ▶ Ejecutar y opere la escena: los objetivos se marcan en vivo.</span></div>`
+    : `<button class="link" data-brief="show">Ver ficha del reto</button><span class="muted"> · ${esc(b.goal ?? "")}</span>`;
+}
+
+async function reportDone(via, grade) {
+  try {
+    return await api.learnComplete(state.exercise.id, via, grade);
+  } catch {
+    return null;
+  }
+}
+
+function fillAfter(el, r, lead = "") {
+  if (!el || !r) return;
+  el.innerHTML =
+    (lead ? `<b>${esc(lead)}</b> ` : "") +
+    (r.teaches ? `<span class="learn-teaches">Qué enseña: ${esc(r.teaches)}</span>` : "") +
+    (r.next ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>` : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
+}
+
+window.openExerciseById = async (id) => {
+  try {
+    applyProject(await api.openExercise(id));
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}
+`, "fatal");
+  }
+};
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#scene-devmgr")) return window.JwsimDevices?.open();
+  if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
+  const b = e.target.closest("[data-brief], [data-next]");
+  if (!b) return;
+  if (b.dataset.next) window.openExerciseById(b.dataset.next);
+  else if (b.dataset.brief === "start") renderBrief(false);
+  else renderBrief(true);
+});
 
 function renderGrade(g) {
   if (!g.ok) {
@@ -1338,6 +1661,12 @@ async function gradeExercise() {
     const g = await api.gradeExercise(state.exercise.file, state.sketch.dir);
     $("grade-result").innerHTML = renderGrade(g);
     $("grade-note").textContent = g.ok ? `Calificado en ${(g.wall_ms / 1000).toFixed(1)} s` : "";
+    if (g.ok && g.grade >= 14 && state.exercise?.id) {
+      const box = document.createElement("div");
+      box.className = "learn-after grade-pass";
+      $("grade-result").prepend(box);
+      fillAfter(box, await reportDone("grade", g.grade), "Reto aprobado.");
+    }
   } catch (err) {
     $("grade-note").textContent = cleanError(err);
   } finally {
@@ -1508,10 +1837,16 @@ function setScenePane(pane, save = true) {
 function wireSceneSide() {
   const saved = storeGet(SIDE_KEY);
   setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  // Ir al reto: la vista del esquema con su pestaña abierta.
+  window.JwsimShowReto = () => {
+    window.JwsimScene?.setView("scene");
+    setScenePane("reto", false);
+  };
   for (const t of document.querySelectorAll(".side-tab"))
     t.addEventListener("click", () => setScenePane(document.querySelector(".scene-main").dataset.pane === t.dataset.pane ? null : t.dataset.pane));
   // Al seleccionar un equipo o un cable con el panel abierto, se ven sus propiedades.
-  window.JwsimScenePane = { showProps: () => document.querySelector(".scene-main").dataset.pane && setScenePane("props", false) };
+  // Con el reto abierto no se cambia: el alumno opera la escena mirando los objetivos.
+  window.JwsimScenePane = { showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false) };
 }
 
 // Panel inferior: alto ajustable con su divisor (se recuerda) y plegable.
@@ -1609,6 +1944,7 @@ function wireUi() {
   $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
   for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
+  api.onOpenTarget(openFromEditor);
   $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
   $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));
   $("btn-dbg-in").addEventListener("click", () => dbgCommand("stepIn"));
@@ -1714,7 +2050,21 @@ function wireUi() {
     if (cmd === "new") $("btn-new").click();
     else if (cmd === "open") $("btn-open").click();
     else if (cmd === "save") saveSketch();
+    else if (cmd === "newFile") promptNewFile();
+    else if (cmd === "importFiles") importSketchFiles();
     else if (cmd === "format") autoFormat();
+    else if (cmd === "undo") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.undo?.();
+      else editor?.trigger("menu", "undo");
+    } else if (cmd === "redo") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.redo?.();
+      else editor?.trigger("menu", "redo");
+    } else if (cmd === "duplicate") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.duplicate?.();
+      else editor?.trigger("menu", "editor.action.duplicateSelection");
+    } else if (cmd === "delete") {
+      if (document.body.dataset.tab === "schematic") window.JwsimScene?.removeSelected?.();
+    }
     else if (cmd === "dock") $("sb-dock").click();
     else if (cmd.startsWith("tab:")) window.JwsimTabs?.select(cmd.slice(4));
     else if (cmd === "run") buildAndRun();
@@ -1722,7 +2072,7 @@ function wireUi() {
     else if (cmd === "stop") stopSim();
     else if (cmd === "openProject") openProject();
     else if (cmd === "saveProject") saveProjectFile();
-    else if (cmd === "dbgToggle" && state.active) toggleBreakpoint(state.active, editor.getPosition().lineNumber);
+    else if (cmd === "dbgToggle" && state.active && isCodeFile(state.active)) toggleBreakpoint(state.active, editor.getPosition().lineNumber);
     else if (cmd === "dbgContinue") dbgCommand("continue");
     else if (cmd === "dbgNext") dbgCommand("next");
     else if (cmd === "dbgStepIn") dbgCommand("stepIn");
@@ -1766,7 +2116,7 @@ function initMonaco() {
       });
       api
         .apiCatalog()
-        .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models.values()]))
+        .then((catalog) => window.JwsimCompletion?.install(monacoRef, catalog, () => [...state.models].filter(([n]) => isCodeFile(n)).map(([, m]) => m)))
         .catch((err) => consoleWrite(`[jwsim] autocompletado no disponible: ${err.message}\n`, "sys"));
       // Autoformato también desde el menú contextual del editor ("Dar formato
       // al documento", Mayús+Alt+F). Ctrl+T llega por el menú Herramientas.
@@ -1785,7 +2135,7 @@ function initMonaco() {
       editor.addCommand(monacoRef.KeyMod.CtrlCmd | monacoRef.KeyCode.KeyT, () => autoFormat());
       // Clic en el margen: alterna un breakpoint en esa línea.
       editor.onMouseDown((e) => {
-        if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active) {
+        if (e.target.type === monacoRef.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && state.active && isCodeFile(state.active)) {
           toggleBreakpoint(state.active, e.target.position.lineNumber);
         }
       });
@@ -1908,6 +2258,12 @@ window.jwsimTest = {
   setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
   grade: () => gradeExercise(),
   sketchDir: () => state.sketch?.dir ?? null,
+  // Archivos adicionales del sketch.
+  fileNames: () => [...state.models.keys()],
+  addFile: (name) => createSketchFile(name),
+  deleteFile: (name) => deleteSketchFile(name, { ask: false }),
+  showFile: (name) => showFile(name),
+  language: () => editor.getModel()?.getLanguageId() ?? null,
 };
 
 async function main() {
@@ -1943,6 +2299,10 @@ async function main() {
   } catch (err) {
     fail("no se pudo crear el sketch nuevo", err);
   }
+  const target = await api.takeOpenTarget();
+  if (target) await openFromEditor(target);
+  // Pantalla «Proyectos» (start.js), salvo si el OpenPLC Editor pidió un proyecto.
+  window.JwsimStart?.onReady({ openedFromEditor: !!target });
 }
 
 main();

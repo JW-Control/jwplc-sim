@@ -84,5 +84,9 @@ const electron = createRequire(join(APP, "package.json"))("electron");
 const args = [APP, ...extra];
 if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
 log("abriendo JWPLC Sim…");
-const child = spawn(electron, args, { stdio: "inherit", cwd: APP });
+// La terminal de VS Code (y otras apps Electron) exporta ELECTRON_RUN_AS_NODE=1:
+// con esa variable Electron arranca como Node y no abre la ventana.
+const env = { ...process.env };
+delete env.ELECTRON_RUN_AS_NODE;
+const child = spawn(electron, args, { stdio: "inherit", cwd: APP, env });
 child.on("exit", (code) => process.exit(code ?? 0));

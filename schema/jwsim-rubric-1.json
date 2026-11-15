@@ -18,6 +18,13 @@
     "id": {
       "type": "string"
     },
+    "goals": {
+      "description": "Objetivos en vivo (opcional): mientras el alumno opera la escena, cada uno se cumple cuando 'when' se sostiene 'hold_ms' de tiempo simulado. No dan nota.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/goal"
+      }
+    },
     "cases": {
       "type": "array",
       "minItems": 1,
@@ -181,6 +188,63 @@
           ]
         }
       ]
+    },
+    "goal": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "description": "Señal → valor (igualdad) o [min, max] (rango cerrado). Claves: I0_k, Q0_k, <equipo>.<salida>.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": [
+                  "boolean",
+                  "number"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            ]
+          }
+        },
+        "hold_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "after": {
+          "description": "id de un objetivo anterior que debe cumplirse primero",
+          "type": "string"
+        },
+        "extra": {
+          "description": "Objetivo extra: no impide completar el reto",
+          "enum": [
+            "merit",
+            "distinction"
+          ]
+        }
+      }
     }
   }
 }

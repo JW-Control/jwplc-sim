@@ -629,7 +629,42 @@ export class Scene {
         // true: eco; false: dirección inválida (02); un número: ese código de excepción.
         return ok === undefined ? undefined : ok === true ? reply(dev, echo) : exc(dev, typeof ok === "number" ? ok : 2);
       };
-      if ((fn === 3 || fn === 4) && frame.length === 8) {
+      // Bits (bobinas y entradas discretas), con modbusReadBits/modbusWriteBits.
+      const writeBits = (start, bits, echo) => {
+        if (!dev.inst.modbusWriteBits) return exc(dev, 1);
+        const ok = dev.inst.modbusWriteBits(start, bits, o.t);
+        return ok === undefined ? undefined : ok === true ? reply(dev, echo) : exc(dev, typeof ok === "number" ? ok : 2);
+      };
+      if ((fn === 1 || fn === 2) && frame.length === 8) {
+        const count = u16(4);
+        if (!dev.inst.modbusReadBits) r = exc(dev, 1);
+        else if (count < 1 || count > 2000) r = exc(dev, 3);
+        else {
+          const bits = dev.inst.modbusReadBits(fn === 1 ? "coils" : "discrete", u16(2), count, o.t);
+          if (bits === undefined) continue;  // sin alimentación: no responde
+          if (bits === null) r = exc(dev, 2);
+          else {
+            // Empaquetados de 8 en 8, el primero en el bit menos significativo.
+            const bytes = new Array(Math.ceil(count / 8)).fill(0);
+            bits.forEach((b, k) => b && (bytes[k >> 3] |= 1 << (k & 7)));
+            r = reply(dev, [fn, bytes.length, ...bytes]);
+          }
+        }
+      } else if (fn === 5 && frame.length === 8) {
+        const v = u16(4);
+        if (v !== 0xff00 && v !== 0) r = exc(dev, 3);
+        else {
+          r = writeBits(u16(2), [v === 0xff00 ? 1 : 0], frame.slice(1, 6));
+          if (r === undefined) continue;
+        }
+      } else if (fn === 15 && frame.length >= 9 && frame.length === 9 + frame[6]) {
+        const count = u16(4);
+        if (count < 1 || frame[6] !== Math.ceil(count / 8)) r = exc(dev, 3);
+        else {
+          r = writeBits(u16(2), Array.from({ length: count }, (_, k) => (frame[7 + (k >> 3)] >> (k & 7)) & 1), frame.slice(1, 6));
+          if (r === undefined) continue;
+        }
+      } else if ((fn === 3 || fn === 4) && frame.length === 8) {
         const count = u16(4);
         if (!dev.inst.modbusRead) r = exc(dev, 1);
         else if (count < 1 || count > 125) r = exc(dev, 3);
@@ -655,7 +690,7 @@ export class Scene {
       out = r;
     }
     // La escritura pudo cambiar el estado de un dispositivo.
-    if (fn === 6 || fn === 16) this.evaluate(o.t);
+    if (fn === 5 || fn === 6 || fn === 15 || fn === 16) this.evaluate(o.t);
     return out;
   }
 

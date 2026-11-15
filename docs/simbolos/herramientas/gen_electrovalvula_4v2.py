@@ -27,9 +27,9 @@ sinterizado en R y S; la alimentacion entra por P desde abajo.
 4V210: el conector DIN se dibuja girado 180 grados (prensaestopas a la
 derecha; el real admite montarse asi) para que el cable baje a los bornes sin
 cruzar las mangueras. Bornes A1/A2 (hilos 1 y 2), bocas en x = 420 y 460.
-4V220: bobina A+ a la derecha (P->A, sale) y A- a la izquierda (P->B, entra),
-cada una con su conector y su cable: bornes A-1/A-2 en x = 40 y 80 y
-A+1/A+2 en x = 520 y 560.
+4V220: bobina A+ a la izquierda (P->A, sale) y A- a la derecha (P->B, entra),
+cada una con su conector y su cable: bornes A+1/A+2 en x = 40 y 80 y
+A-1/A-2 en x = 520 y 560.
 
 Estados: LED de cada conector (traslucido) encendido con su bobina; mangueras
 segun la corredera (out.energized en la 4V210, out.spoolA en la 4V220);
@@ -312,7 +312,7 @@ for (kind, _), x0, x1 in zip(SEGS, X, X[1:]):
         p += pilot(x0, x1)
     else:
         right = x0 > X_PLATE
-        led = ("out.coilPlus" if right else "out.coilMinus") if BI else "out.energized"
+        led = ("out.coilMinus" if right else "out.coilPlus") if BI else "out.energized"
         s, gend, gy, span = coil(x0, x1, right, led)
         p += s
         coils.append((right, gend, gy, span))
@@ -368,9 +368,9 @@ for right, gend, gy, _ in coils:
     if not BI:
         p += cable(gend, gy, 400, ((420, "A1", "1"), (460, "A2", "2")), None)
     elif right:
-        p += cable(gend, gy, 500, ((520, "A+1", "1"), (560, "A+2", "2")), "A+")
+        p += cable(gend, gy, 500, ((520, "A-1", "1"), (560, "A-2", "2")), "A−")
     else:
-        p += cable(gend, gy, 60, ((40, "A-1", "1"), (80, "A-2", "2")), "A−")
+        p += cable(gend, gy, 60, ((40, "A+1", "1"), (80, "A+2", "2")), "A+")
 
 with open(sys.argv[2] if len(sys.argv) > 2 else f"{P}.svg", "w", encoding="utf-8") as f:
     f.write(finish(p, P))

@@ -50,7 +50,7 @@ const grade = async () => {
 try {
   // ---- EX_LIST
   const opts = await until(() => win.$$eval("#sel-exercise option", (o) => o.filter((x) => x.value).map((x) => x.value)), 10000);
-  criteria.EX_LIST = { ok: opts?.length === 8, exercises: opts };
+  criteria.EX_LIST = { ok: opts?.length === 9, exercises: opts };
   log(`EX_LIST ${JSON.stringify(criteria.EX_LIST)}`);
 
   // ---- EX_OPEN

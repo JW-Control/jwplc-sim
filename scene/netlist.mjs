@@ -41,7 +41,8 @@
  * @typedef {{ id: string, pos?: string, neg?: string, kind: "DC" | "AC" | "AC3", volts: number,
  *   phases?: { L1: string, L2: string, L3: string }, hz?: { value: number, rate: number, goal: number },
  *   controlled?: boolean }} Source  AC3: sin pos/neg, volts entre fases; hz: frecuencia (salida de un variador)
- * @typedef {{ id: string, a: string, b: string, rating: string, polar?: boolean, coil?: boolean }} Load
+ * @typedef {{ id: string, a: string, b: string, rating: string, polar?: boolean, coil?: boolean, meter?: boolean }} Load
+ *   meter: entrada de medición (voltímetro): lee cualquier tensión, sin tensión nominal ni avisos
  * @typedef {{ a: string, b: string }} Switch
  * @typedef {{
  *   on: boolean, polarity: 1 | -1 | 0, source: string | null, volts: number, kind: "DC" | "AC" | null,
@@ -214,7 +215,7 @@ export function solve(net, tripped = new Set()) {
       st = { on: true, polarity: fwd ? 1 : -1, source: s.id, volts: s.volts, kind: /** @type {"DC" | "AC"} */ (s.kind) };
       break;
     }
-    if (st.on) {
+    if (st.on && !l.meter) {
       const r = parseRating(l.rating);
       if (st.volts > r.volts * 1.1) {
         st = { ...st, on: false, issue: "overvoltage" };
@@ -273,7 +274,7 @@ export function analyze(net, wired, skip) {
   const has = (t, suffix) => [...(g.marks.get(g.uf.find(t)) ?? [])].some((m) => m.endsWith(suffix));
   for (const l of net.loads) {
     if (wired && !wired.has(l.a) && !wired.has(l.b)) continue;
-    if (skip?.(l)) continue;
+    if (skip?.(l) || l.meter) continue;
     const ok = net.sources.some((s) => {
       const ma = g.marks.get(g.uf.find(l.a)) ?? new Set();
       const mb = g.marks.get(g.uf.find(l.b)) ?? new Set();

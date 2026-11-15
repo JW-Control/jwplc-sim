@@ -24,6 +24,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 
+import { editorDir as editorDirOf } from "./fetch-editor.mjs";
 import { resolvePackageRoot } from "./fetch-package.mjs";
 import { bundledToolchainBin, ensurePchFriendlyCompiler } from "./fetch-toolchain.mjs";
 
@@ -67,8 +68,10 @@ if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAG
 }
 // Cadena del OpenPLC Editor (G6), si se descargó: sin ella la app compila
 // sketches igual y pide node scripts/fetch-editor.mjs para proyectos OpenPLC.
-const editorDir = existsSync(join(ROOT, ".jwsim", "editor")) ? ".jwsim/editor" : null;
-if (!editorDir) console.error("[dist] aviso: sin .jwsim/editor; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)");
+// Solo la versión de editor.lock: una cadena vieja en la caché no se empaqueta.
+const editorRel = relative(ROOT, editorDirOf()).split("\\").join("/");
+const editorDir = existsSync(join(ROOT, editorRel, "ready.json")) ? editorRel : null;
+if (!editorDir) console.error(`[dist] aviso: sin ${editorRel}; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)`);
 if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falta el toolchain (node scripts/fetch-toolchain.mjs)");
 // Puerto COM virtual (com0com): componente opcional del instalador de Windows.
 if (win) node([join("scripts", "fetch-com0com.mjs")]);
@@ -101,6 +104,11 @@ const config = {
     res(pkgDir),
     res(".jwsim/third_party"),
     ...(editorDir ? [res(editorDir)] : []),
+    // pipeline.cjs carga STruC++ de deps/node_modules, que `res` deja fuera.
+    // esbuild solo hace falta para armar la cadena, no para compilar.
+    ...(editorDir
+      ? [{ from: join(ROOT, editorDir, "deps", "node_modules"), to: `${editorDir}/deps/node_modules`, filter: ["**/*", "!esbuild/**", "!@esbuild/**"] }]
+      : []),
     ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
     // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,
@@ -113,6 +121,12 @@ const config = {
   afterPack: async ({ appOutDir }) => {
     const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js"];
     const missing = need.filter((f) => !existsSync(join(appOutDir, "resources", "app", "node_modules", ...f.split("/"))));
+    if (editorDir) {
+      const strucpp = join(appOutDir, "resources", ...editorDir.split("/"), "deps", "node_modules", "strucpp");
+      for (const f of ["package.json", "libs", "src/runtime/include"]) {
+        if (!existsSync(join(strucpp, ...f.split("/")))) missing.push(`strucpp/${f}`);
+      }
+    }
     if (missing.length) throw new Error(`faltan en la app armada: ${missing.join(", ")}`);
   },
   win: {

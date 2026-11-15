@@ -11,13 +11,18 @@ import { Worker } from "node:worker_threads";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
 import { buildApiCatalog } from "../cli/lib/api-catalog.mjs";
-import { installedDevices, registryWithInstalled } from "../cli/lib/device.mjs";
+import { BEHAVIORS, generateDevice, MODELS, normalizeSpec, RAMP, symbolLayout, writeDevice } from "../cli/lib/device-gen.mjs";
+import { checkDeviceDir, installedDevices, linkDevice, localDevices, registryWithInstalled, unlinkDevice } from "../cli/lib/device.mjs";
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
+import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
+import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
+import { checkGoals, GoalTracker } from "./lib/goals.mjs";
+import { levels, loadProgress, markDone, nextAfter, saveProgress } from "./lib/learning.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -41,7 +46,48 @@ if (app.isPackaged && process.platform === "win32") {
 // instalación para todos los usuarios): la caché de compilación va a los datos.
 if (app.isPackaged) process.env.JWSIM_CACHE_DIR ??= join(app.getPath("userData"), "cache");
 
+// Archivos del sketch que van al compilador: las pestañas .ino y los fuentes
+// de la raíz (cli/lib/build.mjs, como arduino-cli).
 const SKETCH_EXT = new Set([".ino", ".h", ".hpp", ".c", ".cpp"]);
+// Notas que acompañan al sketch: se muestran y se editan, pero no se compilan.
+const SKETCH_TEXT_EXT = new Set([".md", ".txt"]);
+const isSketchFile = (name) => {
+  const ext = extname(name).toLowerCase();
+  return SKETCH_EXT.has(ext) || SKETCH_TEXT_EXT.has(ext);
+};
+// Contenido inicial de un archivo nuevo (Programa ▸ Nuevo archivo).
+function newFileContent(name) {
+  const ext = extname(name).toLowerCase();
+  if (ext === ".h" || ext === ".hpp") return `#pragma once\n\n#include <Arduino.h>\n\n`;
+  // Un .cpp se compila aparte: no recibe el #include <Arduino.h> del .ino.
+  if (ext === ".cpp") return `#include <Arduino.h>\n\n`;
+  if (ext === ".md") return `# ${basename(name, extname(name))}\n\n`;
+  return "";
+}
+// Nombre válido para un archivo del sketch, como Arduino IDE: sin extensión
+// es una pestaña .ino; solo letras, números, _ - y un punto antes de la extensión.
+function sketchFileName(raw) {
+  let name = String(raw ?? "").trim();
+  if (!name) throw new Error("escriba un nombre de archivo");
+  if (!extname(name)) name += ".ino";
+  if (!/^[A-Za-z0-9_][A-Za-z0-9_-]*\.[A-Za-z0-9]+$/.test(name)) {
+    throw new Error(`nombre no válido: «${name}» (use letras, números, _ o -, sin espacios ni carpetas)`);
+  }
+  if (!isSketchFile(name)) {
+    throw new Error(`tipo de archivo no admitido: ${extname(name)} (use .ino, .h, .hpp, .c, .cpp, .md o .txt)`);
+  }
+  return name;
+}
+// Windows no distingue mayúsculas: «Motor.h» y «motor.h» son el mismo archivo.
+const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
+function sketchEntry(dir, name) {
+  return readdirSync(dir).find((f) => sameName(f, name)) ?? null;
+}
+function editableSketchDir(dir) {
+  if (!dir || !existsSync(dir)) throw new Error("no hay un sketch abierto");
+  if (isOpenPlcProject(dir)) throw new Error("los archivos de un proyecto OpenPLC se crean en el OpenPLC Editor");
+  return resolve(dir);
+}
 // Sketch nuevo: el clásico de Arduino IDE.
 const TEMPLATE = `void setup() {
   // Escriba aquí su código de configuración; se ejecuta una vez:
@@ -57,6 +103,8 @@ void loop() {
 let win = null;
 let runner = null;
 let sceneSession = null; // co-simulación con la escena (G7)
+let activeGoals = null; // objetivos en vivo del ejercicio abierto
+let goalTracker = null;
 let registryPromise = null; // biblioteca incluida + dispositivos de escena instalados
 let runnerExe = null;
 let debug = null; // DebugSession adjunta al runner actual
@@ -97,7 +145,7 @@ function readSketch(dir) {
   if (isOpenPlcProject(dir)) return readOpenPlc(dir);
   const name = basename(dir);
   const files = readdirSync(dir)
-    .filter((f) => SKETCH_EXT.has(extname(f).toLowerCase()) && statSync(join(dir, f)).isFile())
+    .filter((f) => isSketchFile(f) && statSync(join(dir, f)).isFile())
     .sort((a, b) => (a === `${name}.ino` ? -1 : b === `${name}.ino` ? 1 : a.localeCompare(b)))
     .map((f) => ({ name: f, path: join(dir, f), content: readFileSync(join(dir, f), "utf8") }));
   if (!files.some((f) => f.name === `${name}.ino`)) throw new Error(`la carpeta ${dir} no contiene ${name}.ino`);
@@ -244,7 +292,7 @@ ipcMain.handle("api:catalog", () => {
 // ---------------------------------------------------------------- ejercicios (G9)
 const EXERCISES = join(import.meta.dirname, "..", "exercises");
 
-ipcMain.handle("exercises:list", () => {
+function listExercises() {
   if (!existsSync(EXERCISES)) return [];
   const out = [];
   for (const d of readdirSync(EXERCISES).sort()) {
@@ -252,12 +300,34 @@ ipcMain.handle("exercises:list", () => {
     if (!existsSync(f)) continue;
     try {
       const { project } = loadProject(f);
-      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1 });
+      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1, brief: project.exercise.brief ?? null });
     } catch {
       // un ejercicio roto no impide listar los demás
     }
   }
   return out;
+}
+ipcMain.handle("exercises:list", () => listExercises());
+
+// ---- Centro de aprendizaje: progreso del alumno en el perfil.
+const progressFile = () => join(app.getPath("userData"), "aprendizaje.json");
+const unlockOpts = (p) => ({ unlockAll: p.unlockAll || process.env.JWSIM_UNLOCK_ALL === "1" });
+ipcMain.handle("learn:state", () => {
+  const p = loadProgress(progressFile());
+  return levels(listExercises(), p, unlockOpts(p));
+});
+ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
+  const p = loadProgress(progressFile());
+  const changed = markDone(p, String(id), via === "grade" ? "grade" : "goals", grade);
+  if (changed) saveProgress(progressFile(), p);
+  const ex = listExercises();
+  return { changed, done: !!p.done[id], next: nextAfter(ex, p, String(id), unlockOpts(p)), teaches: ex.find((e) => e.id === id)?.brief?.teaches ?? "" };
+});
+ipcMain.handle("learn:unlockAll", (_e, on) => {
+  const p = loadProgress(progressFile());
+  p.unlockAll = !!on;
+  saveProgress(progressFile(), p);
+  return levels(listExercises(), p, unlockOpts(p));
 });
 
 // Abre una copia del ejercicio en la carpeta de trabajo (sin la solución):
@@ -270,6 +340,13 @@ ipcMain.handle("exercises:open", (_e, id) => {
   return openProject(join(dst, `${id}.jwsim`));
 });
 
+// Objetivos en vivo del ejercicio abierto (null: ninguno). Cuentan desde la
+// corrida siguiente o, si ya corre, desde ahora.
+ipcMain.handle("goals:set", (_e, goals) => {
+  activeGoals = Array.isArray(goals) && goals.length ? goals : null;
+  goalTracker = activeGoals && sceneSession ? new GoalTracker(activeGoals) : null;
+});
+
 // Enunciado de un proyecto de ejercicio (o null si no lo es).
 ipcMain.handle("exercise:info", (_e, file) => {
   try {
@@ -277,7 +354,18 @@ ipcMain.handle("exercise:info", (_e, file) => {
     const ex = project.exercise;
     if (!ex) return null;
     const st = ex.statement ? resolve(dirname(file), ex.statement) : null;
-    return { title: project.name, level: ex.level ?? 1, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "" };
+    // Objetivos en vivo de la rúbrica (opcionales); si están mal, se avisa.
+    let goals = [];
+    let goalsError = null;
+    try {
+      const rub = ex.rubric ? JSON.parse(readFileSync(resolve(dirname(file), ex.rubric), "utf8")) : {};
+      checkGoals(rub.goals, ex.rubric);
+      goals = rub.goals ?? [];
+    } catch (err) {
+      goalsError = err.message;
+    }
+    // id: carpeta del ejercicio (la copia de trabajo se llama igual).
+    return { id: basename(dirname(file)), title: project.name, level: ex.level ?? 1, brief: ex.brief ?? null, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError };
   } catch {
     return null;
   }
@@ -341,6 +429,9 @@ ipcMain.handle("sketch:openDialog", async () => {
   return readSketch(dirname(r.filePaths[0]));
 });
 
+// Proyecto pedido por el OpenPLC Editor (G6 SIMULATE_BUTTON).
+ipcMain.handle("sketch:openPlc", (_e, target) => readSketch(openPlcDir(target)));
+
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
   if (isOpenPlcProject(dir)) return true; // se edita en el OpenPLC Editor
   for (const f of files) {
@@ -350,6 +441,136 @@ ipcMain.handle("sketch:save", (_e, { dir, files }) => {
     writeFileSync(p, f.content);
   }
   return true;
+});
+
+// Archivos adicionales del sketch (como las pestañas de Arduino IDE): .h, .c,
+// .cpp y .ino extra se compilan; .md y .txt solo se editan.
+ipcMain.handle("sketch:addFile", (_e, { dir, name }) => {
+  const root = editableSketchDir(dir);
+  const file = sketchFileName(name);
+  const taken = sketchEntry(root, file);
+  if (taken) throw new Error(`ya existe ${taken} en el sketch`);
+  const p = join(root, file);
+  const content = newFileContent(file);
+  ownWrites.set(p, content);
+  writeFileSync(p, content, { flag: "wx" });
+  return { name: file, path: p, content };
+});
+
+// Programa ▸ Agregar archivo…: copia archivos de otra carpeta al sketch.
+ipcMain.handle("sketch:importFiles", async (_e, dir) => {
+  const root = editableSketchDir(dir);
+  const r = await dialog.showOpenDialog(win, {
+    title: "Agregar archivos al sketch",
+    properties: ["openFile", "multiSelections"],
+    filters: [
+      { name: "Código y notas", extensions: ["ino", "h", "hpp", "c", "cpp", "md", "txt"] },
+      { name: "Todos los archivos", extensions: ["*"] },
+    ],
+  });
+  if (r.canceled) return { added: [], skipped: [] };
+  const added = [];
+  const skipped = [];
+  for (const src of r.filePaths) {
+    const file = basename(src);
+    if (!isSketchFile(file)) {
+      skipped.push(`${file}: tipo de archivo no admitido`);
+      continue;
+    }
+    if (dirname(resolve(src)) === root) {
+      skipped.push(`${file}: ya está en el sketch`);
+      continue;
+    }
+    const taken = sketchEntry(root, file);
+    if (taken) {
+      skipped.push(`${file}: ya existe ${taken} en el sketch`);
+      continue;
+    }
+    const p = join(root, file);
+    const content = readFileSync(src, "utf8");
+    ownWrites.set(p, content);
+    writeFileSync(p, content, { flag: "wx" });
+    added.push({ name: file, path: p, content });
+  }
+  return { added, skipped };
+});
+
+// El .ino principal no se borra: sin él la carpeta deja de ser un sketch.
+ipcMain.handle("sketch:deleteFile", (_e, { dir, name }) => {
+  const root = editableSketchDir(dir);
+  const file = String(name ?? "");
+  if (sameName(file, `${basename(root)}.ino`)) throw new Error(`${file} es el archivo principal del sketch: no se puede eliminar`);
+  const p = resolve(root, file);
+  if (dirname(p) !== root || !isSketchFile(file) || !existsSync(p)) throw new Error(`no existe ${file} en el sketch`);
+  // A la papelera, no un borrado definitivo.
+  return shell.trashItem(p).then(() => true);
+});
+
+// ---------------------------------------------------------------- inicio y nuevo proyecto
+// Pantalla «Proyectos» al abrir (como el OpenPLC Editor) y asistente de 3
+// pasos: tipo (Arduino u OpenPLC), nombre y carpeta, lenguaje IEC. Los
+// proyectos IEC los crea y los edita el OpenPLC Editor (app/lib/openplc-editor.mjs).
+// En las pruebas (JWSIM_WORKSPACE) no se muestra, salvo JWSIM_START_SCREEN=1.
+ipcMain.handle("app:startScreen", () => (process.env.JWSIM_START_SCREEN ?? (process.env.JWSIM_WORKSPACE ? "0" : "1")) === "1");
+
+const editorCfgFile = () => join(app.getPath("userData"), "openplc-editor.json");
+function configuredEditor() {
+  try {
+    return JSON.parse(readFileSync(editorCfgFile(), "utf8")).path ?? null;
+  } catch {
+    return null;
+  }
+}
+const findEditor = () => locateEditor({ configured: configuredEditor(), packaged: app.isPackaged, simRoot: join(import.meta.dirname, "..") });
+function editorStatus() {
+  const ed = findEditor();
+  return { found: !!ed, label: ed?.label ?? null, source: ed?.source ?? null, languages: LANGUAGES, workspace: workspaceDir() };
+}
+ipcMain.handle("openplc:status", () => editorStatus());
+// Recientes: abrir un sketch o un proyecto OpenPLC por su carpeta, sin copiarlo.
+ipcMain.handle("sketch:openDir", (_e, dir) => {
+  if (!dir || !existsSync(dir)) throw new Error(`ya no existe ${dir}`);
+  return readSketch(dir);
+});
+
+ipcMain.handle("openplc:choose", async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: "Ubicar el OpenPLC Editor (JWPLC Edition)",
+    properties: ["openFile"],
+    filters: process.platform === "win32" ? [{ name: "Aplicación", extensions: ["exe"] }] : [],
+  });
+  if (!r.canceled && r.filePaths[0]) writeFileSync(editorCfgFile(), JSON.stringify({ path: r.filePaths[0] }, null, 2) + "\n");
+  return editorStatus();
+});
+
+ipcMain.handle("project:pickFolder", async (_e, current) => {
+  const r = await dialog.showOpenDialog(win, { title: "Carpeta del proyecto", defaultPath: current || workspaceDir(), properties: ["openDirectory", "createDirectory"] });
+  return r.canceled ? null : r.filePaths[0];
+});
+
+ipcMain.handle("project:createArduino", (_e, { name, parent }) => {
+  const bad = checkProjectName(name);
+  if (bad) throw new Error(`nombre no válido: ${bad}`);
+  const dir = join(resolve(parent || workspaceDir()), name);
+  if (existsSync(dir)) throw new Error(`ya existe ${dir}`);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${name}.ino`), TEMPLATE);
+  return readSketch(dir);
+});
+
+ipcMain.handle("project:createOpenPlc", async (_e, { name, parent, language, interval }) => {
+  const ed = findEditor();
+  if (!ed) throw new Error("no se encontró el OpenPLC Editor (JWPLC Edition): instálelo o ubíquelo con «Ubicar el OpenPLC Editor…»");
+  const dir = await createProject(ed, { name, parent: parent || workspaceDir(), language, interval });
+  return readSketch(dir);
+});
+
+ipcMain.handle("openplc:openInEditor", async (_e, dir) => {
+  const ed = findEditor();
+  if (!ed) throw new Error("no se encontró el OpenPLC Editor (JWPLC Edition): instálelo o ubíquelo con «Ubicar el OpenPLC Editor…»");
+  await openInEditor(ed, dir);
+  editorLinked = true;
+  return ed.label;
 });
 
 // ---------------------------------------------------------------- proyectos
@@ -406,7 +627,7 @@ ipcMain.handle("watch:set", (_e, dir) => {
   // hmi/), en subcarpetas; nunca su salida (build/).
   const plc = isOpenPlcProject(dir);
   const relevant = (name) =>
-    plc ? !/^build[\\/]/.test(name) && (name === "project.json" || /^(pous|devices|hmi)[\\/]/.test(name)) : SKETCH_EXT.has(extname(name).toLowerCase());
+    plc ? !/^build[\\/]/.test(name) && (name === "project.json" || /^(pous|devices|hmi)[\\/]/.test(name)) : isSketchFile(name);
   watcher = watch(dir, { recursive: plc }, (_event, rawName) => {
     const name = rawName && String(rawName).split(sep).join("/");
     if (!name || !relevant(name)) return;
@@ -416,7 +637,15 @@ ipcMain.handle("watch:set", (_e, dir) => {
     pending.set(
       p,
       setTimeout(() => {
-        if (!existsSync(p)) return;
+        if (!existsSync(p)) {
+          // Sketch: un archivo borrado fuera se quita de las pestañas.
+          if (!plc) {
+            ownWrites.delete(p);
+            forward("fs:changed", { name, path: p, content: null, deleted: true, at: Date.now(), openplc: false });
+          }
+          return;
+        }
+        if (!statSync(p).isFile()) return;
         const content = readFileSync(p, "utf8");
         if (ownWrites.get(p) === content) return;
         ownWrites.set(p, content);
@@ -543,9 +772,11 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out" && forward("sim:message", m));
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
+    goalTracker = activeGoals?.length ? new GoalTracker(activeGoals) : null;
     sceneSession.on("snapshot", (snap) => {
       lastSceneInputs = snap.inputs ?? null;
       forward("scene:snapshot", snap);
+      if (goalTracker) forward("goals:progress", goalTracker.update(snap));
     });
     sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
   }
@@ -613,12 +844,73 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
 // ---------------------------------------------------------------- escena (G7)
 function registry() {
   // Un dispositivo instalado roto no deja a la app sin la biblioteca incluida.
-  registryPromise ??= registryWithInstalled().catch((err) => {
+  // Un dispositivo enlazado que no carga (error en su código) se avisa y se salta.
+  registryPromise ??= registryWithInstalled({ onError: (d, err) => forward("sim:stderr", `[jwsim] dispositivo ${d.type ?? d.dir}: ${err.message}\n`) }).catch((err) => {
     forward("sim:stderr", `[jwsim] dispositivos instalados: ${err.message}\n`);
     return new Registry();
   });
   return registryPromise;
 }
+
+// ---- Gestor de dispositivos (modo desarrollador): carpetas enlazadas sin el
+// índice firmado, validadas (contrato y símbolos en la grilla) y recargadas
+// sin reiniciar. Una simulación en marcha sigue con lo que tenía.
+async function devicesState() {
+  const reg = await registry();
+  const local = await Promise.all(localDevices().map((d) => (d.error ? { dir: d.dir, ok: false, errors: [d.error], warnings: [] } : checkDeviceDir(d.dir))));
+  for (const d of local) d.loaded = !!d.type && reg.list().some((x) => x.type === d.type);
+  const fromIndex = installedDevices().filter((d) => !d.local).map(({ type, version, kind, name }) => ({ type, version, kind, name }));
+  return { builtin: builtinDevices.length, installed: fromIndex, local };
+}
+function reloadDevices() {
+  registryPromise = null;
+  return registry();
+}
+ipcMain.handle("devices:list", () => devicesState());
+ipcMain.handle("devices:link", async (_e, dir) => {
+  if (!dir) {
+    const r = await dialog.showOpenDialog(win, { title: "Carpeta del dispositivo (con jwsim-device.json)", properties: ["openDirectory"] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    dir = r.filePaths[0];
+  }
+  await linkDevice(dir);
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:unlink", async (_e, dir) => {
+  unlinkDevice(dir);
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:reload", async () => {
+  await reloadDevices();
+  return devicesState();
+});
+ipcMain.handle("devices:reveal", (_e, dir) => shell.openPath(dir));
+
+// ---- Nuevo dispositivo (etapa B): bloques de comportamiento → carpeta del
+// SDK generada (cli/lib/device-gen.mjs), enlazada y lista en la paleta.
+const devicesHome = () => join(workspaceDir(), "Dispositivos");
+ipcMain.handle("devices:behaviors", () => ({ behaviors: BEHAVIORS, models: MODELS, ramp: RAMP, parent: devicesHome() }));
+ipcMain.handle("devices:preview", (_e, spec) => {
+  try {
+    const o = normalizeSpec(spec);
+    const L = symbolLayout(o);
+    return { ok: true, type: o.type, svg: generateDevice(spec).files["symbol.svg"], w: L.w, h: L.h, top: L.top.map((t) => t.id), bottom: L.bottom.map((t) => t.id) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+ipcMain.handle("devices:pickParent", async (_e, current) => {
+  const r = await dialog.showOpenDialog(win, { title: "Carpeta donde crear el dispositivo", defaultPath: current || devicesHome(), properties: ["openDirectory", "createDirectory"] });
+  return r.canceled ? null : r.filePaths[0];
+});
+ipcMain.handle("devices:create", async (_e, { spec, parent }) => {
+  const r = writeDevice(parent || devicesHome(), spec);
+  await linkDevice(r.dir);
+  await reloadDevices();
+  return { dir: r.dir, type: r.spec.type, state: await devicesState() };
+});
 
 // Definiciones para la paleta y el inspector (sin funciones).
 ipcMain.handle("scene:devices", async () =>
@@ -633,6 +925,7 @@ ipcMain.handle("scene:devices", async () =>
     terminals: d.terminals,
     actions: d.actions ?? [],
     installed: installedDevices().some((x) => x.type === d.type),
+    local: installedDevices().some((x) => x.type === d.type && x.local),
   })),
 );
 
@@ -845,21 +1138,48 @@ function buildMenu() {
       {
         label: "Archivo",
         submenu: [
+          { label: "Proyectos (inicio)…", click: send("startScreen") },
+          { label: "Centro de aprendizaje…", click: send("learnCenter") },
+          { label: "Nuevo proyecto…", accelerator: "CmdOrCtrl+Alt+N", click: send("newProject") },
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
           { label: "Guardar", accelerator: "CmdOrCtrl+S", click: send("save") },
           { type: "separator" },
+          { label: "Nuevo archivo en el sketch…", accelerator: "CmdOrCtrl+Shift+N", click: send("newFile") },
+          { label: "Agregar archivos al sketch…", click: send("importFiles") },
+          { type: "separator" },
           { label: "Abrir proyecto…", accelerator: "CmdOrCtrl+Shift+O", click: send("openProject") },
           { label: "Guardar proyecto", accelerator: "CmdOrCtrl+Shift+S", click: send("saveProject") },
           { type: "separator" },
+          { label: "Abrir en OpenPLC Editor", click: send("openInEditor") },
           { label: "Abrir carpeta de trabajo", click: () => shell.openPath(workspaceDir()) },
           { type: "separator" },
           { role: "quit", label: "Salir" },
         ],
       },
       {
+        label: "Edición",
+        submenu: [
+          { label: "Deshacer", accelerator: "CmdOrCtrl+Z", click: send("undo") },
+          { label: "Rehacer", accelerator: "CmdOrCtrl+Y", click: send("redo") },
+          { type: "separator" },
+          { role: "cut", label: "Cortar" },
+          { role: "copy", label: "Copiar" },
+          { role: "paste", label: "Pegar" },
+          { label: "Duplicar", accelerator: "CmdOrCtrl+D", click: send("duplicate") },
+          { label: "Eliminar", accelerator: "Delete", click: send("delete") },
+          { type: "separator" },
+          { role: "selectAll", label: "Seleccionar todo" },
+        ],
+      },
+      {
         label: "Herramientas",
-        submenu: [{ label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") }],
+        submenu: [
+          { label: "Autoformato", accelerator: "CmdOrCtrl+T", click: send("format") },
+          { type: "separator" },
+          { label: "Dispositivos propios…", click: send("devices") },
+          { label: "Nuevo dispositivo…", click: send("newDevice") },
+        ],
       },
       {
         label: "Simulación",
@@ -913,7 +1233,34 @@ function buildMenu() {
 // cae a SwiftShader por software en lugar de no estar disponible.
 app.commandLine.appendSwitch("enable-unsafe-swiftshader");
 
+// G6 SIMULATE_BUTTON: el OpenPLC Editor lanza la app con --jwsim-open. Si ya hay
+// una abierta, el proyecto se abre en ella y este proceso termina; abrir varias
+// a mano (sin la opción) sigue funcionando.
+let pendingOpen = openArg(process.argv);
+// Sim y editor van juntos (abierto con Simular o el Sim abrió el editor): al
+// cerrar el Sim se pide cerrar también el editor.
+let editorLinked = !!pendingOpen;
+let rendererReady = false;
+const primary = app.requestSingleInstanceLock();
+if (!primary && pendingOpen) app.quit();
+app.on("second-instance", (_e, argv) => {
+  const target = openArg(argv);
+  if (!target) return;
+  editorLinked = true;
+  if (win?.isMinimized()) win.restore();
+  win?.focus();
+  if (rendererReady) forward("app:openTarget", target);
+  else pendingOpen = target;
+});
+ipcMain.handle("app:takeOpenTarget", () => {
+  rendererReady = true;
+  const target = pendingOpen;
+  pendingOpen = null;
+  return target;
+});
+
 app.whenReady().then(() => {
+  if (!primary && pendingOpen) return;
   buildMenu();
   win = new BrowserWindow({
     width: 1440,
@@ -940,4 +1287,13 @@ app.on("window-all-closed", async () => {
   await stopRunner();
   await comBridge?.close();
   app.quit();
+});
+
+// Cerrar la ventana, Archivo ▸ Salir o app.quit(): todos pasan por will-quit.
+// El pedido sale en un proceso aparte que sigue aunque el Sim termine.
+app.on("will-quit", () => {
+  if (!editorLinked || process.env.JWSIM_CLOSE_EDITOR === "0") return;
+  editorLinked = false;
+  const ed = findEditor();
+  if (ed) closeEditor(ed).catch(() => {});
 });

@@ -1,6 +1,47 @@
 {
   "$schema": "../../schema/jwsim-rubric-1.json",
   "id": "01-marcha-parada",
+  "goals": [
+    {
+      "id": "arranca",
+      "description": "Pulse S1: el motor arranca y sigue en marcha al soltarlo",
+      "when": {
+        "KM1.closed": true,
+        "M1.running": true
+      },
+      "hold_ms": 2000
+    },
+    {
+      "id": "piloto",
+      "description": "El piloto H1 se enciende con el motor en marcha",
+      "when": {
+        "KM1.closed": true,
+        "H1.lit": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "para",
+      "description": "Pulse S0: el motor se detiene y queda detenido",
+      "when": {
+        "KM1.closed": false,
+        "M1.running": false,
+        "H1.lit": false
+      },
+      "after": "arranca",
+      "hold_ms": 1500
+    },
+    {
+      "id": "rearranca",
+      "description": "Vuelve a arrancar con S1 después de la parada",
+      "when": {
+        "KM1.closed": true
+      },
+      "after": "para",
+      "hold_ms": 1000,
+      "extra": "merit"
+    }
+  ],
   "cases": [
     {
       "name": "Arranque y enclavamiento",

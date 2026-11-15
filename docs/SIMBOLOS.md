@@ -42,6 +42,7 @@ archivo `<nombre>__<valor>.svg`, con el valor en minúsculas y sin signos
 | `power-24vdc` | `model` | `power-24vdc__mdr60.svg` (por defecto), `__hdr60`, `__ndr120` |
 | `lamp` | `model` | `lamp.svg` (XB2, por defecto), `lamp__ad16.svg` |
 | `contactor` | `aux` | `contactor.svg` (10: 13-14 NA, CJX2-0910), `contactor__01.svg` (01: 21-22 NC, CJX2-0901) |
+| `breaker` | `poles` | `breaker.svg` (1P, por defecto), `breaker__2p.svg`, `breaker__3p.svg` |
 
 Cada variante puede tener otro tamaño y otros bornes. Una variante que no
 muestra un borne de la definición (p. ej. la HDR-60 no tiene PE) deja ese
@@ -66,6 +67,18 @@ Cada borne se marca con un círculo de clase `jw-term`:
 - El cable llega al borde del símbolo, a la altura de `cx`. Ahí conviene
   dibujar la ranura o la boca de la bornera: el simulador pone encima el
   casquillo del terminal.
+
+Si el tornillo que se ve no está donde entra el cable (p. ej. la bornera de
+control del VFD-EL, cuyos cables entran abajo a la izquierda), se marca
+además con `jw-term-alt`, con el mismo `data-term`:
+
+```xml
+<circle class="jw-term-alt" data-term="MI1" cx="436.8" cy="386" r="6"/>
+```
+
+Un clic (o soltar un cable arrastrado) en ese punto conecta el mismo borne;
+el cable sigue entrando por su `jw-term`. `cx` y `cy` son libres (no van en
+la grilla) y el simulador también oculta el círculo.
 
 ## 3. Partes que dependen del estado
 
@@ -132,6 +145,43 @@ el tamaño actual, sus bornes, parámetros, acciones y salidas, y los dibujos
 actuales en reposo y activos como punto de partida.
 
 ## 6. Estado de la biblioteca
+
+Catálogo, tanda 1 (propuesta del 10/11/2026, **por aprobar**, sin fotos propias
+todavía: medidas y aspecto de los catálogos de cada fabricante; hay que
+validarlas con fotos de JW Control según los lineamientos 2.1):
+
+- `gen_mando_tanda1.py` (familia XB2 de `fam22.py`): parada de emergencia
+  XB2-BS542 (hongo Ø40; suelta, deja ver el anillo verde del vástago;
+  enclavada, hundida y más oscura), pulsador luminoso XB2-BW33 (bloque LED
+  X1-X2) y selector de llave XB2-BG21 (la llave gira con `out.position`).
+- `gen_breaker_nxb63.py`: termomagnético NXB-63 de 1, 2 y 3 polos, el mismo
+  frente que la red de 230 VAC con los bornes de entrada cableables, la
+  palanca accionable, el calibre de `out.rating` y el rótulo DISPARÓ.
+- `gen_tablero_tanda1.py`: guardamotor NS2-25 (polos en x = 40, 80, 120,
+  sobre el contactor; auxiliar lateral; perilla O-TRIP-I y dial), relé
+  temporizador de riel DIN (LED U y R, función, dial y aguja de avance),
+  SSR Fotek SSR-40DA y torre de señalización LTA-205-3 (campo, 2 px/mm).
+- `gen_sensor_capacitivo_cr18.py`: capacitivo Autonics CR18, hecho a
+  partir del inductivo PR18: cuerpo de plástico, perilla SENS, histéresis
+  del 20 % y el material en la pieza. El inductivo y el capacitivo
+  muestran el alcance real (`out.snTxt`) bajo la zona.
+
+Tanda 2 (propuesta del 10/11/2026, **por aprobar**, igual sin fotos propias),
+`gen_instrumentos_tanda2.py`: interruptor de nivel tipo pera y
+porta-electrodos (campo, 2 px/mm, dentro de un corte del tanque con el agua;
+el agua de los electrodos se arrastra con `data-drag` y recorta con un
+`clipPath`), relé de nivel de riel DIN (como el temporizador, con el esquema
+del tanque que lee), presostato KP35 y termostato KP77 (escala de corte y
+diferencial, contacto 1-2-4 a la vista, valor medido y deslizador; sin el
+logo de la marca) y voltímetro y amperímetro AD16-22 (familia AD16, display
+LED con `out.lcd`).
+
+Tanda 3 (propuesta del 10/11/2026, **por aprobar**), `gen_fieldbus_tanda3.py`:
+módulo de E/S remotas 8DI/8DO de riel DIN (LED por entrada y salida, PWR y
+dirección), medidor PZEM-016 (bornera L N A B, TC de anillo con CT1 y CT2 y
+la lectura en un rótulo, porque el equipo no tiene pantalla) y controlador
+de temperatura 48 × 48 (PV y SV, LED OUT y AL1, bornera trasera arriba y
+abajo).
 
 Símbolos v2 (aprobados por JW Control el 24/10/2026, según
 `simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
@@ -201,7 +251,9 @@ Sw2 AVI/ACI (su palanca sigue a `param.sw2`), la bornera de control verde en dos
 RC y el puerto RS-485, subidos para dejar paso al cableado; abajo U/T1 V/T2
 W/T3, + y - y la barra de tierra. Los puntos de conexión de la bornera de
 control están fuera del cuerpo, abajo a la izquierda, uno a continuación del
-otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-). El cable interno de
+otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-); el
+cable se lleva (o se suelta) en el tornillo verde de la bornera, marcado con
+`jw-term-alt`, y el resto del recorrido se dibuja solo. El cable interno de
 cada borne (baja, corre a la izquierda por su carril y baja por el costado,
 sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
 escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+

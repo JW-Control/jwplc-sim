@@ -13,7 +13,7 @@
 //     "sdk": 1 }
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -21,6 +21,7 @@ import { pathToFileURL } from "node:url";
 import { Registry } from "../../scene/devices/index.mjs";
 import { Scene } from "../../scene/scene.mjs";
 import { ROOT } from "./build.mjs";
+import { checkDeviceSymbols } from "./symbol-check.mjs";
 import { packTarGz } from "./tar.mjs";
 import { toolchain } from "./toolchain.mjs";
 
@@ -104,11 +105,16 @@ export function buildNativeDevice(dir, { target = "native", outDir, log = () => 
   return { manifest: m, lib };
 }
 
-/** Definiciones de un dispositivo de escena (módulo ES), validadas. */
-export async function loadSceneDevice(dir) {
+/**
+ * Definiciones de un dispositivo de escena (módulo ES), validadas. Con
+ * `fresh`, el módulo se vuelve a leer del disco (recargar sin reiniciar; los
+ * módulos que importe a su vez siguen en la caché de Node).
+ */
+export async function loadSceneDevice(dir, { fresh = false } = {}) {
   const m = readManifest(dir);
   if (m.kind !== "scene") throw new Error(`${m.type} es nativo: lo carga el runner (--device)`);
-  const mod = await import(pathToFileURL(resolve(dir, m.entry)).href);
+  const url = pathToFileURL(resolve(dir, m.entry)).href + (fresh ? `?v=${Date.now()}-${Math.random().toString(36).slice(2)}` : "");
+  const mod = await import(url);
   const defs = [mod.default ?? mod.device].flat().filter(Boolean);
   if (!defs.length) throw new Error(`${m.entry} no exporta la definición (export default)`);
   if (!defs.some((d) => d.type === m.type && d.version === m.version)) {
@@ -135,11 +141,90 @@ export function packDevice(dir) {
   };
 }
 
-/** Dispositivos instalados: [{ type, version, kind, dir, lib? }]. */
+// ---------------------------------------------------------------- modo desarrollador
+// Carpetas de dispositivos de escena en desarrollo, enlazadas sin pasar por
+// el índice firmado (jwsim-cli device link <carpeta> o el gestor de la app).
+// Ejecutan código: solo carpetas de confianza.
+export const localLinksFile = () => join(jwsimHome(), "devices-local.json");
+
+/** Carpetas enlazadas (rutas absolutas). */
+export function localLinks() {
+  try {
+    const j = JSON.parse(readFileSync(localLinksFile(), "utf8"));
+    return Array.isArray(j.dirs) ? j.dirs.filter((d) => typeof d === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLinks(dirs) {
+  mkdirSync(jwsimHome(), { recursive: true });
+  writeFileSync(localLinksFile(), JSON.stringify({ dirs: [...new Set(dirs)] }, null, 2) + "\n");
+}
+
+/**
+ * Valida un dispositivo de escena en una carpeta: manifiesto, contrato (se
+ * instancia) y símbolos. No lanza: devuelve el resultado.
+ */
+export async function checkDeviceDir(dir, { fresh = true } = {}) {
+  const out = { dir, ok: false, type: null, version: null, name: null, errors: [], warnings: [], symbols: [] };
+  try {
+    const { manifest, defs } = await loadSceneDevice(dir, { fresh });
+    Object.assign(out, { type: manifest.type, version: manifest.version, name: manifest.name, category: defs[0].category ?? "Otros" });
+    out.symbols = checkDeviceSymbols(dir, defs);
+    for (const s of out.symbols) {
+      for (const e of s.errors) out.errors.push(`${s.file}: ${e}`);
+      for (const w of s.warnings) out.warnings.push(`${s.file}: ${w}`);
+    }
+    if (!out.symbols.length) out.warnings.push("sin symbol.svg: se dibuja como módulo genérico con los bornes repartidos en la grilla");
+  } catch (err) {
+    out.errors.push(err.message);
+  }
+  out.ok = !out.errors.length;
+  return out;
+}
+
+/** Enlaza una carpeta (modo desarrollador). Lanza si no es un dispositivo de escena válido. */
+export async function linkDevice(dir) {
+  const abs = resolve(dir);
+  const m = readManifest(abs);
+  if (m.kind !== "scene") throw new Error(`${m.type}: solo se enlazan dispositivos de escena (es ${m.kind})`);
+  const r = await checkDeviceDir(abs);
+  if (!r.ok) throw new Error(`${m.type}: ${r.errors.join("; ")}`);
+  const other = localDevices().find((d) => d.type === m.type && d.dir !== abs);
+  if (other) throw new Error(`${m.type} ya está enlazado desde ${other.dir}`);
+  saveLinks([...localLinks(), abs]);
+  return r;
+}
+
+/** Quita un enlace por carpeta o por tipo; devuelve las carpetas quitadas. */
+export function unlinkDevice(target) {
+  const abs = resolve(target);
+  const dirs = localLinks();
+  const gone = dirs.filter((d) => d === abs || localDevices().find((x) => x.dir === d)?.type === target);
+  if (!gone.length) throw new Error(`no hay un dispositivo enlazado ${target}`);
+  saveLinks(dirs.filter((d) => !gone.includes(d)));
+  return gone;
+}
+
+/** Dispositivos enlazados: [{ type, version, kind, name, dir, local: true }] o { dir, error }. */
+export function localDevices() {
+  return localLinks().map((dir) => {
+    try {
+      const m = readManifest(dir);
+      return { type: m.type, version: m.version, kind: m.kind, name: m.name, dir, local: true };
+    } catch (err) {
+      return { dir, local: true, error: err.message };
+    }
+  });
+}
+
+/** Dispositivos instalados del índice y enlazados: [{ type, version, kind, dir, lib?, local? }]. */
 export function installedDevices() {
+  // Los enlazados van primero: si coinciden tipo y versión con uno del índice, manda el local.
+  const out = localDevices().filter((d) => !d.error && d.kind === "scene");
   const root = devicesDir();
-  if (!existsSync(root)) return [];
-  const out = [];
+  if (!existsSync(root)) return out;
   for (const t of readdirSync(root).sort()) {
     for (const v of readdirSync(join(root, t)).sort()) {
       const dir = join(root, t, v);
@@ -155,12 +240,24 @@ export function installedDevices() {
   return out;
 }
 
-/** Registro con los dispositivos incluidos más los de escena instalados. */
-export async function registryWithInstalled() {
+/**
+ * Registro con los dispositivos incluidos más los de escena instalados y
+ * enlazados. `onError(d, err)` recibe los que no cargan (no frenan a los demás).
+ */
+export async function registryWithInstalled({ fresh = false, onError } = {}) {
   const reg = new Registry();
   for (const d of installedDevices()) {
     if (d.kind !== "scene") continue;
-    const { defs } = await loadSceneDevice(d.dir);
+    let defs;
+    try {
+      ({ defs } = await loadSceneDevice(d.dir, { fresh: fresh || !!d.local }));
+    } catch (err) {
+      if (onError) {
+        onError(d, err);
+        continue;
+      }
+      throw err;
+    }
     for (const def of defs) {
       try {
         reg.add(def);

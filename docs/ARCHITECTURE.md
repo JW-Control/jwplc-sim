@@ -122,7 +122,6 @@ nuevo del package sin clasificar hace fallar el build.
 `rom/ets_sys.h`, `soc/{gpio_reg,gpio_sig_map,rtc,uart_pins,spi_struct}.h`, `lwip/{ip_addr,netif}.h`.
 Contienen **solo** lo que el código del package consume (medido en G0
 compilando el cierre completo); cuando una alpha use algo nuevo, se agrega
-aquí.
 
 ### 2.4 FreeRTOS usado por el package (medido en G0)
 
@@ -307,17 +306,20 @@ lo que se descarga. `scripts/fetch-editor.mjs` deja en `.jwsim/editor/<tag>/`:
 - las fuentes del editor (sparse checkout) y su pipeline empaquetado con
   esbuild (`deps/pipeline.cjs`): las mismas funciones que usa el main process
   (`runCompilePipeline`, `parseProjectFiles`, `preprocessPous`,
-  `XmlGenerator`, `mergeStrucppRuntimeIntoSkeleton`, `buildDefaultPinMapping`);
-- xml2st y STruC++ en las versiones de `binary-versions.json` del editor, y las
+  `fromSchemaShape` y `transpileToSt`, `mergeStrucppRuntimeIntoSkeleton`,
+  `buildDefaultPinMapping`);
+- STruC++ en la versión de `binary-versions.json` del editor, y las
   `.stlib` incluidas de STruC++ (todas, como `LibraryManagerModule`);
 - el VPP del JWPLC Basic en `PLATFORM_VPP_SHA` del workflow de pre-release del
   editor (el mismo VPP que empaqueta esa versión).
 
 `cli/lib/openplc.mjs` hace lo que el editor: proyecto → datos
-(`parseProjectFiles`), preproceso y forma IPC (`compiler-adapter.ts`),
+(`parseProjectFiles`), alias de E/S a direcciones (`resolveProjectAliases`, con
+las direcciones guardadas en el proyecto), preproceso y forma IPC (`compiler-adapter.ts`),
 esqueleto `Baremetal` + runtime de STruC++ + HAL `jwplcbasic.cpp` del VPP
 como `src/arduino.cpp` (`compiler-module.ts`) y `runCompilePipeline`:
-xml2st → ST, STruC++ → C++, `defines.h` (defines del HAL, MD5, pines por
+ST con el transpilador JSON del editor (`st-transpiler`; desde 4.3 el editor
+ya no usa xml2st), STruC++ → C++, `defines.h` (defines del HAL, MD5, pines por
 defecto del VPP), bundle. Solo cambia el port: no instala core ni librerías
 (se usa el package fijado) y, en vez de llamar a arduino-cli, devuelve el
 sketch (`examples/Baremetal/`) y la librería `src/`. `buildSketch` los compila
@@ -337,6 +339,12 @@ en el OpenPLC Editor. La app vigila la carpeta en forma recursiva
 del editor se agrupan (300 ms) y, con la simulación en marcha, se recompila
 con la cadena del editor y se reinicia conservando la escena, como la
 recarga de un sketch (G2 EXTERNAL_EDIT_RELOAD).
+
+El botón «Simular» del editor **[G6 SIMULATE_BUTTON]** lanza la app con
+`--jwsim-open=<carpeta del proyecto o project.json>` (`app/lib/open-arg.mjs`). Si
+ya hay una abierta, el proyecto se abre en ella y el proceso nuevo termina; si
+es el proyecto ya abierto, no se recarga. Abrir varias instancias a mano, sin
+la opción, sigue funcionando.
 
 Límites de la primera versión: el MENU/HMI del proyecto (`hmi/`,
 `finalizeJwplcHmiSkeleton`) y el Modbus de la pantalla del VPP
@@ -505,7 +513,7 @@ botones de la interfaz.
   N celeste; el mando en negro. Con la simulación en marcha, los cables en
   el positivo de una fuente en servicio brillan.
 
-**Biblioteca** (18 definiciones; símbolos en `docs/SIMBOLOS.md` §6):
+**Biblioteca** (53 definiciones; símbolos en `docs/SIMBOLOS.md` §6):
 
 | Tipo | Bornes | Comportamiento |
 |---|---|---|
@@ -515,16 +523,33 @@ botones de la interfaz.
 | `pushbutton-no`, `pushbutton-nc`, `pushbutton-nono`, `pushbutton-nonc` | 13-14; 11-12; 13-14 + 23-24; 13-14 + 21-22 | Contactos mientras se pulsa |
 | `selector-2`, `selector-3` | 13-14/21-22, 13-14/23-24 | Posiciones 0/I e I/0/II |
 | `limit-switch` | 13-14, 21-22 | A mano o por enlace mecánico |
-| `sensor-inductive`, `sensor-photoelectric` | BN/BU/BK | PNP o NPN, NA o NC, tiempo de respuesta, alimentado y con polaridad |
+| `sensor-inductive`, `sensor-capacitive`, `sensor-photoelectric` | BN/BU/BK | PNP o NPN, NA o NC, tiempo de respuesta, alimentado y con polaridad. Inductivo y capacitivo: la pieza a una distancia (`distance`) con alcance real Sn × factor del `material` (inductivo: acero 1, inoxidable 0,75, latón 0,5, aluminio 0,45, cobre 0,4, no metales 0; capacitivo: metal y agua 1, vidrio y madera 0,5, plástico 0,45, papel 0,2) y, en el capacitivo, × la `sensitivity` (20-100 %); histéresis 10 % y 20 %. Salidas `sn` y `snTxt` |
+| `float-switch` | BK, BN, BU | Interruptor de nivel tipo pera: sube con el nivel en `alto` y baja en `bajo` (enlaces a `source`, p. ej. T1.nivel); sin fuente, acción `float` (toggle). BK-BN cierra arriba, BK-BU abajo |
+| `level-electrodes` | E1, E2, E3 | Porta-electrodos: varillas mojadas según el nivel (enlaces a `source` con las alturas `alto` y `bajo`, o la acción `nivel` arrastrando el agua); las publica como sonda `electrodos` (0, 1 o 2 mojadas) para el relé de nivel cableado uno a uno |
+| `pressure-switch`, `thermostat` | 1, 2, 4 | Presostato KP35 y termostato KP77: al subir hasta `corte` cierra 1-4 y abre 1-2; vuelve en `corte` − `dif`. La magnitud se lee de `source` (enlaces y lectura) o se arrastra (acción `presion` o `temperatura`). Salidas `activado`, `texto`, `ajusteTxt` |
+| `emergency-stop` | 11-12 NC, 23-24 NA | Parada de emergencia de enclavamiento (acción `press` de tipo toggle: queda pulsada hasta girarla) |
+| `pushbutton-lit` | 13-14, X1-X2 | Pulsador luminoso: 13-14 mientras se pulsa y LED independiente (24 VDC o 230 VAC) |
+| `selector-key` | 13-14, 21-22 | Selector de llave 0/I |
 | `lamp`, `buzzer` | X1-X2, +/- | 24 VDC o 230 VAC, modelo XB2 o AD16 (`model`); el zumbador es polarizado |
+| `stack-light` | COM, R, A, V, Z | Torre de señalización: rojo, ámbar, verde y zumbador, cada uno entre su borne y COM (salidas `red`, `amber`, `green`, `buzzer`) |
 | `relay` | A1-A2, 11-12-14, 21-22-24 | Conmutados; atraque 8 ms, caída 4 ms |
+| `timer-relay` | A1-A2, 15-16-18, 25-26-28 | Temporizador multifunción (`mode`): retardo a la conexión, retardo a la desconexión, intermitente (empieza cerrado), impulso y estrella-triángulo (15-18 estrella hasta `time`, 25-28 triángulo tras `pauseMs`); en los demás modos los dos conmutados van juntos. Salidas `timing`, `progress` (0-1) y `remaining` |
+| `level-relay` | A1-A2, E1 E2 E3, 11-12-14 | Relé de nivel por electrodos (RM4-LG01): lee la sonda `electrodos` cableada a E1 E2 E3 (sin cablear: seco); `modo` llenado (cierra 11-14 con el nivel bajo E2 hasta mojar E1) o vaciado (al revés), con `retardoMs` |
+| `ssr` | 1-2, 3 (+), 4 (−) | Relé de estado sólido Fotek SSR-40DA: entrada de 24 VDC polarizada, salida 1-2 con 8,3 ms de retardo (cruce por cero) |
 | `contactor` | A1-A2, 1-2/3-4/5-6, 13-14 o 21-22 | Auxiliar 13-14 NA (`aux` 10, CJX2-0910) o 21-22 NC (`aux` 01, CJX2-0901); atraque 20 ms, caída 10 ms |
 | `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
 | `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 | `overload-relay` | 1-2, 3-4, 5-6, 95-96 NC, 97-98 NO | Relé térmico CHINT NR2-25 (ficha CHINT serie NR2): mide la corriente de cada polo (`currentSensors` en 2, 4 y 6) y dispara por sobrecarga con una imagen térmica de clase 10 (θ → (I/ajuste)² con la constante `tauS` = 120 s; dispara en θ = 1,15²: 7,2 × ajuste en ~3 s, 1,5 × en menos de 2 min, 1,05 × no dispara), por falta de fase después de `tripMs` o con TEST; STOP abre 95-96 mientras se pulsa; rearme manual (H) con RESET o automático (A) tras `rearmeMs`, en los dos casos solo frío (θ ≤ 1). Salidas `corriente`, `calor` (% del disparo) y `sobrecarga` |
+| `breaker` | 1-2, 3-4, 5-6 | Termomagnético CHINT NXB-63 de 1, 2 o 3 polos (`poles`, una plantilla por variante), `In` y curva B/C/D: imagen térmica (`tauS`, dispara en (1,3 × In)²) y disparo magnético instantáneo a 4, 7,5 o 15 × In con la corriente de la salida (`currentSensors` en 2, 4, 6). La palanca (acción `lever`, toggle) abre y cierra; disparado queda abajo y solo sube con el bimetal frío. Salidas `on`, `tripped`, `rating` («C16») |
+| `motor-protector` | 1-2, 3-4, 5-6, 13-14 NA, 21-22 NC | Guardamotor CHINT NS2-25 con auxiliar NS2-AE11: térmico de clase 10 ajustable (`range`, `ajuste`, como el NR2), magnético a 13 × el máximo del rango, falta de fase tras `tripMs` y TEST. Perilla (acción `knob`): O → I; disparado queda en TRIP (`knob` 0,5) y hay que pasar por O antes de volver a I |
 | `motor-2v` | 1U 1V 1W, 2U 2V 2W, PE | Trifásico de dos velocidades con bobinados independientes (lavado/centrifugado de la JWPLC Laundry): `velocidad` baja o alta, `rpm`, `conflicto` con los dos bobinados energizados (no gira, rotor bloqueado); corriente de cada bobinado (`InLow`, `InHigh`, `carga`) |
 | `vfd-el` | R S, U V W, PE; MI1-MI6, DCM, +24V; RA RB RC; SG+ SG-; +10V AVI ACM | Variador Delta VFD-EL (VFD007EL21A, estructura A, entrada 1F 220 V) programable según su manual: parámetros Pr.GG.NN (`scene/devices/vfd-el.mjs`, `VFD_EL_PARAMS`, con los valores de fábrica del manual: 02.00 = AVI, 02.01 = bornes, 02.05 = bloqueo del inicio) que se editan con el teclado (MODE recorre F, H, A, U, Frd/rEu y la selección GG.NN; ENTER guarda con «End» o «Err»; ▲▼ con repetición), el inspector o Modbus (dirección GGNNH); potenciómetro (04.00/04.02); 04.04 2 o 3 cables; MI3-MI6 (04.05-04.08) multivelocidad (15), reset, inhibir rampa, rampa 2, JOG (01.13-01.15), bloque base, UP/DOWN (02.07/02.08), EF, desconexión, bloqueo y fuente de operación; 04.09 NA/NC; límites 01.05/01.07/01.08; relé 03.00; registro de fallas 06.08-06.12; Modbus 2000H-2002H, 2100H-2109H, excepciones CE02/CE03 y pérdida de comunicación CE10 (09.02/09.03). Plantillas de taller (`presets`). Lo que se programa en el equipo vuelve a la escena (`DeviceStep.params`). Corriente de salida (`currentSensors` en U V W): la del motor conectado, en la página A, la salida `corriente` y 2104H (× 10). Entrada analógica AVI con el conmutador Sw2 (parámetro `sw2`): en AVI lee 0-10 V (potenciómetro externo en 10V-AVI-ACM o una señal de tensión) y en ACI 4-20 mA; escalado 04.11-04.18, pérdida de ACI bajo 2 mA según 02.06 (falla AErr, código 32, tras 100 ms); avisos si Sw2 no coincide con la señal o con 02.00. Plantillas «Potenciómetro externo (AVI)» y «Señal 4-20 mA (ACI)» |
+| `voltmeter` | 1, 2 | Voltímetro AD16-22FS (60-500 VAC) o AD16-22DSV (6-100 VDC, con signo): carga de medición (`meter: true` en el netlist: sin tensión nominal ni avisos); fuera de rango o tipo equivocado, «---» |
+| `ammeter` | 1-2 | Amperímetro AD16-22FSA (0-100 A, TC incorporado), en serie: corriente de las cargas que la informan (`currentSensors` en 2) |
+| `remote-io` | +, −, A, B; DC, DI1-DI8; C1, DO1-DO4; C2, DO5-DO8 | Módulo de E/S remotas Modbus RTU (dir. 3): bobinas 0-7 = DO1-DO8 (01, 05, 15), entradas discretas 0-7 = DI1-DI8 (02), holding 0 / input 0 = máscaras (03, 04, 06, 16). Entradas de 24 VDC al común DC; relés en dos grupos. Sin alimentación sueltan y no responde |
+| `energy-meter` | L, N, A, B, CT1-CT2 | Medidor PZEM-016 (dir. 1): se alimenta de L-N (carga de medición), la fase pasa por el TC (CT1-CT2, `currentSensors` en CT2). Input 0-9 como su hoja de datos (V × 10, A × 1000 y W × 10 en 32 bits, Wh integrados en el tiempo, Hz × 10, fp × 100 con el parámetro `fp`, alarma); holding 1 = umbral de alarma |
+| `temp-controller` | L, N, A, B, R1 R2 R3, 11-14, 21-24 | Controlador 48 × 48 con RS-485 (dir. 4): PT100 cableada (sonda `pt100`, p. ej. la del fermentador) o simulada; ON-OFF con histéresis, calentar o enfriar; alarma por desvío o sonda abierta. Input 0 = PV × 10, 1 = estado; holding 0-3 = SV, histéresis, modo y desvío (06, 16) |
 | `potentiometer` | 1 2 3 | Potenciómetro de panel de 22 mm, 5 kΩ lineal: sonda `pot` (3, 2 cursor, 1) con la posición de la perilla (acción `pos`, se arrastra; queda en el parámetro `posicion`). Para la referencia de un variador: 3 a 10V, 2 a AVI y 1 a ACM |
 | `signal-source` | + - | Calibrador de lazo 4-20 mA / 0-10 V (parámetro `modo`), ajustable de 0 a 100 % (acción `valor`): sonda `4-20mA` o `0-10V` en + y -; salida `texto` («12.00 mA») |
 | `motor-1ph` | U1 U2 PE (+ Z1 Z2) | Monofásico WEG 220 V con capacitor de arranque: principal U1-U2 y auxiliar Z1-Z2. Parámetro `bornera`: «2 cables» (auxiliar puenteado de fábrica, adelante) o «4 cables» (Z1 y Z2 al tablero, para invertir el giro). El auxiliar solo actúa bajo el 75 % de la velocidad (interruptor centrífugo): sin él el motor zumba (`bloqueado`); el sentido lo da su polaridad respecto del principal y a velocidad no se invierte. Corriente: principal 6 × In al arrancar o zumbando y auxiliar 2 × In mientras actúa (`In` 5,6 A, `carga`). `jwsim/motor` queda como motor genérico de 230 VAC o 24 VDC (U1-U2) de los ejercicios |
@@ -615,7 +640,9 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 | Tipo | Lee | Salidas | Acciones |
 |---|---|---|---|
 | `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
-| `jwsim/tank` (tanque con bomba) | `bomba` (p. ej. `M1.running`) | `nivel` (0-1) y `nivelPct` como segmentos, `rebalse`, `vacio`, `bombeando` | `consumo` (L/min) |
+| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
+
+**Modelo del tanque (1.1):** balance de volumen dV/dt = bomba × caudal − consumo − válvula × Cd·a·√(2gh) (descarga por gravedad de Torricelli con `salidaMm`). La `forma` (modelo en la paleta: cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera) da el área A(h) ∝ f(h/H); V(h) se tabula y se invierte para la altura. Se integra con RK4 a `pasoMs` (discretización configurable, 1-1000 ms) y el nivel se publica en tramos lineales de un paso, así los sensores ven el cruce exacto. Con área constante y sin descarga es lineal y exacto (un tramo), igual que la 1.0.
 | `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
 
 La cinta integra el avance con la regla del trapecio (exacta en la rampa

@@ -31,6 +31,7 @@
 <line x1="468" y1="152" x2="468" y2="172" stroke="#f2c230" stroke-width="1.2"/>
 <text x="414" y="168" text-anchor="end" font-family="sans-serif" font-size="10" font-weight="700" fill="#7fe3a8">detección 8,0 mm</text>
 <text x="472" y="168" font-family="sans-serif" font-size="10" font-weight="700" fill="#f2c230">histéresis 8,8 mm</text>
+<text x="414" y="182" text-anchor="end" font-family="sans-serif" font-size="9" font-weight="700" fill="#c9cdd3" data-text="out.snTxt">Sn 8,0 mm · acero</text>
 <line x1="248" y1="80" x2="608" y2="80" stroke="#8a9099" stroke-width="1" stroke-dasharray="6 3 1.5 3"/>
 <path d="M60 80 H42 Q30 80 30 92 V176" fill="none" stroke="#0c0d0f" stroke-width="22" stroke-linecap="round"/>
 <path d="M60 80 H42 Q30 80 30 92 V176" fill="none" stroke="#33373d" stroke-width="18" stroke-linecap="round"/>
