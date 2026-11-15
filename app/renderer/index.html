@@ -117,6 +117,9 @@
               <span class="led-sm" id="led-pwr" title="Alimentación"></span><span>PWR</span>
               <span class="led-sm" id="led-run" title="Firmware en ejecución"></span><span>RUN</span>
               <span class="led-sm err" id="led-err" title="Error del firmware"></span><span>ERR</span>
+              <span class="led-sm buz" id="led-buz" title="Buzzer (GPIO26): encendido mientras suena"></span><span>BUZ</span>
+              <button class="buz-sound" id="buz-sound" title="Sonido del buzzer, relés y contactores" aria-label="Sonido">🔊</button>
+              <button class="buz-sound" id="tft-zoom-open" title="Ampliar la pantalla a escala exacta (también doble clic en la pantalla)" aria-label="Ampliar pantalla">⛶</button>
               <button class="sd-slot on" id="sd-slot" data-signal="SD_CARD" disabled
                 title="Zócalo microSD: clic para quitar o poner la tarjeta (detección por GPIO39)">microSD</button>
             </div>
@@ -157,7 +160,7 @@
             <!-- Mini placa: la pantalla y los LED del JWPLC mientras se mira la planta. -->
             <button class="mini-plc" id="mini-plc" title="Ir a la placa (Ctrl+4)" hidden>
               <canvas id="mini-tft" width="320" height="170"></canvas>
-              <span class="mini-leds"><i data-led="led-pwr"></i>PWR<i data-led="led-run"></i>RUN<i data-led="led-err" class="err"></i>ERR</span>
+              <span class="mini-leds"><i data-led="led-pwr"></i>PWR<i data-led="led-run"></i>RUN<i data-led="led-err" class="err"></i>ERR<i data-led="led-buz" class="buz"></i>BUZ</span>
             </button>
           </div>
           <div id="scene-view" class="scene-view" hidden>
@@ -186,7 +189,7 @@
                 <button id="scene-redo" class="icon" title="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>↷</button>
                 <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
                 <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
-                <button id="scene-sound" class="icon" title="Sonido de relés y contactores" aria-label="Sonido">🔊</button>
+                <button id="scene-sound" class="icon" title="Sonido (relés, contactores y buzzer)" aria-label="Sonido">🔊</button>
               </div>
               <aside class="scene-side" id="scene-side">
                 <!-- Como Fritzing: panel «Equipos» (las miniaturas) y, debajo, la «Ficha» (el Inspector), con un divisor entre los dos. -->
@@ -366,6 +369,20 @@
       <button id="sb-dock" class="ghost" title="Mostrar el panel inferior (Ctrl+J)">▴ Panel inferior</button>
     </footer>
 
+    <!-- Pantalla ampliada: la TFT a escala entera (cada píxel del ST7789 =
+         k×k píxeles de la pantalla de la PC), nítida para mirar o grabar. -->
+    <div id="tft-zoom" class="tft-zoom" hidden>
+      <div class="tft-zoom-box">
+        <canvas id="tft-zoom-canvas" width="320" height="170" tabindex="0"
+          title="Pantalla ampliada (con foco: flechas, Enter = OK, Esc = ESC)"></canvas>
+        <div class="tft-zoom-bar">
+          <span id="tft-zoom-scale"></span>
+          <button id="tft-zoom-minus" title="Más chica">−</button>
+          <button id="tft-zoom-plus" title="Más grande">+</button>
+          <button id="tft-zoom-close" title="Cerrar (clic fuera de la pantalla también cierra)">Cerrar</button>
+        </div>
+      </div>
+    </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
     <script src="completion.js"></script>

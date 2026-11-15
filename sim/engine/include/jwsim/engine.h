@@ -179,6 +179,16 @@ void jwsim_fatal(const char *fmt, ...) __attribute__((noreturn, format(printf, 1
 // en la placa real).
 void jwsim_set_fatal_hook(void (*hook)(void));
 
+// ---------------------------------------------------------------- PWM (LEDC)
+// Valor PWM actual de un pin (sim/hal/src/ledc.cpp): frecuencia en Hz y ciclo
+// en [0, 1]. Devuelve false si el pin no está en LEDC.
+bool jwsim_pwm_get(uint8_t pin, uint32_t *freq, double *duty);
+// Observador de cambios de PWM (uno solo): el runner lo usa para llevar el
+// buzzer de la placa (GPIO26) a la interfaz, que lo hace sonar. Solo observa:
+// no entra en la traza ni cambia el hash. ciclo 0 = silencio o pin liberado.
+typedef void (*jwsim_pwm_observer)(uint8_t pin, uint32_t freq, double duty, void *arg);
+void jwsim_pwm_observe(jwsim_pwm_observer fn, void *arg);
+
 #ifdef __cplusplus
 }
 #endif

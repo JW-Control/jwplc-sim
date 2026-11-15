@@ -163,6 +163,8 @@ function setStatus(kind, text) {
   $("led-pwr").classList.toggle("on", live);
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
+  if (kind !== "running") window.JwsimSound?.buzzerStop();
+  if (!live) $("led-buz").classList.remove("on");
   for (const b of document.querySelectorAll("#inputs .io, #keypad .key, #sd-slot")) b.disabled = !live;
   $("fault-rtc").disabled = live;
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
@@ -364,6 +366,9 @@ async function placeBoard() {
   };
   new ResizeObserver(fit).observe($("plc-fit"));
   fit();
+  // Nitidez de la pantalla según el tamaño con que quedó (ver fitTftRendering).
+  new ResizeObserver(() => fitTftRendering($("tft"))).observe($("tft"));
+  matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener?.("change", () => fitTftRendering($("tft")));
   const num = (el, k) => Number(el.getAttribute(k));
   const place = (el, x, y, w, h) =>
     Object.assign(el.style, { left: `${((x - vx) / vw) * 100}%`, top: `${((y - vy) / vh) * 100}%`, width: `${(w / vw) * 100}%`, height: `${(h / vh) * 100}%` });
@@ -447,17 +452,81 @@ function wireKeypad() {
   $("sd-slot").addEventListener("click", () => {
     if (["running", "paused", "break"].includes(state.sim)) setInput("SD_CARD", !state.levels.get("SD_CARD"));
   });
-  const tft = $("tft");
-  tft.addEventListener("keydown", (e) => {
-    const sig = KEYMAP[e.key];
-    if (!sig) return;
-    e.preventDefault();
-    if (!e.repeat) pressKey(sig, true);
-  });
-  tft.addEventListener("keyup", (e) => {
-    const sig = KEYMAP[e.key];
-    if (sig) pressKey(sig, false);
-  });
+  // Teclado sobre la pantalla (y sobre la pantalla ampliada).
+  for (const tft of [$("tft"), $("tft-zoom-canvas")]) {
+    tft.addEventListener("keydown", (e) => {
+      const sig = KEYMAP[e.key];
+      if (!sig) return;
+      e.preventDefault();
+      if (!e.repeat) pressKey(sig, true);
+    });
+    tft.addEventListener("keyup", (e) => {
+      const sig = KEYMAP[e.key];
+      if (sig) pressKey(sig, false);
+    });
+  }
+  wireTftZoom();
+}
+
+// ------------------------------------------------------------- nitidez de la TFT
+// El canvas guarda los 320×170 píxeles del ST7789 y el navegador lo escala al
+// tamaño de la placa. Con «pixelated» al achicar (placa chica, ventana
+// angosta) el vecino más cercano salta filas y columnas enteras: desaparecen
+// líneas de 1 px y trazos de letras. Por eso: pixelated solo si cada píxel
+// del ST7789 ocupa al menos un píxel físico; si no, suavizado (promedia y no
+// pierde nada).
+function fitTftRendering(canvas) {
+  if (!canvas) return;
+  const w = canvas.getBoundingClientRect().width * (window.devicePixelRatio || 1);
+  const mode = w >= canvas.width - 0.5 ? "pixelated" : "auto";
+  if (canvas.style.imageRendering !== mode) canvas.style.imageRendering = mode;
+}
+window.JwsimTft = { fitRendering: fitTftRendering };
+
+// Pantalla ampliada a escala entera: k×k píxeles físicos por píxel del
+// ST7789, sin bordes desparejos (para mirar de cerca o grabar un video).
+function wireTftZoom() {
+  const box = $("tft-zoom");
+  const cv = $("tft-zoom-canvas");
+  const ctx = cv.getContext("2d");
+  let k = 0;
+  let raf = 0;
+  const kMax = () => {
+    const dpr = window.devicePixelRatio || 1;
+    return Math.max(1, Math.floor(Math.min((innerWidth * 0.94 * dpr) / 320, ((innerHeight - 90) * dpr) / 170)));
+  };
+  const size = () => {
+    const dpr = window.devicePixelRatio || 1;
+    k = Math.min(Math.max(1, k || kMax()), kMax());
+    Object.assign(cv.style, { width: `${(320 * k) / dpr}px`, height: `${(170 * k) / dpr}px` });
+    $("tft-zoom-scale").textContent = `${k}× · ${320 * k}×${170 * k} px`;
+    $("tft-zoom-minus").disabled = k <= 1;
+    $("tft-zoom-plus").disabled = k >= kMax();
+  };
+  const step = () => {
+    ctx.drawImage($("tft"), 0, 0);
+    raf = requestAnimationFrame(step);
+  };
+  const open = () => {
+    box.hidden = false;
+    k = 0;
+    size();
+    cancelAnimationFrame(raf);
+    step();
+    cv.focus();
+  };
+  const close = () => {
+    box.hidden = true;
+    cancelAnimationFrame(raf);
+    $("tft").focus();
+  };
+  $("tft").addEventListener("dblclick", open);
+  $("tft-zoom-open").addEventListener("click", open);
+  $("tft-zoom-close").addEventListener("click", close);
+  $("tft-zoom-minus").addEventListener("click", () => ((k -= 1), size()));
+  $("tft-zoom-plus").addEventListener("click", () => ((k += 1), size()));
+  box.addEventListener("click", (e) => e.target === box && close());
+  window.addEventListener("resize", () => !box.hidden && size());
 }
 
 function setInput(signal, value) {
@@ -832,6 +901,7 @@ function setInputMode(mode) {
 
 function setSpeed(speed) {
   state.speed = speed;
+  window.JwsimSound?.buzzerStop();   // el agendado del buzzer se recalibra
   $("sel-speed").value = String(speed);
   if (state.sim === "running") api.command({ type: "run", speed });
 }
@@ -1208,6 +1278,25 @@ function onReplayEnd(m) {
   state.lastReplay = { t_ns: m.t_ns, hash: m.trace_hash, match: ok };
 }
 
+// Buzzer de la placa (GPIO26, LEDC): sonido con los instantes del runner y
+// LED «BUZ» con el último estado de cada tanda.
+const BUZZER_PIN = 26;
+function onPwm(items) {
+  const bz = items.filter((i) => i[1] === BUZZER_PIN);
+  if (!bz.length) return;
+  window.JwsimSound?.buzzer(bz, state.speed);
+  const [, , hz, duty] = bz[bz.length - 1];
+  $("led-buz").classList.toggle("on", hz > 0 && duty > 0);
+}
+
+function paintBuzSound() {
+  const on = !!window.JwsimSound?.enabled;
+  const b = $("buz-sound");
+  b.textContent = on ? "🔊" : "🔇";
+  b.title = on ? "Sonido (buzzer, relés y contactores): activado" : "Sonido (buzzer, relés y contactores): apagado";
+  b.classList.toggle("off", !on);
+}
+
 function onMessage(m) {
   switch (m.type) {
     case "hello":
@@ -1234,6 +1323,9 @@ function onMessage(m) {
       break;
     case "bus":
       appendBus(m.items, m.dropped);
+      break;
+    case "pwm":
+      onPwm(m.items);
       break;
     case "serial":
       // La consola es UART0; el resto (RS-485 en UART2) se ve en Tráfico.
@@ -1942,6 +2034,11 @@ function wireUi() {
   $("btn-pause").addEventListener("click", togglePause);
   $("btn-stop").addEventListener("click", stopSim);
   $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
+  $("buz-sound").addEventListener("click", () => {
+    window.JwsimSound.enabled = !window.JwsimSound.enabled;
+  });
+  window.JwsimSound?.onChange(paintBuzSound);
+  paintBuzSound();
   for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
   api.onOpenTarget(openFromEditor);
@@ -2211,6 +2308,13 @@ async function comToggle() {
 
 // Ganchos para las pruebas E2E (abrir un proyecto sin el diálogo del SO).
 window.jwsimTest = {
+  // Pantalla ampliada: abierta y ancho en píxeles físicos; modo de la TFT.
+  tftZoom: () => ({
+    open: !$("tft-zoom").hidden,
+    px: Math.round($("tft-zoom-canvas").getBoundingClientRect().width * (window.devicePixelRatio || 1)),
+    rendering: $("tft").style.imageRendering,
+    tftPx: Math.round($("tft").getBoundingClientRect().width * (window.devicePixelRatio || 1)),
+  }),
   autoFormat: () => autoFormat(),
   setActiveText: (text) => editor.getModel().setValue(text),
   activeText: () => editor.getModel().getValue(),

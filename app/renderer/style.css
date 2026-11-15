@@ -766,11 +766,70 @@ button.io.on {
   background: var(--err);
   box-shadow: 0 0 6px var(--err);
 }
+/* Buzzer de la placa (GPIO26): ámbar mientras suena. */
+.led-sm.buz.on,
+.mini-leds i.buz.on {
+  background: #f2b33d;
+  box-shadow: 0 0 6px #f2b33d;
+}
+.buz-sound {
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 16px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.buz-sound:hover {
+  border-color: var(--accent);
+}
+.buz-sound.off {
+  opacity: 0.55;
+}
+/* image-rendering lo decide app.js según la escala (fitTftRendering):
+   pixelated al ampliar, suavizado al achicar, para no perder filas. */
 .screen {
   position: absolute;
   display: block;
   image-rendering: pixelated;
   background: #000;
+}
+.tft-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 12, 0.82);
+}
+.tft-zoom[hidden] {
+  display: none;
+}
+.tft-zoom-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+#tft-zoom-canvas {
+  display: block;
+  image-rendering: pixelated;
+  background: #000;
+  border: 6px solid #15181c;
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+#tft-zoom-canvas:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.tft-zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .screen:focus-visible {
   outline: 2px solid var(--accent);
@@ -2238,7 +2297,7 @@ body[data-tab="plant"] .view3d-empty {
 .mini-plc canvas {
   width: 224px;
   height: 119px;
-  image-rendering: pixelated;
+  image-rendering: auto;   /* 224 px < 320: suavizado, sin perder filas */
   border-radius: 3px;
   background: #000;
 }
