@@ -869,6 +869,7 @@ memoria compartida con un contador de versión para no copiar por el pipe.
 | runner→UI | `serial` | bytes de UART por puerto |
 | runner→UI | `display` | nueva versión del framebuffer |
 | runner→UI | `stopped` | motivo (`time`, `breakpoint`, `idle`, `fatal`), `t_ns`, hash |
+| runner→UI | `pwm` | cambios del LEDC `[[t_ns, pin, hz, ciclo]...]` en cada volcado (hasta 400; si se pasa, el último estado de cada pin). La interfaz hace sonar el GPIO26 (buzzer) con WebAudio respetando los `t_ns` en ×1 y enciende el LED «BUZ»; no entra en la traza |
 | runner→UI | `fatal` | API no soportada, `esp_restart`, assert, crash |
 | UI→runner | `scene` | **[G7]** `{on, watch}`: co-simulación con la escena; el runner solo avanza hasta el horizonte |
 | ambos | `horizon` | **[G7]** UI→runner `{until_ns}`; runner→UI `{t_ns, reason: output\|until, changes}` (§6.6) |

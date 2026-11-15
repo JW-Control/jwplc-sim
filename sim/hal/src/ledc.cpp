@@ -35,6 +35,18 @@ ledc_clk_cfg_t g_clock = LEDC_AUTO_CLK;
 uint8_t g_analog_resolution = 8;
 uint32_t g_analog_freq = 1000;
 
+jwsim_pwm_observer g_observer = nullptr;
+void *g_observer_arg = nullptr;
+
+double duty_of(const Channel &c) {
+  const double d = static_cast<double>(c.duty) / static_cast<double>(1u << c.resolution);
+  return c.invert ? 1.0 - d : d;
+}
+
+void notify(uint8_t pin, uint32_t freq, double duty) {
+  if (g_observer) g_observer(pin, freq, duty, g_observer_arg);
+}
+
 Channel *by_pin(uint8_t pin) {
   for (auto &c : g_ch) {
     if (c.used && c.pin == pin) return &c;
@@ -49,6 +61,7 @@ void apply(Channel &c) {
   for (int i = 0; i < 4; ++i) rec[2 + i] = static_cast<uint8_t>(c.freq >> (8 * i));
   for (int i = 0; i < 4; ++i) rec[6 + i] = static_cast<uint8_t>(c.duty >> (8 * i));
   jwsim_trace_bytes(rec, sizeof(rec));
+  notify(c.pin, c.freq, duty_of(c));
 }
 
 bool attach(uint8_t pin, uint32_t freq, uint8_t resolution, int channel) {
@@ -107,6 +120,11 @@ bool jwsim_pwm_get(uint8_t pin, uint32_t *freq, double *duty) {
   return true;
 }
 
+void jwsim_pwm_observe(jwsim_pwm_observer fn, void *arg) {
+  g_observer = fn;
+  g_observer_arg = arg;
+}
+
 ledc_clk_cfg_t ledcGetClockSource(void) { return g_clock; }
 bool ledcSetClockSource(ledc_clk_cfg_t source) {
   g_clock = source;
@@ -151,6 +169,7 @@ bool ledcDetach(uint8_t pin) {
   if (!c) return false;
   jwsim::gpio(pin).release(c);
   c->used = false;
+  notify(pin, 0, 0.0);
   return true;
 }
 uint32_t ledcChangeFrequency(uint8_t pin, uint32_t freq, uint8_t resolution) {

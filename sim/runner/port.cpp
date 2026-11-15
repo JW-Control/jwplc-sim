@@ -40,6 +40,7 @@
 //                   actual ("until"): una acción del usuario en la escena se
 //                   aplica sin esperar el resto de un horizonte largo.
 //   runner → UI : hello · signals · serial · bus · status · stopped (con hash)
+//                 pwm: cambios del LEDC [[t_ns,pin,hz,ciclo]...] (buzzer GPIO26)
 //                 input: cada entrada aplicada con su t_ns, en formato .stim,
 //                 para grabar la sesión y reproducirla con el mismo hash.
 // El firmware avanza en tramos de 1 ms virtual sincronizados con el reloj de
@@ -100,6 +101,7 @@ constexpr uint8_t kFrameDisplay = 2;
 constexpr size_t kBusMaxItems = 400;  // por envío; el resto se cuenta como descartado
 constexpr size_t kBusMaxUartBytes = 256;
 constexpr size_t kBusMaxSpiBytes = 64;
+constexpr size_t kPwmMaxItems = 400;  // cambios de PWM por envío (ver PortPwm)
 // Silencio que separa dos fragmentos de UART (tramas Modbus RTU incluidas:
 // con la UART instantánea de G3, los bytes de una trama llegan juntos).
 constexpr jwsim_ns_t kUartGapNs = 500 * JWSIM_NS_PER_US;
@@ -360,6 +362,50 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       jwsim_request_stop();
     }
   });
+  // PWM del LEDC (buzzer de la placa en GPIO26, y cualquier otro pin): cada
+  // cambio de frecuencia o ciclo con su instante, enviado en cada volcado como
+  // {"type":"pwm","items":[[t_ns,pin,hz,ciclo]...]}. La interfaz hace sonar el
+  // GPIO26 con esos instantes. Con demasiados cambios por volcado (un fade
+  // muy rápido a velocidad máxima) se descartan los intermedios y se manda el
+  // último estado de cada pin, para que la interfaz no quede con un tono pegado.
+  struct PortPwm {
+    std::string items;
+    size_t count = 0;
+    bool dropped = false;
+    std::map<uint8_t, std::pair<uint32_t, double>> last;
+    void item(jwsim_ns_t t, uint8_t pin, uint32_t freq, double duty) {
+      char buf[96];
+      std::snprintf(buf, sizeof(buf), "[%llu,%u,%lu,%.4f]", static_cast<unsigned long long>(t), static_cast<unsigned>(pin),
+                    static_cast<unsigned long>(freq), duty);
+      if (!items.empty()) items.push_back(',');
+      items += buf;
+      ++count;
+    }
+  } pwm;
+  jwsim_pwm_observe(
+      [](uint8_t pin, uint32_t freq, double duty, void *arg) {
+        auto &p = *static_cast<PortPwm *>(arg);
+        if (duty <= 0) freq = 0;
+        auto it = p.last.find(pin);
+        if (it != p.last.end() && it->second.first == freq && it->second.second == duty) return;
+        p.last[pin] = {freq, duty};
+        if (p.count >= kPwmMaxItems) {
+          p.dropped = true;
+          return;
+        }
+        p.item(jwsim_now(), pin, freq, duty);
+      },
+      &pwm);
+  auto send_pwm = [&]() {
+    if (pwm.dropped) {
+      for (const auto &[pin, v] : pwm.last) pwm.item(jwsim_now(), pin, v.first, v.second);
+    }
+    if (pwm.items.empty()) return;
+    send_json("{\"type\":\"pwm\",\"items\":[" + pwm.items + "]}");
+    pwm.items.clear();
+    pwm.count = 0;
+    pwm.dropped = false;
+  };
   // Red del W5500 (app/lib/net-bridge.mjs): lo que el chip envía se manda
   // en cada volcado, solo si la interfaz lo pidió.
   bool net_on = false;
@@ -527,6 +573,7 @@ int run_port(jwsim::boards::JwplcBasic &board, const std::function<RestartInfo()
       if (jwsim::SPIBus *spi = board.spi_bus(3)) spi->flush_capture();
     }
     send_bus();
+    send_pwm();
     for (const auto &m : net_out) send_json(m);
     net_out.clear();
     if (!link_items.empty()) {

@@ -766,6 +766,27 @@ button.io.on {
   background: var(--err);
   box-shadow: 0 0 6px var(--err);
 }
+/* Buzzer de la placa (GPIO26): ámbar mientras suena. */
+.led-sm.buz.on,
+.mini-leds i.buz.on {
+  background: #f2b33d;
+  box-shadow: 0 0 6px #f2b33d;
+}
+.buz-sound {
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 16px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.buz-sound:hover {
+  border-color: var(--accent);
+}
+.buz-sound.off {
+  opacity: 0.55;
+}
 .screen {
   position: absolute;
   display: block;

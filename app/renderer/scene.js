@@ -2344,13 +2344,13 @@
     const sound = $("scene-sound");
     const paintSound = () => {
       sound.textContent = window.JwsimSound?.enabled ? "🔊" : "🔇";
-      sound.title = window.JwsimSound?.enabled ? "Sonido de relés y contactores: activado" : "Sonido de relés y contactores: apagado";
+      sound.title = window.JwsimSound?.enabled ? "Sonido (relés, contactores y buzzer): activado" : "Sonido (relés, contactores y buzzer): apagado";
       sound.classList.toggle("off", !window.JwsimSound?.enabled);
     };
     sound.addEventListener("click", () => {
       window.JwsimSound.enabled = !window.JwsimSound.enabled;
-      paintSound();
     });
+    window.JwsimSound?.onChange(paintSound);
     paintSound();
     api.onDisplay(() => requestAnimationFrame(copyTft));
     new ResizeObserver(() => S.view === "scene" && !S.fitted && fit()).observe($("scene-svg"));

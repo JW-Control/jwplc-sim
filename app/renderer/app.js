@@ -163,6 +163,8 @@ function setStatus(kind, text) {
   $("led-pwr").classList.toggle("on", live);
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");
+  if (kind !== "running") window.JwsimSound?.buzzerStop();
+  if (!live) $("led-buz").classList.remove("on");
   for (const b of document.querySelectorAll("#inputs .io, #keypad .key, #sd-slot")) b.disabled = !live;
   $("fault-rtc").disabled = live;
   for (const id of ["btn-dbg-continue", "btn-dbg-next", "btn-dbg-in", "btn-dbg-out"]) $(id).disabled = kind !== "break";
@@ -832,6 +834,7 @@ function setInputMode(mode) {
 
 function setSpeed(speed) {
   state.speed = speed;
+  window.JwsimSound?.buzzerStop();   // el agendado del buzzer se recalibra
   $("sel-speed").value = String(speed);
   if (state.sim === "running") api.command({ type: "run", speed });
 }
@@ -1208,6 +1211,25 @@ function onReplayEnd(m) {
   state.lastReplay = { t_ns: m.t_ns, hash: m.trace_hash, match: ok };
 }
 
+// Buzzer de la placa (GPIO26, LEDC): sonido con los instantes del runner y
+// LED «BUZ» con el último estado de cada tanda.
+const BUZZER_PIN = 26;
+function onPwm(items) {
+  const bz = items.filter((i) => i[1] === BUZZER_PIN);
+  if (!bz.length) return;
+  window.JwsimSound?.buzzer(bz, state.speed);
+  const [, , hz, duty] = bz[bz.length - 1];
+  $("led-buz").classList.toggle("on", hz > 0 && duty > 0);
+}
+
+function paintBuzSound() {
+  const on = !!window.JwsimSound?.enabled;
+  const b = $("buz-sound");
+  b.textContent = on ? "🔊" : "🔇";
+  b.title = on ? "Sonido (buzzer, relés y contactores): activado" : "Sonido (buzzer, relés y contactores): apagado";
+  b.classList.toggle("off", !on);
+}
+
 function onMessage(m) {
   switch (m.type) {
     case "hello":
@@ -1234,6 +1256,9 @@ function onMessage(m) {
       break;
     case "bus":
       appendBus(m.items, m.dropped);
+      break;
+    case "pwm":
+      onPwm(m.items);
       break;
     case "serial":
       // La consola es UART0; el resto (RS-485 en UART2) se ve en Tráfico.
@@ -1942,6 +1967,11 @@ function wireUi() {
   $("btn-pause").addEventListener("click", togglePause);
   $("btn-stop").addEventListener("click", stopSim);
   $("sel-speed").addEventListener("change", (e) => setSpeed(Number(e.target.value)));
+  $("buz-sound").addEventListener("click", () => {
+    window.JwsimSound.enabled = !window.JwsimSound.enabled;
+  });
+  window.JwsimSound?.onChange(paintBuzSound);
+  paintBuzSound();
   for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
   api.onOpenTarget(openFromEditor);
