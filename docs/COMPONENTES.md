@@ -40,6 +40,28 @@ aparece en la paleta de la escena como cualquier otro equipo.
 `node cli/jwsim-cli.mjs device test <carpeta>` lo valida igual que un
 equipo programado.
 
+Sin abrir la app (por ejemplo, cuando una IA escribe el `component.json`):
+
+```
+node cli/jwsim-cli.mjs device component <carpeta> [--link] [--try escenario.json]
+```
+
+valida, regenera `symbol.svg`, el manifiesto y el README, y con `--try`
+corre un escenario en el banco. El escenario es una lista de pasos; las
+entradas se mantienen de un paso al siguiente:
+
+```json
+[
+  { "ms": 0 },
+  { "ms": 60000, "digital": { "bomba": 1 } },
+  { "ms": 1000, "write": [{ "table": "holding", "reg": 0, "value": 2.2 }] }
+]
+```
+
+Para que una IA arme componentes guiada, la skill
+`.claude/skills/crear-componente-jwplc/SKILL.md` explica el método paso a
+paso (Claude Code la carga sola al abrir este repositorio).
+
 ## Formato `jwcomp/1`
 
 ```json

@@ -24,13 +24,15 @@
 // fallas; 2 uso incorrecto; 3 el sketch no compila; 4 la simulación terminó
 // mal (FATAL, vigilante, caída); 5 entorno (toolchain o package).
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
 import { BEHAVIORS, writeDevice } from "./lib/device-gen.mjs";
+import { readComponent, writeComponent } from "./lib/component-files.mjs";
+import { ComponentBench } from "../app/lib/component-bench.mjs";
 import { buildNativeDevice, checkDeviceDir, installedDevices, linkDevice, loadSceneDevice, localDevices, packDevice, readManifest, unlinkDevice } from "./lib/device.mjs";
 import { IndexError, installPackage, loadIndex } from "./lib/index.mjs";
 import { runMatrix } from "./lib/matrix.mjs";
@@ -88,6 +90,7 @@ function parse(argv) {
     else if (a === "--runs") opts.runs = Number(value(++i, a));
     else if (a === "--set") (opts.set ??= []).push(value(++i, a));
     else if (a === "--link") opts.link = true;
+    else if (a === "--try") opts.try = value(++i, a);
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -363,6 +366,45 @@ async function main() {
         if (opts.link) await linkDevice(r.dir);
         if (!opts.json) console.log(`[jwsim-cli] creado ${r.spec.type} en ${r.dir}${opts.link ? " (enlazado)" : ""}`);
         emit({ ok: true, type: r.spec.type, dir: r.dir, files: Object.keys(r.files), linked: !!opts.link });
+        return code;
+      }
+      // Componente declarativo (docs/COMPONENTES.md): valida component.json,
+      // regenera symbol.svg, el manifiesto y el README (como «Guardar» del
+      // editor) y, con --try, lo corre en el banco con un escenario:
+      //   device component <carpeta> [--link] [--try escenario.json]
+      if (sub === "component") {
+        if (!arg) throw new CliError(EXIT.USAGE, "uso: device component <carpeta> [--link] [--try escenario.json]");
+        const dir = resolve(arg);
+        const { spec, art } = readComponent(dir);
+        let r;
+        try {
+          r = writeComponent(dir, spec, art);
+        } catch (err) {
+          const list = /** @type {any} */ (err).errors ?? [/** @type {any} */ (err).message];
+          if (!opts.json) for (const e of list) console.error(`[jwsim-cli] error: ${e}`);
+          emit({ ok: false, errors: list });
+          return EXIT.FAIL;
+        }
+        if (opts.link) await linkDevice(dir);
+        if (!opts.json) console.log(`[jwsim-cli] ${spec.type}@${spec.version}: válido; bornes ${r.def.terminals.map((t) => t.id).join(" ")}${opts.link ? " (enlazado)" : ""}`);
+        /** @type {any[]} */
+        const steps = [];
+        if (opts.try) {
+          // Escenario: [{ "ms": 60000, "digital": { "bomba": 1 }, "analog": { "temp": 7.5 }, "write": [{ "table": "holding", "reg": 0, "value": 2 }] }, …]
+          const scen = JSON.parse(readFileSync(resolve(opts.try), "utf8"));
+          const bench = new ComponentBench(r.spec);
+          let held = {};
+          for (const s of scen) {
+            held = { ...held, ...s, digital: { ...held.digital, ...s.digital }, analog: { ...held.analog, ...s.analog } };
+            for (const w of s.write ?? []) bench.write(w.table, w.reg, w.value);
+            const st = bench.advance(Number(s.ms ?? 0), held);
+            const outs = Object.entries(st.outputs).map(([k, v]) => `${k}=${typeof v === "number" ? +v.toFixed(3) : v}`).join(" ");
+            const regs = st.regs.map((g) => `${g.table[0]}${g.reg}=${g.words === null ? "—" : g.words.join("/")}`).join(" ");
+            if (!opts.json) console.log(`t=${(st.tMs / 1000).toFixed(1)} s  ${outs}${regs ? `  | ${regs}` : ""}`);
+            steps.push(st);
+          }
+        }
+        emit({ ok: true, type: spec.type, dir, terminals: r.def.terminals.map((t) => t.id), linked: !!opts.link, ...(opts.try ? { steps } : {}) });
         return code;
       }
       // Modo desarrollador: una carpeta de dispositivo de escena se usa en el
