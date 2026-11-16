@@ -99,7 +99,7 @@
       `<p class="devmgr-intro">Use en el simulador un dispositivo que está desarrollando, sin publicarlo: la carpeta con su <code>jwsim-device.json</code>, el módulo (<code>device.mjs</code>) y su <code>symbol.svg</code>. ` +
       `<b>Nuevo dispositivo…</b> la genera a partir de un comportamiento. Guía en <code>docs/SDK.md</code>.</p>` +
       `<p class="devmgr-warn">⚠ Un dispositivo ejecuta su propio código en esta computadora: agregue solo carpetas de confianza.</p>` +
-      `<div class="devmgr-bar"><button class="primary" data-act="new" ${st.busy ? "disabled" : ""}>Nuevo dispositivo…</button>` +
+      `<div class="devmgr-bar"><button class="primary" data-act="new" ${st.busy ? "disabled" : ""}>Nuevo dispositivo…</button><button data-act="comped" title="Componente propio con tu dibujo SVG, sus bornes, su modelo por bloques y Modbus, sin programar">Editor de componentes…</button>` +
       `<button data-act="link" ${st.busy ? "disabled" : ""}>Agregar carpeta…</button>` +
       `<button data-act="reload" ${st.busy ? "disabled" : ""} title="Vuelve a leer el código y los símbolos de las carpetas, sin reiniciar">↻ Recargar</button>` +
       `<span class="muted devmgr-note">${esc(st.busy ? "Trabajando…" : st.note)}</span></div>` +
@@ -276,6 +276,10 @@
     else if (act === "unlink") run(() => api.devicesUnlink(dir), "Quitado.");
     else if (act === "reveal") api.devicesReveal(dir);
     else if (act === "new") openWizard();
+    else if (act === "comped") {
+      close();
+      window.JwsimComponentEditor?.open();
+    }
     else if (act === "nb-cancel") {
       st.view = "list";
       render();

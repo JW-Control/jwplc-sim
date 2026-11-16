@@ -32,6 +32,11 @@ import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 import { Registry, builtinDevices } from "../scene/devices/index.mjs";
 import { Scene } from "../scene/scene.mjs";
+import { buildComponent, checkComponent, componentTerminals, componentVars, BLOCK_KINDS, IO_KINDS, SIGNALS } from "../scene/component.mjs";
+import { symbolSvg } from "../scene/component-symbol.mjs";
+import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
+import { folderOf, readComponent, writeComponent } from "../cli/lib/component-files.mjs";
+import { ComponentBench } from "./lib/component-bench.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
@@ -960,6 +965,62 @@ ipcMain.handle("devices:create", async (_e, { spec, parent }) => {
   return { dir: r.dir, type: r.spec.type, state: await devicesState() };
 });
 
+// ---- Editor de componentes (hito 1, docs/COMPONENTES.md): componentes
+// declarativos (solo datos, sin código del autor) con su dibujo, bornes,
+// modelo por bloques y mapa Modbus; se guardan como carpeta enlazada.
+ipcMain.handle("comp:info", () => ({ models: LTI_MODELS, blocks: BLOCK_KINDS, io: IO_KINDS, signals: SIGNALS, parent: devicesHome() }));
+ipcMain.handle("comp:check", (_e, spec) => {
+  const vars = componentVars(spec);
+  const terminals = componentTerminals(spec);
+  try {
+    const { warnings } = checkComponent(spec);
+    const def = buildComponent(spec);
+    return { ok: true, errors: [], warnings, vars, terminals, parameters: def.parameters };
+  } catch (err) {
+    return { ok: false, errors: err.errors ?? [err.message], warnings: err.warnings ?? [], vars, terminals };
+  }
+});
+ipcMain.handle("comp:symbol", (_e, { spec, art }) => {
+  try {
+    return { ok: true, ...symbolSvg(spec, componentTerminals(spec), art || null) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+ipcMain.handle("comp:save", async (_e, { spec, art, dir }) => {
+  const target = resolve(dir || join(devicesHome(), folderOf(spec.type)));
+  const r = writeComponent(target, spec, art ?? null);
+  if (!localDevices().some((d) => resolve(d.dir) === target)) await linkDevice(target);
+  await reloadDevices();
+  return { dir: target, spec: r.spec };
+});
+ipcMain.handle("comp:open", async (_e, dir) => {
+  if (!dir) {
+    const r = await dialog.showOpenDialog(win, { title: "Carpeta del componente (con component.json)", defaultPath: devicesHome(), properties: ["openDirectory"] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    dir = r.filePaths[0];
+  }
+  return { dir, ...readComponent(dir) };
+});
+// Ejemplos incluidos (sdk/examples con component.json): se abren como copia (se guardan en Dispositivos).
+ipcMain.handle("comp:examples", () => {
+  const root = join(import.meta.dirname, "..", "sdk", "examples");
+  return readdirSync(root)
+    .filter((d) => existsSync(join(root, d, "component.json")))
+    .map((d) => ({ id: d, ...readComponent(join(root, d)) }));
+});
+let bench = null;
+ipcMain.handle("comp:benchStart", (_e, spec) => {
+  bench = new ComponentBench(spec);
+  return bench.advance(0, {});
+});
+ipcMain.handle("comp:benchStep", (_e, { dtMs, inputs }) => (bench ? bench.advance(dtMs, inputs) : null));
+ipcMain.handle("comp:benchWrite", (_e, { table, reg, value }) => {
+  if (!bench) return null;
+  const ok = bench.write(table, reg, value);
+  return { ok, state: bench.state() };
+});
+
 // Definiciones para la paleta y el inspector (sin funciones).
 ipcMain.handle("scene:devices", async () =>
   (await registry()).list().map((d) => ({
@@ -1227,6 +1288,7 @@ function buildMenu() {
           { type: "separator" },
           { label: "Dispositivos propios…", click: send("devices") },
           { label: "Nuevo dispositivo…", click: send("newDevice") },
+          { label: "Editor de componentes…", click: send("componentEditor") },
         ],
       },
       {

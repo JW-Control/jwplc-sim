@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170">
+  <!-- Módulo NFT: canal de cultivo arriba, reservorio con bomba abajo. -->
+  <rect x="34" y="40" width="10" height="70" fill="#9aa3ad"/>
+  <rect x="246" y="40" width="10" height="70" fill="#9aa3ad"/>
+  <rect x="20" y="26" width="260" height="22" rx="11" fill="#eef0f2" stroke="#5b636c" stroke-width="1.5"/>
+  <g fill="#3fa34d" stroke="#2b6e34" stroke-width="1">
+    <ellipse cx="70" cy="20" rx="16" ry="9"/><ellipse cx="62" cy="15" rx="8" ry="6"/><ellipse cx="78" cy="14" rx="8" ry="6"/>
+    <ellipse cx="130" cy="20" rx="16" ry="9"/><ellipse cx="122" cy="15" rx="8" ry="6"/><ellipse cx="138" cy="14" rx="8" ry="6"/>
+    <ellipse cx="190" cy="20" rx="16" ry="9"/><ellipse cx="182" cy="15" rx="8" ry="6"/><ellipse cx="198" cy="14" rx="8" ry="6"/>
+    <ellipse cx="250" cy="20" rx="16" ry="9"/><ellipse cx="242" cy="15" rx="8" ry="6"/><ellipse cx="258" cy="14" rx="8" ry="6"/>
+  </g>
+  <rect x="20" y="100" width="190" height="64" rx="4" fill="#cfe6f7" stroke="#4a7fa8" stroke-width="1.5"/>
+  <rect x="21" y="118" width="188" height="45" fill="#7fb8e0" opacity="0.8"/>
+  <rect x="40" y="132" width="26" height="24" rx="3" fill="#355c8a"/>
+  <path d="M53 132 V60 H30 V48" fill="none" stroke="#5b636c" stroke-width="3"/>
+  <path d="M268 48 V90 H200 V104" fill="none" stroke="#5b636c" stroke-width="3"/>
+  <rect x="150" y="108" width="6" height="40" fill="#2f8c74"/>
+  <rect x="164" y="108" width="6" height="34" fill="#c27d2b"/>
+  <text x="105" y="160" font-size="9" text-anchor="middle" fill="#1b3a57" font-family="sans-serif">Solución nutritiva</text>
+</svg>
