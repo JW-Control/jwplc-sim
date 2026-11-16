@@ -1,0 +1,303 @@
+{
+  "format": "jwcomp/1",
+  "type": "jwcontrol/hidroponia-nft",
+  "version": "1.0.0",
+  "name": "Módulo hidropónico NFT",
+  "category": "Planta",
+  "author": "jwcontrol",
+  "license": "MIT",
+  "description": "Módulo NFT (película de nutrientes) con reservorio. Entradas a 24 VDC: bomba de recirculación (B1-B2), electroválvula de llenado (V1-V2) y bomba dosificadora de nutrientes (D1-D2). Salidas: flotador de nivel bajo (LS1-LS2, cierra con el nivel bajo), nivel 4-20 mA (AO+ AO-, 0-100 %) y sensor de pH, conductividad y temperatura por RS-485 (Modbus RTU, dirección 3, 9600 8N1; input 0 = pH×100, 1 = CE×100 mS/cm, 2 = °C×10, 3 = nivel×10 %; holding 0 = consigna de CE×100). Las plantas consumen agua mientras circula la solución y la CE sube al dosificar y baja al llenar.",
+  "stepMs": 200,
+  "parameters": [
+    {
+      "id": "llenadoPctS",
+      "label": "Llenado con la válvula",
+      "type": "number",
+      "default": 0.8,
+      "unit": "%/s",
+      "group": "Modelo"
+    },
+    {
+      "id": "consumoPctS",
+      "label": "Consumo de las plantas",
+      "type": "number",
+      "default": 0.05,
+      "unit": "%/s",
+      "group": "Modelo"
+    },
+    {
+      "id": "dosisCeS",
+      "label": "Subida de CE al dosificar",
+      "type": "number",
+      "default": 0.01,
+      "unit": "mS/cm/s",
+      "group": "Modelo"
+    },
+    {
+      "id": "tauPh",
+      "label": "τ del pH",
+      "type": "number",
+      "default": 90,
+      "unit": "s",
+      "group": "Modelo"
+    },
+    {
+      "id": "tAgua",
+      "label": "Temperatura del agua",
+      "type": "number",
+      "default": 22,
+      "unit": "°C",
+      "group": "Modelo"
+    }
+  ],
+  "vars": {
+    "ceConsigna": 1.8
+  },
+  "io": [
+    {
+      "kind": "power",
+      "a": "V+",
+      "b": "V-",
+      "rating": "24VDC",
+      "label": "Alimentación del sensor"
+    },
+    {
+      "kind": "digital-in",
+      "var": "bomba",
+      "a": "B1",
+      "b": "B2",
+      "rating": "24VDC",
+      "label": "Bomba de recirculación"
+    },
+    {
+      "kind": "digital-in",
+      "var": "llenado",
+      "a": "V1",
+      "b": "V2",
+      "rating": "24VDC",
+      "label": "Válvula de llenado"
+    },
+    {
+      "kind": "digital-in",
+      "var": "dosis",
+      "a": "D1",
+      "b": "D2",
+      "rating": "24VDC",
+      "label": "Bomba dosificadora"
+    },
+    {
+      "kind": "digital-out",
+      "var": "nivelBajo",
+      "a": "LS1",
+      "b": "LS2",
+      "label": "Flotador de nivel bajo"
+    },
+    {
+      "kind": "analog-out",
+      "var": "nivel",
+      "signal": "4-20mA",
+      "a": "AO+",
+      "b": "AO-",
+      "min": 0,
+      "max": 100,
+      "label": "Nivel 4-20 mA"
+    }
+  ],
+  "blocks": [
+    {
+      "block": "expr",
+      "out": "caudalNeto",
+      "expr": "llenado * llenadoPctS - bomba * consumoPctS"
+    },
+    {
+      "block": "integrator",
+      "in": "caudalNeto",
+      "out": "nivel",
+      "min": 0,
+      "max": 100,
+      "y0": 60
+    },
+    {
+      "block": "expr",
+      "out": "dCe",
+      "expr": "dosis * dosisCeS - llenado * llenadoPctS * ce / max(nivel, 5)"
+    },
+    {
+      "block": "integrator",
+      "in": "dCe",
+      "out": "ce",
+      "min": 0,
+      "max": 5,
+      "y0": 1.5
+    },
+    {
+      "block": "expr",
+      "out": "phObjetivo",
+      "expr": "6.4 - 0.35 * (ce - 1.5)"
+    },
+    {
+      "block": "tf",
+      "in": "phObjetivo",
+      "out": "ph",
+      "model": "1.er orden",
+      "K": 1,
+      "tau1": "tauPh",
+      "y0": 6.4
+    },
+    {
+      "block": "compare",
+      "in": "nivel",
+      "out": "nivelBajo",
+      "high": 25,
+      "low": 20,
+      "invert": true
+    },
+    {
+      "block": "expr",
+      "out": "temp",
+      "expr": "tAgua + 0.5 * bomba"
+    }
+  ],
+  "modbus": {
+    "address": 3,
+    "baud": 9600,
+    "input": [
+      {
+        "reg": 0,
+        "var": "ph",
+        "scale": 100
+      },
+      {
+        "reg": 1,
+        "var": "ce",
+        "scale": 100
+      },
+      {
+        "reg": 2,
+        "var": "temp",
+        "scale": 10
+      },
+      {
+        "reg": 3,
+        "var": "nivel",
+        "scale": 10
+      }
+    ],
+    "holding": [
+      {
+        "reg": 0,
+        "var": "ceConsigna",
+        "scale": 100,
+        "write": true,
+        "min": 0,
+        "max": 5
+      }
+    ]
+  },
+  "symbol": {
+    "width": 340,
+    "height": 240,
+    "widgets": [
+      {
+        "kind": "value",
+        "var": "nivel",
+        "x": 298,
+        "y": 150,
+        "decimals": 0,
+        "unit": "%",
+        "label": "Nivel"
+      },
+      {
+        "kind": "value",
+        "var": "ph",
+        "x": 298,
+        "y": 186,
+        "decimals": 2,
+        "unit": "pH",
+        "label": "pH"
+      },
+      {
+        "kind": "value",
+        "var": "ce",
+        "x": 298,
+        "y": 120,
+        "decimals": 2,
+        "unit": "mS",
+        "label": "CE"
+      },
+      {
+        "kind": "lamp",
+        "var": "bomba",
+        "x": 40,
+        "y": 205,
+        "color": "#37d67a"
+      },
+      {
+        "kind": "lamp",
+        "var": "nivelBajo",
+        "x": 60,
+        "y": 205,
+        "color": "#ff5d5d"
+      }
+    ],
+    "art": "art.svg",
+    "pins": {
+      "V+": {
+        "side": "t",
+        "x": 20
+      },
+      "V-": {
+        "side": "t",
+        "x": 40
+      },
+      "B1": {
+        "side": "t",
+        "x": 80
+      },
+      "B2": {
+        "side": "t",
+        "x": 100
+      },
+      "V1": {
+        "side": "t",
+        "x": 140
+      },
+      "V2": {
+        "side": "t",
+        "x": 160
+      },
+      "D1": {
+        "side": "t",
+        "x": 200
+      },
+      "D2": {
+        "side": "t",
+        "x": 220
+      },
+      "LS1": {
+        "side": "b",
+        "x": 120
+      },
+      "LS2": {
+        "side": "b",
+        "x": 140
+      },
+      "AO+": {
+        "side": "b",
+        "x": 180
+      },
+      "AO-": {
+        "side": "b",
+        "x": 200
+      },
+      "A": {
+        "side": "t",
+        "x": 280
+      },
+      "B": {
+        "side": "t",
+        "x": 300
+      }
+    }
+  }
+}

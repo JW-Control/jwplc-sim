@@ -8,6 +8,8 @@
 //   { "type": "autor/nombre", "version": "1.0.0", "kind": "scene" | "native" | "example",
 //     "name": "...", "description": "...", "license": "MIT", "author": "...",
 //     "entry": "device.mjs"            (scene: módulo ES que exporta la definición)
+//     "entry": "component.json"        (scene: componente declarativo del editor visual,
+//                                       scene/component.mjs; no ejecuta código del autor)
 //     "sources": ["dispositivo.c"],    (native: fuentes C/C++; se compilan al instalar)
 //     "entry": "proyecto.jwsim"        (example: proyecto con sketch y escena)
 //     "sdk": 1 }
@@ -18,6 +20,7 @@ import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { buildComponent } from "../../scene/component.mjs";
 import { Registry } from "../../scene/devices/index.mjs";
 import { Scene } from "../../scene/scene.mjs";
 import { ROOT } from "./build.mjs";
@@ -50,7 +53,7 @@ export function readManifest(dir) {
   if (!m.name) throw bad("falta 'name'");
   if (!m.license) throw bad("falta 'license' (identificador SPDX)");
   if ((m.sdk ?? SDK_VERSION) > SDK_VERSION) throw bad(`requiere el SDK ${m.sdk}; este simulador implementa el ${SDK_VERSION}`);
-  if (m.kind === "scene" && !/\.m?js$/.test(m.entry ?? "")) throw bad("'entry' debe ser el módulo .mjs/.js del dispositivo");
+  if (m.kind === "scene" && !/\.(m?js|json)$/.test(m.entry ?? "")) throw bad("'entry' debe ser el módulo .mjs/.js del dispositivo o el component.json del componente");
   if (m.kind === "native" && !(Array.isArray(m.sources) && m.sources.length)) throw bad("'sources' debe listar las fuentes C/C++");
   if (m.kind === "example" && !/\.jwsim$/.test(m.entry ?? "")) throw bad("'entry' debe ser el proyecto .jwsim del ejemplo");
   for (const f of m.kind === "native" ? m.sources : [m.entry]) {
@@ -113,9 +116,21 @@ export function buildNativeDevice(dir, { target = "native", outDir, log = () => 
 export async function loadSceneDevice(dir, { fresh = false } = {}) {
   const m = readManifest(dir);
   if (m.kind !== "scene") throw new Error(`${m.type} es nativo: lo carga el runner (--device)`);
-  const url = pathToFileURL(resolve(dir, m.entry)).href + (fresh ? `?v=${Date.now()}-${Math.random().toString(36).slice(2)}` : "");
-  const mod = await import(url);
-  const defs = [mod.default ?? mod.device].flat().filter(Boolean);
+  let defs;
+  if (m.entry.endsWith(".json")) {
+    // Componente declarativo: solo datos; el intérprete arma la definición (siempre se lee del disco).
+    let spec;
+    try {
+      spec = JSON.parse(readFileSync(resolve(dir, m.entry), "utf8"));
+    } catch (err) {
+      throw new Error(`${m.entry}: JSON inválido: ${err.message}`);
+    }
+    defs = [buildComponent(spec)];
+  } else {
+    const url = pathToFileURL(resolve(dir, m.entry)).href + (fresh ? `?v=${Date.now()}-${Math.random().toString(36).slice(2)}` : "");
+    const mod = await import(url);
+    defs = [mod.default ?? mod.device].flat().filter(Boolean);
+  }
   if (!defs.length) throw new Error(`${m.entry} no exporta la definición (export default)`);
   if (!defs.some((d) => d.type === m.type && d.version === m.version)) {
     throw new Error(`${m.entry} no define ${m.type}@${m.version} (manifiesto y código deben coincidir)`);

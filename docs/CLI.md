@@ -162,6 +162,7 @@ SDK de dispositivos e índice comunitario ([docs/SDK.md](SDK.md)):
 |---|---|
 | `device build <carpeta>` | Nativo: compila la biblioteca (`.so`, `.dll`, `.dylib`) con el toolchain del simulador en `build/devices/<nombre>/`. De escena: valida el contrato. |
 | `device test <carpeta>` | De escena: valida y corre sus `*.test.mjs` con `JWSIM_SDK` → `sdk/testing.mjs`. |
+| `device component <carpeta> [--link] [--try escenario.json]` | Componente del editor ([docs/COMPONENTES.md](COMPONENTES.md)): valida `component.json`, regenera `symbol.svg`, el manifiesto y el README (como «Guardar» del editor), lo enlaza con `--link` y, con `--try`, lo corre en el banco con un escenario y muestra salidas y registros por paso. |
 | `device pack <carpeta>` | Paquete `.tar.gz` reproducible con su SHA-256 y tamaño (para el índice). |
 | `device install <tipo>[@versión]` | Instala desde el índice (`--index`, `JWSIM_INDEX` o el de GitHub). Verifica la firma Ed25519 del índice, el tamaño y el SHA-256 del paquete, las rutas del tar y el manifiesto. Si algo falla no instala nada; con `--json` el error trae `"security": true`. |
 | `device list` | Dispositivos instalados en `~/.jwsim/devices` (`JWSIM_HOME`) y, con `--index`, los del índice. |
