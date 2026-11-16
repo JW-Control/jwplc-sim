@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "JW_DWIN por USB: el Modbus va en sobres ESC 'JW' por el mismo Serial que el texto. Sin la PC que emula la pantalla, setPage, el texto 'JW_DWIN USB' y enableTouch salen en sobres y dan Timeout. Por la consola: 'ping' responde 'pong', 'cnt 7' pone el contador (sendValue val=7) y un comando desconocido se informa.",
+  "$comment": "JW_DWIN por USB: el Modbus va en sobres ESC 'JW' por el mismo Serial que el texto. Sin la PC que emula la pantalla, setPage, el texto 'JW_DWIN USB' y enableTouch salen en sobres y dan Timeout. Por la consola: 'ping' responde 'pong', 'cnt 7' pone el contador y un comando desconocido se informa. Sin enlace, JW_DWIN deja un intento cada 500 ms y se lo lleva la primera llamada del loop (checkKey, sendValue o sendText, según los tiempos del package): se exige que los intentos sigan, no cuál de las tres lo toma.",
   "sketch": "package:libraries/JW_DWIN/examples/Simular_USB",
   "until_ms": 4000,
   "stim": [
@@ -41,9 +41,9 @@
         "after_ms": 1700
       },
       {
-        "match": "sendValue \\| addr=0x1000 val=7 Timeout$",
-        "min": 1,
-        "after_ms": 1500
+        "match": "\\[\\d+\\] (checkKey|sendValue|sendText) \\| addr=0x[0-9A-F]+ val=\\d+ Timeout$",
+        "min": 2,
+        "after_ms": 1700
       }
     ]
   }
