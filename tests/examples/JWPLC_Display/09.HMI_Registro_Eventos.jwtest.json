@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Historial de eventos: corre sin FATAL; capturas de la página Proceso, del historial con el arranque, del detalle de un evento (OK) y del historial tras cerrarlo (OK) con marcha y paro de la bomba.",
+  "$comment": "Historial de eventos: corre sin FATAL; capturas de la página Proceso, del historial con el arranque, del detalle de un evento y del historial tras cerrarlo, con marcha y paro de la bomba. Desde alpha.17 (árbitro de teclas I4) el primer OK sólo entra a la página desde el selector y el segundo abre el detalle, como dice el ejemplo.",
   "sketch": "package:libraries/JWPLC_Display/examples/09.HMI_Registro_Eventos",
   "until_ms": 6000,
   "args": [
@@ -12,6 +12,8 @@
     "2100 BTN_RIGHT=0",
     "2600 BTN_OK=1",
     "2700 BTN_OK=0",
+    "3000 BTN_OK=1",
+    "3100 BTN_OK=0",
     "3600 BTN_OK=1",
     "3700 BTN_OK=0"
   ],
