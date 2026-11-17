@@ -16,6 +16,7 @@
 //                      fijado; nunca se modifica ese checkout.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,105 +77,34 @@ function markCommit(dir, commit) {
 }
 
 // Devuelve la raíz del checkout (directorio que contiene JWPLC/2.1.0).
+// En la rama de revisiones en vivo (sin candado estricto de commit):
+//   1. JWPLC_PACKAGE_DIR si está definida.
+//   2. Checkout hermano ../platform-jwplc si contiene JWPLC_PACKAGE_TREE.
+//   3. En última instancia, la rama/ref configurada en package.lock.
 export function resolvePackageRoot({ fetch = true } = {}) {
   const lock = readLock();
   const override = process.env.JWPLC_PACKAGE_DIR;
 
   if (override) {
-    const dir = resolve(override);
-    if (!existsSync(join(dir, lock.JWPLC_PACKAGE_TREE))) {
-      throw new Error(`JWPLC_PACKAGE_DIR=${dir} no contiene ${lock.JWPLC_PACKAGE_TREE}`);
-    }
-    const head = revParse(dir, "HEAD");
-    if (head && head !== lock.JWPLC_PACKAGE_COMMIT) {
-      // Un checkout local en otra rama se acepta solo si el árbol del package
-      // es idéntico al del tag fijado (p. ej. main con el cierre publicado).
-      const tagCommit = revParse(dir, lock.JWPLC_PACKAGE_REF);
-      let same = false;
-      if (tagCommit === lock.JWPLC_PACKAGE_COMMIT) {
-        try {
-          execFileSync("git", ["diff", "--quiet", lock.JWPLC_PACKAGE_REF, "HEAD", "--", ...SPARSE_PATHS], { cwd: dir });
-          same = true;
-        } catch {
-          same = false;
-        }
-      }
-      if (!same) {
-        throw new Error(
-          `JWPLC_PACKAGE_DIR=${dir} está en ${head.slice(0, 12)} y su árbol difiere de ` +
-            `${lock.JWPLC_PACKAGE_REF} (${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}).`,
-        );
-      }
-    }
-    return { root: dir, lock, source: "JWPLC_PACKAGE_DIR" };
+    return packageFromDir(override);
+  }
+
+  const sibling = resolve(ROOT, "..", "platform-jwplc");
+  if (existsSync(join(sibling, lock.JWPLC_PACKAGE_TREE))) {
+    return packageFromDir(sibling);
   }
 
   const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF.replaceAll("/", "_"));
   if (existsSync(join(dest, ".git")) || existsSync(join(dest, COMMIT_MARK))) {
     const head = revParse(dest, "HEAD");
-    if (head === lock.JWPLC_PACKAGE_COMMIT) {
+    if (head) {
       markCommit(dest, head);
-      return { root: dest, lock, source: "cache" };
+      return { root: dest, lock: { ...lock, JWPLC_PACKAGE_COMMIT: head }, source: "cache" };
     }
-    // Sin git (la PC del usuario con el instalador): vale la marca escrita al
-    // descargarlo o al armar el instalador. Nunca se borra un package que no
-    // se pudo verificar: sin git tampoco se podría volver a clonar.
-    if (head === null) {
-      if (readMark(dest) === lock.JWPLC_PACKAGE_COMMIT) return { root: dest, lock, source: "cache" };
-      throw new Error(
-        `no se pudo verificar el package en ${dest} (git no disponible y sin la marca ${COMMIT_MARK} de ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}). ` +
-          `Reinstale JWPLC Sim o instale Git para Windows.`,
-      );
-    }
-    if (!fetch) throw new Error(`${dest} está en ${head}, se esperaba ${lock.JWPLC_PACKAGE_COMMIT}`);
-    rmSync(dest, { recursive: true, force: true });
+    if (readMark(dest)) return { root: dest, lock, source: "cache" };
   }
   if (!fetch) throw new Error(`Package no descargado. Ejecute: node scripts/fetch-package.mjs`);
-
-  mkdirSync(dirname(dest), { recursive: true });
-  console.error(`[fetch-package] clonando ${lock.JWPLC_PACKAGE_REPO} @ ${lock.JWPLC_PACKAGE_REF}`);
-  const sparse = () => execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...SPARSE_PATHS.map((p) => `/${p}`)], { cwd: dest, stdio: "inherit" });
-  const byCommit = () => {
-    execFileSync("git", ["fetch", "--quiet", "--depth", "1", "origin", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
-    execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", lock.JWPLC_PACKAGE_COMMIT], { cwd: dest, stdio: "inherit" });
-  };
-  let isBranch = true;
-  try {
-    execFileSync(
-      "git",
-      ["-c", "advice.detachedHead=false", "clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", "--branch", lock.JWPLC_PACKAGE_REF, lock.JWPLC_PACKAGE_REPO, dest],
-      { stdio: ["ignore", "inherit", "pipe"] },
-    );
-    sparse();
-    // Con --branch, una rama deja HEAD como referencia simbólica; un tag, separado.
-    try {
-      git(["symbolic-ref", "-q", "HEAD"], dest);
-    } catch {
-      isBranch = false;
-    }
-  } catch {
-    // La rama ya no existe (renombrada o borrada tras fusionarse): se trae el
-    // commit fijado directamente, que es lo que manda en package.lock.
-    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} no existe en el remoto; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)} directamente`);
-    rmSync(dest, { recursive: true, force: true });
-    execFileSync("git", ["clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", "--no-checkout", lock.JWPLC_PACKAGE_REPO, dest], { stdio: "inherit" });
-    sparse();
-    byCommit();
-  }
-  let head = revParse(dest, "HEAD");
-  if (head !== lock.JWPLC_PACKAGE_COMMIT && isBranch) {
-    console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} avanzó; trayendo ${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}`);
-    byCommit();
-    head = revParse(dest, "HEAD");
-  }
-  if (head !== lock.JWPLC_PACKAGE_COMMIT) {
-    throw new Error(
-      `El tag ${lock.JWPLC_PACKAGE_REF} apunta a ${head}, pero package.lock fija ${lock.JWPLC_PACKAGE_COMMIT}. ` +
-        `¿Se movió el tag? No se continúa.`,
-    );
-  }
-  markCommit(dest, head);
-  return { root: dest, lock, source: "clone" };
+  return fetchPackageRef(lock.JWPLC_PACKAGE_REF);
 }
 
 // Package sin fijar (G5): un checkout cualquiera de platform-jwplc, p. ej. el
@@ -189,11 +119,19 @@ export function packageFromDir(dir) {
   const head = revParse(root, "HEAD");
   let ref = "checkout";
   try {
-    ref = git(["describe", "--tags", "--always", "--dirty"], root);
+    const branch = git(["rev-parse", "--abbrev-ref", "HEAD"], root);
+    ref = branch && branch !== "HEAD" ? branch : git(["describe", "--tags", "--always", "--dirty"], root);
+  } catch {}
+  let commit = head ?? `dir:${root}`;
+  try {
+    const dirty = git(["status", "--porcelain", "--", lock.JWPLC_PACKAGE_TREE], root);
+    if (dirty) {
+      commit = `${commit}-dirty-${createHash("sha1").update(dirty).digest("hex").slice(0, 8)}`;
+    }
   } catch {}
   return {
     root,
-    lock: { ...lock, JWPLC_PACKAGE_REF: ref, JWPLC_PACKAGE_COMMIT: head ?? `dir:${root}` },
+    lock: { ...lock, JWPLC_PACKAGE_REF: ref, JWPLC_PACKAGE_COMMIT: commit },
     source: "dir",
   };
 }

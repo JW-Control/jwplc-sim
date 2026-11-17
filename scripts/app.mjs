@@ -16,6 +16,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
+import { resolvePackageRoot } from "./fetch-package.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const APP = join(ROOT, "app");
@@ -39,15 +40,12 @@ if (process.platform === "win32") {
   }
 }
 
-// 1. Package fijado (package.lock).
-const lock = Object.fromEntries(
-  readFileSync(join(ROOT, "package.lock"), "utf8")
-    .split(/\r?\n/)
-    .filter((l) => /^\w+=/.test(l))
-    .map((l) => l.split("=")),
-);
-if (!existsSync(join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF ?? "", "JWPLC"))) {
-  log("descargando el package fijado…");
+// 1. Package (modo en vivo sin candado o descarga de respaldo).
+try {
+  const pkg = resolvePackageRoot({ fetch: false });
+  log(`usando package en vivo: ${pkg.root} (${pkg.lock.JWPLC_PACKAGE_REF})`);
+} catch {
+  log("descargando el package…");
   run([join(ROOT, "scripts", "fetch-package.mjs")]);
 }
 

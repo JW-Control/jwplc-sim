@@ -281,19 +281,26 @@ ipcMain.handle("code:format", (_e, { text, name, dir }) => {
 });
 
 ipcMain.handle("app:info", () => {
-  const lock = readLock();
-  return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+  try {
+    const { lock } = resolvePackageRoot({ fetch: false });
+    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+  } catch {
+    const lock = readLock();
+    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+  }
 });
 
 ipcMain.handle("examples:list", () => listExamples());
 
 // Catálogo de la API del Basic para el autocompletado, de los headers del
-// package fijado (cli/lib/api-catalog.mjs).
+// package activo (cli/lib/api-catalog.mjs).
 let apiCatalog = null;
+let apiCatalogCommit = null;
 ipcMain.handle("api:catalog", () => {
-  if (!apiCatalog) {
-    const { root, lock } = resolvePackageRoot();
+  const { root, lock } = resolvePackageRoot();
+  if (!apiCatalog || apiCatalogCommit !== lock.JWPLC_PACKAGE_COMMIT) {
     apiCatalog = buildApiCatalog(join(root, lock.JWPLC_PACKAGE_TREE));
+    apiCatalogCommit = lock.JWPLC_PACKAGE_COMMIT;
   }
   return apiCatalog;
 });
