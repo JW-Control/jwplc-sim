@@ -1,0 +1,112 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Animación de Ledcito (mascota de JW Control). Corrida 1: al arrancar entra solo a USER y recorre las fases en orden (durmiendo, despierta, mira a ambos lados, corte, asombro, feliz, se apaga) y repite el ciclo; capturas de cada expresión. Corrida 2: OK reinicia la animación y ESC vuelve a IDLE.",
+  "sketch": "package:libraries/JWPLC_Display/examples/17.Display_Ledcito",
+  "runs": [
+    {
+      "until_ms": 18500,
+      "expect": {
+        "console": [
+          "^JWPLC Basic - Ledcito$",
+          {
+            "match": "^Ledcito: durmiendo$",
+            "count": 1,
+            "before_ms": 1200
+          },
+          {
+            "match": "^Ledcito: despierta$",
+            "count": 1,
+            "after_ms": 2800,
+            "before_ms": 3200
+          },
+          {
+            "match": "^Ledcito: mira a ambos lados$",
+            "count": 1,
+            "after_ms": 4100,
+            "before_ms": 4500
+          },
+          {
+            "match": "^Ledcito: corte: ve a Ledcito$",
+            "count": 1,
+            "after_ms": 7800,
+            "before_ms": 8200
+          },
+          {
+            "match": "^Ledcito: asombro$",
+            "count": 1,
+            "after_ms": 9000,
+            "before_ms": 9400
+          },
+          {
+            "match": "^Ledcito: feliz$",
+            "count": 1,
+            "after_ms": 10900,
+            "before_ms": 11300
+          },
+          {
+            "match": "^Ledcito: se apaga$",
+            "count": 1,
+            "after_ms": 16200,
+            "before_ms": 16600
+          },
+          {
+            "match": "^Ledcito: durmiendo$",
+            "count": 1,
+            "after_ms": 17600
+          }
+        ],
+        "console_absent": [
+          "sin RAM"
+        ],
+        "screen": [
+          {
+            "at_ms": 4500,
+            "ref": "screens/17.Display_Ledcito_despierto.png"
+          },
+          {
+            "at_ms": 9500,
+            "ref": "screens/17.Display_Ledcito_asombro.png"
+          },
+          {
+            "at_ms": 11200,
+            "ref": "screens/17.Display_Ledcito_feliz.png"
+          }
+        ]
+      }
+    },
+    {
+      "until_ms": 7000,
+      "stim": [
+        "4500 BTN_OK=1",
+        "4600 BTN_OK=0",
+        "6000 BTN_ESC=1",
+        "6100 BTN_ESC=0"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^Ledcito: despierta$",
+            "count": 1,
+            "before_ms": 4500
+          },
+          {
+            "match": "^Ledcito: durmiendo$",
+            "count": 1,
+            "after_ms": 4500,
+            "before_ms": 4800
+          },
+          {
+            "match": "^Ledcito: mira a ambos lados$",
+            "count": 0,
+            "after_ms": 4500
+          },
+          {
+            "match": "^Ledcito: ",
+            "count": 0,
+            "after_ms": 6200
+          }
+        ]
+      }
+    }
+  ]
+}
