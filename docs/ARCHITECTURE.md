@@ -616,7 +616,12 @@ escena modela también el proceso y la instrumentación:
 - **Transmisores** (2.0): `pt100-rs485` (PT100 de 3 hilos; registro 0 =
   °C × 10), `ph-rs485` (electrodo y ATC; 0 = pH × 100, 1 = °C × 10) y
   `pressure-rs485` (0-10 bar; 0 = bar × 100, mide `source`, p. ej.
-  `RED1.presion`, o se ajusta a mano; falla «sensor abierto» = 7FFFh),
+  `RED1.presion`, o se ajusta a mano; falla «sensor abierto» = 7FFFh) y
+  `chlorine-rs485` (cloro libre, dir. 4; 0 = mg/L × 100, 1 = pH × 100;
+  mide `source`, p. ej. `CL1.cloro`; «sin muestra» = 7FFFh). La bomba
+  dosificadora `chlorinator` (bobina 24 VDC) lleva la concentración de la
+  cámara de contacto hacia dosis / caudal de agua con la constante de mezcla
+  (fallas: descebada y tanque de hipoclorito vacío),
   9600 8N1 por defecto. Con sonda `cableada` miden la sonda de un bloque
   cableada a sus bornes (SDK §2.3.3): un hilo cortado o cruzado es sonda
   abierta. Con sonda `simulada` el valor se ajusta a mano.
@@ -654,6 +659,9 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 
 **Modelo de la red del edificio:** cada bomba sigue su curva con las leyes de afinidad (caudal ∝ n, presión de cierre ∝ n²: Q = qMax·n·√(1 − P/(pCierre·n²))); el consumo de los grifos crece con √P (`consumo` es el caudal a 3,5 bar); el hidroneumático aporta C = V·(1 + precarga)/(1 + P)² L/bar (Boyle) y bajo la precarga solo queda la tubería (1,5 L/bar). dP/dt = (Q bombas − Q consumo)/C, integrado cada 10 ms y publicado cada 100 ms. Sin agua en la cisterna (bajo el 2 %) las bombas no dan caudal.
 | `jwsim/lift` (montacargas, `scene/devices/lift.mjs`) | `motor` (positivo sube; `velocidad` m/s a speed 1) | `altura` (m, segmento: los finales de piso y de sobrerrecorrido se enlazan aquí), `piso`, `enPiso` (−1 entre pisos), `pisoTxt`, `puerta0`… (true = abierta), `puertasCerradas`, `sobrecarga`, `movimiento`, `tope` | `puerta0`…`puerta5`, `sobrecarga` (toggles, también con clic en el símbolo) |
+| `jwsim/sand-filter` (filtro de arena, `scene/devices/treatment.mjs`) | `bomba`, `servicio` (p. ej. `Y1.open`), `retrolavado` (p. ej. `Y2.open`) | `dp` (bar, para el presostato diferencial), `qServicio`, `qRetrolavado` (L/min), `qRel` (0-1, Bomba del reservorio), `colmatacion` (%), `turbidez`, `turbidezSalida` (NTU), `lavando`, `cerrado` | `turbidez` (perilla), `colmatar` |
+
+**Modelo del filtro:** la colmatación crece con el volumen filtrado × turbidez / (`capacidad` × 20 NTU) y el retrolavado la baja con constante de 8 s; dp = (0,15 + 1,1 × colmatación) × velocidad² en servicio; el caudal de servicio cae a (1 − 0,6 × colmatación²) del nominal; sobre el 85 % de colmatación deja pasar turbidez.
 | `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
 
 La cinta integra el avance con la regla del trapecio (exacta en la rampa

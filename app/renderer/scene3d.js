@@ -17,7 +17,7 @@ const COL = {
 };
 const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", ...AIR]);
+const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", "jwsim/sand-filter", "jwsim/chlorinator", ...AIR]);
 const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
 const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
@@ -378,6 +378,8 @@ function rebuild(spec) {
       "jwsim/door": buildDoor,
       "jwsim/building-water": buildBuilding,
       "jwsim/lift": buildLift,
+      "jwsim/sand-filter": buildFilter,
+      "jwsim/chlorinator": buildChlorinator,
       "jwsim/compressor": buildCompressor,
       "jwsim/service-unit": buildServiceUnit,
     };
@@ -670,6 +672,56 @@ function buildLift(p) {
   return { group: g, cab, rope, drum, doors, extra, tall, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
+/** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
+function buildFilter() {
+  const g = new THREE.Group();
+  const shell = cyl(0.42, 1.5, mat(0x2f6fb5, { metalness: 0.3, roughness: 0.4, transparent: true, opacity: 0.55 }), 32);
+  shell.position.set(0.6, 0.95, 0);
+  const capT = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), shell.material);
+  capT.position.set(0.6, 1.7, 0);
+  const gravel = cyl(0.4, 0.25, mat(0x7f8790), 28);
+  gravel.position.set(0.6, 0.33, 0);
+  const bedM = mat(0xe2c98f, { roughness: 0.95 });
+  const sand = cyl(0.4, 0.5, bedM, 28);
+  sand.position.set(0.6, 0.71, 0);
+  const anth = cyl(0.4, 0.2, mat(0x2a2e33, { roughness: 0.9 }), 28);
+  anth.position.set(0.6, 1.06, 0);
+  const waterM = mat(0x9cc3ee, { transparent: true, opacity: 0.45 });
+  const water = cyl(0.4, 0.5, waterM, 28);
+  water.position.set(0.6, 1.42, 0);
+  for (const x of [0.38, 0.82]) {
+    const leg = box(0.06, 0.25, 0.06, mat(COL.post));
+    leg.position.set(x, 0.12, 0);
+    g.add(leg);
+  }
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  const inP = cyl(0.04, 0.6, pipeM, 12);
+  inP.rotation.z = Math.PI / 2;
+  inP.position.set(0.0, 1.85, 0);
+  const outP = cyl(0.04, 0.7, pipeM, 12);
+  outP.rotation.z = Math.PI / 2;
+  outP.position.set(1.2, 0.3, 0);
+  const gg = gauge(0.1);
+  gg.position.set(0.6, 1.25, 0.45);
+  g.add(shell, capT, gravel, sand, anth, water, inP, outP, gg);
+  return { group: g, bedM, waterM, gauge: gg, height: 2.3, size: [1.6, 0.9] };
+}
+
+/** Dosificadora de cloro: tanque de hipoclorito con la bomba encima y su LED. */
+function buildChlorinator() {
+  const g = new THREE.Group();
+  const tank = cyl(0.2, 0.55, mat(0xf4f5f6, { roughness: 0.5 }), 24);
+  tank.position.set(0.3, 0.28, 0);
+  const liquid = cyl(0.18, 0.5, mat(0xe8f27a, { transparent: true, opacity: 0.6 }), 24);
+  liquid.position.set(0.3, 0.27, 0);
+  const head = box(0.26, 0.16, 0.18, mat(0xd8282d));
+  head.position.set(0.3, 0.64, 0);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), mat(COL.off, { emissive: 0x000000 }));
+  led.position.set(0.38, 0.66, 0.1);
+  g.add(tank, liquid, head, led);
+  return { group: g, led, liquid, height: 1.2, size: [0.6, 0.4] };
+}
+
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
 
 function frame(now) {
@@ -702,6 +754,17 @@ function frame(now) {
       m.panel.position.x = m.A / 2 + pos * m.A;
       m.person.visible = !!out.persona;
       m.ray.material.opacity = out.persona ? 0.25 : 0.8;
+    } else if (o.type === "jwsim/sand-filter") {
+      const c = Math.max(0, Math.min(1, Number(out.colmatacion ?? 0) / 100));
+      m.bedM.color.setRGB(0.886 - 0.5 * c, 0.788 - 0.5 * c, 0.561 - 0.4 * c);
+      m.waterM.color.setHex(out.lavando ? 0x9a7a4a : 0x9cc3ee);
+      needleTo(m.gauge, Number(out.dp ?? 0), 2);
+    } else if (o.type === "jwsim/chlorinator") {
+      m.led.material.color.setHex(out.dosificando ? COL.on : COL.off);
+      m.led.material.emissive.setHex(out.dosificando ? 0x1f8a46 : 0x000000);
+      const lv = Math.max(0.02, Number(out.tanque ?? 0) / 100);
+      m.liquid.scale.y = lv;
+      m.liquid.position.y = 0.02 + (0.5 * lv) / 2;
     } else if (o.type === "jwsim/lift") {
       const y = Number(out.altura ?? 0) * LIFT_K;
       m.cab.position.y = y;

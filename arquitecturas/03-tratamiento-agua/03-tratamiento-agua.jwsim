@@ -1,0 +1,325 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Planta de tratamiento de agua",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/tratamiento_agua/tratamiento_agua.ino"
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0,
+        "params": {
+          "model": "MDR-60"
+        }
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "LSL",
+        "type": "jwsim/float-switch",
+        "x": 860,
+        "y": 0,
+        "params": {
+          "source": "T2.nivel",
+          "alto": 30,
+          "bajo": 25
+        }
+      },
+      {
+        "id": "LSH",
+        "type": "jwsim/float-switch",
+        "x": 1060,
+        "y": 0,
+        "params": {
+          "source": "T2.nivel",
+          "alto": 90,
+          "bajo": 85
+        }
+      },
+      {
+        "id": "PDS",
+        "type": "jwsim/pressure-switch",
+        "x": 1260,
+        "y": 0,
+        "params": {
+          "source": "F1.dp",
+          "corte": 1.0,
+          "dif": 0.2
+        }
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/selector-2",
+        "x": 1480,
+        "y": 0,
+        "params": {
+          "label": "Auto"
+        }
+      },
+      {
+        "id": "AT1",
+        "type": "jwsim/chlorine-rs485",
+        "x": 1680,
+        "y": 0,
+        "params": {
+          "address": 4,
+          "source": "CL1.cloro"
+        }
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "x": 1940,
+        "y": 0,
+        "params": {
+          "color": "amarillo",
+          "label": "Retrolavado"
+        }
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "x": 2120,
+        "y": 0,
+        "params": {
+          "color": "rojo",
+          "label": "Alarma"
+        }
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 560
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 240,
+        "y": 560
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "x": 240,
+        "y": 980
+      },
+      {
+        "id": "Y1",
+        "type": "jwsim/water-valve",
+        "x": 560,
+        "y": 560
+      },
+      {
+        "id": "Y2",
+        "type": "jwsim/water-valve",
+        "x": 760,
+        "y": 560
+      },
+      {
+        "id": "CL1",
+        "type": "jwsim/chlorinator",
+        "x": 980,
+        "y": 560,
+        "params": {
+          "agua": "F1.qServicio"
+        }
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/sand-filter",
+        "x": 1240,
+        "y": 560,
+        "params": {
+          "bomba": "M1.speed",
+          "servicio": "Y1.open",
+          "retrolavado": "Y2.open",
+          "caudal": 120,
+          "capacidad": 3000,
+          "turbidez": 20,
+          "colmatacion0": 40
+        }
+      },
+      {
+        "id": "T2",
+        "type": "jwsim/tank",
+        "x": 1620,
+        "y": 560,
+        "params": {
+          "volumen": 1500,
+          "alto": 1.5,
+          "bomba": "F1.qRel",
+          "caudal": 120,
+          "consumo": 40,
+          "nivel0": 20
+        }
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "LSL.BK"
+      },
+      {
+        "from": "LSL.BN",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "LSH.BK"
+      },
+      {
+        "from": "LSH.BN",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "PDS.1"
+      },
+      {
+        "from": "PDS.4",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_3"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "AT1.+"
+      },
+      {
+        "from": "AT1.-",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "AT1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "AT1.B"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "Y1.A1"
+      },
+      {
+        "from": "Y1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "Y2.A1"
+      },
+      {
+        "from": "Y2.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "CL1.A1"
+      },
+      {
+        "from": "CL1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_4.1"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_5.1"
+      },
+      {
+        "from": "plc.Q0_5.2",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "L1.L",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "M1.U2",
+        "to": "L1.N"
+      }
+    ]
+  }
+}

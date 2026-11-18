@@ -6,6 +6,7 @@
 //   ARCH_RUN      compila y corre: con S1 en Auto la red sube a ~4 bar con el PI
 //   ARCH_3D       la Planta 3D muestra la cisterna y la sala de bombas con el edificio
 //   ARCH_LIFT     la 02 (montacargas): «Llamar P2» sube la cabina hasta el piso 2
+//   ARCH_WATER    la 03 (tratamiento): filtra, dosifica cloro y «Colmatar» lleva al retrolavado
 // Informe en build/gates/JWSIM_ARQUITECTURAS_E2E.json y capturas en build/gates/arquitecturas/.
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -95,13 +96,41 @@ try {
   await t(() => window.JwsimTabs.select("schematic"));
   await win.waitForTimeout(800);
   await win.screenshot({ path: join(OUT, "02-esquema.png") });
+
+  await win.click("#btn-stop");
+  await win.waitForFunction(() => window.jwsimTest.status() !== "running", null, { timeout: 20000 });
+  await t(() => window.jwsimTest.pickArch("03-tratamiento-agua"));
+  await win.waitForTimeout(2500);
+  await win.click("#btn-run");
+  await win.waitForFunction(() => window.jwsimTest.status() === "running", null, { timeout: 240000 });
+  await win.waitForTimeout(1500);
+  await t(() => window.jwsimTest.scene.act("S1", "position", 1));
+  await win.waitForTimeout(8000);
+  await t(() => window.jwsimTest.scene.act("F1", "colmatar", true));
+  await win.waitForTimeout(300);
+  await t(() => window.jwsimTest.scene.act("F1", "colmatar", false));
+  let water = null;
+  for (let i = 0; i < 30 && !water?.ok; i++) {
+    await win.waitForTimeout(500);
+    water = await t(() => {
+      const o = (id) => window.jwsimTest.scene.snapshot()?.devices.find((d) => d.id === id)?.outputs ?? {};
+      return { ok: !!o("F1").lavando && !!o("Y2").open && !o("Y1").open, dp: o("F1").dp, cloro: o("AT1").cloro };
+    });
+  }
+  await win.screenshot({ path: join(OUT, "03-esquema.png") });
+  await t(() => window.jwsimTest.scene.view("3d"));
+  await win.waitForTimeout(1500);
+  const objs3 = await t(() => window.jwsimTest.scene.view3d());
+  await win.screenshot({ path: join(OUT, "03-planta-3d.png") });
+  criteria.ARCH_WATER = { ...water, ok: !!water?.ok && objs3.some((o) => o.type === "jwsim/sand-filter") };
+  log(`ARCH_WATER ${JSON.stringify(criteria.ARCH_WATER)}`);
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
   log(`ERROR ${e}`);
 } finally {
   await app.close();
 }
-const ok = ["ARCH_LIST", "ARCH_OPEN", "ARCH_RUN", "ARCH_3D", "ARCH_LIFT"].every((k) => criteria[k]?.ok);
+const ok = ["ARCH_LIST", "ARCH_OPEN", "ARCH_RUN", "ARCH_3D", "ARCH_LIFT", "ARCH_WATER"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_ARQUITECTURAS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
 console.log(`JWSIM_ARQUITECTURAS_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

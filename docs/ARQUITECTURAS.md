@@ -41,3 +41,18 @@ piso no llega a tiempo). BTN_OK repone.
 
 Prueba: `02-montacargas.jwtest.json` (sube a P2, baja y la puerta abierta en
 marcha da E01).
+
+## 03 · Planta de tratamiento de agua
+
+Bomba de captación con contactor, filtro de arena a presión (`jwsim/sand-filter`)
+con válvula de servicio Y1 y de retrolavado Y2, presostato diferencial PDS,
+bomba dosificadora de cloro CL1 (`jwsim/chlorinator`) y analizador de cloro
+residual AT1 por RS-485 (`jwsim/chlorine-rs485`, dir. 4), reservorio T2 con
+flotadores bajo y alto. El PLC llena el reservorio entre sus flotadores, hace
+el retrolavado (25 s) cuando PDS marca el filtro colmatado y regula el cloro a
+1,0 mg/L con un PI de tiempo proporcional (ventana de 10 s). Alarmas: E10
+cloro bajo, E11 cloro alto, E12 dosificadora sin efecto, E13 analizador sin
+respuesta o sin muestra (deja de dosificar).
+
+Prueba: `03-tratamiento-agua.jwtest.json` (filtra, colmata, retrolava, vuelve
+y la celda seca da E13).
