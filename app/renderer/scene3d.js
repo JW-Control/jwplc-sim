@@ -5,7 +5,8 @@
 // las instantáneas de la escena. Entre instantáneas, lo que se mueve a
 // velocidad conocida (piezas, nivel, puerta, vástago) se extrapola para que
 // la animación sea continua. Los sensores enlazados a un equipo de planta
-// (source) aparecen como balizas que se encienden al detectar.
+// (source) aparecen como balizas que se encienden al detectar; los sensores
+// magnéticos de cilindro, montados sobre el tubo en su extremo.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -14,8 +15,10 @@ const COL = {
   tank: 0xb8c4d0, water: 0x2f8cff, pump: 0x3f7fbf, door: 0xc9cfd6, post: 0x4b5563, rod: 0xdfe3e8, body: 0x7b8794,
   on: 0x37d67a, off: 0x3a4048, warn: 0xffb020, person: 0xe2b48c,
 };
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve-2"]);
-const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric"]);
+const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
+const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
+/** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
+const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra });
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
@@ -46,6 +49,19 @@ function beacon() {
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), mat(COL.off, { emissive: 0x000000 }));
   lamp.position.y = 0.55;
   g.add(post, lamp);
+  g.userData.lamp = lamp;
+  return g;
+}
+/** Sensor magnético montado en la ranura del cilindro, con su LED. */
+function slotSensor() {
+  const g = new THREE.Group();
+  const bodyS = box(0.12, 0.035, 0.04, mat(0x1f2328));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.04, 0.025, 0);
+  const cable = cyl(0.008, 0.25, mat(0x2a2e33), 8);
+  cable.rotation.z = Math.PI / 2;
+  cable.position.set(-0.17, 0, 0);
+  g.add(bodyS, lamp, cable);
   g.userData.lamp = lamp;
   return g;
 }
@@ -275,9 +291,21 @@ function rebuild(spec) {
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
     const beacons = [];
-    for (const s of spec.devices.filter((q) => SENSORS.has(q.type) && String(q.params?.source ?? "").startsWith(`${d.id}.`))) {
+    for (const s of spec.devices.filter((q) => SENSORS.has(q.type) && sourceOf(q).startsWith(`${d.id}.`))) {
+      const key = sourceOf(s).slice(d.id.length + 1);
+      if (s.type === "jwsim/sensor-cylinder") {
+        // Sobre el tubo (radio 0.09, eje a 0.9 m): atrás si marca retraído, adelante si extendido.
+        const b = slotSensor();
+        b.position.set(s.params.end === "extendido" ? 0.66 : 0.14, 0.9 + 0.1, 0);
+        const t = label(s.id);
+        t.scale.set(0.5, 0.125, 1);
+        t.position.y = 0.16;
+        b.add(t);
+        model.group.add(b);
+        beacons.push({ id: s.id, b });
+        continue;
+      }
       const b = beacon();
-      const key = String(s.params.source).slice(d.id.length + 1);
       const min = Number(s.params.min ?? 1);
       if (d.type === "jwsim/conveyor") b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);

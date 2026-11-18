@@ -15,6 +15,7 @@ está mal y en qué instante.
 | 06 | Arranque estrella-triángulo | 2 | Secuencia temporizada con pausa obligatoria entre contactores |
 | 07 | Cinta con contador de lote | 2 | Detección de flanco y contador |
 | 08 | Alarma con reconocimiento | 3 | Secuencia de alarma: bocina, parpadeo, reconocimiento y memoria |
+| 10 | Secuencia electroneumática de 4 cilindros | 3 | Secuencia A+ B+ B− A− C+ D+ D− C− con sensores magnéticos, vigilancia por tiempo, pausa y reset con los botones del frente |
 
 ## Uso
 
@@ -125,7 +126,10 @@ exercises/01-marcha-parada/
 
 Cada **caso** es una co-simulación del sketch con la escena: acciones sobre
 los equipos (como en las pruebas `.jwtest.json`) y fallas inyectadas
-(`faults`, ARCHITECTURE §4.2) en instantes dados. Cada **verificación** es
+(`faults`, ARCHITECTURE §4.2) en instantes dados. Los botones del frente
+de la placa no son equipos de la escena: se pulsan con `stim`, líneas en el
+formato `.stim` (`"stim": ["1000 BTN_OK=1", "1100 BTN_OK=0"]`, ejercicio 10).
+Cada **verificación** es
 una tabla de verdad temporizada sobre la traza:
 
 | Verificación | Se cumple si… |

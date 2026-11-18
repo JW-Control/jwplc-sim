@@ -8,7 +8,7 @@ import { buzzer, contactor, lamp, motor, motor1ph, motor3ph, relay, solenoidValv
 import { emergencyStop, limitSwitch, pushbuttonLit, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3, selectorKey } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24, power3ph } from "./supplies.mjs";
-import { sensorCapacitive, sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
+import { sensorCapacitive, sensorCylinder, sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
 import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
 import { motor2v, overloadRelay } from "./drives.mjs";
 import { vfdEl } from "./vfd-el.mjs";
@@ -38,6 +38,7 @@ export const builtinDevices = [
   sensorInductive,
   sensorCapacitive,
   sensorPhotoelectric,
+  sensorCylinder,
   floatSwitch,
   levelElectrodes,
   pressureSwitch,

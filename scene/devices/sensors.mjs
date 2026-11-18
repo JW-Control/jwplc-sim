@@ -29,13 +29,20 @@ export const MATERIALS = {
 
 const fmtMm = (v) => `${(Math.round(v * 10) / 10).toFixed(1).replace(".", ",")} mm`;
 
+// Magnético de cilindro: tipo Festo SMT-8M (PNP de 3 hilos, se monta en la
+// ranura del cilindro y detecta el imán del émbolo). Se elige el cilindro
+// (la electroválvula que lo mueve, p. ej. Y1) y el extremo: retraído
+// (position = 0) o extendido (position = 1).
+export const CYLINDER_ENDS = { "retraído": [0, 0], extendido: [1, 1] };
+
 /**
- * @param {"inductive" | "capacitive" | "photoelectric"} kind
+ * @param {"inductive" | "capacitive" | "photoelectric" | "cylinder"} kind
  * @returns {import("../../sdk/jwsim-device.js").DeviceDefinition}
  */
 function sensor(kind) {
   // Inductivo y capacitivo: pieza a una distancia, con alcance según el material.
   const proximity = kind === "inductive" || kind === "capacitive";
+  const cylinder = kind === "cylinder";
   const capacitive = kind === "capacitive";
   const K = capacitive ? CAPACITIVE : INDUCTIVE;
   const mats = capacitive ? MATERIALS.capacitive : MATERIALS.inductive;
@@ -56,12 +63,25 @@ function sensor(kind) {
         { id: "target", label: "Pieza al frente", kind: "toggle" },
       ]
     : [{ id: "target", label: "Objeto", kind: "toggle" }];
-  const NAMES = { inductive: "Sensor inductivo", capacitive: "Sensor capacitivo", photoelectric: "Sensor fotoeléctrico" };
+  const NAMES = { inductive: "Sensor inductivo", capacitive: "Sensor capacitivo", photoelectric: "Sensor fotoeléctrico", cylinder: "Sensor magnético de cilindro" };
   const DESCRIPTIONS = {
     inductive: `Sensor inductivo de 3 hilos Autonics PR18-8D (M18, detecta metal a Sn = ${K.sn} mm sobre acero, histéresis ${K.hysteresis * 100} %). Otros metales acortan el alcance (latón 50 %, aluminio 45 %, cobre 40 %) y los no metales no se detectan. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
     capacitive: `Sensor capacitivo de 3 hilos Autonics CR18-8D (M18 de plástico, Sn ajustable hasta ${K.sn} mm, histéresis ${K.hysteresis * 100} %). Detecta metales y no metales: agua y metal al 100 %, vidrio y madera 50 %, plástico 45 %, papel 20 %, por eso sirve para nivel de líquidos o granos a través de un tanque de plástico. El potenciómetro de sensibilidad ajusta el alcance. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
     photoelectric: "Sensor fotoeléctrico difuso de 3 hilos. Se acciona a mano o por la posición de otro dispositivo.",
+    cylinder:
+      "Final de carrera magnético de 3 hilos (tipo Festo SMT-8M, PNP) montado en la ranura del cilindro: detecta el imán del émbolo en el extremo elegido. Indique la electroválvula que mueve el cilindro (p. ej. Y1) y si marca el vástago retraído o extendido; en la vista 3D aparece sobre el cilindro.",
   };
+  /** @type {import("../../sdk/jwsim-device.js").ParameterSpec[]} */
+  const targetParams = cylinder
+    ? [
+        { id: "cylinder", label: "Cilindro (electroválvula)", type: "string", default: "", hint: "p. ej. Y1" },
+        { id: "end", label: "Extremo", type: "enum", options: Object.keys(CYLINDER_ENDS), default: "retraído" },
+      ]
+    : [
+        { id: "source", label: "Detecta", type: "string", default: "", hint: "dispositivo.salida, p. ej. Y1.position" },
+        { id: "min", label: "Desde", type: "number", default: 1 },
+        { id: "max", label: "Hasta", type: "number", default: 1 },
+      ];
   return {
     type: `jwsim/sensor-${kind}`,
     version: kind === "inductive" ? "1.2.0" : "1.0.0",
@@ -70,12 +90,10 @@ function sensor(kind) {
     description: DESCRIPTIONS[kind],
     parameters: [
       { id: "output", label: "Salida", type: "enum", options: ["pnp", "npn"], default: "pnp" },
-      { id: "contact", label: "Contacto", type: "enum", options: ["no", "nc"], default: "no", hint: proximity ? "NA/NC" : "no = luz, nc = oscuridad" },
+      { id: "contact", label: "Contacto", type: "enum", options: ["no", "nc"], default: "no", hint: proximity || cylinder ? "NA/NC" : "no = luz, nc = oscuridad" },
       { id: "responseMs", label: "Tiempo de respuesta", type: "number", default: capacitive ? 10 : kind === "inductive" ? 1 : 0.5, unit: "ms" },
       ...distanceParam,
-      { id: "source", label: "Detecta", type: "string", default: "", hint: "dispositivo.salida, p. ej. Y1.position" },
-      { id: "min", label: "Desde", type: "number", default: 1 },
-      { id: "max", label: "Hasta", type: "number", default: 1 },
+      ...targetParams,
     ],
     terminals: [
       { id: "BN", label: "BN (+)" },
@@ -83,7 +101,13 @@ function sensor(kind) {
       { id: "BK", label: "BK (salida)" },
     ],
     actions,
-    links: (p) => (p.source ? [{ id: "target", source: String(p.source), min: Number(p.min), max: Number(p.max) }] : []),
+    links: (p) => {
+      if (cylinder) {
+        const [min, max] = CYLINDER_ENDS[String(p.end)] ?? CYLINDER_ENDS["retraído"];
+        return p.cylinder ? [{ id: "target", source: `${String(p.cylinder)}.position`, min, max }] : [];
+      }
+      return p.source ? [{ id: "target", source: String(p.source), min: Number(p.min), max: Number(p.max) }] : [];
+    },
     electrical: (p) => ({
       loads: [{ id: "supply", a: "BN", b: "BU", rating: "24VDC", polar: true }],
       contacts: { out: p.output === "npn" ? ["BU", "BK"] : ["BN", "BK"] },
@@ -126,3 +150,4 @@ function sensor(kind) {
 export const sensorInductive = sensor("inductive");
 export const sensorCapacitive = sensor("capacitive");
 export const sensorPhotoelectric = sensor("photoelectric");
+export const sensorCylinder = sensor("cylinder");

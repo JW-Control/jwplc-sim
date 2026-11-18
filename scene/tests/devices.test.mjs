@@ -184,6 +184,34 @@ test("sensor fotoeléctrico NC (modo oscuridad) por la posición del cilindro", 
   assert.equal(s.output("H", "lit"), false, "el vástago entra en el haz al 40 % de la carrera (200 ms)");
 });
 
+test("sensor magnético de cilindro: marca retraído y extendido del cilindro elegido", () => {
+  const s = scene(
+    [
+      "PS:power-24vdc", "Y1:solenoid-valve", "S:pushbutton-no", "H0:lamp", "H1:lamp",
+      { id: "B0", type: "jwsim/sensor-cylinder", params: { cylinder: "Y1", end: "retraído" } },
+      { id: "B1", type: "jwsim/sensor-cylinder", params: { cylinder: "Y1", end: "extendido" } },
+    ],
+    [
+      "PS.+V1 - B0.BN", "B0.BU - PS.-V1", "B0.BK - H0.X1", "H0.X2 - PS.-V1",
+      "PS.+V1 - B1.BN", "B1.BU - PS.-V1", "B1.BK - H1.X1", "H1.X2 - PS.-V1",
+      "PS.+V1 - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.-V1",
+    ],
+  );
+  s.advanceTo(ms(1));
+  assert.equal(s.output("H0", "lit"), true, "en reposo: retraído");
+  assert.equal(s.output("H1", "lit"), false);
+  s.act("S", "press", true, ms(10));
+  s.advanceTo(ms(200));
+  assert.equal(s.output("H0", "lit"), false, "en carrera: ninguno");
+  assert.equal(s.output("H1", "lit"), false);
+  s.advanceTo(ms(520));
+  assert.equal(s.output("H1", "lit"), true, "al final de la carrera de 500 ms: extendido");
+  s.act("S", "press", false, ms(600));
+  s.advanceTo(ms(1010));
+  assert.equal(s.output("H0", "lit"), true, "vuelve en 400 ms: retraído");
+  assert.equal(s.output("H1", "lit"), false);
+});
+
 test("lámpara: tensión nominal, insuficiente y sobretensión (se quema)", () => {
   const ok = lampVia("S:pushbutton-no", "S.13", "S.14");
   ok.act("S", "press", true, ms(1));

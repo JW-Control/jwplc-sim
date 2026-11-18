@@ -16,6 +16,9 @@
 //   console (+ from/to)     una línea de la consola que coincide
 //   no_faults (+ from/to)   sin fallas eléctricas de la escena (cortocircuito…)
 //
+// Un caso puede traer "stim": líneas .stim para la placa («1500 BTN_OK=1»),
+// p. ej. los botones del frente, que no son dispositivos de la escena.
+//
 // Una verificación con "prerequisite": true es un requisito del caso: si
 // falla, las demás del caso no suman (no hacer nada no aprueba "nunca
 // arranca con los dos pulsados" si tampoco arranca cuando debe).
@@ -74,6 +77,7 @@ function checkRubric(r, file) {
       if (["always", "never", "eventually"].includes(kinds[0]) && !(k.to_ms > (k.from_ms ?? 0))) throw bad(`cases[${i}].checks[${j}]: requiere from_ms < to_ms`);
     });
     expandFaults(c.faults, true);
+    if (c.stim !== undefined && !(Array.isArray(c.stim) && c.stim.every((l) => typeof l === "string"))) throw bad(`cases[${i}]: 'stim' debe ser una lista de líneas`);
   });
 }
 
@@ -181,9 +185,11 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
   for (const [i, c] of ex.rubric.cases.entries()) {
     const fx = expandFaults(c.faults, true);
     const args = [...fx.args];
-    if (fx.stim.length) {
+    // Estímulos de la placa: los de las fallas y los del caso (botones del frente).
+    const stimLines = [...fx.stim, ...(c.stim ?? [])].sort((a, b) => parseFloat(a) - parseFloat(b));
+    if (stimLines.length) {
       const stim = join(work, `case${i}.stim`);
-      writeFileSync(stim, fx.stim.join("\n") + "\n");
+      writeFileSync(stim, stimLines.join("\n") + "\n");
       args.push("--stim", stim);
     }
     /** @type {[bigint, string][]} */

@@ -84,5 +84,5 @@ test("los ejercicios del repositorio traen ficha y quedan en 3 niveles", () => {
   }
   const r = levels(ex, emptyProgress());
   assert.equal(r.levels.length, 3);
-  assert.equal(r.total, 9);
+  assert.equal(r.total, 10);
 });

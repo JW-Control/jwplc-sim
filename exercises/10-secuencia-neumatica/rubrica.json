@@ -1,0 +1,243 @@
+{
+  "$schema": "../../schema/jwsim-rubric-1.json",
+  "id": "10-secuencia-neumatica",
+  "cases": [
+    {
+      "name": "Secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo",
+      "until_ms": 14000,
+      "stim": [
+        "1000 BTN_OK=1",
+        "1100 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "OK arranca: sale A y se enciende H1 (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "from_ms": 1000,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": true,
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Antes de OK no se mueve nada",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 990,
+          "always": {
+            "Q0_0": false,
+            "Q0_1": false,
+            "Q0_2": false,
+            "Q0_3": false
+          }
+        },
+        {
+          "description": "B sale solo con A afuera",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 14000,
+          "never": {
+            "Q0_1": true,
+            "Y1.extended": false
+          }
+        },
+        {
+          "description": "A vuelve solo con B adentro",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 14000,
+          "never": {
+            "Q0_0": false,
+            "Y1.retracted": false,
+            "Y2.retracted": false
+          }
+        },
+        {
+          "description": "C sale solo con A y B adentro",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 14000,
+          "never": {
+            "Q0_2": true,
+            "Y1.retracted": false
+          }
+        },
+        {
+          "description": "D sale solo con C afuera",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 14000,
+          "never": {
+            "Q0_3": true,
+            "Y3.extended": false
+          }
+        },
+        {
+          "description": "C vuelve después de D",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 14000,
+          "eventually": {
+            "Q0_2": false,
+            "Y3.extended": false,
+            "Y4.retracted": true,
+            "H1.lit": true
+          },
+          "for_ms": 10
+        },
+        {
+          "description": "Ciclo continuo: A vuelve a salir sin pulsar OK",
+          "points": 3,
+          "from_ms": 7500,
+          "to_ms": 14000,
+          "eventually": {
+            "Q0_0": true,
+            "Y3.retracted": true
+          }
+        },
+        {
+          "description": "Sin fallas eléctricas",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 14000,
+          "no_faults": true
+        }
+      ]
+    },
+    {
+      "name": "Pausa y continuación",
+      "until_ms": 9000,
+      "stim": [
+        "1000 BTN_OK=1",
+        "1100 BTN_OK=0",
+        "2300 BTN_ESC=1",
+        "2400 BTN_ESC=0",
+        "5000 BTN_OK=1",
+        "5100 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "En pausa: H2 encendido, H1 apagado",
+          "points": 2,
+          "at_ms": 3500,
+          "expect": {
+            "H2.lit": true,
+            "H1.lit": false
+          },
+          "prerequisite": true
+        },
+        {
+          "description": "En pausa no cambia ninguna salida de válvula",
+          "points": 2,
+          "from_ms": 2600,
+          "to_ms": 4950,
+          "never": {
+            "Q0_2": true
+          }
+        },
+        {
+          "description": "OK continúa desde el mismo paso hasta llegar a C+",
+          "points": 2,
+          "from_ms": 5000,
+          "to_ms": 9000,
+          "eventually": {
+            "Q0_2": true,
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Falla: bobina de Y2 cortada (B no sale)",
+      "until_ms": 10000,
+      "faults": [
+        {
+          "kind": "burnt",
+          "device": "Y2",
+          "at_ms": 0
+        }
+      ],
+      "stim": [
+        "1000 BTN_OK=1",
+        "1100 BTN_OK=0",
+        "7500 BTN_LEFT=1",
+        "7600 BTN_LEFT=0"
+      ],
+      "checks": [
+        {
+          "description": "Detecta la falla por tiempo y enciende H3",
+          "points": 3,
+          "from_ms": 4500,
+          "to_ms": 7400,
+          "eventually": {
+            "H3.lit": true
+          },
+          "prerequisite": true
+        },
+        {
+          "description": "Informa TB1 (B no llegó a B1)",
+          "points": 1,
+          "console": "FALLA TB1",
+          "from_ms": 4000,
+          "to_ms": 7400
+        },
+        {
+          "description": "No sigue con C mientras B no llega",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 10000,
+          "never": {
+            "Q0_2": true
+          }
+        },
+        {
+          "description": "Reset retrae los cilindros y apaga H3",
+          "points": 2,
+          "at_ms": 9500,
+          "expect": {
+            "Y1.retracted": true,
+            "H3.lit": false,
+            "Q0_0": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Falla: sensor A0 pegado",
+      "until_ms": 7000,
+      "faults": [
+        {
+          "kind": "stuck",
+          "device": "A0",
+          "value": true,
+          "at_ms": 0
+        }
+      ],
+      "stim": [
+        "1000 BTN_OK=1",
+        "1100 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Informa PA0 (A0 sigue activo con A afuera)",
+          "points": 2,
+          "console": "FALLA PA0",
+          "from_ms": 3000,
+          "to_ms": 7000,
+          "prerequisite": true
+        },
+        {
+          "description": "No avanza a B",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 7000,
+          "never": {
+            "Q0_1": true
+          }
+        }
+      ]
+    }
+  ]
+}
