@@ -77,8 +77,12 @@ function slotSensor() {
   return g;
 }
 function lightBeacon(b, on) {
-  b.userData.lamp.material.color.setHex(on ? COL.on : COL.off);
-  b.userData.lamp.material.emissive.setHex(on ? 0x1f8a46 : 0x000000);
+  const beam = b.userData.beam;
+  // Fotocelda: LED naranja y haz más visible al detectar (como en OIP).
+  const led = beam ? 0xff5a00 : COL.on;
+  b.userData.lamp.material.color.setHex(on ? led : COL.off);
+  b.userData.lamp.material.emissive.setHex(on ? (beam ? 0xff5a00 : 0x1f8a46) : 0x000000);
+  if (beam) beam.material.opacity = on ? 0.9 : 0.35;
 }
 
 // ------------------------------------------------------------ modelos
@@ -127,17 +131,194 @@ function buildConveyor(p) {
   return { group: g, belt: tex, rollers, pieces, L, W, len: Number(p.pieza ?? 0.2), sA: Number(p.sensorA ?? 0.4), sB: Number(p.sensorB ?? 1.7), size: [L, W] };
 }
 
-// Cinta con física: el mismo dibujo con sus valores de fábrica, más el tope.
+// ---- Cinta con física (planta 3D, etapa 1). Formas propias con las medidas
+// de Open Industry Project como referencia (bastidor de 0,17 m, barandas,
+// fotocelda de 45 × 73 × 160 mm con el haz a 0,10 m) y sus texturas (MIT,
+// app/renderer/assets/oip/LEEME.md).
+const DECK_Y = 0.75; // altura de la banda
+const FRAME_H = 0.17; // alto del bastidor
+const GUARD_H = 0.06; // baranda sobre la banda (más baja que en OIP: se ve la caja)
+const BELT_W = 0.6; // ancho de la banda
+const TEX = {};
+/** Textura de assets/oip, cargada una vez (color en sRGB). */
+function oipTex(name, { srgb = true, repeat } = {}) {
+  const key = `${name}|${repeat ?? ""}`;
+  if (!TEX[key]) {
+    const t = new THREE.TextureLoader().load(`assets/oip/${name}`);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    if (repeat) {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(repeat[0], repeat[1]);
+    }
+    TEX[key] = t;
+  }
+  return TEX[key];
+}
+
+/** Banda: la tela de OIP con líneas transversales tenues (se ve el avance). */
+function beltTexture(L) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 512;
+  const g = c.getContext("2d");
+  g.fillStyle = "#2a2826";
+  g.fillRect(0, 0, 512, 512);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(L / 0.5, BELT_W / 0.5);
+  const img = new Image();
+  img.onload = () => {
+    g.drawImage(img, 0, 0, 512, 512);
+    g.fillStyle = "rgba(255,255,255,0.06)";
+    g.fillRect(0, 0, 6, 512);
+    g.fillRect(256, 0, 3, 512);
+    tex.needsUpdate = true;
+  };
+  img.src = "assets/oip/BeltFabric.jpg";
+  return tex;
+}
+
+// Atlas de cartón de OIP (1024 px): zonas usadas por cara de la caja (sin la
+// etiqueta con la marca de OIP). [x0, y0, x1, y1] en píxeles.
+const CARDBOARD = {
+  side: [[4, 4, 506, 336], [518, 4, 1020, 336]], // ±z: largo × alto, con símbolos
+  top: [4, 349, 506, 676], // +y: con la cinta adhesiva
+  bottom: [518, 349, 1020, 686],
+  end: [346, 694, 684, 1020], // ±x: con cinta y paraguas
+};
+const cardboardGeo = new Map();
+let cardboardMat = null;
+/** Caja de cartón L × H × W con el atlas mapeado cara por cara. */
+function cardboardBox(L, H, W) {
+  const k = [L, H, W].join("x");
+  if (!cardboardGeo.has(k)) {
+    const geo = new THREE.BoxGeometry(L, H, W);
+    const uv = geo.attributes.uv;
+    // Orden de caras de BoxGeometry: +x, -x, +y, -y, +z, -z (4 vértices c/u).
+    const rects = [CARDBOARD.end, CARDBOARD.end, CARDBOARD.top, CARDBOARD.bottom, CARDBOARD.side[0], CARDBOARD.side[1]];
+    rects.forEach(([x0, y0, x1, y1], face) => {
+      for (let i = face * 4; i < face * 4 + 4; i++) {
+        const u = uv.getX(i);
+        const v = uv.getY(i);
+        uv.setXY(i, (x0 + u * (x1 - x0)) / 1024, 1 - (y1 - v * (y1 - y0)) / 1024);
+      }
+    });
+    uv.needsUpdate = true;
+    cardboardGeo.set(k, geo);
+  }
+  cardboardMat ??= new THREE.MeshStandardMaterial({
+    map: oipTex("BoxCardboard.webp"),
+    normalMap: oipTex("BoxCardboardNormal.webp", { srgb: false }),
+    roughnessMap: oipTex("BoxCardboardRoughness.webp", { srgb: false }),
+    roughness: 1,
+    metalness: 0,
+  });
+  return new THREE.Mesh(cardboardGeo.get(k), cardboardMat);
+}
+
+/**
+ * Fotocelda: carcasa naranja con tapa negra, ventana, LED y el haz (+z del
+ * grupo, desde la cara de la lente). Origen en la cara de la lente, 20 mm
+ * bajo la banda, como la monta OIP sobre el bastidor.
+ */
+function photoEye(range) {
+  const g = new THREE.Group();
+  const body = box(0.045, 0.114, 0.073, mat(0xd17f32, { metalness: 0.5, roughness: 0.36 }));
+  body.position.set(0, 0.093, -0.0365);
+  const cap = box(0.045, 0.01, 0.073, mat(0x0b0b0b, { roughness: 0.55, metalness: 0 }));
+  cap.position.set(0, 0.155, -0.0365);
+  const lens = box(0.032, 0.032, 0.004, mat(0x10161c, { roughness: 0.1, metalness: 0.3 }));
+  lens.position.set(0, 0.1, 0.001);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.005, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0, 0.124, 0.002);
+  const bracket = box(0.06, 0.004, 0.05, mat(0x8a9099, { metalness: 0.6, roughness: 0.4 }));
+  bracket.position.set(0, 0.034, -0.03);
+  const beamM = new THREE.MeshBasicMaterial({ color: 0xff3b2f, transparent: true, opacity: 0.35, depthWrite: false });
+  const beam = cyl(0.005, range, beamM, 8);
+  beam.rotation.x = Math.PI / 2;
+  beam.position.set(0, 0.1, range / 2);
+  g.add(body, cap, lens, lamp, bracket, beam);
+  g.userData.lamp = lamp;
+  g.userData.beam = beam;
+  return g;
+}
+
 function buildConveyorPhysics(p) {
   const q = { largo: 3, pieza: 0.3, sensorA: 2, sensorB: 2.7, ...p };
-  const model = buildConveyor(q);
-  const stop = Number(q.tope ?? 0);
-  if (stop > 0 && stop < model.L) {
-    const post = box(0.04, 0.22, model.W + 0.1, mat(COL.warn));
-    post.position.set(stop + 0.02, 0.85, 0);
-    model.group.add(post);
+  const L = Math.max(0.2, Number(q.largo));
+  const W = BELT_W;
+  const g = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ map: oipTex("Metal.webp", { repeat: [L / 1.5, 1] }), metalness: 0.6, roughness: 0.45, color: 0xc4cad1 });
+  // Bastidor: dos perfiles laterales a todo el largo, con su baranda.
+  for (const z of [-W / 2 - 0.012, W / 2 + 0.012]) {
+    const rail = box(L + 0.04, FRAME_H, 0.024, metal);
+    rail.position.set(L / 2, DECK_Y - FRAME_H / 2, z);
+    const guard = box(L, GUARD_H, 0.005, mat(0xb9c0c8, { metalness: 0.55, roughness: 0.4 }));
+    guard.position.set(L / 2, DECK_Y + GUARD_H / 2, z + Math.sign(z) * 0.006);
+    g.add(rail, guard);
   }
-  return model;
+  // Banda y tambores de los extremos (radio = medio bastidor).
+  const tex = beltTexture(L);
+  const belt = box(L, 0.012, W, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, metalness: 0 }));
+  belt.position.set(L / 2, DECK_Y - 0.006, 0);
+  g.add(belt);
+  const rollers = [];
+  const R = FRAME_H / 2 - 0.005;
+  const rollerM = new THREE.MeshStandardMaterial({ map: oipTex("RollerMetal.webp"), metalness: 0.7, roughness: 0.35 });
+  for (const x of [0, L]) {
+    const r = cyl(R, W, rollerM, 24);
+    r.rotation.x = Math.PI / 2;
+    r.position.set(x, DECK_Y - R, 0);
+    g.add(r);
+    rollers.push(r);
+  }
+  // Patas cada ~1,5 m con travesaño.
+  const n = Math.max(2, Math.ceil(L / 1.5) + 1);
+  const legH = DECK_Y - FRAME_H;
+  for (let i = 0; i < n; i++) {
+    const x = 0.1 + (i * (L - 0.2)) / (n - 1);
+    for (const z of [-W / 2 + 0.03, W / 2 - 0.03]) {
+      const leg = box(0.05, legH, 0.05, metal);
+      leg.position.set(x, legH / 2, z);
+      g.add(leg);
+    }
+    const brace = box(0.04, 0.04, W - 0.06, metal);
+    brace.position.set(x, 0.18, 0);
+    g.add(brace);
+  }
+  // Tope.
+  const stop = Number(q.tope ?? 0);
+  if (stop > 0 && stop < L) {
+    const post = box(0.04, GUARD_H + 0.08, W + 0.06, mat(COL.warn));
+    post.position.set(stop + 0.02, DECK_Y + (GUARD_H + 0.08) / 2, 0);
+    g.add(post);
+  }
+  const pieces = new THREE.Group();
+  g.add(pieces);
+  const len = Math.max(0.02, Number(q.pieza));
+  const H = (len * 2) / 3;
+  return {
+    group: g,
+    belt: tex,
+    rollers,
+    rollerR: R,
+    pieces,
+    L,
+    W,
+    len,
+    sA: Number(q.sensorA),
+    sB: Number(q.sensorB),
+    size: [L, W],
+    makePiece: () => cardboardBox(len, H, H),
+    pieceY: DECK_Y + H / 2,
+    // Fotocelda montada en el bastidor del lado +z, con el haz cruzando la banda.
+    sensor: (key) => {
+      const eye = photoEye(W + 0.06);
+      eye.rotation.y = Math.PI;
+      eye.position.set(key === "sensorB" ? Number(q.sensorB) : Number(q.sensorA), DECK_Y - 0.02, W / 2 + 0.02 + 0.037);
+      return eye;
+    },
+  };
 }
 
 function buildTank(p) {
@@ -432,6 +613,16 @@ function rebuild(spec) {
         t.position.y = -0.17;
         b.add(t);
         model.cyl.add(b);
+        beacons.push({ id: s.id, b });
+        continue;
+      }
+      if (model.sensor) {
+        const b = model.sensor(key);
+        const t = label(s.id);
+        t.scale.set(0.6, 0.15, 1);
+        t.position.set(0, -0.1, -0.12);
+        b.add(t);
+        model.group.add(b);
         beacons.push({ id: s.id, b });
         continue;
       }
@@ -755,11 +946,11 @@ function frame(now) {
       // Con física, cada caja con su velocidad (puede no ir con la cinta).
       const vs = out.velPiezas;
       m.belt.offset.x = (m.belt.offset.x - (v * (1 / 60)) / 0.2) % 1;
-      for (const r of m.rollers) r.rotation.y -= (v / 0.05) * (1 / 60);
+      for (const r of m.rollers) r.rotation.y -= (v / (m.rollerR ?? 0.05)) * (1 / 60);
       const xs = (out.piezas ?? []).map((px, i) => px + Number(vs?.[i] ?? v) * dt);
-      while (m.pieces.children.length < xs.length) m.pieces.add(box(m.len, m.len * 0.8, m.len, mat(COL.piece)));
+      while (m.pieces.children.length < xs.length) m.pieces.add(m.makePiece ? m.makePiece() : box(m.len, m.len * 0.8, m.len, mat(COL.piece)));
       while (m.pieces.children.length > xs.length) m.pieces.remove(m.pieces.children.at(-1));
-      xs.forEach((px, i) => m.pieces.children[i].position.set(px, 0.74 + (m.len * 0.8) / 2, 0));
+      xs.forEach((px, i) => m.pieces.children[i].position.set(px, m.pieceY ?? 0.74 + (m.len * 0.8) / 2, 0));
     } else if (o.type === "jwsim/tank") {
       const lvl = Math.max(0.001, Math.min(1, Number(out.nivelPct ?? 0) / 100));
       m.water.scale.y = lvl * m.H;

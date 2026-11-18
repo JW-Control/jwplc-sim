@@ -180,8 +180,12 @@ Detalles de la integración con la escena:
   quien lee una salida en rampa), e interpola la orden en cada paso.
 - Quieta (sin orden ni cajas en movimiento) no pide eventos.
 
-Siguiente: copiar los modelos 3D de OIP (cinta, caja, fotocelda,
-pulsador) con su aviso MIT en `REUSE.toml`.
+Vista 3D (opción 2 aprobada): formas propias (bastidor, banda, tambores,
+patas, caja, fotocelda con haz que se enciende al detectar) con las medidas
+de OIP y sus texturas copiadas sin cambios (`app/renderer/assets/oip/`, MIT,
+aviso en `REUSE.toml` y `docs/LICENSES.md`). La caja usa solo las zonas del
+atlas sin la etiqueta de OIP. Baranda de 0,06 m (OIP: 0,15) para que se vea
+la caja. 59-61 fps.
 
 ## 4. Decisiones a tomar
 
