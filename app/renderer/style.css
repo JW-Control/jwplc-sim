@@ -1863,18 +1863,17 @@ button.io.on {
   stroke-width: 1.6;
   stroke-linecap: round;
 }
-/* Cable con tensión (L+ o L de una fuente en servicio): brilla. */
+/* Cable con tensión (L+ o L de una fuente en servicio): brilla.
+   Sin desenfoque (filter) ni animación: con zoom cercano el filtro pedía a la
+   GPU superficies del tamaño del cable entero, y la animación lo repintaba en
+   cada cuadro; en Windows eso dejaba zonas negras, parpadeo y equipos cortados. */
 .wire .wire-glow {
   stroke: #ff5a2e;
-  stroke-width: 13;
-  opacity: 0.55;
-  filter: url(#wire-glow-blur);
-  animation: wire-glow 1.8s ease-in-out infinite;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
   pointer-events: none;
-}
-@keyframes wire-glow {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.7; }
 }
 .wire.selected .wire-outline {
   stroke: var(--accent);
@@ -2373,10 +2372,10 @@ body[data-tab="plant"] .view3d-empty {
 }
 .cable .cable-glow {
   stroke: #ff5a2e;
-  stroke-width: calc(var(--cable-w) + 10px);
-  opacity: 0.5;
-  filter: url(#wire-glow-blur);
-  animation: wire-glow 1.8s ease-in-out infinite;
+  stroke-width: calc(var(--cable-w) + 7px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
   pointer-events: none;
 }
 .cable.selected .cable-outline {

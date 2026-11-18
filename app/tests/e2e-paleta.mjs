@@ -245,12 +245,12 @@ await win.keyboard.press("Escape");
 const termAt = (end) => sc((e) => window.jwsimTest.scene.termScreen(e), end);
 const rubber = () => win.$eval("#scene-rubber", (p) => p.getAttribute("d") ?? "");
 const panXY = () => sc(() => document.getElementById("scene-root").getAttribute("transform"));
-// Un punto vacío del lienzo (debajo solo está el fondo).
+// Un punto vacío del lienzo (debajo solo está el SVG, sin ningún equipo ni cable).
 const emptyPoint = () =>
   sc(() => {
     const r = document.getElementById("scene-svg").getBoundingClientRect();
     for (let y = r.top + 60; y < r.bottom - 20; y += 30)
-      for (let x = r.left + 60; x < r.right - 20; x += 30) if (document.elementFromPoint(x, y)?.id === "scene-bg") return { x, y };
+      for (let x = r.left + 60; x < r.right - 20; x += 30) if (document.elementFromPoint(x, y)?.id === "scene-svg") return { x, y };
     return null;
   });
 const dragWith = async (button, dx, dy, from) => {
