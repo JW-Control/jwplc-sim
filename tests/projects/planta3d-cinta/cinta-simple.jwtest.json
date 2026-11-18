@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Planta 3D (piloto): «cinta = NOT fotocelda» con la cinta con física (2 m/s, parada del motor 0,5 s). La caja tapa el haz, la cinta frena, la caja sigue ~0,5 m, sale del haz y la cinta vuelve a arrancar: lo medido con Open Industry Project el 18/11/2026. La caja termina cayendo al final.",
+  "sketch": "sketch/cinta_simple",
+  "scene": "planta3d-cinta.jwsim",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      { "match": "^cinta_simple: lista$", "count": 1 },
+      { "match": "^caja en el haz: parar$", "count": 1 },
+      { "match": "^haz libre: marchar$", "count": 2 }
+    ],
+    "scene": {
+      "state": [
+        { "at_ms": 5900, "C1.salidas": 1, "C1.enCinta": 0, "KM1.closed": true }
+      ],
+      "faults": []
+    }
+  }
+}

@@ -148,6 +148,41 @@ lateral, robots, pallets. Ahí se evalúa Jolt (MIT, el paquete normal
 `jolt-physics`, no el modificado de OIP) detrás de la misma interfaz, con
 las mismas pruebas de la etapa 1.
 
+### Estado de la etapa 1 (18/11/2026): piloto hecho
+
+| Pieza | Archivo |
+|---|---|
+| Física (núcleo, sin dependencias) | `scene/physics/cargo-line.mjs` |
+| Dispositivo `jwsim/conveyor-physics` («Cinta con física») | `scene/devices/conveyor-physics.mjs` |
+| Esquema y vista 3D (mismo dibujo que la cinta, con su tope) | `app/renderer/scene-symbols.js`, `app/renderer/scene3d.js` |
+| Proyecto piloto (JWPLC, fotocelda B1, marcha S1, KM1, M1, C1) | `tests/projects/planta3d-cinta/` |
+
+Resultados contra los criterios:
+
+1. Fórmulas cerradas: alcance a μ·g (en el paso esperado y con el
+   recorrido v²/2μg ± 1 %), arrastre sin deslizar, deslizamiento al
+   frenar en seco (v²/2μg ± 2 %), rampa (v·t/2 ± 2 %), acumulación contra
+   el tope y choque que conserva el momento:
+   `node --test scene/tests/conveyor-physics.test.mjs` (13 casos).
+2. `cinta = NOT fotocelda` (2 m/s, parada del motor 0,5 s): la caja sale
+   del haz y la cinta vuelve a arrancar, como en OIP:
+   `tests/projects/planta3d-cinta/cinta-simple.jwtest.json`.
+3. Enclavado: la caja queda detenida en 2,94 m (fotocelda en 2,5 m) y S1 la
+   rearma: `cinta-enclavada.jwtest.json`.
+   (`node cli/jwsim-cli.mjs test tests/projects/planta3d-cinta`).
+4. Determinista: caso propio en las pruebas del núcleo.
+5. 61 fps en la vista 3D con el piloto en marcha (PC de desarrollo).
+
+Detalles de la integración con la escena:
+
+- Con un motor enlazado por `M1.speed`, la cinta lee también
+  `M1.running` para despertar al empezar la rampa (la escena no avisa a
+  quien lee una salida en rampa), e interpola la orden en cada paso.
+- Quieta (sin orden ni cajas en movimiento) no pide eventos.
+
+Siguiente: copiar los modelos 3D de OIP (cinta, caja, fotocelda,
+pulsador) con su aviso MIT en `REUSE.toml`.
+
 ## 4. Decisiones a tomar
 
 1. Aprobar el camino: física propia por etapas (1D primero) en vez de Jolt

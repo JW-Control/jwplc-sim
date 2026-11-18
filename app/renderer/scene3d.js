@@ -17,7 +17,8 @@ const COL = {
 };
 const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", "jwsim/sand-filter", "jwsim/chlorinator", ...AIR]);
+const CONVEYORS = new Set(["jwsim/conveyor", "jwsim/conveyor-physics"]);
+const PLANT = new Set([...CONVEYORS, "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", "jwsim/sand-filter", "jwsim/chlorinator", ...AIR]);
 const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
 const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
@@ -124,6 +125,19 @@ function buildConveyor(p) {
   const pieces = new THREE.Group();
   g.add(pieces);
   return { group: g, belt: tex, rollers, pieces, L, W, len: Number(p.pieza ?? 0.2), sA: Number(p.sensorA ?? 0.4), sB: Number(p.sensorB ?? 1.7), size: [L, W] };
+}
+
+// Cinta con física: el mismo dibujo con sus valores de fábrica, más el tope.
+function buildConveyorPhysics(p) {
+  const q = { largo: 3, pieza: 0.3, sensorA: 2, sensorB: 2.7, ...p };
+  const model = buildConveyor(q);
+  const stop = Number(q.tope ?? 0);
+  if (stop > 0 && stop < model.L) {
+    const post = box(0.04, 0.22, model.W + 0.1, mat(COL.warn));
+    post.position.set(stop + 0.02, 0.85, 0);
+    model.group.add(post);
+  }
+  return model;
 }
 
 function buildTank(p) {
@@ -374,6 +388,7 @@ function rebuild(spec) {
     const p = d.params ?? {};
     const BUILD = {
       "jwsim/conveyor": buildConveyor,
+      "jwsim/conveyor-physics": buildConveyorPhysics,
       "jwsim/tank": buildTank,
       "jwsim/door": buildDoor,
       "jwsim/building-water": buildBuilding,
@@ -421,7 +436,7 @@ function rebuild(spec) {
         continue;
       }
       const b = beacon();
-      if (d.type === "jwsim/conveyor") b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
+      if (CONVEYORS.has(d.type)) b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
       else if (d.type === "jwsim/lift") {
         const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
@@ -735,11 +750,13 @@ function frame(now) {
   for (const [id, o] of V.objects) {
     const out = outOf(id);
     const m = o.model;
-    if (o.type === "jwsim/conveyor") {
+    if (CONVEYORS.has(o.type)) {
       const v = Number(out.avance ?? 0);
+      // Con física, cada caja con su velocidad (puede no ir con la cinta).
+      const vs = out.velPiezas;
       m.belt.offset.x = (m.belt.offset.x - (v * (1 / 60)) / 0.2) % 1;
       for (const r of m.rollers) r.rotation.y -= (v / 0.05) * (1 / 60);
-      const xs = (out.piezas ?? []).map((px) => px + v * dt);
+      const xs = (out.piezas ?? []).map((px, i) => px + Number(vs?.[i] ?? v) * dt);
       while (m.pieces.children.length < xs.length) m.pieces.add(box(m.len, m.len * 0.8, m.len, mat(COL.piece)));
       while (m.pieces.children.length > xs.length) m.pieces.remove(m.pieces.children.at(-1));
       xs.forEach((px, i) => m.pieces.children[i].position.set(px, 0.74 + (m.len * 0.8) / 2, 0));

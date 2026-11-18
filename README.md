@@ -264,3 +264,13 @@ bloquea una tarea; `JWSIM_EXTRA_FLAGS=-fsanitize=address` compila con ASan.
 - Documentación y materiales: [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
 
 Detalle por ruta en `REUSE.toml` y en [docs/LICENSES.md](docs/LICENSES.md).
+
+## Créditos
+
+- La física de planta (`scene/physics/`, cinta con física) está basada en
+  el diseño de [Open Industry Project](https://github.com/Open-Industry-Project/Open-Industry-Project)
+  (MIT, © Automation Standard LLC and Contributors): cinta como superficie
+  con velocidad, fricción de Coulomb con la caja, rampas del accionamiento,
+  fotocelda por haz y las mismas pruebas contra fórmulas cerradas. El
+  código es propio de JW Control. Detalle en
+  [docs/integration/PROPUESTA_PLANTA3D.md](docs/integration/PROPUESTA_PLANTA3D.md).

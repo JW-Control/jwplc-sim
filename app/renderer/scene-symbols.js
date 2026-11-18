@@ -54,6 +54,7 @@
     "power-230vac": [80, 120, [], ["L", "N"]],
     // Planta (G8): sin bornes; dibujo de proceso, no de un modelo comercial.
     conveyor: [280, 120, [], []],
+    "conveyor-physics": [280, 120, [], []],
     tank: [200, 220, [], []],
     door: [260, 160, [], []],
   };
@@ -630,8 +631,10 @@
           (ok ? "" : `<text class="sym-bad" x="${cx}" y="72">DISPARADA</text>`)
         );
       }
-      case "conveyor": {
-        // Cinta vista de costado: piezas a escala del largo, puntos A y B.
+      case "conveyor":
+      case "conveyor-physics": {
+        // Cinta vista de costado: piezas a escala del largo, puntos A y B
+        // (la cinta con física publica las mismas salidas).
         const L = Math.max(0.2, num(p.largo, 2));
         const x0 = 20, x1 = w - 20, by = 56;
         const sx = (m) => x0 + (m / L) * (x1 - x0);
