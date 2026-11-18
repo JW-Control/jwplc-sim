@@ -26,3 +26,18 @@ líder al despertar.
 Pruebas: `01-bombeo-edificio.jwtest.json` (regulación, apoyo, alternancia y
 transmisor abierto) y `falla-bomba.jwtest.json` (STOP en el teclado de VF1:
 E1M y entra B2). En la app: `app/tests/e2e-arquitecturas.mjs`.
+
+## 02 · Montacargas de 3 paradas
+
+Motor trifásico con inversión por contactores (KM1 sube, KM2 baja, enclavados
+por sus auxiliares NC), relé térmico F1, cabina en su pozo (`jwsim/lift`),
+finales de piso SQ0-SQ2, puertas de piso con contacto en cadena (SP0-SP2),
+celda de carga BW, llamadas SB0-SB2 y pilotos. La parada de emergencia y los
+finales de sobrerrecorrido (SQS arriba, SQI abajo) van cableados en serie con
+las bobinas, como en un tablero real. El PLC atiende las llamadas, para en el
+final del piso pedido, no arranca con puerta abierta, sobrecarga o térmico, y
+marca E01 (puerta abierta en marcha), E02 (sobrecarga o térmico) y E03 (el
+piso no llega a tiempo). BTN_OK repone.
+
+Prueba: `02-montacargas.jwtest.json` (sube a P2, baja y la puerta abierta en
+marcha da E01).

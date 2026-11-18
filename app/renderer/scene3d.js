@@ -17,7 +17,7 @@ const COL = {
 };
 const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", ...AIR]);
+const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", ...AIR]);
 const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
 const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
@@ -341,11 +341,14 @@ function fitView() {
   const w = V.extent ?? 4;
   const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
   const fitW = (w / 2 + 0.8) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
-  const fitH = 2.2 / Math.tan(halfFov);
+  // Alto: el del equipo más alto (el pozo del montacargas, el edificio).
+  const tall = Math.max(2.2, V.height ?? 0);
+  const fitH = (tall * 0.75) / Math.tan(halfFov);
   const d = Math.max(fitW, fitH, 4);
   const cx = w / 2;
-  V.controls.target.set(cx, 0.8, 0);
-  V.camera.position.set(cx, 0.8 + d * 0.45, d * 0.9);
+  const cy = Math.max(0.8, tall * 0.4);
+  V.controls.target.set(cx, cy, 0);
+  V.camera.position.set(cx, cy + d * 0.45, d * 0.9);
   V.controls.update();
 }
 
@@ -374,6 +377,7 @@ function rebuild(spec) {
       "jwsim/tank": buildTank,
       "jwsim/door": buildDoor,
       "jwsim/building-water": buildBuilding,
+      "jwsim/lift": buildLift,
       "jwsim/compressor": buildCompressor,
       "jwsim/service-unit": buildServiceUnit,
     };
@@ -382,7 +386,7 @@ function rebuild(spec) {
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? 4 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
+    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? 4 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
@@ -417,7 +421,10 @@ function rebuild(spec) {
       const b = beacon();
       if (d.type === "jwsim/conveyor") b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
-      else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
+      else if (d.type === "jwsim/lift") {
+        const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
+        b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
+      } else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
       else b.position.set(min > 0.5 ? 1.4 : 0.9, 0, 0.35);
       const t = label(s.id);
       t.scale.set(1, 0.25, 1);
@@ -426,11 +433,12 @@ function rebuild(spec) {
       model.group.add(b);
       beacons.push({ id: s.id, b });
     }
-    V.objects.set(d.id, { type: d.type, model, beacons });
+    V.objects.set(d.id, { type: d.type, model, beacons, motor: String(p.motor ?? "").split(".")[0] });
     huds.push(d.id);
     x += w + 1.2;
   }
   V.extent = Math.max(2, x - 1.2);
+  V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   fitView();
   const empty = document.getElementById("view3d-empty");
   if (empty) empty.hidden = plant.length > 0;
@@ -593,7 +601,73 @@ function buildBuilding(p) {
   top.rotation.z = Math.PI / 2;
   top.position.set(bx + 0.15, 3.5, -0.12);
   g.add(manifold, hydro, dome, gg, bldg, up, top);
-  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, size: [bx + 1.3, 1] };
+  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, height: 3.8, size: [bx + 1.3, 1] };
+}
+
+/** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
+const LIFT_K = 0.5;
+function buildLift(p) {
+  const g = new THREE.Group();
+  const n = Math.max(2, Math.min(6, Math.round(Number(p.pisos ?? 3))));
+  const H = Math.max(0.5, Number(p.entrePisos ?? 3)) * LIFT_K;
+  const top = (n - 1) * H;
+  const tall = top + 1.6;
+  const post = mat(0x5b6470, { metalness: 0.4 });
+  for (const [x, z] of [[0, -0.55], [1.1, -0.55], [0, 0.55], [1.1, 0.55]]) {
+    const pst = box(0.06, tall, 0.06, post);
+    pst.position.set(x, tall / 2, z);
+    g.add(pst);
+  }
+  // Máquina: motor y tambor sobre el pozo.
+  const deck = box(1.3, 0.06, 1.3, mat(0x3a4048));
+  deck.position.set(0.55, tall, 0);
+  const mot = cyl(0.12, 0.34, mat(0x2f6fb5, { metalness: 0.35 }), 20);
+  mot.rotation.z = Math.PI / 2;
+  mot.position.set(0.3, tall + 0.16, 0);
+  const drum = new THREE.Group();
+  const dr = cyl(0.11, 0.3, mat(0x9aa3ad, { metalness: 0.5 }), 20);
+  dr.rotation.z = Math.PI / 2;
+  const mark = box(0.32, 0.02, 0.03, mat(0xffb020));
+  mark.position.y = 0.11;
+  drum.add(dr, mark);
+  drum.position.set(0.72, tall + 0.14, 0);
+  g.add(deck, mot, drum);
+  // Losas y puertas de cada piso (a la derecha del pozo).
+  const doors = [];
+  for (let i = 0; i < n; i++) {
+    const slab = box(1.4, 0.08, 1.4, mat(0x9aa3ad, { roughness: 0.9 }));
+    slab.position.set(1.9, i * H - 0.04, 0);
+    const door = box(0.04, 0.95, 0.9, mat(0x8a939d, { metalness: 0.3, transparent: true, opacity: 0.85 }));
+    door.position.set(1.18, i * H + 0.48, 0);
+    const tag = label(i === 0 ? "PB" : `P${i}`);
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(2.4, i * H + 0.3, 0.6);
+    g.add(slab, door, tag);
+    doors.push(door);
+  }
+  // Cabina con la carga.
+  const cab = new THREE.Group();
+  const floor = box(0.95, 0.05, 0.95, mat(0x3a4048));
+  floor.position.y = 0.025;
+  const roof = box(0.95, 0.04, 0.95, mat(0xc9cfd6));
+  roof.position.y = 1.0;
+  const back = box(0.03, 1.0, 0.95, mat(0xc9cfd6, { metalness: 0.4 }));
+  back.position.set(-0.46, 0.5, 0);
+  const side1 = box(0.95, 1.0, 0.03, mat(0xc9cfd6, { metalness: 0.4, transparent: true, opacity: 0.5 }));
+  side1.position.set(0, 0.5, 0.46);
+  const side2 = side1.clone();
+  side2.position.z = -0.46;
+  const crate = box(0.4, 0.32, 0.4, mat(0xa87a3c));
+  crate.position.set(-0.1, 0.21, 0);
+  const extra = box(0.5, 0.36, 0.5, mat(0xd8282d));
+  extra.position.set(0.05, 0.55, 0.05);
+  extra.visible = false;
+  cab.add(floor, roof, back, side1, side2, crate, extra);
+  cab.position.set(0.55, 0, 0);
+  const rope = cyl(0.01, 1, mat(0x23272d), 6);
+  rope.position.set(0.55, 0, 0);
+  g.add(cab, rope);
+  return { group: g, cab, rope, drum, doors, extra, tall, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
@@ -628,6 +702,16 @@ function frame(now) {
       m.panel.position.x = m.A / 2 + pos * m.A;
       m.person.visible = !!out.persona;
       m.ray.material.opacity = out.persona ? 0.25 : 0.8;
+    } else if (o.type === "jwsim/lift") {
+      const y = Number(out.altura ?? 0) * LIFT_K;
+      m.cab.position.y = y;
+      m.rope.scale.y = Math.max(0.01, m.tall - y - 1.0);
+      m.rope.position.y = (m.tall + y + 1.0) / 2;
+      m.drum.rotation.x += out.movimiento ? (Number(outOf(String(o.motor ?? "")).speed ?? 0) || 0) * 0.3 : 0;
+      m.doors.forEach((dd, i) => {
+        dd.position.z = out[`puerta${i}`] ? 0.8 : 0;
+      });
+      m.extra.visible = !!out.sobrecarga;
     } else if (o.type === "jwsim/building-water") {
       for (const pm of m.pumps) pm.rotor.rotation.z += Number(outOf(pm.id).speed ?? 0) * 0.6;
       needleTo(m.gauge, Number(out.presion ?? 0), 10);

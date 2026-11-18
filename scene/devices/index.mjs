@@ -6,6 +6,7 @@
 
 import { compressor, serviceUnit } from "./pneumatics.mjs";
 import { buildingWater, pressureRs485 } from "./water.mjs";
+import { lift } from "./lift.mjs";
 import { buzzer, contactor, lamp, motor, motor1ph, motor3ph, relay, solenoidValve, solenoidValve2 } from "./loads.mjs";
 import { emergencyStop, limitSwitch, pushbuttonLit, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3, selectorKey } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
@@ -58,6 +59,7 @@ export const builtinDevices = [
   compressor,
   serviceUnit,
   buildingWater,
+  lift,
   pressureRs485,
   motor,
   motor1ph,

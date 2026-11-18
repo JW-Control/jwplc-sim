@@ -5,6 +5,7 @@
 //   ARCH_OPEN     abre la copia con su escena (13 equipos y la placa) y la ficha en la consola
 //   ARCH_RUN      compila y corre: con S1 en Auto la red sube a ~4 bar con el PI
 //   ARCH_3D       la Planta 3D muestra la cisterna y la sala de bombas con el edificio
+//   ARCH_LIFT     la 02 (montacargas): «Llamar P2» sube la cabina hasta el piso 2
 // Informe en build/gates/JWSIM_ARQUITECTURAS_E2E.json y capturas en build/gates/arquitecturas/.
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -67,13 +68,40 @@ try {
   criteria.ARCH_3D = { ok: types.includes("jwsim/tank") && types.includes("jwsim/building-water"), objetos: objs.map((o) => o.id) };
   log(`ARCH_3D ${JSON.stringify(criteria.ARCH_3D)}`);
   await win.screenshot({ path: join(OUT, "01-planta-3d.png") });
+
+  await win.click("#btn-stop");
+  await win.waitForFunction(() => window.jwsimTest.status() !== "running", null, { timeout: 20000 });
+  await t(() => window.jwsimTest.pickArch("02-montacargas"));
+  await win.waitForTimeout(2500);
+  await win.click("#btn-run");
+  await win.waitForFunction(() => window.jwsimTest.status() === "running", null, { timeout: 240000 });
+  await win.waitForTimeout(1500);
+  await t(() => window.jwsimTest.scene.view("3d"));
+  await t(() => window.jwsimTest.scene.act("SB2", "press", true));
+  await win.waitForTimeout(300);
+  await t(() => window.jwsimTest.scene.act("SB2", "press", false));
+  let lift = null;
+  for (let i = 0; i < 60 && !lift?.ok; i++) {
+    await win.waitForTimeout(500);
+    lift = await t(() => {
+      const o = window.jwsimTest.scene.snapshot()?.devices.find((d) => d.id === "CAB1")?.outputs ?? {};
+      return { ok: o.enPiso === 2 && !o.movimiento, altura: o.altura, piso: o.pisoTxt, movimiento: o.movimiento };
+    });
+    if (i === 12) await win.screenshot({ path: join(OUT, "02-planta-3d.png") });
+  }
+  const objs2 = await t(() => window.jwsimTest.scene.view3d());
+  criteria.ARCH_LIFT = { ...lift, ok: !!lift?.ok && objs2.some((o) => o.type === "jwsim/lift") };
+  log(`ARCH_LIFT ${JSON.stringify(criteria.ARCH_LIFT)}`);
+  await t(() => window.JwsimTabs.select("schematic"));
+  await win.waitForTimeout(800);
+  await win.screenshot({ path: join(OUT, "02-esquema.png") });
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
   log(`ERROR ${e}`);
 } finally {
   await app.close();
 }
-const ok = ["ARCH_LIST", "ARCH_OPEN", "ARCH_RUN", "ARCH_3D"].every((k) => criteria[k]?.ok);
+const ok = ["ARCH_LIST", "ARCH_OPEN", "ARCH_RUN", "ARCH_3D", "ARCH_LIFT"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_ARQUITECTURAS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
 console.log(`JWSIM_ARQUITECTURAS_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);
