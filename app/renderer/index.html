@@ -165,16 +165,16 @@
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main">
+              <!-- El zoom y el desplazamiento en curso se aplican con CSS a esta capa, no al SVG:
+                   así el navegador no vuelve a maquetar los símbolos en cada paso (scene.js, viewFast). -->
+              <div id="scene-pan">
               <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
                 <defs>
-                  <!-- Grilla en coordenadas de la escena: un punto cada 20 px (bornes y cables caen en ella). -->
-                  <pattern id="scene-grid" x="-10" y="-10" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <circle cx="10" cy="10" r="1.3" fill="#2c333c"></circle>
-                  </pattern>
                   <filter id="wire-glow-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter>
                 </defs>
                 <g id="scene-root">
-                  <rect id="scene-bg" x="-20000" y="-20000" width="40000" height="40000" fill="url(#scene-grid)"></rect>
+                  <!-- La grilla (un punto cada 20 px de la escena) la dibuja el fondo de .scene-main (scene.js, gridBg). -->
+                  <rect id="scene-bg" x="-20000" y="-20000" width="40000" height="40000" fill="transparent"></rect>
                   <g id="scene-board"></g>
                   <g id="scene-wires"></g>
                   <g id="scene-devices"></g>
@@ -183,6 +183,7 @@
                   <path id="scene-rubber" d=""></path>
                 </g>
               </svg>
+              </div>
               <!-- Herramientas del lienzo: flotan en su esquina, no restan altura. -->
               <div class="scene-float" role="toolbar" aria-label="Lienzo">
                 <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>

@@ -1064,8 +1064,18 @@
   function svgRect() {
     return fastView?.rect ?? $("scene-svg").getBoundingClientRect();
   }
+  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena:
+  // durante el gesto no deja zonas vacías al mover el SVG.
+  function gridBg(pan, zoom) {
+    const main = $("scene-pan").parentElement;
+    const step = 20 * zoom;
+    const r = Math.max(0.6, 1.3 * zoom);
+    main.style.backgroundImage = step < 6 ? "none" : `radial-gradient(circle, #2c333c ${r}px, transparent ${r + 0.7}px)`;
+    main.style.backgroundSize = `${step}px ${step}px`;
+    main.style.backgroundPosition = `${pan.x - 10 * zoom}px ${pan.y - 10 * zoom}px`;
+  }
   function commitView() {
-    const svg = $("scene-svg");
+    const svg = $("scene-pan");
     if (fastView) {
       clearTimeout(fastView.t);
       fastView = null;
@@ -1073,11 +1083,12 @@
       svg.style.willChange = "";
     }
     $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+    gridBg(S.pan, S.zoom);
   }
   function viewFast(delayMs = 140) {
-    const svg = $("scene-svg");
+    const svg = $("scene-pan");
     if (!fastView) {
-      fastView = { pan: { ...S.pan }, zoom: S.zoom, rect: svg.getBoundingClientRect() };
+      fastView = { pan: { ...S.pan }, zoom: S.zoom, rect: $("scene-svg").getBoundingClientRect() };
       svg.style.transformOrigin = "0 0";
       svg.style.willChange = "transform";
     }
@@ -1085,6 +1096,7 @@
     svg.style.transform = `translate(${S.pan.x - fastView.pan.x * k}px, ${S.pan.y - fastView.pan.y * k}px) scale(${k})`;
     clearTimeout(fastView.t);
     if (delayMs > 0) fastView.t = setTimeout(commitView, delayMs);
+    gridBg(S.pan, S.zoom);
   }
 
   function toWorld(e) {
@@ -1820,6 +1832,18 @@
       y0 = Math.min(y0, (d.y ?? 0) - 70 - refs);
       x1 = Math.max(x1, (d.x ?? 0) + s.w);
       y1 = Math.max(y1, (d.y ?? 0) + s.h + 60 + refs);
+    }
+    // Los cables trazados pueden salir más allá de ese margen: se suma su caja real.
+    try {
+      const wb = /** @type {SVGGraphicsElement} */ (/** @type {unknown} */ ($("scene-wires"))).getBBox();
+      if (wb.width || wb.height) {
+        x0 = Math.min(x0, wb.x - 10);
+        y0 = Math.min(y0, wb.y - 10);
+        x1 = Math.max(x1, wb.x + wb.width + 10);
+        y1 = Math.max(y1, wb.y + wb.height + 10);
+      }
+    } catch {
+      /* sin caja (vista oculta): basta con los equipos */
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
     // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).

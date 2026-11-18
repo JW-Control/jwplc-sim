@@ -1266,6 +1266,9 @@ button.io.on {
   /* Durante el zoom o el arrastre de la vista el SVG se escala con CSS:
      no debe pintar fuera de su zona ni sobre el panel lateral. */
   overflow: hidden;
+  /* Fondo y grilla del lienzo: quedan fijos aunque el SVG se mueva con CSS. */
+  background-color: #101317;
+  background-repeat: repeat;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px 36px;
 }
@@ -1644,11 +1647,15 @@ button.io.on {
 .scene-float button.off {
   opacity: 0.6;
 }
+#scene-pan {
+  min-width: 0;
+  min-height: 0;
+}
 #scene-svg {
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 300px;
-  background-color: #101317;
   touch-action: none;
   user-select: none;
   cursor: grab;
@@ -3174,4 +3181,9 @@ body[data-tab="plant"] .view3d-empty {
 .ce-foot ul {
   margin: 4px 0;
   padding-left: 18px;
+}
+/* Con geometricPrecision el navegador no rehace la maquetación de cada texto
+   del esquema al cambiar la escala (zoom fluido). */
+#scene-svg text {
+  text-rendering: geometricPrecision;
 }
