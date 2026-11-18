@@ -7,6 +7,7 @@
 //   PN_LIVE       con la secuencia en marcha una válvula conmuta (bobina
 //                 encendida) y la línea al cilindro lleva presión
 //   PN_SYMBOLS    en «A colores» el compresor y la FR usan sus plantillas
+//   PN_3D         la Planta 3D muestra el compresor, la FR y los 4 cilindros
 // Informe en build/gates/JWSIM_NEUMATICA_E2E.json y captura en build/gates/neumatica/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-neumatica.mjs
 import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -83,13 +84,24 @@ try {
   );
   criteria.PN_SYMBOLS = { ok: sym.every(Boolean), templates: sym };
   log(`PN_SYMBOLS ${JSON.stringify(criteria.PN_SYMBOLS)}`);
+
+  await t(() => window.jwsimTest.scene.view("3d"));
+  await sleep(1500);
+  const objs = await t(() => window.jwsimTest.scene.view3d());
+  const types = objs.map((o) => o.type);
+  criteria.PN_3D = {
+    ok: types.includes("jwsim/compressor") && types.includes("jwsim/service-unit") && types.filter((x) => /solenoid/.test(x)).length === 4,
+    objetos: objs.map((o) => o.id),
+  };
+  log(`PN_3D ${JSON.stringify(criteria.PN_3D)}`);
+  await win.screenshot({ path: join(OUT, "planta-3d.png") });
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
   log(`ERROR ${e}`);
 } finally {
   await app.close();
 }
-const ok = ["PN_AVAILABLE", "PN_DRAWN", "PN_LIVE", "PN_SYMBOLS"].every((k) => criteria[k]?.ok);
+const ok = ["PN_AVAILABLE", "PN_DRAWN", "PN_LIVE", "PN_SYMBOLS", "PN_3D"].every((k) => criteria[k]?.ok);
 mkdirSync(join(ROOT, "build", "gates"), { recursive: true });
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_NEUMATICA_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_NEUMATICA_E2E=${ok ? "PASS" : "FAIL"}`);
