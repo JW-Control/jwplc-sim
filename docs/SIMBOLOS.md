@@ -42,6 +42,7 @@ archivo `<nombre>__<valor>.svg`, con el valor en minúsculas y sin signos
 | `power-24vdc` | `model` | `power-24vdc__mdr60.svg` (por defecto), `__hdr60`, `__ndr120` |
 | `lamp` | `model` | `lamp.svg` (XB2, por defecto), `lamp__ad16.svg` |
 | `contactor` | `aux` | `contactor.svg` (10: 13-14 NA, CJX2-0910), `contactor__01.svg` (01: 21-22 NC, CJX2-0901) |
+| `limit-switch` | `model` | `limit-switch.svg` (XCKJ, por defecto), `limit-switch__compacto.svg` (palanca con rodillo de módulo didáctico, 120 × 200) |
 | `breaker` | `poles` | `breaker.svg` (1P, por defecto), `breaker__2p.svg`, `breaker__3p.svg` |
 
 Cada variante puede tener otro tamaño y otros bornes. Una variante que no

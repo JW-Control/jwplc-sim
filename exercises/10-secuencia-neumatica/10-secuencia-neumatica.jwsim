@@ -74,10 +74,11 @@
         "params": {
           "source": "Y1.position",
           "min": 0,
-          "max": 0
+          "max": 0,
+          "model": "compacto"
         },
-        "x": 760,
-        "y": 0
+        "x": 960,
+        "y": 200
       },
       {
         "id": "A1",
@@ -85,10 +86,11 @@
         "params": {
           "source": "Y1.position",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "model": "compacto"
         },
-        "x": 900,
-        "y": 0
+        "x": 1200,
+        "y": 200
       },
       {
         "id": "B0",
@@ -96,10 +98,11 @@
         "params": {
           "source": "Y2.position",
           "min": 0,
-          "max": 0
+          "max": 0,
+          "model": "compacto"
         },
-        "x": 1040,
-        "y": 0
+        "x": 1720,
+        "y": 200
       },
       {
         "id": "B1",
@@ -107,10 +110,11 @@
         "params": {
           "source": "Y2.position",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "model": "compacto"
         },
-        "x": 1180,
-        "y": 0
+        "x": 1960,
+        "y": 200
       },
       {
         "id": "C0",
@@ -118,10 +122,11 @@
         "params": {
           "source": "Y3.position",
           "min": 0,
-          "max": 0
+          "max": 0,
+          "model": "compacto"
         },
-        "x": 1320,
-        "y": 0
+        "x": 2480,
+        "y": 200
       },
       {
         "id": "C1",
@@ -129,10 +134,11 @@
         "params": {
           "source": "Y3.position",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "model": "compacto"
         },
-        "x": 1460,
-        "y": 0
+        "x": 2720,
+        "y": 200
       },
       {
         "id": "D0",
@@ -140,10 +146,11 @@
         "params": {
           "source": "Y4.position",
           "min": 0,
-          "max": 0
+          "max": 0,
+          "model": "compacto"
         },
-        "x": 1600,
-        "y": 0
+        "x": 3240,
+        "y": 200
       },
       {
         "id": "D1",
@@ -151,10 +158,11 @@
         "params": {
           "source": "Y4.position",
           "min": 1,
-          "max": 1
+          "max": 1,
+          "model": "compacto"
         },
-        "x": 1740,
-        "y": 0
+        "x": 3480,
+        "y": 200
       },
       {
         "id": "Y1",
@@ -164,7 +172,7 @@
           "returnMs": 600
         },
         "x": 760,
-        "y": 420
+        "y": 440
       },
       {
         "id": "Y2",
@@ -173,8 +181,8 @@
           "strokeMs": 800,
           "returnMs": 600
         },
-        "x": 1040,
-        "y": 420
+        "x": 1520,
+        "y": 440
       },
       {
         "id": "Y3",
@@ -183,8 +191,8 @@
           "strokeMs": 800,
           "returnMs": 600
         },
-        "x": 1320,
-        "y": 420
+        "x": 2280,
+        "y": 440
       },
       {
         "id": "Y4",
@@ -193,8 +201,8 @@
           "strokeMs": 800,
           "returnMs": 600
         },
-        "x": 1600,
-        "y": 420
+        "x": 3040,
+        "y": 440
       },
       {
         "id": "H1",
@@ -203,8 +211,8 @@
           "color": "verde",
           "label": "En marcha"
         },
-        "x": 1880,
-        "y": 420
+        "x": 3800,
+        "y": 440
       },
       {
         "id": "H2",
@@ -213,8 +221,8 @@
           "color": "amarillo",
           "label": "Pausa"
         },
-        "x": 2020,
-        "y": 420
+        "x": 3980,
+        "y": 440
       },
       {
         "id": "H3",
@@ -223,8 +231,8 @@
           "color": "rojo",
           "label": "Falla"
         },
-        "x": 2160,
-        "y": 420
+        "x": 4160,
+        "y": 440
       }
     ],
     "wiring": [

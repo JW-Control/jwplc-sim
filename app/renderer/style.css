@@ -1263,6 +1263,9 @@ button.io.on {
   position: relative;
   flex: 1;
   min-height: 0;
+  /* Durante el zoom o el arrastre de la vista el SVG se escala con CSS:
+     no debe pintar fuera de su zona ni sobre el panel lateral. */
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px 36px;
 }
@@ -1274,6 +1277,9 @@ button.io.on {
   display: none;
 }
 .side-bar {
+  position: relative;
+  z-index: 2;
+  background: var(--panel, #15181c);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1648,6 +1654,9 @@ button.io.on {
   cursor: grab;
 }
 .scene-side {
+  position: relative;
+  z-index: 2;
+  background: var(--panel, #15181c);
   border-left: 1px solid var(--border);
   overflow: auto;
   padding: 8px 10px;

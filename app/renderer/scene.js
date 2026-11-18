@@ -365,7 +365,7 @@
 
   // Centra la vista en un punto de la escena (referencias: «ir al otro lado»).
   function focusOn(x, y) {
-    const r = $("scene-svg").getBoundingClientRect();
+    const r = svgRect();
     S.pan = { x: r.width / 2 - x * S.zoom, y: r.height / 2 - y * S.zoom };
     render();
   }
@@ -871,7 +871,7 @@
     for (const g of [...$("scene-board").children, ...$("scene-devices").children, ...$("scene-terms").children]) if (!keep.has(g.dataset.id)) g.remove();
     for (const dev of S.spec.devices) renderDevice(dev, force);
     renderWires();
-    $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+    commitView();
     renderSide();
     // La ficha de la paleta avisa si la simulación impide agregar equipos.
     if (S.pal.shownRunning !== S.running) {
@@ -1055,8 +1055,40 @@
   }
 
   // ------------------------------------------------------------ edición
+  // Vista rápida al hacer zoom o mover la vista: mientras dura el gesto, el
+  // SVG ya dibujado se escala y se desplaza con una transformación CSS (la
+  // compone la GPU, sin volver a pintar los símbolos); al soltar la rueda
+  // (140 ms) o el botón se aplica la transformación real y se redibuja nítido.
+  /** @type {{ pan: { x: number, y: number }, zoom: number, rect: DOMRect, t?: any } | null} */
+  var fastView = null; // var: render() puede correr antes de esta línea
+  function svgRect() {
+    return fastView?.rect ?? $("scene-svg").getBoundingClientRect();
+  }
+  function commitView() {
+    const svg = $("scene-svg");
+    if (fastView) {
+      clearTimeout(fastView.t);
+      fastView = null;
+      svg.style.transform = "";
+      svg.style.willChange = "";
+    }
+    $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+  }
+  function viewFast(delayMs = 140) {
+    const svg = $("scene-svg");
+    if (!fastView) {
+      fastView = { pan: { ...S.pan }, zoom: S.zoom, rect: svg.getBoundingClientRect() };
+      svg.style.transformOrigin = "0 0";
+      svg.style.willChange = "transform";
+    }
+    const k = S.zoom / fastView.zoom;
+    svg.style.transform = `translate(${S.pan.x - fastView.pan.x * k}px, ${S.pan.y - fastView.pan.y * k}px) scale(${k})`;
+    clearTimeout(fastView.t);
+    if (delayMs > 0) fastView.t = setTimeout(commitView, delayMs);
+  }
+
   function toWorld(e) {
-    const r = $("scene-svg").getBoundingClientRect();
+    const r = svgRect();
     return { x: (e.clientX - r.left - S.pan.x) / S.zoom, y: (e.clientY - r.top - S.pan.y) / S.zoom };
   }
 
@@ -1520,7 +1552,7 @@
       if (S.drag.kind === "pan") {
         if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
-        $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        viewFast(0);
         // La punta del cable en curso sigue al puntero con la vista nueva.
         updateRubber(e);
       } else if (S.drag.kind === "vertex") {
@@ -1567,6 +1599,7 @@
       if (S.drag?.kind === "pan") {
         const clicked = !S.drag.panned;
         S.drag = null;
+        commitView();
         if (clicked) cancelWiring();
         return;
       }
@@ -1596,13 +1629,13 @@
       "wheel",
       (e) => {
         e.preventDefault();
-        const r = svg.getBoundingClientRect();
+        const r = svgRect();
         const mx = e.clientX - r.left;
         const my = e.clientY - r.top;
         const z = Math.min(3, Math.max(0.2, S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
         S.pan = { x: mx - ((mx - S.pan.x) * z) / S.zoom, y: my - ((my - S.pan.y) * z) / S.zoom };
         S.zoom = z;
-        $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        viewFast();
         updateRubber(e);
       },
       { passive: false },
@@ -1775,7 +1808,7 @@
   }
 
   function fit() {
-    const box = $("scene-svg").getBoundingClientRect();
+    const box = svgRect();
     if (!S.spec.devices.length || !box.width) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     // Margen para los cables que pasan por encima y por debajo de los equipos
@@ -2248,7 +2281,7 @@
         return { w: s.w, h: s.h };
       },
       toScreen: (x, y) => {
-        const r = $("scene-svg").getBoundingClientRect();
+        const r = svgRect();
         return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
       },
       wire: (a, b) => addWire(a, b),

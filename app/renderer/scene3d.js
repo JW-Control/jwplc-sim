@@ -25,19 +25,27 @@ const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
 
 /** Texto en un plano siempre de frente (rótulo del equipo). */
+// Lienzo a 4× (1024 × 256) con mipmaps y filtrado anisotrópico: el rótulo
+// sigue nítido al acercar la cámara y no parpadea al alejarla.
 function label(text) {
   const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 64;
+  c.width = 1024;
+  c.height = 256;
   const g = c.getContext("2d");
   g.fillStyle = "rgba(20,23,27,0.85)";
-  g.roundRect(0, 8, 256, 48, 10);
+  g.roundRect(0, 32, 1024, 192, 40);
   g.fill();
   g.fillStyle = "#e7ebef";
-  g.font = "bold 28px sans-serif";
+  g.font = "bold 112px sans-serif";
   g.textAlign = "center";
-  g.fillText(text, 128, 42);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  g.textBaseline = "middle";
+  g.fillText(text, 512, 132);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
   s.scale.set(1.6, 0.4, 1);
   return s;
 }
