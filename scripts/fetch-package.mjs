@@ -9,6 +9,7 @@
 // Uso:
 //   node scripts/fetch-package.mjs            # clona/verifica según package.lock
 //   node scripts/fetch-package.mjs --print    # solo imprime la ruta resuelta
+//   node scripts/fetch-package.mjs --fijado   # ignora el modo en vivo: package.lock exacto
 //
 // Variables:
 //   JWPLC_PACKAGE_DIR  ruta a un checkout local de platform-jwplc. Si es un repo
@@ -81,8 +82,11 @@ function markCommit(dir, commit) {
 //   1. JWPLC_PACKAGE_DIR si está definida.
 //   2. Checkout hermano ../platform-jwplc si contiene JWPLC_PACKAGE_TREE.
 //   3. En última instancia, la rama/ref configurada en package.lock.
-export function resolvePackageRoot({ fetch = true } = {}) {
+// Con `fijado` (instalador, gates de release) se salta 1 y 2 y se exige el
+// commit de package.lock.
+export function resolvePackageRoot({ fetch = true, fijado = false } = {}) {
   const lock = readLock();
+  if (fijado) return lockedPackage(lock, fetch);
   const override = process.env.JWPLC_PACKAGE_DIR;
 
   if (override) {
@@ -105,6 +109,26 @@ export function resolvePackageRoot({ fetch = true } = {}) {
   }
   if (!fetch) throw new Error(`Package no descargado. Ejecute: node scripts/fetch-package.mjs`);
   return fetchPackageRef(lock.JWPLC_PACKAGE_REF);
+}
+
+// Package exacto de package.lock en .jwsim/package/<REF>/, con la marca de
+// commit que verifica la app instalada.
+function lockedPackage(lock, fetch) {
+  const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF.replaceAll("/", "_"));
+  const want = lock.JWPLC_PACKAGE_COMMIT;
+  const current = () => revParse(dest, "HEAD") ?? readMark(dest);
+  if (current() !== want) {
+    if (!fetch) throw new Error(`Package fijado no descargado. Ejecute: node scripts/fetch-package.mjs --fijado`);
+    rmSync(dest, { recursive: true, force: true });
+    fetchPackageRef(lock.JWPLC_PACKAGE_REF);
+    if (current() !== want) {
+      execFileSync("git", ["fetch", "--quiet", "--depth", "1", "--filter=blob:none", "origin", want], { cwd: dest, stdio: "inherit" });
+      execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", want], { cwd: dest, stdio: "inherit" });
+    }
+    if (current() !== want) throw new Error(`${lock.JWPLC_PACKAGE_REF} no apunta a ${want} (package.lock)`);
+  }
+  markCommit(dest, want);
+  return { root: dest, lock, source: "lock" };
 }
 
 // Package sin fijar (G5): un checkout cualquiera de platform-jwplc, p. ej. el
@@ -160,7 +184,10 @@ export function fetchPackageRef(ref) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const { root, lock, source } = resolvePackageRoot({ fetch: !process.argv.includes("--print") });
+    const { root, lock, source } = resolvePackageRoot({
+      fetch: !process.argv.includes("--print"),
+      fijado: process.argv.includes("--fijado"),
+    });
     if (!process.argv.includes("--print")) {
       console.error(`[fetch-package] ${lock.JWPLC_PACKAGE_REF} (${lock.JWPLC_PACKAGE_COMMIT.slice(0, 12)}) listo [${source}]`);
     }
