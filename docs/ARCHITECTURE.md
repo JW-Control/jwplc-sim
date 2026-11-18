@@ -614,7 +614,9 @@ escena modela también el proceso y la instrumentación:
   fallas de §4.2 valen: transmisor quemado o cable del bus cortado (no
   responde), sonda abierta o en corto (7FFFh / 8000h).
 - **Transmisores** (2.0): `pt100-rs485` (PT100 de 3 hilos; registro 0 =
-  °C × 10) y `ph-rs485` (electrodo y ATC; 0 = pH × 100, 1 = °C × 10),
+  °C × 10), `ph-rs485` (electrodo y ATC; 0 = pH × 100, 1 = °C × 10) y
+  `pressure-rs485` (0-10 bar; 0 = bar × 100, mide `source`, p. ej.
+  `RED1.presion`, o se ajusta a mano; falla «sensor abierto» = 7FFFh),
   9600 8N1 por defecto. Con sonda `cableada` miden la sonda de un bloque
   cableada a sus bornes (SDK §2.3.3): un hilo cortado o cruzado es sonda
   abierta. Con sonda `simulada` el valor se ajusta a mano.
@@ -645,9 +647,12 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 | Tipo | Lee | Salidas | Acciones |
 |---|---|---|---|
 | `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
-| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
+| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`), `extraccion` (L/min que sacan otros equipos, p. ej. `RED1.qBombas`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
 
 **Modelo del tanque (1.1):** balance de volumen dV/dt = bomba × caudal − consumo − válvula × Cd·a·√(2gh) (descarga por gravedad de Torricelli con `salidaMm`). La `forma` (modelo en la paleta: cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera) da el área A(h) ∝ f(h/H); V(h) se tabula y se invierte para la altura. Se integra con RK4 a `pasoMs` (discretización configurable, 1-1000 ms) y el nivel se publica en tramos lineales de un paso, así los sensores ven el cruce exacto. Con área constante y sin descarga es lineal y exacto (un tramo), igual que la 1.0.
+| `jwsim/building-water` (red del edificio con hidroneumático, `scene/devices/water.mjs`) | `bombas` (motores: `<id>.speed`), `cisterna` (p. ej. `T1.nivel`) | `presion` (bar), `qBombas`, `qConsumo`, `consumo` (L/min), `reposicion` (flotador de la cisterna, 1 bajo el 90 % hasta el 97 %), `seco`, `bombas` | `consumo` (L/min, perilla en el símbolo) |
+
+**Modelo de la red del edificio:** cada bomba sigue su curva con las leyes de afinidad (caudal ∝ n, presión de cierre ∝ n²: Q = qMax·n·√(1 − P/(pCierre·n²))); el consumo de los grifos crece con √P (`consumo` es el caudal a 3,5 bar); el hidroneumático aporta C = V·(1 + precarga)/(1 + P)² L/bar (Boyle) y bajo la precarga solo queda la tubería (1,5 L/bar). dP/dt = (Q bombas − Q consumo)/C, integrado cada 10 ms y publicado cada 100 ms. Sin agua en la cisterna (bajo el 2 %) las bombas no dan caudal.
 | `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
 
 La cinta integra el avance con la regla del trapecio (exacta en la rampa

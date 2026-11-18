@@ -356,6 +356,36 @@ ipcMain.handle("exercises:open", (_e, id) => {
   return openProject(join(dst, `${id}.jwsim`));
 });
 
+// ---------------------------------------------------------------- arquitecturas
+// Casos de la vitrina (arquitecturas/<id>): proyecto completo con su programa,
+// escena y una ficha VITRINA.md con el recorrido y las fallas para mostrar.
+// Se abren como copia en la carpeta de trabajo (Arquitecturas/<id>).
+const ARCHS = join(import.meta.dirname, "..", "arquitecturas");
+function listArchs() {
+  if (!existsSync(ARCHS)) return [];
+  const out = [];
+  for (const d of readdirSync(ARCHS).sort()) {
+    const f = join(ARCHS, d, `${d}.jwsim`);
+    if (!existsSync(f)) continue;
+    try {
+      out.push({ id: d, title: loadProject(f).project.name });
+    } catch {
+      // una arquitectura rota no impide listar las demás
+    }
+  }
+  return out;
+}
+ipcMain.handle("archs:list", () => listArchs());
+ipcMain.handle("archs:open", (_e, id) => {
+  if (!/^[\w.-]+$/.test(id)) throw new Error(`arquitectura inválida: ${id}`);
+  const src = join(ARCHS, id);
+  const dst = join(workspaceDir(), "Arquitecturas", id);
+  syncExercise(src, dst);
+  const res = openProject(join(dst, `${id}.jwsim`));
+  const card = join(dst, "VITRINA.md");
+  return { ...res, showcase: existsSync(card) ? readFileSync(card, "utf8") : "" };
+});
+
 // Objetivos en vivo del ejercicio abierto (null: ninguno). Cuentan desde la
 // corrida siguiente o, si ya corre, desde ahora.
 ipcMain.handle("goals:set", (_e, goals) => {

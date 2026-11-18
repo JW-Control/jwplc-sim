@@ -149,7 +149,8 @@ select:focus-visible {
   color: #fff;
 }
 #sel-example,
-#sel-exercise {
+#sel-exercise,
+#sel-arch {
   max-width: 180px;
 }
 /* Las vistas del panel inferior con display propio (el envío por UART) se
@@ -1166,7 +1167,8 @@ button.io.on {
     display: none;
   }
   #sel-example,
-  #sel-exercise {
+  #sel-exercise,
+  #sel-arch {
     max-width: 130px;
   }
   .toolbar {

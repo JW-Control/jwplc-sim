@@ -5,6 +5,7 @@
 // JWSIM_G7_DEVICE_LIBRARY) y registro por tipo y versión.
 
 import { compressor, serviceUnit } from "./pneumatics.mjs";
+import { buildingWater, pressureRs485 } from "./water.mjs";
 import { buzzer, contactor, lamp, motor, motor1ph, motor3ph, relay, solenoidValve, solenoidValve2 } from "./loads.mjs";
 import { emergencyStop, limitSwitch, pushbuttonLit, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3, selectorKey } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
@@ -56,6 +57,8 @@ export const builtinDevices = [
   solenoidValve2,
   compressor,
   serviceUnit,
+  buildingWater,
+  pressureRs485,
   motor,
   motor1ph,
   motor3ph,

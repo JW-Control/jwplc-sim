@@ -17,7 +17,7 @@ const COL = {
 };
 const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", ...AIR]);
+const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", ...AIR]);
 const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
 const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
@@ -369,23 +369,20 @@ function rebuild(spec) {
   const huds = [];
   for (const d of plant) {
     const p = d.params ?? {};
-    const model =
-      d.type === "jwsim/conveyor"
-        ? buildConveyor(p)
-        : d.type === "jwsim/tank"
-          ? buildTank(p)
-          : d.type === "jwsim/door"
-            ? buildDoor(p)
-            : d.type === "jwsim/compressor"
-              ? buildCompressor()
-              : d.type === "jwsim/service-unit"
-                ? buildServiceUnit()
-                : buildCylinder(p);
+    const BUILD = {
+      "jwsim/conveyor": buildConveyor,
+      "jwsim/tank": buildTank,
+      "jwsim/door": buildDoor,
+      "jwsim/building-water": buildBuilding,
+      "jwsim/compressor": buildCompressor,
+      "jwsim/service-unit": buildServiceUnit,
+    };
+    const model = (BUILD[d.type] ?? buildCylinder)(p);
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
+    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? 4 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
@@ -528,6 +525,77 @@ function buildServiceUnit() {
   return { group: g, gauge: gg, size: [1.0, 0.4] };
 }
 
+/** Sala de bombas y edificio: bombas sobre su base, colector, hidroneumático, manómetro y el edificio. */
+function buildBuilding(p) {
+  const g = new THREE.Group();
+  const ids = String(p.bombas ?? "")
+    .split(/[\s,;]+/)
+    .filter(Boolean);
+  const steel = mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 });
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  const n = Math.max(1, ids.length);
+  const skidW = 0.8 * n + 0.6;
+  const skid = box(skidW, 0.08, 0.9, mat(0x3a4048));
+  skid.position.set(skidW / 2, 0.04, 0);
+  g.add(skid);
+  const pumps = ids.map((id, i) => {
+    const x = 0.5 + i * 0.8;
+    const motorB = cyl(0.14, 0.36, mat(0x2f6fb5, { metalness: 0.35 }), 24);
+    motorB.rotation.x = Math.PI / 2;
+    motorB.position.set(x, 0.26, 0.12);
+    const fanCover = cyl(0.15, 0.06, mat(0x23272d), 24);
+    fanCover.rotation.x = Math.PI / 2;
+    fanCover.position.set(x, 0.26, 0.33);
+    const volute = cyl(0.17, 0.12, mat(0x9aa3ad, { metalness: 0.5 }), 28);
+    volute.rotation.x = Math.PI / 2;
+    volute.position.set(x, 0.26, -0.12);
+    // Acople visible entre motor y bomba: gira con la velocidad.
+    const rotor = new THREE.Group();
+    const shaft = cyl(0.03, 0.08, steel, 12);
+    shaft.rotation.x = Math.PI / 2;
+    const key = box(0.14, 0.02, 0.02, mat(0xffb020));
+    rotor.add(shaft, key);
+    rotor.position.set(x, 0.26, -0.03);
+    const riser = cyl(0.035, 0.6, pipeM, 12);
+    riser.position.set(x, 0.62, -0.12);
+    const tag = label(id);
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(x, 0.05, 0.6);
+    g.add(motorB, fanCover, volute, rotor, riser, tag);
+    return { id, rotor };
+  });
+  const len = skidW + 0.6;
+  const manifold = cyl(0.05, len, pipeM, 16);
+  manifold.rotation.z = Math.PI / 2;
+  manifold.position.set(len / 2 + 0.2, 0.92, -0.12);
+  // Hidroneumático vertical sobre el colector, al final de la base.
+  const hx = skidW - 0.05;
+  const hydro = cyl(0.22, 0.7, mat(0x3a7bd5, { metalness: 0.3, roughness: 0.4 }), 28);
+  hydro.position.set(hx, 0.47, -0.42);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), hydro.material);
+  dome.position.set(hx, 0.82, -0.42);
+  const gg = gauge(0.1);
+  gg.position.set(skidW + 0.35, 1.08, -0.06);
+  // Edificio con ventanas que se encienden cuando hay consumo.
+  const bx = skidW + 1.2;
+  const bldg = box(1.2, 3.2, 1, mat(0xd9dee4, { roughness: 0.8 }));
+  bldg.position.set(bx + 0.6, 1.6, -0.3);
+  const winM = mat(0x2a2e33, { emissive: 0x000000 });
+  for (let f = 0; f < 5; f++)
+    for (let c = 0; c < 3; c++) {
+      const w = box(0.22, 0.32, 0.02, winM);
+      w.position.set(bx + 0.22 + c * 0.38, 0.45 + f * 0.6, 0.21);
+      g.add(w);
+    }
+  const up = cyl(0.04, 2.6, pipeM, 12);
+  up.position.set(bx - 0.08, 2.2, -0.12);
+  const top = cyl(0.04, 0.5, pipeM, 12);
+  top.rotation.z = Math.PI / 2;
+  top.position.set(bx + 0.15, 3.5, -0.12);
+  g.add(manifold, hydro, dome, gg, bldg, up, top);
+  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, size: [bx + 1.3, 1] };
+}
+
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
 
 function frame(now) {
@@ -560,6 +628,12 @@ function frame(now) {
       m.panel.position.x = m.A / 2 + pos * m.A;
       m.person.visible = !!out.persona;
       m.ray.material.opacity = out.persona ? 0.25 : 0.8;
+    } else if (o.type === "jwsim/building-water") {
+      for (const pm of m.pumps) pm.rotor.rotation.z += Number(outOf(pm.id).speed ?? 0) * 0.6;
+      needleTo(m.gauge, Number(out.presion ?? 0), 10);
+      const q = Math.min(1, Number(out.qConsumo ?? 0) / 120);
+      m.windows.emissive.setRGB(0.55 * q, 0.75 * q, 1.0 * q);
+      m.pipes.color.setHex(Number(out.presion ?? 0) > 0.5 ? 0x1f56c8 : 0x9cc3ee);
     } else if (o.type === "jwsim/compressor") {
       needleTo(m.gauge, Number(out.pressure ?? 0), 12);
       if (out.running) m.wheel.rotation.z -= 0.5;
