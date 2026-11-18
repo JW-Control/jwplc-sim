@@ -24,6 +24,11 @@
 // Project en el modo «The simulator polls the PLC» (sondea cada 20 ms); otro
 // patrón (FUXA, un SCADA) es «modbus». Sin pedidos durante QUIET_MS el
 // cliente queda «quieto» (OIP en Stop, o la conexión colgada).
+//
+// Vigilancia (como la E/S remota real y el propio OIP con las salidas del
+// PLC): si ningún cliente pide durante QUIET_MS, o se van todos, las
+// entradas que escribieron los clientes vuelven a 0 (evento "released").
+// Así el sketch no se queda con la fotocelda tapada cuando OIP se cierra.
 import { EventEmitter } from "node:events";
 import net from "node:net";
 
@@ -53,6 +58,8 @@ export class IoBridge extends EventEmitter {
     this.listening = false;
     this.lastStatus = "";
     this.timer = null;
+    /** Entradas que escribió algún cliente desde la última liberación. */
+    this.driven = new Set();
   }
 
   /**
@@ -80,6 +87,18 @@ export class IoBridge extends EventEmitter {
     if (key === this.lastStatus) return;
     this.lastStatus = key;
     this.emit("status", st);
+    if (st.state !== "connected") this.#release(st.state);
+  }
+
+  // Vigilancia: nadie pide (o no queda nadie) → las entradas que manejaban
+  // los clientes vuelven a 0. Las que maneja la escena no se tocan.
+  #release(reason) {
+    if (!this.driven.size) return;
+    const signals = [...this.driven].filter((s) => !this.owns(s));
+    const wasOn = signals.filter((s) => this.levels.get(s));
+    for (const s of signals) this.#set(s, false);
+    this.driven.clear();
+    this.emit("released", { reason, signals, wasOn });
   }
 
   /** Engancha el runner y abre el puerto. */
@@ -115,6 +134,7 @@ export class IoBridge extends EventEmitter {
 
   #set(signal, on) {
     if (this.owns(signal)) return;
+    this.driven.add(signal);
     if (this.levels.get(signal) === on) return;
     this.levels.set(signal, on);
     this.runner?.send({ type: "set", signal, value: on ? 1 : 0 });

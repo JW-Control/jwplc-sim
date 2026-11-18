@@ -892,6 +892,12 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
       }
       prevState = st.state;
     });
+    // Vigilancia del puente: solo se avisa si alguna entrada estaba en 1.
+    ioBridge.on("released", ({ wasOn }) => {
+      if (!wasOn.length) return;
+      const names = wasOn.map((s) => s.replace("_", ".")).join(", ");
+      forward("sim:stderr", `[jwsim] puente de E/S: el cliente se fue o dejó de pedir: ${names} a 0\n`);
+    });
     ioBridge.attach(r);
   }
   // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.

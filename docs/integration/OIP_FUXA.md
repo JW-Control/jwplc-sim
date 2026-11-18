@@ -37,6 +37,11 @@ FUXA); `"present": false` lo quita. Al reproducir una grabación no se abre.
 
 Fuera del mapa responde la excepción 02; una función no admitida, la 01.
 
+**Vigilancia:** si ningún cliente pide durante 1,5 s, o se desconectan
+todos, las entradas que escribieron los clientes vuelven a 0 (como la E/S
+remota real). Un cliente que escribe una vez y se queda callado ve volver
+su entrada a 0; FUXA y OIP sondean todo el tiempo, así que no les afecta.
+
 **Con escena (G7):** las entradas que tienen un cable en la escena las
 maneja la escena; el puente no las escribe (las lee igual). Las demás
 quedan libres para la planta.

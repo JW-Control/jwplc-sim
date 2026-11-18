@@ -76,6 +76,65 @@ test("FUXA u otro (FC01/FC03): cliente Modbus, no OIP", async () => {
   }
 });
 
+// Runner que registra lo que el puente le manda escribir.
+class RecRunner extends FakeRunner {
+  sent = [];
+  send(m) {
+    this.sent.push(m);
+  }
+}
+async function openRec(owns) {
+  const bridge = new IoBridge({ port: 0, owns });
+  const runner = new RecRunner();
+  const released = [];
+  bridge.on("released", (e) => released.push(e));
+  const port = new Promise((r) => bridge.once("listening", (_h, p) => r(p)));
+  bridge.attach(runner);
+  return { bridge, runner, released, port: await port };
+}
+const level = (runner, s) => runner.sent.filter((m) => m.signal === s).at(-1)?.value;
+
+test("al irse el cliente, las entradas que escribió vuelven a 0", async () => {
+  const { bridge, runner, released, port } = await openRec();
+  try {
+    const c = new ModbusTcpClient("127.0.0.1", port, 1);
+    await c.connect();
+    await c.writeMultiple(0, [0b11]);   // fotocelda y pulsador en 1
+    await c.readInput(1, 1);
+    assert.equal(level(runner, "I0_0"), 1);
+    c.close();
+    await until(() => released.length === 1);
+    assert.equal(released[0].reason, "waiting");
+    assert.deepEqual(released[0].wasOn, ["I0_0", "I0_1"]);
+    assert.equal(level(runner, "I0_0"), 0);
+    assert.equal(level(runner, "I0_1"), 0);
+  } finally {
+    bridge.close();
+  }
+});
+
+test("sin pedidos durante QUIET_MS (Stop en OIP): vuelven a 0; la escena no se toca", async () => {
+  const { bridge, runner, released, port } = await openRec((s) => s === "I0_2");
+  try {
+    const c = new ModbusTcpClient("127.0.0.1", port, 1);
+    await c.connect();
+    await c.writeMultiple(0, [0b101]);   // I0_0 y I0_2 (este último es de la escena)
+    assert.equal(level(runner, "I0_0"), 1);
+    assert.equal(level(runner, "I0_2"), undefined);
+    await until(() => released.length === 1, QUIET_MS + 1500);
+    assert.equal(released[0].reason, "quiet");
+    assert.deepEqual(released[0].wasOn, ["I0_0"]);
+    assert.equal(level(runner, "I0_0"), 0);
+    assert.equal(level(runner, "I0_2"), undefined);
+    // Vuelve a pedir y escribir: la entrada sube de nuevo.
+    await c.writeMultiple(0, [0b1]);
+    assert.equal(level(runner, "I0_0"), 1);
+    c.close();
+  } finally {
+    bridge.close();
+  }
+});
+
 test("solo avisa cuando cambia el estado, no por cada pedido", async () => {
   const { bridge, states, port } = await open();
   try {

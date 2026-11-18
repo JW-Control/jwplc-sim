@@ -140,6 +140,21 @@ Cada cambio también queda en la consola, por ejemplo
 `[jwsim] puente de E/S: Open Industry Project conectado`. Prueba:
 `node --test tests/app/io_bridge_status_test.mjs`.
 
+### Al cerrar OIP o dar Stop: las entradas vuelven a 0
+
+Si OIP se desconecta, o deja de pedir durante más de 1,5 s (Stop), las
+entradas que escribió vuelven a 0, como hace la E/S remota real (y OIP con
+las salidas del PLC). Así el sketch no queda con la fotocelda «tapada»
+cuando OIP ya no está. La consola lo avisa si alguna estaba en 1:
+
+```text
+[jwsim] puente de E/S: sin clientes, esperando
+[jwsim] puente de E/S: el cliente se fue o dejó de pedir: I0.0 a 0
+```
+
+Las entradas cableadas en la escena del Sim no se tocan. Al volver a Play,
+OIP escribe los valores de nuevo en el primer ciclo.
+
 ### Por qué el sketch enclava la parada
 
 La primera versión era `cinta = NOT fotocelda` y la cinta solo se detenía
