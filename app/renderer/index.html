@@ -165,8 +165,7 @@
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main">
-              <!-- El zoom y el desplazamiento en curso se aplican con CSS a esta capa, no al SVG:
-                   así el navegador no vuelve a maquetar los símbolos en cada paso (scene.js, viewFast). -->
+              <!-- Contenedor del lienzo (sin transformaciones CSS: ver scene.js, commitView). -->
               <div id="scene-pan">
               <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
                 <defs>

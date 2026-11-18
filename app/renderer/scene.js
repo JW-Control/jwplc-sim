@@ -1055,21 +1055,18 @@
   }
 
   // ------------------------------------------------------------ edición
-  // Vista rápida al hacer zoom o mover la vista: mientras dura el gesto, la
-  // capa #scene-pan (que envuelve al SVG) se escala y se desplaza con una
-  // transformación CSS, sin tocar la maquetación de los símbolos; al soltar la
-  // rueda (140 ms) o el botón se aplica la transformación real del SVG.
-  // Sin will-change: con la capa compuesta aparte, Chrome (GPU, Windows) podía
-  // conservar el área de recorte del gesto y al soltar dejar equipos
-  // cortados con una línea recta; sin ella cada paso se repinta completo y el
-  // costo por paso medido es el mismo.
-  /** @type {{ pan: { x: number, y: number }, zoom: number, rect: DOMRect, t?: any } | null} */
-  var fastView = null; // var: render() puede correr antes de esta línea
+  // Zoom y desplazamiento: se cambia solo la transformación de #scene-root,
+  // como mucho una vez por cuadro (requestAnimationFrame). No se usa ninguna
+  // transformación CSS sobre el SVG ni sobre un contenedor: en Chrome con GPU
+  // (Windows) dejaba un área de recorte vieja y, al soltar, equipos y cables
+  // cortados con una línea recta. El costo de cada paso lo bajan los textos
+  // con text-rendering: geometricPrecision (style.css), que ya no se vuelven a
+  // maquetar al cambiar la escala.
+  var viewFrame = 0; // var: render() puede correr antes de esta línea
   function svgRect() {
-    return fastView?.rect ?? $("scene-svg").getBoundingClientRect();
+    return $("scene-svg").getBoundingClientRect();
   }
-  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena:
-  // durante el gesto no deja zonas vacías al mover el SVG.
+  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena.
   function gridBg(pan, zoom) {
     const main = $("scene-pan").parentElement;
     const step = 20 * zoom;
@@ -1079,27 +1076,17 @@
     main.style.backgroundPosition = `${pan.x - 10 * zoom}px ${pan.y - 10 * zoom}px`;
   }
   function commitView() {
-    const svg = $("scene-pan");
-    if (fastView) {
-      clearTimeout(fastView.t);
-      fastView = null;
-      svg.style.transform = "";
+    if (viewFrame) {
+      cancelAnimationFrame(viewFrame);
+      viewFrame = 0;
     }
     $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
     gridBg(S.pan, S.zoom);
   }
-  function viewFast(delayMs = 140) {
-    const svg = $("scene-pan");
-    if (!fastView) {
-      fastView = { pan: { ...S.pan }, zoom: S.zoom, rect: $("scene-svg").getBoundingClientRect() };
-      svg.style.transformOrigin = "0 0";
-    }
-    const k = S.zoom / fastView.zoom;
-    svg.style.transform = `translate(${S.pan.x - fastView.pan.x * k}px, ${S.pan.y - fastView.pan.y * k}px) scale(${k})`;
-    clearTimeout(fastView.t);
-    if (delayMs > 0) fastView.t = setTimeout(commitView, delayMs);
-    gridBg(S.pan, S.zoom);
+  function viewFast() {
+    if (!viewFrame) viewFrame = requestAnimationFrame(() => ((viewFrame = 0), commitView()));
   }
+
 
   function toWorld(e) {
     const r = svgRect();
@@ -1566,7 +1553,7 @@
       if (S.drag.kind === "pan") {
         if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
-        viewFast(0);
+        viewFast();
         // La punta del cable en curso sigue al puntero con la vista nueva.
         updateRubber(e);
       } else if (S.drag.kind === "vertex") {
