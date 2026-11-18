@@ -68,6 +68,9 @@ Cada borne se marca con un círculo de clase `jw-term`:
 - El cable llega al borde del símbolo, a la altura de `cx`. Ahí conviene
   dibujar la ranura o la boca de la bornera: el simulador pone encima el
   casquillo del terminal.
+- Un equipo sin bornes eléctricos (la unidad de mantenimiento neumática) lo
+  declara con `data-terms="none"` en el `<svg>`; sin eso, un archivo sin
+  `.jw-term` se rechaza.
 
 Si el tornillo que se ve no está donde entra el cable (p. ej. la bornera de
 control del VFD-EL, cuyos cables entran abajo a la izquierda), se marca

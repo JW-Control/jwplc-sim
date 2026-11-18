@@ -17,7 +17,7 @@ test("registro: los 16 dispositivos con tipo, versión, bornes y parámetros vá
   assert.equal(r.list().length, builtinDevices.length);
   for (const d of builtinDevices) {
     assert.match(d.type, /^jwsim\//);
-    assert.ok(d.terminals.length > 0 || d.category === "Planta", d.type);
+    assert.ok(d.terminals.length > 0 || ["Planta", "Neumática"].includes(d.category), d.type);
     for (const p of d.parameters ?? []) if (p.type === "enum") assert.ok(p.options.includes(p.default), `${d.type}.${p.id}`);
   }
   for (const t of ["pushbutton-no", "pushbutton-nc", "selector-2", "selector-3", "limit-switch", "sensor-inductive",
@@ -487,4 +487,36 @@ test("entrada sink con polaridad invertida (M1 al +): no se activa y avisa", () 
   s.act("S", "press", true, ms(1));
   assert.deepEqual(s.boardInputs(), { I0_0: 0 });
   assert.ok(s.warnings.some((w) => w.type === "polarity" && w.load === "plc.I0_0"));
+});
+
+test("neumática: el cilindro sigue a la presión del compresor y la unidad FR", () => {
+  const s = scene(
+    [
+      "PS:power-24vdc", "S:pushbutton-no",
+      { id: "CP1", type: "jwsim/compressor", params: { start: 0, fillS: 8, consumers: "Y1", leak: 0 } },
+      { id: "FR1", type: "jwsim/service-unit", params: { source: "CP1", setpoint: 6 } },
+      { id: "Y1", type: "jwsim/solenoid-valve", params: { air: "FR1", strokeMs: 500, returnMs: 400 } },
+    ],
+    ["PS.+V1 - S.13", "S.14 - Y1.A1", "Y1.A2 - PS.-V1"],
+  );
+  s.act("S", "press", true, ms(10));
+  s.advanceTo(ms(150));
+  assert.equal(s.output("CP1", "running"), true, "tanque vacío: el compresor arranca");
+  assert.equal(s.output("Y1", "position"), 0, "sin presión el vástago no sale");
+  // 0 → 8 bar en 8 s: a los ~1,5 bar (1,5 s) empieza a moverse, lento.
+  s.advanceTo(ms(2500));
+  const p = s.output("Y1", "position");
+  assert.ok(p > 0 && p < 1, `sale despacio con poca presión (${p})`);
+  s.advanceTo(ms(9000));
+  assert.equal(s.output("Y1", "extended"), true);
+  assert.ok(Math.abs(s.output("FR1", "pressure") - 6) < 0.01, "la FR regula a 6 bar");
+  s.advanceTo(ms(12000));
+  assert.equal(s.output("CP1", "running"), false, "al corte (8 bar) para");
+  // Retorno: gasta aire y la presión del tanque baja.
+  s.act("S", "press", false, ms(12000));
+  s.advanceTo(ms(12200));
+  assert.equal(s.output("Y1", "moving"), true);
+  assert.ok(s.output("CP1", "pressure") < 8, "el cilindro en movimiento consume");
+  s.advanceTo(ms(13000));
+  assert.equal(s.output("Y1", "retracted"), true);
 });

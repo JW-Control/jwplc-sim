@@ -15,7 +15,7 @@ está mal y en qué instante.
 | 06 | Arranque estrella-triángulo | 2 | Secuencia temporizada con pausa obligatoria entre contactores |
 | 07 | Cinta con contador de lote | 2 | Detección de flanco y contador |
 | 08 | Alarma con reconocimiento | 3 | Secuencia de alarma: bocina, parpadeo, reconocimiento y memoria |
-| 10 | Secuencia electroneumática de 4 cilindros | 3 | Secuencia A+ B+ B− A− C+ D+ D− C− con sensores magnéticos, vigilancia por tiempo, pausa y reset con los botones del frente |
+| 10 | Secuencia electroneumática de 4 cilindros | 3 | Secuencia A+ B+ B− A− C+ D+ D− C− con finales de carrera de rodillo, vigilancia por tiempo, pausa y reset con los botones del frente; aire de un compresor con presostato y una unidad FR (vista «Neumático») |
 
 ## Uso
 

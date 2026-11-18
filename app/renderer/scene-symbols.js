@@ -136,7 +136,9 @@
       const side = (t.getAttribute("data-side") ?? (y < h / 2 ? "t" : "b")) === "b" ? "b" : "t";
       terms[id] = { x, y: side === "t" ? 0 : h, side, screw: y };
     }
-    if (!Object.keys(terms).length) return bad("no marca ningún borne (.jw-term)");
+    // Un equipo sin bornes eléctricos (p. ej. la unidad de mantenimiento
+    // neumática) lo declara con data-terms="none" en el <svg>.
+    if (!Object.keys(terms).length && svg.getAttribute("data-terms") !== "none") return bad("no marca ningún borne (.jw-term)");
     // Otro punto de clic para un borne (.jw-term-alt): p. ej. el tornillo de
     // la bornera de control del VFD-EL, cuyo cable entra por otro lado. Un
     // clic ahí conecta el mismo borne; el cable sigue entrando por .jw-term.

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E de G9 sobre Electron (Playwright): ejercicios en la app.
-//   EX_LIST      la lista «Ejercicios…» trae los 8 ejercicios
+//   EX_LIST      la lista «Ejercicios…» trae los 10 ejercicios
 //   EX_OPEN      abrir el 01 copia el proyecto a la carpeta de trabajo sin la
 //                solución, carga la escena y muestra la pestaña Ejercicio con
 //                el enunciado
@@ -50,7 +50,7 @@ const grade = async () => {
 try {
   // ---- EX_LIST
   const opts = await until(() => win.$$eval("#sel-exercise option", (o) => o.filter((x) => x.value).map((x) => x.value)), 10000);
-  criteria.EX_LIST = { ok: opts?.length === 9, exercises: opts };
+  criteria.EX_LIST = { ok: opts?.length === 10, exercises: opts };
   log(`EX_LIST ${JSON.stringify(criteria.EX_LIST)}`);
 
   // ---- EX_OPEN

@@ -1391,6 +1391,7 @@
     S.error = r.error ?? null;
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
+    window.JwsimPneu?.onSnapshot(S.snap);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
@@ -2282,6 +2283,7 @@
       S.sel = null;
       S.fitted = false;
       S.rendered.clear();
+      window.JwsimPneu?.onSpec();
       if (S.spec.devices.length) setView("scene");
       else if (S.view === "scene") setView("scene");
       if (!S.running) analyze();
@@ -2455,6 +2457,7 @@
       }
       S.snap = snap;
       window.Jwsim3D?.onSnapshot(snap);
+      window.JwsimPneu?.onSnapshot(snap);
       render();
     });
     const sound = $("scene-sound");
