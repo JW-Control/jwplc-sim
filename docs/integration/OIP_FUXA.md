@@ -46,22 +46,16 @@ quedan libres para la planta.
 OIP se conecta a un PLC por Modbus TCP a través de libplctag (además de
 OPC UA y EtherNet/IP). En el panel **Comms**:
 
-1. Protocolo **Modbus TCP**, gateway `127.0.0.1:5020` (o la IP de la PC con
-   JWPLC Sim si OIP corre en otra).
-2. En cada pieza, el tag con la nomenclatura de libplctag para Modbus:
-   - sensores (fotocelda, final de carrera): bobina de la entrada,
-     `co0` … `co7` (I0.0 … I0.7);
-   - actuadores (cinta, cilindro, desviador): entrada discreta de la
-     salida, `di0` … `di7` (Q0.0 … Q0.7), o la bobina `co16` … `co23`.
-3. Ejecutar en JWPLC Sim y luego **Play** en OIP.
+**OIP de escritorio (2026.11.10 en adelante): ver `OIP_CONEXION.md`**,
+probado con OIP real el 18/11/2026. Resumen: en *Simulation > PLC
+Controllers…*, *An external PLC* → *The simulator polls the PLC*,
+`127.0.0.1:5020`. Sensores en `%IX0.n` (= I0.n, holding 0) y actuadores en
+`%QX2.n` (= Q0.n, input register 1).
 
-Ejemplo: cinta transportadora con una fotocelda al final. La fotocelda
-escribe `co0` (I0.0) y la cinta lee `di0` (Q0.0); con el sketch
-«marcha mientras no haya caja» la cinta se detiene al llegar la caja.
-
-> La interfaz de OIP cambia entre versiones: los nombres del panel y de
-> los campos pueden diferir. La nomenclatura de los tags (`co`, `di`, `hr`,
-> `ir` seguidos de la dirección) es la de libplctag.
+Versiones anteriores de OIP (Godot, libplctag): protocolo **Modbus TCP**,
+gateway `127.0.0.1:5020`; sensores en las bobinas `co0` … `co7`
+(I0.0 … I0.7) y actuadores en las entradas discretas `di0` … `di7`
+(Q0.0 … Q0.7) o las bobinas `co16` … `co23`. No se probó con OIP real.
 
 ## 3. FUXA (HMI/SCADA web)
 
@@ -102,5 +96,7 @@ escena y la latencia de la entrada a la salida a velocidad real (≤ 100 ms).
 Con FUXA real: `node scripts/check-fuxa-real.mjs --fuxa <carpeta de
 @frangoteam/fuxa>` levanta un servidor FUXA, le crea el dispositivo y las
 tags por su API REST (como el editor) y comprueba pulsadores, pilotos y
-registros contra el sketch (informe en `docs/reports/G8_FUXA_REAL.md`). La
-prueba con Open Industry Project (Godot, con pantalla) se hace en taller.
+registros contra el sketch (informe en `docs/reports/G8_FUXA_REAL.md`).
+Con Open Industry Project de escritorio: probado con OIP real el
+18/11/2026 (cinta, caja y fotocelda; `OIP_CONEXION.md`), y
+`node scripts/check-oip-cliente.mjs` repite sus tramas sin OIP.
