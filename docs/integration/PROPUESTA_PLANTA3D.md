@@ -1,98 +1,158 @@
-# Propuesta: planta 3D propia del Sim, partiendo de Open Industry Project
+# Propuesta: planta 3D con física propia del Sim, basada en Open Industry Project
 
 Propuesta del 18/11/2026, por aprobar. Rama `feature/alpha18-Planta3D`
 (parte de `feature/alpha18-IntegracionOIP`).
 
 La comunicación con Open Industry Project (OIP) ya funciona
-(`OIP_CONEXION.md`). Esta propuesta va un paso más allá: tener una planta 3D
-con física **dentro del propio Sim**, sin abrir OIP, y tomar a OIP como base
-técnica y como referencia para validarla.
+(`OIP_CONEXION.md`). El siguiente paso es una planta 3D con física
+**dentro del propio Sim**, sin abrir OIP.
 
-## 1. Punto de partida
+## 0. Decisiones ya tomadas
 
-| | Planta 3D del Sim (hoy) | Open Industry Project |
+- **No se incrusta OIP.** JWPLC Sim es un producto de JW Control (quizá se
+  distribuya gratis): el código de la física es propio y el Sim no depende
+  de la app de OIP.
+- **OIP es la referencia.** Se estudia cómo resuelve la física y se usa como
+  patrón de comparación (mismo escenario, mismo sketch).
+- **Crédito en el repo:** «Física de planta basada en el diseño de Open
+  Industry Project (MIT, © Automation Standard LLC and Contributors)», en el
+  README y en el encabezado de los archivos de física. Si en algún momento se
+  copia código o un modelo de OIP, se agrega además su aviso MIT en
+  `REUSE.toml` (el repo ya tiene `LICENSES/MIT.txt`).
+
+## 1. Cómo trata OIP la física
+
+Estudiado sobre el código fuente de OIP en GitHub
+(`Open-Industry-Project/Open-Industry-Project`, commit `4202d1d` del
+18/11/2026): `docs/architecture.md`, `docs/sim-clock.md`,
+`docs/cargo-bodies.md`, `src/sim/` y las piezas de `examples/parts/`.
+
+### 1.1 Motor y reloj
+
+- **Motor:** Jolt Physics (WASM), una versión modificada por ellos
+  (`1.1.1-oip.10`) con dos parches propios: fricción acoplada (una caja
+  frenada contra un borde puede girar y seguir) y «superficie de rodadura»
+  (solo la cara de arriba de la cinta arrastra; el costado no).
+- **Paso fijo:** 60 Hz por defecto (configurable de 60 a 1000). La física es
+  la dueña del reloj: el PLC escanea intercalado con los pasos, con el
+  tiempo de la simulación y nunca con el de la PC. A ×2, ×4 u ×8 se dan más
+  pasos del mismo tamaño, así que la física no cambia con la velocidad.
+- **Determinismo:** las mismas entradas dan el mismo resultado, y sus
+  pruebas automáticas corren la planta sin ventana.
+- **Latencia:** un sensor que cambia en el paso N mueve un actuador en el
+  paso N+1 (16,7 ms a 60 Hz).
+
+### 1.2 La cinta: una superficie con velocidad, no rodillos
+
+- La cinta es un cuerpo **fijo** con una «velocidad de superficie». En cada
+  contacto con una caja, Jolt la arrastra como si el suelo se moviera
+  (`setSurfaceVelocity`). No hay rodillos ni banda que giren.
+- La caja se acopla a la cinta por **fricción de Coulomb**: si va más lenta
+  que la cinta, acelera a lo sumo μ·g hasta igualarla; luego viaja pegada.
+  Fricción por defecto: cinta 0,59, caja 0,5.
+- **El accionamiento tiene rampa**, como un variador: la cinta de OIP trae
+  2 m/s, con 0,5 s de arranque y 0,5 s de frenado. Su propia ayuda lo dice:
+  *«Cargo keeps travelling while it does, so a box stopped at a photo-eye
+  ends up past it.»* Esto explica lo que medimos el 18/11: la caja salió
+  del haz 160-370 ms después de la orden de parar. No resbaló: la cinta
+  todavía estaba frenando.
+- Lo que más código les cuesta son las **uniones entre tramos**: cada tramo
+  es un cuerpo aparte, y al pasar de uno a otro Jolt genera contactos
+  «fantasma» que levantan la caja. Tienen filtros ajustados a mano
+  (`conveyorContacts.ts`).
+
+### 1.3 Sensores y cajas
+
+- **Fotocelda:** no es un rayo de Jolt. Es un cálculo directo de un rayo
+  contra la caja orientada de cada carga (`cargoSensing.ts`), con alcance
+  máximo y opción normalmente cerrado.
+- **Cajas:** cuerpos rígidos con masa, sin rebote (restitución 0) y sin
+  amortiguación; los pallets usan más iteraciones del solver para no
+  hundirse con mucha carga.
+- **Simplificaciones que ellos mismos declaran:** los rodillos son una sola
+  superficie (una caja no se traba entre rodillos) y no hay cargas blandas.
+
+### 1.4 Cómo validan
+
+Sus pruebas comparan la física contra fórmulas cerradas
+(`physicsFidelity.test.ts`):
+
+1. la caja alcanza la cinta acelerando a μ·g;
+2. una vez alcanzada, viaja a la velocidad de la cinta sin deslizar;
+3. en rampa se sostiene por debajo de atan(μ) y resbala por encima;
+4. una fila de cajas se acumula contra un tope sin encimarse.
+
+## 2. El Sim hoy
+
+| | Planta del Sim (hoy) | OIP |
 |---|---|---|
-| Dibujo | three.js, piezas con primitivas (`app/renderer/scene3d.js`) | three.js, piezas con primitivas y modelos GLB |
-| Física | No hay. La cinta mueve piezas en 1D a su velocidad (`scene/devices/plant.mjs`); al parar, la pieza para en seco | Jolt Physics: cajas con masa, fricción, inercia y colisiones |
-| Sensores | La fotocelda compara la posición de la pieza con su punto | Haz (raycast) que corta la caja real |
-| Equipos | Cinta, tanque, puerta, cilindro, compresor, unidad FR… | Cintas, rodillos, desviadores, robots, pórticos… |
-| Unida al tablero | Sí: los equipos son los de la escena eléctrica | No: solo tags por Modbus |
-| Gate | `JWSIM_G8_3D_SCENES` PASS | — |
+| Modelo | 1D, guiado por eventos (`scene/devices/plant.mjs`): calcula el instante exacto en que el borde de una pieza llega a un sensor | Cuerpos rígidos en 3D, paso fijo de 60 Hz |
+| Cinta → pieza | Pegadas: la pieza va siempre a la velocidad de la cinta | Fricción: puede resbalar al arrancar o frenar fuerte |
+| Rampa | La del motor o el variador de la escena (`M1.speed`) | Propia de la cinta (0,5 s) |
+| Piezas | Todas del mismo largo, sin choques entre ellas | Cajas de distinto tamaño que chocan y se acumulan |
+| Sensores | Puntos A y B a lo largo de la cinta | Haz contra la caja, en cualquier posición |
+| Unida al tablero | Sí | No (solo tags) |
 
-Lo que le falta a la planta del Sim es **física**. La prueba con OIP lo
-mostró: la caja siguió 160-370 ms después de parar la cinta y salió del
-haz. En el Sim actual eso no pasa, porque la pieza para en seco, así que un
-programa que funciona en el Sim puede fallar en la planta real (o en OIP).
+El Sim ya tiene lo que OIP más cuida (tiempo de simulación, determinismo,
+pruebas sin ventana) y además une la planta con el tablero eléctrico. Le
+falta la parte mecánica: fricción, choques entre cajas y sensores en
+cualquier lugar.
 
-### Por qué partir de OIP
+## 3. Cómo lo planteamos en el Sim
 
-- **Misma base:** los dos usan three.js, así que se pueden portar piezas
-  sin cambiar de motor.
-- **Licencia:** OIP es MIT, incluidos sus modelos y texturas («first-party»,
-  según su `THIRD_PARTY_NOTICES.md`). El MIT se puede incorporar a un
-  proyecto GPL-3.0 como el Sim, conservando el aviso de copyright
-  (`LICENSES/`, `REUSE.toml`).
-- **Física probada:** OIP usa Jolt Physics (MIT), que corre como WASM tanto
-  en la ventana como en Node, así que también sirve en las pruebas
-  automáticas.
-- **Referencia:** el escenario cinta + caja + fotocelda ya corre en OIP con
-  el sketch `oip_cinta`. El piloto del Sim tiene que comportarse igual.
+**Física propia, por etapas, sin Jolt al principio.** Para cintas, cajas y
+fotoceldas no hace falta un motor 3D completo: el comportamiento que OIP
+valida (§1.4) se reproduce con un modelo más simple, escrito por nosotros,
+que se puede probar contra las mismas fórmulas.
 
-El código legible está en GitHub
-(`github.com/Open-Industry-Project/Open-Industry-Project`). Lo instalado está
-compilado y minificado: no se toma código de ahí.
+### Etapa 1 · Piloto: cajas con fricción sobre la cinta
 
-## 2. Opciones
+Un dispositivo nuevo de escena (por ejemplo `jwsim/conveyor-fisico`), sin
+cambiar la cinta actual:
 
-| Opción | Qué es | A favor | En contra |
-|---|---|---|---|
-| A. Incrustar OIP | Abrir la app web de OIP dentro del Sim y unirla por el puente | Todo OIP de una vez | Dos interfaces, ~60 MB más (la app web de OIP instalada pesa 62 MB), se rompe con cada versión de OIP, la escena eléctrica y la planta siguen separadas |
-| **B. Portar piezas con física** (recomendada) | Agregar Jolt a la Planta 3D del Sim y portar de OIP la cinta, la caja, la fotocelda y el pulsador | Una sola app; los equipos siguen siendo los de la escena eléctrica; crece pieza por pieza | Más trabajo por pieza |
-| C. Solo modelos | Usar los GLB y texturas de OIP en la vista actual | Rápido, mejora el aspecto | No resuelve la física |
+- **Paso fijo** de la simulación (60 Hz por defecto, como OIP), con el
+  tiempo de la escena: sigue funcionando a ×10 y en las grabaciones.
+- **Cinta:** velocidad de superficie que da el motor o el variador de la
+  escena, con sus rampas. Opcional: rampa propia de la cinta.
+- **Cajas:** largo, ancho, masa y fricción por caja. Coulomb contra la
+  cinta (aceleración máxima μ·g hacia la velocidad de la cinta).
+- **Choques en la línea:** una caja no atraviesa a la de adelante ni a un
+  tope; se acumulan (en 1D, a lo largo de la cinta).
+- **Fin de cinta:** la caja cae (sale de la cinta y se cuenta).
+- **Fotocelda por haz:** rayo contra la caja en cualquier posición, con
+  alcance y NC, como la de OIP.
+- **Vista 3D:** `scene3d.js` dibuja las cajas que manda la escena; no
+  calcula nada.
 
-## 3. Piloto (etapa 1)
+Criterios de aceptación (prueba automática en Node, sin ventana):
 
-El mismo escenario de `tests/projects/oip-cinta`, pero **todo dentro del
-Sim**, sin OIP y con el mismo sketch:
-
-- cinta con superficie que arrastra (velocidad del equipo `jwsim/conveyor`);
-- caja con masa y fricción que cae sobre la cinta;
-- fotocelda por haz (raycast) a dos tercios del recorrido;
-- pulsador de marcha en la planta.
-
-**Dónde corre la física:** en el proceso de la escena, con el tiempo de
-la simulación y no con el reloj de la PC. Así sigue funcionando a ×10 y
-en las grabaciones `.stim`, y da siempre el mismo resultado. La ventana
-solo dibuja lo que recibe en cada instantánea, como hoy.
-
-**Criterios de aceptación:**
-
-1. Con `cinta = NOT fotocelda` (sin enclavamiento), la caja sale del haz por
-   inercia y la cinta vuelve a arrancar, igual que en OIP.
-2. Con el sketch `oip_cinta` (enclavado), la caja queda detenida y el
+1. Las fórmulas de OIP (§1.4, puntos 1, 2 y 4) se cumplen con un error
+   menor al 1 %.
+2. Con `cinta = NOT fotocelda` y una rampa de frenado de 0,5 s a 2 m/s, la
+   caja pasa el haz: el mismo resultado que dio OIP el 18/11.
+3. Con el sketch `oip_cinta` (enclavado), la caja queda detenida y el
    pulsador la rearma.
-3. Resultado determinista: dos corridas dan las mismas posiciones.
-4. Al menos 30 fps en la PC de referencia (como `JWSIM_G8_3D_SCENES`).
-5. Prueba automática en Node, sin ventana, que verifica 1-3.
+4. Determinista: dos corridas dan las mismas posiciones.
+5. Al menos 30 fps en la vista 3D (como `JWSIM_G8_3D_SCENES`).
 
-## 4. Etapas siguientes
+### Etapa 2 · Más piezas en 1D
 
-- **Etapa 2.** Más piezas sobre la misma física: rodillos, desviador,
-  cilindro empujador (ya existe la electroválvula 5/2) y caja de
-  descarga. Las cintas de la vitrina y de los ejercicios pasan a tener
-  física.
-- **Etapa 3.** Colocar y mover piezas en la vista 3D (hoy la posición sale
-  de la escena eléctrica).
-- **Etapa 4 (evaluar).** Leer paquetes de piezas de OIP (`manifest.json` +
-  `behavior.js`) para ampliar el catálogo sin portar a mano.
+Tope neumático (con el cilindro que ya existe), desviador a otra cinta,
+cinta inclinada (Coulomb con pendiente, punto 3 de §1.4) y migración de
+las cintas de la vitrina y los ejercicios a la física.
 
-## 5. Decisiones a tomar
+### Etapa 3 · Física 3D (evaluar)
 
-1. **Opción B** como camino (o A o C).
-2. **Compatibilidad:** con física, ¿los ejercicios y la vitrina actuales
-   (cinta 1D) pasan a física, o la física se activa por proyecto
-   (`simulation.physics`)? Propuesta: por proyecto en la etapa 1, y migrar
-   en la etapa 2.
-3. **Atribución:** cómo citar a OIP en la app y en el instalador. El repo ya
-   tiene `LICENSES/MIT.txt`; faltaría el aviso de copyright de OIP en
-   `REUSE.toml` para los archivos portados y una línea en los créditos.
+Solo si hace falta lo que el modelo 1D no cubre: cajas que giran, empujador
+lateral, robots, pallets. Ahí se evalúa Jolt (MIT, el paquete normal
+`jolt-physics`, no el modificado de OIP) detrás de la misma interfaz, con
+las mismas pruebas de la etapa 1.
+
+## 4. Decisiones a tomar
+
+1. Aprobar el camino: física propia por etapas (1D primero) en vez de Jolt
+   desde el inicio.
+2. Cinta nueva (`jwsim/conveyor-fisico`) en paralelo a la actual, o que la
+   actual gane física con un parámetro. Propuesta: en paralelo en la etapa
+   1 y unificar en la etapa 2.
+3. Texto y lugar del crédito a OIP (§0).
