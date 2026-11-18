@@ -60,7 +60,7 @@ node([join("scripts", "fetch-third-party.mjs")]);
 // el PATH). Un package descargado antes de que existiera la marca la recibe
 // aquí.
 if (process.env.JWPLC_PACKAGE_DIR) throw new Error("el instalador lleva el package de .jwsim/package: quite JWPLC_PACKAGE_DIR");
-const { root: pkgRoot, lock } = resolvePackageRoot();
+const { root: pkgRoot, lock } = resolvePackageRoot({ fijado: true });
 const pkgDir = relative(ROOT, pkgRoot).replaceAll("\\", "/");
 const mark = join(pkgRoot, ".jwsim-commit");
 if (!existsSync(mark) || readFileSync(mark, "utf8").trim() !== lock.JWPLC_PACKAGE_COMMIT) {

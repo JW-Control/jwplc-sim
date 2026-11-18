@@ -29,7 +29,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .jwsim
-          key: jwsim-${{ runner.os }}-${{ hashFiles('package.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+          key: jwsim-${{ runner.os }}-${{ hashFiles('package.lock', 'editor.lock', 'third_party/sources.json', 'third_party/toolchain.json') }}
+
+      # Cadena del OpenPLC Editor de editor.lock (STruC++ y VPP): sin ella la app
+      # instalada no compila proyectos OpenPLC.
+      - name: Cadena del OpenPLC Editor
+        run: node scripts/fetch-editor.mjs
 
       - name: Instalador y portable
         run: node scripts/dist.mjs
