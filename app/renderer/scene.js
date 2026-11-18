@@ -580,7 +580,6 @@
 
   function renderWires() {
     const g = $("scene-wires");
-    g.textContent = "";
     // Los recorridos se recalculan solo si cambió la geometría (no con cada
     // instantánea de la simulación). Al arrastrar un equipo o un punto de
     // doblez se vuelven a trazar solo los cables afectados, con A* y los
@@ -771,8 +770,66 @@
         if (own) handles += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
       });
     }
-    g.innerHTML = html;
-    $("scene-handles").innerHTML = handles;
+    // Solo se reemplaza el DOM si cambió algo: con la simulación corriendo
+    // llega una instantánea por cuadro y rehacer todos los cables (y sus
+    // rótulos) en cada una obligaba a maquetar y pintar de nuevo el esquema.
+    if (S.wiresHtml !== html || !g.firstChild) {
+      S.wiresHtml = html;
+      g.innerHTML = html;
+    }
+    if (S.handlesHtml !== handles) {
+      S.handlesHtml = handles;
+      $("scene-handles").innerHTML = handles;
+    }
+  }
+
+  // Cambia un atributo solo si su valor es otro. Volver a poner el mismo
+  // transform en un grupo SVG hace que Chrome maquete de nuevo todos los textos
+  // que contiene (con la simulación, en cada instantánea).
+  function setAttr(el, name, value) {
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  // Reemplaza el contenido SVG de un elemento parcheando solo lo que cambió.
+  // Con la simulación corriendo un equipo se redibuja en cada instantánea
+  // (p. ej. la electroválvula mientras el vástago se mueve): reemplazar todo
+  // su DOM obligaba a maquetar de nuevo sus textos y a pintarlo entero. Si la
+  // estructura es la misma (lo habitual: misma plantilla, otro estado) solo
+  // se copian los atributos y textos distintos.
+  const patchBox = document.createElementNS(NS, "g");
+  function setSvgHtml(el, html) {
+    if (!el.firstChild) {
+      el.innerHTML = html;
+      return;
+    }
+    patchBox.innerHTML = html;
+    patchChildren(el, patchBox);
+    patchBox.textContent = "";
+  }
+  function patchChildren(a, b) {
+    const an = a.childNodes;
+    const bn = b.childNodes;
+    if (an.length !== bn.length) {
+      a.replaceChildren(...bn);
+      return;
+    }
+    for (let i = 0; i < an.length; i++) {
+      const x = an[i];
+      const y = bn[i];
+      if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName) {
+        a.replaceChild(y.cloneNode(true), x);
+        continue;
+      }
+      if (x.nodeType !== 1) {
+        if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue;
+        continue;
+      }
+      const xe = /** @type {Element} */ (x);
+      const ye = /** @type {Element} */ (y);
+      for (const at of [...xe.attributes]) if (!ye.hasAttribute(at.name)) xe.removeAttribute(at.name);
+      for (const at of ye.attributes) if (xe.getAttribute(at.name) !== at.value) xe.setAttribute(at.name, at.value);
+      patchChildren(xe, ye);
+    }
   }
 
   function renderDevice(dev, force = false) {
@@ -787,7 +844,7 @@
       $(sym.board ? "scene-board" : "scene-devices").appendChild(g);
       force = true;
     }
-    g.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    setAttr(g, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     g.classList.toggle("selected", S.sel?.kind === "device" && S.sel.id === dev.id);
     // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
     const pre = `${dev.id}.`;
@@ -798,7 +855,7 @@
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
     const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
-    tg?.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
     S.rendered.set(dev.id, sig);
     if (sym.board) {
@@ -830,14 +887,19 @@
       leds.innerHTML = html;
     } else {
       const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
-      g.innerHTML =
+      setSvgHtml(
+        g,
+        // Zona de clic de todo el equipo, debajo del dibujo: el interior de
+        // una plantilla no recibe el puntero (style.css, .dev .tpl *).
+        `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
         `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
-          : "");
+          : ""),
+      );
     }
     // Bornes en su propia capa, encima de los cables (un clic en un borne ya
     // cableado empieza otro cable en vez de seleccionar el existente).
@@ -848,7 +910,7 @@
       t.dataset.id = dev.id;
       $("scene-terms").appendChild(t);
     }
-    t.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    setAttr(t, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (t.childElementCount && !force) return;
     let th = "";
     for (const [id, [x, y]] of Object.entries(sym.screws)) {
@@ -1048,9 +1110,13 @@
     for (const f of S.snap?.findings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     for (const f of S.snap?.warnings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     if (S.error) items.unshift(["bad", S.error, null]);
-    diag.innerHTML = items.length
+    const diagHtml = items.length
       ? items.slice(-30).map(([c, m, d]) => `<li class="${c}" data-dev="${esc(d ?? "")}">${esc(m)}</li>`).join("")
       : `<li class="ok">${S.snap ? "Sin fallas ni avisos" : "—"}</li>`;
+    if (S.diagHtml !== diagHtml) {
+      S.diagHtml = diagHtml;
+      diag.innerHTML = diagHtml;
+    }
     $("scene-rearm").disabled = !S.running || !(S.snap?.faults?.length || S.snap?.devices.some((d) => d.tripped || d.damaged.length));
   }
 
@@ -1080,7 +1146,7 @@
       cancelAnimationFrame(viewFrame);
       viewFrame = 0;
     }
-    $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+    setAttr($("scene-root"), "transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
     gridBg(S.pan, S.zoom);
   }
   function viewFast() {

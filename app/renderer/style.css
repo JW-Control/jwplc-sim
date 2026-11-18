@@ -3186,3 +3186,24 @@ body[data-tab="plant"] .view3d-empty {
 #scene-svg text {
   text-rendering: geometricPrecision;
 }
+/* Los textos de los equipos no reciben el puntero (el clic cae en la figura de
+   debajo). Probar el puntero sobre ~250 textos en cada cuadro, con la
+   simulación corriendo y el mouse sobre el esquema, era la mayor parte del
+   trabajo del hilo principal. */
+#scene-board text,
+#scene-devices text {
+  pointer-events: none;
+}
+/* Igual con el interior de las plantillas .svg: solo reciben el puntero sus
+   partes accionables (.act) y la zona de clic del equipo (.dev-hit). */
+.dev .tpl * {
+  pointer-events: none;
+}
+.dev .tpl .act,
+.dev .tpl .act * {
+  pointer-events: visiblePainted;
+}
+.dev .dev-hit {
+  fill: none;
+  pointer-events: all;
+}
