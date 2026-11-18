@@ -19,23 +19,23 @@
     "rubric": "./rubrica.json",
     "solution": "./solucion/secuencia_neumatica",
     "brief": {
-      "goal": "Cuatro cilindros neumáticos que siguen la secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo, vigilada por sus finales de carrera magnéticos.",
+      "goal": "Cuatro cilindros neumáticos que siguen la secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo, vigilada por sus finales de carrera de rodillo.",
       "steps": [
         "OK arranca el ciclo continuo si los cuatro cilindros están en reposo.",
         "Cada paso espera su final de carrera; si no llega en 3 s, la máquina queda en falla con el código en ERR.",
         "ESC pausa en el paso actual y OK continúa.",
         "LEFT (Reset) retrae todos los cilindros y deja la máquina lista."
       ],
-      "teaches": "Secuencias neumáticas con finales de carrera, vigilancia por tiempo, pausa y reset.",
+      "teaches": "Secuencias electroneumáticas con finales de carrera, vigilancia por tiempo, pausa y reset.",
       "uses": [
-        "I0_0 · A0, sensor magnético: cilindro A retraído",
-        "I0_1 · A1, sensor magnético: cilindro A extendido",
-        "I0_2 · B0, sensor magnético: cilindro B retraído",
-        "I0_3 · B1, sensor magnético: cilindro B extendido",
-        "I0_4 · C0, sensor magnético: cilindro C retraído",
-        "I0_5 · C1, sensor magnético: cilindro C extendido",
-        "I0_6 · D0, sensor magnético: cilindro D retraído",
-        "I0_7 · D1, sensor magnético: cilindro D extendido",
+        "I0_0 · A0, final de carrera de rodillo: cilindro A retraído",
+        "I0_1 · A1, final de carrera de rodillo: cilindro A extendido",
+        "I0_2 · B0, final de carrera de rodillo: cilindro B retraído",
+        "I0_3 · B1, final de carrera de rodillo: cilindro B extendido",
+        "I0_4 · C0, final de carrera de rodillo: cilindro C retraído",
+        "I0_5 · C1, final de carrera de rodillo: cilindro C extendido",
+        "I0_6 · D0, final de carrera de rodillo: cilindro D retraído",
+        "I0_7 · D1, final de carrera de rodillo: cilindro D extendido",
         "Q0_0 · Y1, electroválvula 5/2: cilindro A",
         "Q0_1 · Y2, electroválvula 5/2: cilindro B",
         "Q0_2 · Y3, electroválvula 5/2: cilindro C",
@@ -70,80 +70,88 @@
       },
       {
         "id": "A0",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y1",
-          "end": "retraído"
+          "source": "Y1.position",
+          "min": 0,
+          "max": 0
         },
         "x": 760,
         "y": 0
       },
       {
         "id": "A1",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y1",
-          "end": "extendido"
+          "source": "Y1.position",
+          "min": 1,
+          "max": 1
         },
         "x": 900,
         "y": 0
       },
       {
         "id": "B0",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y2",
-          "end": "retraído"
+          "source": "Y2.position",
+          "min": 0,
+          "max": 0
         },
         "x": 1040,
         "y": 0
       },
       {
         "id": "B1",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y2",
-          "end": "extendido"
+          "source": "Y2.position",
+          "min": 1,
+          "max": 1
         },
         "x": 1180,
         "y": 0
       },
       {
         "id": "C0",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y3",
-          "end": "retraído"
+          "source": "Y3.position",
+          "min": 0,
+          "max": 0
         },
         "x": 1320,
         "y": 0
       },
       {
         "id": "C1",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y3",
-          "end": "extendido"
+          "source": "Y3.position",
+          "min": 1,
+          "max": 1
         },
         "x": 1460,
         "y": 0
       },
       {
         "id": "D0",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y4",
-          "end": "retraído"
+          "source": "Y4.position",
+          "min": 0,
+          "max": 0
         },
         "x": 1600,
         "y": 0
       },
       {
         "id": "D1",
-        "type": "jwsim/sensor-cylinder",
+        "type": "jwsim/limit-switch",
         "params": {
-          "cylinder": "Y4",
-          "end": "extendido"
+          "source": "Y4.position",
+          "min": 1,
+          "max": 1
         },
         "x": 1740,
         "y": 0
@@ -234,98 +242,66 @@
       },
       {
         "from": "PS1.+V1",
-        "to": "A0.BN"
+        "to": "A0.13"
       },
       {
-        "from": "A0.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "A0.BK",
+        "from": "A0.14",
         "to": "plc.I0_0"
       },
       {
         "from": "PS1.+V1",
-        "to": "A1.BN"
+        "to": "A1.13"
       },
       {
-        "from": "A1.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "A1.BK",
+        "from": "A1.14",
         "to": "plc.I0_1"
       },
       {
         "from": "PS1.+V1",
-        "to": "B0.BN"
+        "to": "B0.13"
       },
       {
-        "from": "B0.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "B0.BK",
+        "from": "B0.14",
         "to": "plc.I0_2"
       },
       {
         "from": "PS1.+V1",
-        "to": "B1.BN"
+        "to": "B1.13"
       },
       {
-        "from": "B1.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "B1.BK",
+        "from": "B1.14",
         "to": "plc.I0_3"
       },
       {
         "from": "PS1.+V1",
-        "to": "C0.BN"
+        "to": "C0.13"
       },
       {
-        "from": "C0.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "C0.BK",
+        "from": "C0.14",
         "to": "plc.I0_4"
       },
       {
         "from": "PS1.+V1",
-        "to": "C1.BN"
+        "to": "C1.13"
       },
       {
-        "from": "C1.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "C1.BK",
+        "from": "C1.14",
         "to": "plc.I0_5"
       },
       {
         "from": "PS1.+V1",
-        "to": "D0.BN"
+        "to": "D0.13"
       },
       {
-        "from": "D0.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "D0.BK",
+        "from": "D0.14",
         "to": "plc.I0_6"
       },
       {
         "from": "PS1.+V1",
-        "to": "D1.BN"
+        "to": "D1.13"
       },
       {
-        "from": "D1.BU",
-        "to": "PS1.-V1"
-      },
-      {
-        "from": "D1.BK",
+        "from": "D1.14",
         "to": "plc.I0_7"
       },
       {

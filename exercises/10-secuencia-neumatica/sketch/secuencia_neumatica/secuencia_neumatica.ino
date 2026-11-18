@@ -1,5 +1,5 @@
 // Ejercicio 10 · Secuencia electroneumática A+ B+ B- A- C+ D+ D- C- (ver ENUNCIADO.md)
-//   I0_0  A0, sensor magnético: cilindro A retraído      I0_1  A1: cilindro A extendido
+//   I0_0  A0, final de carrera: cilindro A retraído      I0_1  A1: cilindro A extendido
 //   I0_2  B0: cilindro B retraído                        I0_3  B1: cilindro B extendido
 //   I0_4  C0: cilindro C retraído                        I0_5  C1: cilindro C extendido
 //   I0_6  D0: cilindro D retraído                        I0_7  D1: cilindro D extendido

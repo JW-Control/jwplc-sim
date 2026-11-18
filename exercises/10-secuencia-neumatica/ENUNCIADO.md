@@ -1,6 +1,6 @@
 # Ejercicio 10 · Secuencia electroneumática de 4 cilindros
 
-**Nivel 3.** Una estación de montaje mueve cuatro cilindros neumáticos de doble efecto (A, B, C y D), cada uno con una electroválvula 5/2 monoestable (Y1 a Y4: con bobina sale, sin bobina vuelve). Cada cilindro lleva dos sensores magnéticos en su ranura: «0» marca el vástago adentro y «1» afuera. Los ocho sensores ocupan las ocho entradas del JWPLC Basic, así que el mando va en los botones del frente de la placa.
+**Nivel 3.** Una estación de montaje mueve cuatro cilindros neumáticos de doble efecto (A, B, C y D), cada uno con una electroválvula 5/2 monoestable (Y1 a Y4: con bobina sale, sin bobina vuelve). Cada cilindro tiene dos finales de carrera de rodillo que acciona la cabeza del vástago: «0» marca el vástago adentro y «1» afuera (contacto NA 13-14). Los ocho finales ocupan las ocho entradas del JWPLC Basic, así que el mando va en los botones del frente de la placa.
 
 ## Secuencia
 
@@ -33,4 +33,4 @@ Opcional: muestre el mismo código en ERR de la pantalla con `JWPLC_Display.setE
 
 ## Para probar en el simulador
 
-En la escena, el inspector de cada electroválvula y de cada sensor tiene sus fallas: corte la bobina de Y2 o deje pegado A0 y vea qué hace su programa. La vista 3D muestra los cuatro cilindros con sus sensores encendiéndose al llegar.
+En la escena, el inspector de cada electroválvula y de cada sensor tiene sus fallas: corte la bobina de Y2 o deje pegado A0 y vea qué hace su programa. La vista 3D muestra los cuatro cilindros sobre su panel, con la palanca de cada final de carrera bajando al llegar la cabeza del vástago.

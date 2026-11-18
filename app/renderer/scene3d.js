@@ -15,6 +15,7 @@ const COL = {
   tank: 0xb8c4d0, water: 0x2f8cff, pump: 0x3f7fbf, door: 0xc9cfd6, post: 0x4b5563, rod: 0xdfe3e8, body: 0x7b8794,
   on: 0x37d67a, off: 0x3a4048, warn: 0xffb020, person: 0xe2b48c,
 };
+const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
@@ -176,24 +177,103 @@ function buildDoor(p) {
   return { group: g, panel, ray, person, A, size: [2 * A, 1] };
 }
 
+// Cilindro de doble efecto sobre un panel ranurado de aluminio, como en los
+// módulos didácticos de electroneumática: tapas oscuras, tubo de acero,
+// vástago cromado con cabeza redondeada y conectores azules.
+const CYL = { y: 1.0, z: 0.1, capR: 0.075, tubeR: 0.06, rear: 0.06, front: 0.74, S: 0.5, rodOut: 0.1, headR: 0.045, K: 1.8 };
 function buildCylinder(p) {
-  const S = 0.6; // carrera dibujada (m)
+  const { y, z, S } = CYL;
   const g = new THREE.Group();
-  const body = cyl(0.09, 0.8, mat(COL.body, { metalness: 0.5 }), 24);
-  body.rotation.z = Math.PI / 2;
-  body.position.set(0.4, 0.9, 0);
-  const capA = cyl(0.11, 0.06, mat(COL.frame), 24);
+  // El cilindro, sus sensores y finales van en un grupo propio a escala K
+  // (medidas de arriba en su sistema), con el eje a 1,1 m del piso.
+  const c = new THREE.Group();
+  c.scale.setScalar(CYL.K);
+  c.position.y = 1.1 - CYL.K * y;
+  const alu = mat(0xc9ced5, { metalness: 0.3, roughness: 0.45 });
+  const dark = mat(0x23272d, { roughness: 0.5 });
+  const blue = mat(0x1f6fd1, { roughness: 0.45 });
+  const steel = mat(0xd5dbe1, { metalness: 0.35, roughness: 0.3 });
+  const chrome = mat(0xf2f4f6, { metalness: 0.45, roughness: 0.15 });
+  // Panel ranurado (cubre el hueco hasta el equipo vecino) y su pie.
+  const PW = 3.8; // ancho del panel: cubre el equipo (2,6 m) y el hueco al vecino
+  const panel = box(PW, 1.3, 0.03, alu);
+  panel.position.set(1.3, 0.95, -0.04);
+  g.add(panel);
+  for (let i = 0; i < 12; i++) {
+    const slot = box(PW, 0.012, 0.01, mat(0x8a929c));
+    slot.position.set(1.3, 0.36 + i * 0.1, -0.02);
+    g.add(slot);
+  }
+  const foot = box(PW, 0.08, 0.5, alu);
+  foot.position.set(1.3, 0.04, 0.1);
+  g.add(foot, c);
+  // Soportes con perilla azul de fijación rápida.
+  for (const x of [0.03, 0.71]) {
+    const brk = box(0.07, 0.1, 0.12, dark);
+    brk.position.set(x, y - 0.07, z - 0.04);
+    const knob = cyl(0.028, 0.03, blue, 16);
+    knob.rotation.x = Math.PI / 2;
+    knob.position.set(x, y - 0.12, z + 0.035);
+    c.add(brk, knob);
+  }
+  // Tapas, tubo y conectores de aire.
+  const capA = cyl(CYL.capR, CYL.rear, dark, 32);
   capA.rotation.z = Math.PI / 2;
-  capA.position.set(0.02, 0.9, 0);
-  const capB = capA.clone();
-  capB.position.x = 0.78;
-  const rod = cyl(0.025, 0.8, mat(COL.rod, { metalness: 0.8, roughness: 0.2 }), 16);
+  capA.position.set(CYL.rear / 2, y, z);
+  const tube = cyl(CYL.tubeR, CYL.front - CYL.rear - 0.06, steel, 32);
+  tube.rotation.z = Math.PI / 2;
+  tube.position.set((CYL.rear + CYL.front - 0.06) / 2, y, z);
+  const capB = cyl(CYL.capR, 0.06, dark, 32);
+  capB.rotation.z = Math.PI / 2;
+  capB.position.set(CYL.front - 0.03, y, z);
+  const neck = cyl(0.035, 0.03, dark, 24);
+  neck.rotation.z = Math.PI / 2;
+  neck.position.set(CYL.front + 0.015, y, z);
+  c.add(capA, tube, capB, neck);
+  for (const x of [CYL.rear / 2, CYL.front - 0.03]) {
+    const fit = cyl(0.014, 0.05, blue, 12);
+    fit.position.set(x, y + CYL.capR + 0.02, z);
+    c.add(fit);
+  }
+  // Vástago cromado (se escala con la carrera) y cabeza redondeada.
+  const rod = cyl(0.018, 1, chrome, 20);
   rod.rotation.z = Math.PI / 2;
-  const tip = box(0.06, 0.16, 0.16, mat(COL.frame));
-  const stand = box(0.9, 0.9, 0.3, mat(COL.floor));
-  stand.position.set(0.4, 0.42, 0);
-  g.add(stand, body, capA, capB, rod, tip);
-  return { group: g, rod, tip, S, size: [1.6, 0.4] };
+  const tip = new THREE.Group();
+  const nut = cyl(0.03, 0.03, steel, 6);
+  nut.rotation.z = Math.PI / 2;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(CYL.headR, 24, 16), chrome);
+  head.position.x = 0.03;
+  tip.add(nut, head);
+  c.add(rod, tip);
+  return { group: g, cyl: c, rod, tip, S, size: [2.6, 0.4] };
+}
+
+/** Posición x de la cabeza del vástago para una posición 0..1. */
+const headX = (pos) => CYL.front + 0.03 + CYL.rodOut + pos * CYL.S;
+
+/** Final de carrera de rodillo (cuerpo negro sobre base azul) bajo el recorrido de la cabeza. */
+function rollerSwitch() {
+  const g = new THREE.Group();
+  const base = cyl(0.045, 0.02, mat(0x1f6fd1), 24);
+  base.rotation.x = Math.PI / 2;
+  base.position.set(0, -0.06, -0.02);
+  const body = box(0.07, 0.11, 0.06, mat(0x1b1e22, { roughness: 0.5 }));
+  body.position.y = -0.055;
+  const plug = box(0.05, 0.03, 0.02, mat(0xd8323a));
+  plug.position.set(0, -0.06, 0.04);
+  const lever = new THREE.Group();
+  const arm = box(0.012, 0.05, 0.012, mat(0x9aa3ad, { metalness: 0.7 }));
+  arm.position.y = 0.025;
+  const roller = cyl(0.016, 0.02, mat(0x2a2e33), 16);
+  roller.rotation.x = Math.PI / 2;
+  roller.position.y = 0.05;
+  lever.add(arm, roller);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.022, -0.03, 0.031);
+  g.add(base, body, plug, lever, lamp);
+  g.userData.lamp = lamp;
+  g.userData.lever = lever;
+  return g;
 }
 
 // ------------------------------------------------------------ vista
@@ -286,7 +366,7 @@ function rebuild(spec) {
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : 2.2, 0);
+    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : CYLINDERS.has(d.type) ? 1.85 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
@@ -296,17 +376,29 @@ function rebuild(spec) {
       if (s.type === "jwsim/sensor-cylinder") {
         // Sobre el tubo (radio 0.09, eje a 0.9 m): atrás si marca retraído, adelante si extendido.
         const b = slotSensor();
-        b.position.set(s.params.end === "extendido" ? 0.66 : 0.14, 0.9 + 0.1, 0);
+        b.position.set(s.params.end === "extendido" ? CYL.front - 0.14 : CYL.rear + 0.1, CYL.y + CYL.tubeR + 0.012, CYL.z);
         const t = label(s.id);
-        t.scale.set(0.5, 0.125, 1);
-        t.position.y = 0.16;
+        t.scale.set(0.42, 0.105, 1);
+        t.position.y = 0.06;
         b.add(t);
-        model.group.add(b);
+        (model.cyl ?? model.group).add(b);
+        beacons.push({ id: s.id, b });
+        continue;
+      }
+      const min = Number(s.params.min ?? 1);
+      if (CYLINDERS.has(d.type) && s.type === "jwsim/limit-switch") {
+        // Rodillo justo bajo la cabeza del vástago en ese extremo.
+        const b = rollerSwitch();
+        b.position.set(headX(min > 0.5 ? 1 : 0) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
+        const t = label(s.id);
+        t.scale.set(0.42, 0.105, 1);
+        t.position.y = -0.17;
+        b.add(t);
+        model.cyl.add(b);
         beacons.push({ id: s.id, b });
         continue;
       }
       const b = beacon();
-      const min = Number(s.params.min ?? 1);
       if (d.type === "jwsim/conveyor") b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
       else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
@@ -362,14 +454,18 @@ function frame(now) {
       m.ray.material.opacity = out.persona ? 0.25 : 0.8;
     } else {
       const pos = Math.max(0, Math.min(1, Number(out.position ?? 0)));
-      const ext = pos * m.S;
-      m.rod.position.set(0.8 + ext / 2 - 0.2, 0.9, 0);
-      m.rod.scale.y = Math.max(0.05, (ext + 0.4) / 0.8);
-      m.tip.position.set(0.8 + ext + 0.03, 0.9, 0);
+      // Vástago desde el interior de la tapa hasta la tuerca de la cabeza.
+      const x0 = CYL.front - 0.05;
+      const x1 = headX(pos) - 0.03;
+      m.rod.scale.y = x1 - x0;
+      m.rod.position.set((x0 + x1) / 2, CYL.y, CYL.z);
+      m.tip.position.set(x1, CYL.y, CYL.z);
     }
     for (const { id: sid, b } of o.beacons) {
       const so = outOf(sid);
-      lightBeacon(b, !!(so.actuated ?? so.detecting));
+      const on = !!(so.actuated ?? so.detecting);
+      lightBeacon(b, on);
+      if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
     }
   }
   V.controls.update();
