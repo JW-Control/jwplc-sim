@@ -1,0 +1,13 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "OIP: cinta con fotocelda (prueba de comunicación)",
+  "board": { "id": "jwplcbasic", "package": { "minRef": "v2.1.0-alpha.17" } },
+  "program": { "kind": "arduino", "sketch": "./sketch/oip_cinta/oip_cinta.ino" },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1,
+    "ioBridge": { "present": true, "port": 5020, "listenHost": "127.0.0.1" }
+  }
+}
