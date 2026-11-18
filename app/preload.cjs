@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   onStderr: on("sim:stderr"),
   onExit: on("sim:exit"),
   onComClosed: on("com:closed"),
+  onIoBridgeStatus: on("iobridge:status"),
   onMenu: on("menu"),
   // Escena (G7)
   sceneDevices: () => ipcRenderer.invoke("scene:devices"),

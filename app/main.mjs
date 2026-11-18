@@ -206,6 +206,7 @@ async function stopRunner() {
   sceneSession = null;
   bridge?.close();
   bridge = null;
+  if (ioBridge) forward("iobridge:status", { state: "off", clients: [] });
   ioBridge?.close();
   ioBridge = null;
   comBridge?.detach();
@@ -875,7 +876,22 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     lastSceneInputs = null;
     ioBridge = new IoBridge({ port: iob.port ?? 5020, host: iob.listenHost ?? "127.0.0.1", owns: (s) => !!lastSceneInputs && s in lastSceneInputs });
     ioBridge.on("listening", (h, p) => forward("sim:stderr", `[jwsim] puente de E/S (Modbus TCP): bornera en ${h}:${p}\n`));
-    ioBridge.on("error", (err) => forward("sim:stderr", `[jwsim] ${err.message}\n`));
+    ioBridge.on("error", (err) => {
+      forward("sim:stderr", `[jwsim] ${err.message}\n`);
+      forward("iobridge:status", { state: "error", message: err.message, clients: [] });
+    });
+    // Indicador de la barra de estado y una línea en la consola por cada
+    // cambio de conexión (conectado, en pausa, desconectado).
+    let prevState = "";
+    ioBridge.on("status", (st) => {
+      forward("iobridge:status", st);
+      const who = st.clients.some((c) => c.kind === "oip") ? "Open Industry Project" : "cliente Modbus";
+      if (st.state !== prevState && prevState) {
+        const msg = { connected: `${who} conectado`, quiet: `${who} conectado, sin pedidos (¿Stop en OIP?)`, waiting: "sin clientes, esperando" }[st.state];
+        if (msg) forward("sim:stderr", `[jwsim] puente de E/S: ${msg}\n`);
+      }
+      prevState = st.state;
+    });
     ioBridge.attach(r);
   }
   // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.

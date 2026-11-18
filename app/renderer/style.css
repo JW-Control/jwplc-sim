@@ -2184,6 +2184,42 @@ button.fault.on {
   background: var(--ok);
   box-shadow: 0 0 6px var(--ok);
 }
+/* Puente de E/S, en la barra de estado inferior (la superior no tiene
+   lugar): punto + texto. Gris = esperando; verde = conectado y pidiendo;
+   ámbar = conectado pero callado; rojo = error. */
+.iob-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: default;
+}
+.iob-status[hidden] {
+  display: none;
+}
+.iob-status .com-dot {
+  width: 7px;
+  height: 7px;
+}
+.iob-status.on {
+  color: var(--text);
+}
+.iob-status.on .com-dot {
+  background: var(--ok);
+  box-shadow: 0 0 5px var(--ok);
+}
+.iob-status.quiet {
+  color: var(--warn);
+}
+.iob-status.quiet .com-dot {
+  background: var(--warn);
+}
+.iob-status.error {
+  color: var(--err);
+}
+.iob-status.error .com-dot {
+  background: var(--err);
+}
 .com-panel {
   position: fixed;
   z-index: 50;

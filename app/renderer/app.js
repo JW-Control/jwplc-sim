@@ -2155,6 +2155,7 @@ function wireUi() {
   api.onDisplay(drawDisplay);
   wireKeypad();
   api.onStderr((t) => consoleWrite(t, /FATAL|no está soportad/.test(t) ? "fatal" : "sys"));
+  api.onIoBridgeStatus(iobShow);
   api.onExit(({ code }) => {
     if (state.sim === "running" || state.sim === "paused" || state.sim === "break") {
       clearDebugView();
@@ -2261,6 +2262,38 @@ function initMonaco() {
       resolveInit();
     });
   });
+}
+
+// ------------------------------------------------------------- puente de E/S (OIP)
+// Indicador de la barra de estado inferior con el estado del puente Modbus TCP
+// (app/lib/io-bridge.mjs): oculta sin puente; gris esperando; verde con un
+// cliente que pide (Open Industry Project u otro); ámbar si está conectado
+// pero callado (Stop en OIP); rojo si el puerto no se pudo abrir.
+function iobShow(st) {
+  const el = $("iob-status");
+  el.hidden = !st || st.state === "off";
+  if (el.hidden) return;
+  const oip = st.clients?.some((c) => c.kind === "oip");
+  const others = (st.clients ?? []).filter((c) => c.kind !== "oip").length;
+  const name = oip ? "OIP" : others ? "Modbus" : "OIP";
+  const addr = st.host ? `${st.host}:${st.port}` : "";
+  const label = {
+    waiting: "OIP: esperando",
+    connected: `${name} conectado`,
+    quiet: `${name} en pausa`,
+    error: "OIP: error",
+  }[st.state] ?? "OIP";
+  $("iob-label").textContent = label;
+  el.classList.toggle("on", st.state === "connected");
+  el.classList.toggle("quiet", st.state === "quiet");
+  el.classList.toggle("error", st.state === "error");
+  const who = (st.clients ?? []).map((c) => `${c.kind === "oip" ? "Open Industry Project" : c.kind === "modbus" ? "cliente Modbus" : "cliente"} (${c.remote})`).join(", ");
+  el.title = {
+    waiting: `Puente de E/S abierto en ${addr}. En OIP: PLC Controllers… → An external PLC → The simulator polls the PLC, ${addr}.`,
+    connected: `Conectado en ${addr}: ${who}. Sensores %IX0.n = I0.n, actuadores %QX2.n = Q0.n.`,
+    quiet: `Conectado en ${addr} pero sin pedidos desde hace más de 1,5 s: ${who}. ¿OIP está en Stop?`,
+    error: st.message ?? "No se pudo abrir el puente de E/S.",
+  }[st.state] ?? "";
 }
 
 // ------------------------------------------------------------- puerto COM virtual

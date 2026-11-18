@@ -122,6 +122,24 @@ Estos ajustes se guardan en la PC, no en la escena.
 
 Con un PLC externo, OIP corre a velocidad real (×1).
 
+### Indicador en la barra de estado del Sim
+
+Mientras el puente está abierto (Ejecutar), la barra de estado inferior
+muestra a la derecha un punto con el estado de la conexión. Al pasar el
+puntero muestra la dirección y quién está conectado.
+
+| Indicador | Significa |
+|---|---|
+| gris · `OIP: esperando` | Puente abierto, nadie conectado. Falta Play en OIP o revisar el puerto. |
+| verde · `OIP conectado` | OIP sondea el puente (pedidos FC16 + FC04). |
+| verde · `Modbus conectado` | Otro cliente (FUXA, un SCADA) usa el puente. |
+| ámbar · `OIP en pausa` | Conectado, pero sin pedidos durante más de 1,5 s (OIP en Stop). |
+| rojo · `OIP: error` | El puerto no se pudo abrir (por ejemplo, ya está en uso). |
+
+Cada cambio también queda en la consola, por ejemplo
+`[jwsim] puente de E/S: Open Industry Project conectado`. Prueba:
+`node --test tests/app/io_bridge_status_test.mjs`.
+
 ### Por qué el sketch enclava la parada
 
 La primera versión era `cinta = NOT fotocelda` y la cinta solo se detenía
@@ -165,7 +183,6 @@ pulsador y parada con una caja nueva. Termina en `OIP_CLIENTE=PASS`.
 
 ## 8. Pendiente
 
-- Indicador «OIP conectado / desconectado» en la app del Sim.
 - Decidir si el puente publica las salidas también en el input register 0,
   para usar `%QX0.n` en OIP (hoy el input register 0 tiene las entradas y
   lo usa FUXA).
