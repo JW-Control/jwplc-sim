@@ -40,8 +40,29 @@
     }
     $("mtab-sub-program").hidden = tab !== "program";
     $("mtab-sub-schematic").hidden = tab !== "schematic";
+    paintSchem();
     miniPlc(tab === "plant");
   }
+
+  // ---- Esquema eléctrico: a colores o circuito neumático (pneumatic.js)
+  let schem = "color";
+  function paintSchem() {
+    const pn = window.JwsimPneu;
+    const can = !!pn?.available();
+    if (!can) schem = "color";
+    const b = $("schem-pneu");
+    b.disabled = !can;
+    b.title = can
+      ? "Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento"
+      : "Circuito neumático: la escena necesita una electroválvula con cilindro";
+    for (const [id, v] of [["schem-color", "color"], ["schem-pneu", "pneu"]]) {
+      $(id).classList.toggle("active", schem === v);
+      $(id).setAttribute("aria-checked", String(schem === v));
+    }
+    pn?.show(tab === "schematic" && schem === "pneu");
+  }
+  $("schem-color").addEventListener("click", () => ((schem = "color"), paintSchem()));
+  $("schem-pneu").addEventListener("click", () => ((schem = "pneu"), paintSchem()));
 
   async function select(next) {
     if (!TABS.includes(next)) return;
@@ -110,6 +131,9 @@
     },
     select,
     current: () => tab,
+    // La escena cambió (proyecto abierto, equipos agregados): ¿hay neumática?
+    refreshSchem: paintSchem,
+    schem: () => schem,
   };
 
   for (const b of document.querySelectorAll(".mtab")) b.addEventListener("click", () => select(b.dataset.tab));

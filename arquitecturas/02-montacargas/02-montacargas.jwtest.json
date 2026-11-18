@@ -1,0 +1,83 @@
+{
+  "$schema": "../../schema/jwsim-test-1.json",
+  "$comment": "Montacargas: llamada a P2 sube y para en SQ2; llamada a PB baja; puerta abierta en marcha da E01 y para; BTN_OK repone.",
+  "sketch": "sketch/montacargas",
+  "scene": "02-montacargas.jwsim",
+  "until_ms": 60000,
+  "actions": [
+    {
+      "at_ms": 1000,
+      "device": "SB2",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 1300,
+      "device": "SB2",
+      "action": "press",
+      "value": false
+    },
+    {
+      "at_ms": 25000,
+      "device": "SB0",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 25300,
+      "device": "SB0",
+      "action": "press",
+      "value": false
+    },
+    {
+      "at_ms": 30000,
+      "device": "CAB1",
+      "action": "puerta1",
+      "value": true
+    },
+    {
+      "at_ms": 33000,
+      "device": "CAB1",
+      "action": "puerta1",
+      "value": false
+    }
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^Llegó a P2",
+        "after_ms": 20000,
+        "before_ms": 24000
+      },
+      {
+        "match": "^FALLA E01",
+        "after_ms": 30000,
+        "before_ms": 30500
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 10000,
+          "KM1.closed": true,
+          "KM2.closed": false
+        },
+        {
+          "at_ms": 24000,
+          "KM1.closed": false,
+          "CAB1.enPiso": 2
+        },
+        {
+          "at_ms": 28000,
+          "KM2.closed": true
+        },
+        {
+          "at_ms": 32000,
+          "KM2.closed": false,
+          "KM1.closed": false
+        }
+      ],
+      "faults": []
+    }
+  }
+}

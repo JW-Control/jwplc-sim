@@ -15,16 +15,16 @@
 
 import { MS } from "../device-kit.mjs";
 
-const BAUDS = ["9600", "19200", "38400", "57600", "115200"];
+export const BAUDS = ["9600", "19200", "38400", "57600", "115200"];
 const PROBE = { options: [0, 1, 2], labels: ["Normal", "Sonda abierta", "Sonda en corto"] };
-const int16 = (v) => Math.max(-32768, Math.min(32767, Math.round(v))) & 0xffff;
+export const int16 = (v) => Math.max(-32768, Math.min(32767, Math.round(v))) & 0xffff;
 
 /**
  * Tabla de registros a partir de un mapa dirección → valor.
  * @param {Record<number, number>} map
  * @param {number} start @param {number} count
  */
-function regs(map, start, count) {
+export function regs(map, start, count) {
   const out = [];
   for (let a = start; a < start + count; a++) {
     if (!(a in map)) return null;
@@ -34,13 +34,13 @@ function regs(map, start, count) {
 }
 
 /** @type {import("../../sdk/jwsim-device.js").ParameterSpec[]} */
-const BUS_PARAMS = [
+export const BUS_PARAMS = [
   { id: "address", label: "Dirección Modbus", type: "number", default: 1, hint: "1 a 247" },
   { id: "baud", label: "Velocidad", type: "enum", options: BAUDS, default: "9600", hint: "8N1" },
   { id: "responseMs", label: "Demora de respuesta", type: "number", default: 5, unit: "ms" },
   { id: "sonda", label: "Sonda", type: "enum", options: ["cableada", "simulada"], default: "cableada", hint: "cableada: la de otro dispositivo, por sus bornes" },
 ];
-const POWER_BUS = [{ id: "+", label: "+24 V" }, { id: "-", label: "0 V" }, { id: "A", label: "RS-485 A" }, { id: "B", label: "RS-485 B" }];
+export const POWER_BUS = [{ id: "+", label: "+24 V" }, { id: "-", label: "0 V" }, { id: "A", label: "RS-485 A" }, { id: "B", label: "RS-485 B" }];
 
 /** Valor medido: el de la sonda cableada o el ajustado a mano; null si la sonda está abierta. */
 function measured(params, inp, id) {

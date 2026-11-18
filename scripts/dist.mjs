@@ -99,7 +99,7 @@ const config = {
   // La app sin sus pruebas ni las dependencias de desarrollo.
   files: ["**/*", "!tests/**", "!build-res/**", "!installer/**"],
   extraResources: [
-    res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("exercises"), res("third_party"),
+    res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("exercises"), res("arquitecturas"), res("third_party"),
     res("package.lock"), res("editor.lock"), res("LICENSE"), res("LICENSES"),
     res(pkgDir),
     res(".jwsim/third_party"),

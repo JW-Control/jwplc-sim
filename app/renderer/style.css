@@ -149,7 +149,8 @@ select:focus-visible {
   color: #fff;
 }
 #sel-example,
-#sel-exercise {
+#sel-exercise,
+#sel-arch {
   max-width: 180px;
 }
 /* Las vistas del panel inferior con display propio (el envío por UART) se
@@ -1166,7 +1167,8 @@ button.io.on {
     display: none;
   }
   #sel-example,
-  #sel-exercise {
+  #sel-exercise,
+  #sel-arch {
     max-width: 130px;
   }
   .toolbar {
@@ -1263,6 +1265,12 @@ button.io.on {
   position: relative;
   flex: 1;
   min-height: 0;
+  /* Durante el zoom o el arrastre de la vista el SVG se escala con CSS:
+     no debe pintar fuera de su zona ni sobre el panel lateral. */
+  overflow: hidden;
+  /* Fondo y grilla del lienzo: quedan fijos aunque el SVG se mueva con CSS. */
+  background-color: #101317;
+  background-repeat: repeat;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px 36px;
 }
@@ -1274,6 +1282,9 @@ button.io.on {
   display: none;
 }
 .side-bar {
+  position: relative;
+  z-index: 2;
+  background: var(--panel, #15181c);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1638,16 +1649,25 @@ button.io.on {
 .scene-float button.off {
   opacity: 0.6;
 }
+#scene-pan {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+}
 #scene-svg {
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 300px;
-  background-color: #101317;
   touch-action: none;
   user-select: none;
   cursor: grab;
 }
 .scene-side {
+  position: relative;
+  z-index: 2;
+  background: var(--panel, #15181c);
   border-left: 1px solid var(--border);
   overflow: auto;
   padding: 8px 10px;
@@ -1847,18 +1867,17 @@ button.io.on {
   stroke-width: 1.6;
   stroke-linecap: round;
 }
-/* Cable con tensión (L+ o L de una fuente en servicio): brilla. */
+/* Cable con tensión (L+ o L de una fuente en servicio): brilla.
+   Sin desenfoque (filter) ni animación: con zoom cercano el filtro pedía a la
+   GPU superficies del tamaño del cable entero, y la animación lo repintaba en
+   cada cuadro; en Windows eso dejaba zonas negras, parpadeo y equipos cortados. */
 .wire .wire-glow {
   stroke: #ff5a2e;
-  stroke-width: 13;
-  opacity: 0.55;
-  filter: url(#wire-glow-blur);
-  animation: wire-glow 1.8s ease-in-out infinite;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
   pointer-events: none;
-}
-@keyframes wire-glow {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.7; }
 }
 .wire.selected .wire-outline {
   stroke: var(--accent);
@@ -2357,10 +2376,10 @@ body[data-tab="plant"] .view3d-empty {
 }
 .cable .cable-glow {
   stroke: #ff5a2e;
-  stroke-width: calc(var(--cable-w) + 10px);
-  opacity: 0.5;
-  filter: url(#wire-glow-blur);
-  animation: wire-glow 1.8s ease-in-out infinite;
+  stroke-width: calc(var(--cable-w) + 7px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
   pointer-events: none;
 }
 .cable.selected .cable-outline {
@@ -3165,4 +3184,209 @@ body[data-tab="plant"] .view3d-empty {
 .ce-foot ul {
   margin: 4px 0;
   padding-left: 18px;
+}
+/* Con geometricPrecision el navegador no rehace la maquetación de cada texto
+   del esquema al cambiar la escala (zoom fluido). */
+#scene-svg text {
+  text-rendering: geometricPrecision;
+}
+/* Los textos de los equipos no reciben el puntero (el clic cae en la figura de
+   debajo). Probar el puntero sobre ~250 textos en cada cuadro, con la
+   simulación corriendo y el mouse sobre el esquema, era la mayor parte del
+   trabajo del hilo principal. */
+#scene-board text,
+#scene-devices text {
+  pointer-events: none;
+}
+/* Igual con el interior de las plantillas .svg: solo reciben el puntero sus
+   partes accionables (.act) y la zona de clic del equipo (.dev-hit). */
+.dev .tpl * {
+  pointer-events: none;
+}
+.dev .tpl .act,
+.dev .tpl .act * {
+  pointer-events: visiblePainted;
+}
+.dev .dev-hit {
+  fill: none;
+  pointer-events: all;
+}
+
+/* ---------------------------------------------------------------- circuito neumático (pneumatic.js) */
+.pn-view {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: #f7f8fa;
+  z-index: 1;
+}
+.pn-view[hidden] {
+  display: none;
+}
+body[data-schem="pneu"] #scene-pan,
+body[data-schem="pneu"] .scene-float {
+  visibility: hidden;
+}
+#pn-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  color: #1b2a44;
+  font-family: system-ui, sans-serif;
+}
+.pn-tools {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #33404f;
+  font-size: 12px;
+}
+.pn-legend i {
+  display: inline-block;
+  width: 22px;
+  height: 4px;
+  margin: 0 4px 2px 8px;
+  vertical-align: middle;
+  background: #9cc3ee;
+}
+.pn-legend i.on {
+  height: 5px;
+  background: #1f56c8;
+}
+.pn-line {
+  fill: none;
+  stroke: #9cc3ee;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.pn-line.on {
+  stroke: #1f56c8;
+  stroke-width: 3.2;
+}
+/* Aire que entra al cilindro (flow) y que sale por el escape (vent), solo
+   mientras el vástago se mueve. */
+.pn-line.flow {
+  stroke-dasharray: 10 6;
+  animation: pn-flow 0.5s linear infinite;
+}
+.pn-line.vent {
+  stroke-dasharray: 4 6;
+  animation: pn-flow 0.7s linear infinite reverse;
+}
+@keyframes pn-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.pn-box,
+.pn-cyl,
+.pn-gauge {
+  fill: #fff;
+  stroke: #1b2a44;
+  stroke-width: 1.6;
+}
+.pn-frame {
+  fill: none;
+  stroke: #1b2a44;
+  stroke-width: 1.2;
+  stroke-dasharray: 6 4;
+}
+.pn-sym {
+  fill: none;
+  stroke: #1b2a44;
+  stroke-width: 1.6;
+}
+.pn-fill {
+  fill: #1b2a44;
+}
+.pn-flow {
+  stroke: #1b2a44;
+  stroke-width: 1.5;
+  color: #1b2a44;
+}
+.pn-chamber {
+  fill: #e9f1fb;
+}
+.pn-chamber.on {
+  fill: #8db4ef;
+}
+.pn-piston {
+  fill: #1b2a44;
+}
+.pn-rod {
+  fill: #c9d1db;
+  stroke: #1b2a44;
+  stroke-width: 1.4;
+}
+.pn-spool {
+  transition: transform 90ms linear;
+}
+.pn-sol rect,
+.pn-sol line {
+  fill: #fff;
+  stroke: #1b2a44;
+  stroke-width: 1.6;
+}
+.pn-sol.on rect {
+  fill: #ffb020;
+}
+.pn-label,
+.pn-port,
+.pn-ls text {
+  fill: #33404f;
+  font-size: 11px;
+}
+.pn-port {
+  font-size: 9px;
+}
+.pn-name {
+  fill: #1b2a44;
+  font-size: 14px;
+  font-weight: 700;
+}
+.pn-val {
+  fill: #1f56c8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pn-warn {
+  fill: #d63031;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pn-m {
+  fill: #1b2a44;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pn-dev.run circle {
+  fill: #dff5e6;
+}
+.pn-ls line {
+  stroke: #1b2a44;
+  stroke-width: 2;
+}
+.pn-ls circle {
+  fill: #fff;
+  stroke: #1b2a44;
+  stroke-width: 1.5;
+}
+.pn-ls.on circle {
+  fill: #2fbf5b;
+}
+.pn-empty {
+  fill: #33404f;
+  font-size: 14px;
+}
+/* El contorno del cilindro va encima de las cámaras: sin relleno. */
+.pn-view .pn-cyl {
+  fill: none;
 }

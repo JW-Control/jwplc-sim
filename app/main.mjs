@@ -356,6 +356,36 @@ ipcMain.handle("exercises:open", (_e, id) => {
   return openProject(join(dst, `${id}.jwsim`));
 });
 
+// ---------------------------------------------------------------- arquitecturas
+// Casos de la vitrina (arquitecturas/<id>): proyecto completo con su programa,
+// escena y una ficha VITRINA.md con el recorrido y las fallas para mostrar.
+// Se abren como copia en la carpeta de trabajo (Arquitecturas/<id>).
+const ARCHS = join(import.meta.dirname, "..", "arquitecturas");
+function listArchs() {
+  if (!existsSync(ARCHS)) return [];
+  const out = [];
+  for (const d of readdirSync(ARCHS).sort()) {
+    const f = join(ARCHS, d, `${d}.jwsim`);
+    if (!existsSync(f)) continue;
+    try {
+      out.push({ id: d, title: loadProject(f).project.name });
+    } catch {
+      // una arquitectura rota no impide listar las demás
+    }
+  }
+  return out;
+}
+ipcMain.handle("archs:list", () => listArchs());
+ipcMain.handle("archs:open", (_e, id) => {
+  if (!/^[\w.-]+$/.test(id)) throw new Error(`arquitectura inválida: ${id}`);
+  const src = join(ARCHS, id);
+  const dst = join(workspaceDir(), "Arquitecturas", id);
+  syncExercise(src, dst);
+  const res = openProject(join(dst, `${id}.jwsim`));
+  const card = join(dst, "VITRINA.md");
+  return { ...res, showcase: existsSync(card) ? readFileSync(card, "utf8") : "" };
+});
+
 // Objetivos en vivo del ejercicio abierto (null: ninguno). Cuentan desde la
 // corrida siguiente o, si ya corre, desde ahora.
 ipcMain.handle("goals:set", (_e, goals) => {
@@ -1349,6 +1379,14 @@ function buildMenu() {
 // Vista 3D (three.js): sin GPU (máquina virtual, escritorio remoto) WebGL
 // cae a SwiftShader por software en lugar de no estar disponible.
 app.commandLine.appendSwitch("enable-unsafe-swiftshader");
+
+// Raster del esquema en varios hilos de la CPU en lugar del único hilo de la
+// GPU. Medido en una RTX 5060 con pantalla 4K al 200 %: con raster por GPU
+// cada paso de zoom tardaba ~22 ms en ese hilo (picos de 39 ms) y se perdían
+// cuadros; por CPU el mismo trabajo se reparte y solo un cuadro pasó de 33 ms.
+// La composición y WebGL (vista 3D) siguen en la GPU. JWSIM_GPU_RASTER=1 lo
+// vuelve a activar para comparar.
+if (process.env.JWSIM_GPU_RASTER !== "1") app.commandLine.appendSwitch("disable-gpu-rasterization");
 
 // G6 SIMULATE_BUTTON: el OpenPLC Editor lanza la app con --jwsim-open. Si ya hay
 // una abierta, el proyecto se abre en ella y este proceso termina; abrir varias

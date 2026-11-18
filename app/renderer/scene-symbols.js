@@ -38,6 +38,7 @@
     "limit-switch": [80, 100, ["13", "21"], ["14", "22"]],
     "sensor-inductive": [100, 100, ["BN", "BU"], ["BK"]],
     "sensor-photoelectric": [100, 100, ["BN", "BU"], ["BK"]],
+    "sensor-cylinder": [100, 100, ["BN", "BU"], ["BK"]],
     lamp: [60, 100, ["X1"], ["X2"]],
     buzzer: [60, 100, ["+"], ["-"]],
     relay: [120, 140, ["A1", "11", "21"], ["A2", "12", "14", "22", "24"]],
@@ -62,6 +63,7 @@
     relay: { 11: "COM", 21: "COM", 12: "NC", 14: "NO", 22: "NC", 24: "NO" },
     "sensor-inductive": { BN: "+", BU: "0V", BK: "OUT" },
     "sensor-photoelectric": { BN: "+", BU: "0V", BK: "OUT" },
+    "sensor-cylinder": { BN: "+", BU: "0V", BK: "OUT" },
   };
 
   // ------------------------------------------------------------ plantillas .svg
@@ -134,7 +136,9 @@
       const side = (t.getAttribute("data-side") ?? (y < h / 2 ? "t" : "b")) === "b" ? "b" : "t";
       terms[id] = { x, y: side === "t" ? 0 : h, side, screw: y };
     }
-    if (!Object.keys(terms).length) return bad("no marca ningún borne (.jw-term)");
+    // Un equipo sin bornes eléctricos (p. ej. la unidad de mantenimiento
+    // neumática) lo declara con data-terms="none" en el <svg>.
+    if (!Object.keys(terms).length && svg.getAttribute("data-terms") !== "none") return bad("no marca ningún borne (.jw-term)");
     // Otro punto de clic para un borne (.jw-term-alt): p. ej. el tornillo de
     // la bornera de control del VFD-EL, cuyo cable entra por otro lado. Un
     // clic ahí conecta el mismo borne; el cable sigue entrando por .jw-term.
@@ -457,6 +461,23 @@
           `<g class="act" data-action="target" data-kind="toggle"><rect x="${w - 22}" y="${y + 14}" width="18" height="14" rx="2" fill="${det ? "#c9ced5" : "#3a3f46"}" stroke="#8a9099"/>` +
           `<text class="sym-tag light" x="${w - 13}" y="${y + 24}">${det ? "◼" : "□"}</text></g>` +
           `<text class="sym-tag light" x="${cx - 8}" y="${y + 24}">${esc(String(p.output).toUpperCase())} ${esc(String(p.contact).toUpperCase())}</text>`
+        );
+      }
+      case "sensor-cylinder": {
+        // Sensor de ranura (tipo SMT-8M) sobre un tramo del tubo del cilindro.
+        const det = !!o.detecting;
+        const out = !!o.output;
+        const y = cy - 2;
+        const end = String(p.end ?? "retraído");
+        return (
+          module(w, h, "#2b2f35") + terminals(type, lay).replaceAll('class="sym-term"', 'class="sym-term light"') +
+          `<rect x="10" y="${y - 7}" width="${w - 20}" height="14" rx="2" fill="#9aa3ad" stroke="${ink}"/>` +
+          `<line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="#7b8794" stroke-width="2"/>` +
+          `<rect x="${cx - 16}" y="${y - 13}" width="32" height="8" rx="2" fill="#1f2328" stroke="${ink}"/>` +
+          led(cx + 10, y - 9, out, "#ffb020") +
+          `<g class="act" data-action="target" data-kind="toggle"><rect x="${w - 22}" y="${y + 14}" width="18" height="14" rx="2" fill="${det ? "#c9ced5" : "#3a3f46"}" stroke="#8a9099"/>` +
+          `<text class="sym-tag light" x="${w - 13}" y="${y + 24}">${det ? "◼" : "□"}</text></g>` +
+          `<text class="sym-tag light" x="${cx - 26}" y="${y + 24}">${p.cylinder ? `${esc(p.cylinder)}${end === "extendido" ? "+" : "−"}` : "?"}</text>`
         );
       }
       case "lamp": {

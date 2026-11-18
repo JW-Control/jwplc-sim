@@ -524,6 +524,7 @@ botones de la interfaz.
 | `selector-2`, `selector-3` | 13-14/21-22, 13-14/23-24 | Posiciones 0/I e I/0/II |
 | `limit-switch` | 13-14, 21-22 | A mano o por enlace mecánico |
 | `sensor-inductive`, `sensor-capacitive`, `sensor-photoelectric` | BN/BU/BK | PNP o NPN, NA o NC, tiempo de respuesta, alimentado y con polaridad. Inductivo y capacitivo: la pieza a una distancia (`distance`) con alcance real Sn × factor del `material` (inductivo: acero 1, inoxidable 0,75, latón 0,5, aluminio 0,45, cobre 0,4, no metales 0; capacitivo: metal y agua 1, vidrio y madera 0,5, plástico 0,45, papel 0,2) y, en el capacitivo, × la `sensitivity` (20-100 %); histéresis 10 % y 20 %. Salidas `sn` y `snTxt` |
+| `sensor-cylinder` | BN/BU/BK | Sensor magnético de ranura (tipo Festo SMT-8M, PNP o NPN, NA o NC) montado en el cilindro de una electroválvula: `cylinder` (p. ej. Y1) y `end` (`retraído` = position 0, `extendido` = position 1). En la vista 3D va sobre el tubo, en su extremo, con su LED |
 | `float-switch` | BK, BN, BU | Interruptor de nivel tipo pera: sube con el nivel en `alto` y baja en `bajo` (enlaces a `source`, p. ej. T1.nivel); sin fuente, acción `float` (toggle). BK-BN cierra arriba, BK-BU abajo |
 | `level-electrodes` | E1, E2, E3 | Porta-electrodos: varillas mojadas según el nivel (enlaces a `source` con las alturas `alto` y `bajo`, o la acción `nivel` arrastrando el agua); las publica como sonda `electrodos` (0, 1 o 2 mojadas) para el relé de nivel cableado uno a uno |
 | `pressure-switch`, `thermostat` | 1, 2, 4 | Presostato KP35 y termostato KP77: al subir hasta `corte` cierra 1-4 y abre 1-2; vuelve en `corte` − `dif`. La magnitud se lee de `source` (enlaces y lectura) o se arrastra (acción `presion` o `temperatura`). Salidas `activado`, `texto`, `ajusteTxt` |
@@ -537,8 +538,10 @@ botones de la interfaz.
 | `level-relay` | A1-A2, E1 E2 E3, 11-12-14 | Relé de nivel por electrodos (RM4-LG01): lee la sonda `electrodos` cableada a E1 E2 E3 (sin cablear: seco); `modo` llenado (cierra 11-14 con el nivel bajo E2 hasta mojar E1) o vaciado (al revés), con `retardoMs` |
 | `ssr` | 1-2, 3 (+), 4 (−) | Relé de estado sólido Fotek SSR-40DA: entrada de 24 VDC polarizada, salida 1-2 con 8,3 ms de retardo (cruce por cero) |
 | `contactor` | A1-A2, 1-2/3-4/5-6, 13-14 o 21-22 | Auxiliar 13-14 NA (`aux` 10, CJX2-0910) o 21-22 NC (`aux` 01, CJX2-0901); atraque 20 ms, caída 10 ms |
-| `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera |
+| `solenoid-valve` | A1-A2 | 5/2 monoestable con cilindro: `position` 0→1 en la carrera. Con `air` (una FR o un compresor) la velocidad sigue a la presión (la carrera nominal es a 6 bar) y debajo de 1,5 bar el vástago no se mueve; salidas extra `pressure` y `moving` (también en `solenoid-valve-2`) |
 | `solenoid-valve-2` | A+1-A+2, A-1-A-2 | 5/2 biestable (doble solenoide, con memoria) con cilindro: un pulso en A+ deja la corredera en P→A (sale) y uno en A- en P→B (entra); sin bobinas o con las dos, no se mueve. Salidas `coilPlus`, `coilMinus`, `spoolA`, `position`; parámetro `start` (corredera al arrancar) |
+| `compressor` | L-N (solo con `supply` 230 VAC) | Compresor con tanque y presostato (`scene/devices/pneumatics.mjs`): arranca en `pOn`, corta en `pOff`, llena de 0 al corte en `fillS`, pierde `leak` y cada cilindro de `consumers` que se mueve gasta `use` bar/s. Salidas `pressure` (bar), `running`, `consumers` |
+| `service-unit` | — | Unidad de mantenimiento (filtro-regulador con manómetro): `pressure` = mín(compresor `source`, `setpoint`); sin compresor, aire ideal a la regulada |
 | `motor` | U1-U2 | 230 VAC o 24 VDC (sentido por polaridad); rampas de arranque y parada |
 | `overload-relay` | 1-2, 3-4, 5-6, 95-96 NC, 97-98 NO | Relé térmico CHINT NR2-25 (ficha CHINT serie NR2): mide la corriente de cada polo (`currentSensors` en 2, 4 y 6) y dispara por sobrecarga con una imagen térmica de clase 10 (θ → (I/ajuste)² con la constante `tauS` = 120 s; dispara en θ = 1,15²: 7,2 × ajuste en ~3 s, 1,5 × en menos de 2 min, 1,05 × no dispara), por falta de fase después de `tripMs` o con TEST; STOP abre 95-96 mientras se pulsa; rearme manual (H) con RESET o automático (A) tras `rearmeMs`, en los dos casos solo frío (θ ≤ 1). Salidas `corriente`, `calor` (% del disparo) y `sobrecarga` |
 | `breaker` | 1-2, 3-4, 5-6 | Termomagnético CHINT NXB-63 de 1, 2 o 3 polos (`poles`, una plantilla por variante), `In` y curva B/C/D: imagen térmica (`tauS`, dispara en (1,3 × In)²) y disparo magnético instantáneo a 4, 7,5 o 15 × In con la corriente de la salida (`currentSensors` en 2, 4, 6). La palanca (acción `lever`, toggle) abre y cierra; disparado queda abajo y solo sube con el bimetal frío. Salidas `on`, `tripped`, `rating` («C16») |
@@ -611,7 +614,14 @@ escena modela también el proceso y la instrumentación:
   fallas de §4.2 valen: transmisor quemado o cable del bus cortado (no
   responde), sonda abierta o en corto (7FFFh / 8000h).
 - **Transmisores** (2.0): `pt100-rs485` (PT100 de 3 hilos; registro 0 =
-  °C × 10) y `ph-rs485` (electrodo y ATC; 0 = pH × 100, 1 = °C × 10),
+  °C × 10), `ph-rs485` (electrodo y ATC; 0 = pH × 100, 1 = °C × 10) y
+  `pressure-rs485` (0-10 bar; 0 = bar × 100, mide `source`, p. ej.
+  `RED1.presion`, o se ajusta a mano; falla «sensor abierto» = 7FFFh) y
+  `chlorine-rs485` (cloro libre, dir. 4; 0 = mg/L × 100, 1 = pH × 100;
+  mide `source`, p. ej. `CL1.cloro`; «sin muestra» = 7FFFh). La bomba
+  dosificadora `chlorinator` (bobina 24 VDC) lleva la concentración de la
+  cámara de contacto hacia dosis / caudal de agua con la constante de mezcla
+  (fallas: descebada y tanque de hipoclorito vacío),
   9600 8N1 por defecto. Con sonda `cableada` miden la sonda de un bloque
   cableada a sus bornes (SDK §2.3.3): un hilo cortado o cruzado es sonda
   abierta. Con sonda `simulada` el valor se ajusta a mano.
@@ -642,9 +652,16 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 | Tipo | Lee | Salidas | Acciones |
 |---|---|---|---|
 | `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
-| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
+| `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`), `extraccion` (L/min que sacan otros equipos, p. ej. `RED1.qBombas`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
 
 **Modelo del tanque (1.1):** balance de volumen dV/dt = bomba × caudal − consumo − válvula × Cd·a·√(2gh) (descarga por gravedad de Torricelli con `salidaMm`). La `forma` (modelo en la paleta: cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera) da el área A(h) ∝ f(h/H); V(h) se tabula y se invierte para la altura. Se integra con RK4 a `pasoMs` (discretización configurable, 1-1000 ms) y el nivel se publica en tramos lineales de un paso, así los sensores ven el cruce exacto. Con área constante y sin descarga es lineal y exacto (un tramo), igual que la 1.0.
+| `jwsim/building-water` (red del edificio con hidroneumático, `scene/devices/water.mjs`) | `bombas` (motores: `<id>.speed`), `cisterna` (p. ej. `T1.nivel`) | `presion` (bar), `qBombas`, `qConsumo`, `consumo` (L/min), `reposicion` (flotador de la cisterna, 1 bajo el 90 % hasta el 97 %), `seco`, `bombas` | `consumo` (L/min, perilla en el símbolo) |
+
+**Modelo de la red del edificio:** cada bomba sigue su curva con las leyes de afinidad (caudal ∝ n, presión de cierre ∝ n²: Q = qMax·n·√(1 − P/(pCierre·n²))); el consumo de los grifos crece con √P (`consumo` es el caudal a 3,5 bar); el hidroneumático aporta C = V·(1 + precarga)/(1 + P)² L/bar (Boyle) y bajo la precarga solo queda la tubería (1,5 L/bar). dP/dt = (Q bombas − Q consumo)/C, integrado cada 10 ms y publicado cada 100 ms. Sin agua en la cisterna (bajo el 2 %) las bombas no dan caudal.
+| `jwsim/lift` (montacargas, `scene/devices/lift.mjs`) | `motor` (positivo sube; `velocidad` m/s a speed 1) | `altura` (m, segmento: los finales de piso y de sobrerrecorrido se enlazan aquí), `piso`, `enPiso` (−1 entre pisos), `pisoTxt`, `puerta0`… (true = abierta), `puertasCerradas`, `sobrecarga`, `movimiento`, `tope` | `puerta0`…`puerta5`, `sobrecarga` (toggles, también con clic en el símbolo) |
+| `jwsim/sand-filter` (filtro de arena, `scene/devices/treatment.mjs`) | `bomba`, `servicio` (p. ej. `Y1.open`), `retrolavado` (p. ej. `Y2.open`) | `dp` (bar, para el presostato diferencial), `qServicio`, `qRetrolavado` (L/min), `qRel` (0-1, Bomba del reservorio), `colmatacion` (%), `turbidez`, `turbidezSalida` (NTU), `lavando`, `cerrado` | `turbidez` (perilla), `colmatar` |
+
+**Modelo del filtro:** la colmatación crece con el volumen filtrado × turbidez / (`capacidad` × 20 NTU) y el retrolavado la baja con constante de 8 s; dp = (0,15 + 1,1 × colmatación) × velocidad² en servicio; el caudal de servicio cae a (1 − 0,6 × colmatación²) del nominal; sobre el 85 % de colmatación deja pasar turbidez.
 | `jwsim/door` (puerta corrediza) | `motor` (positivo abre) | `posicion` (0-1) y `posicionPct` como segmentos, `abierta`, `cerrada`, `forzando`, `persona` | `persona` (fotocelda) |
 
 La cinta integra el avance con la regla del trapecio (exacta en la rampa

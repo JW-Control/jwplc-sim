@@ -1,0 +1,297 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Bombeo de edificio a presión constante",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/bombeo_edificio/bombeo_edificio.ino"
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0,
+        "params": {
+          "model": "MDR-60"
+        }
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "LS1",
+        "type": "jwsim/float-switch",
+        "x": 860,
+        "y": 0,
+        "params": {
+          "source": "T1.nivel",
+          "alto": 12,
+          "bajo": 6
+        }
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/selector-2",
+        "x": 1060,
+        "y": 0,
+        "params": {
+          "label": "Auto"
+        }
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "x": 1260,
+        "y": 0,
+        "params": {
+          "color": "verde",
+          "label": "Bombeando"
+        }
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "x": 1460,
+        "y": 0,
+        "params": {
+          "color": "rojo",
+          "label": "Alarma"
+        }
+      },
+      {
+        "id": "PT1",
+        "type": "jwsim/pressure-rs485",
+        "x": 1660,
+        "y": 0,
+        "params": {
+          "address": 3,
+          "source": "RED1.presion"
+        }
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 520
+      },
+      {
+        "id": "VF1",
+        "type": "jwsim/vfd-el",
+        "x": 240,
+        "y": 520,
+        "params": {
+          "02-00": "3: RS-485",
+          "02-01": "3: RS-485, STOP/RESET del teclado habilitado",
+          "09-01": "1: 9600 bps",
+          "09-04": "6: RTU 8,N,1",
+          "04-08": "14: falla externa (EF)",
+          "09-02": "1: advertir y parar en rampa",
+          "09-03": 3,
+          "01-09": 3,
+          "01-10": 3,
+          "09-00": 1
+        }
+      },
+      {
+        "id": "VF2",
+        "type": "jwsim/vfd-el",
+        "x": 940,
+        "y": 520,
+        "params": {
+          "02-00": "3: RS-485",
+          "02-01": "3: RS-485, STOP/RESET del teclado habilitado",
+          "09-01": "1: 9600 bps",
+          "09-04": "6: RTU 8,N,1",
+          "04-08": "14: falla externa (EF)",
+          "09-02": "1: advertir y parar en rampa",
+          "09-03": 3,
+          "01-09": 3,
+          "01-10": 3,
+          "09-00": 2
+        }
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 380,
+        "y": 1300
+      },
+      {
+        "id": "M2",
+        "type": "jwsim/motor-3ph",
+        "x": 1080,
+        "y": 1300
+      },
+      {
+        "id": "T1",
+        "type": "jwsim/tank",
+        "x": 1660,
+        "y": 560,
+        "params": {
+          "volumen": 2000,
+          "alto": 1.5,
+          "bomba": "RED1.reposicion",
+          "caudal": 120,
+          "consumo": 0,
+          "extraccion": "RED1.qBombas",
+          "nivel0": 80
+        }
+      },
+      {
+        "id": "RED1",
+        "type": "jwsim/building-water",
+        "x": 1920,
+        "y": 560,
+        "params": {
+          "bombas": "M1, M2",
+          "cisterna": "T1.nivel",
+          "consumo": 60,
+          "presion0": 3,
+          "qMax": 200
+        }
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "LS1.BK"
+      },
+      {
+        "from": "LS1.BN",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "PT1.+"
+      },
+      {
+        "from": "PT1.-",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "VF1.SG+"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "VF1.SG-"
+      },
+      {
+        "from": "VF1.SG+",
+        "to": "VF2.SG+"
+      },
+      {
+        "from": "VF1.SG-",
+        "to": "VF2.SG-"
+      },
+      {
+        "from": "VF2.SG+",
+        "to": "PT1.A"
+      },
+      {
+        "from": "VF2.SG-",
+        "to": "PT1.B"
+      },
+      {
+        "from": "L1.L",
+        "to": "VF1.R"
+      },
+      {
+        "from": "L1.N",
+        "to": "VF1.S"
+      },
+      {
+        "from": "VF1.U",
+        "to": "M1.U1"
+      },
+      {
+        "from": "VF1.V",
+        "to": "M1.V1"
+      },
+      {
+        "from": "VF1.W",
+        "to": "M1.W1"
+      },
+      {
+        "from": "L1.L",
+        "to": "VF2.R"
+      },
+      {
+        "from": "L1.N",
+        "to": "VF2.S"
+      },
+      {
+        "from": "VF2.U",
+        "to": "M2.U1"
+      },
+      {
+        "from": "VF2.V",
+        "to": "M2.V1"
+      },
+      {
+        "from": "VF2.W",
+        "to": "M2.W1"
+      }
+    ]
+  }
+}

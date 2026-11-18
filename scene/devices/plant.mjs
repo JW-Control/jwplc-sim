@@ -178,6 +178,7 @@ export const tank = {
     { id: "bomba", label: "Bomba", type: "string", default: "", hint: "dispositivo.salida de 0 a 1, p. ej. M1.running" },
     { id: "caudal", label: "Caudal de la bomba", type: "number", default: 40, unit: "L/min" },
     { id: "consumo", label: "Consumo fijo", type: "number", default: 15, unit: "L/min" },
+    { id: "extraccion", label: "Extracción de otro equipo", type: "string", default: "", hint: "dispositivo.salida en L/min, p. ej. RED1.qBombas (las bombas que succionan de este tanque)" },
     { id: "salidaMm", label: "Diámetro de la descarga", type: "number", default: 0, unit: "mm", hint: "0 = sin descarga por gravedad" },
     { id: "valvula", label: "Válvula de descarga", type: "string", default: "", hint: "dispositivo.salida, p. ej. Y1.open (vacía: siempre abierta)" },
     { id: "nivel0", label: "Nivel inicial", type: "number", default: 50, unit: "%" },
@@ -188,6 +189,7 @@ export const tank = {
   reads: (p) => [
     ...(p.bomba ? [{ id: "bomba", source: String(p.bomba) }] : []),
     ...(p.valvula ? [{ id: "valvula", source: String(p.valvula) }] : []),
+    ...(p.extraccion ? [{ id: "extraccion", source: String(p.extraccion) }] : []),
   ],
   create(ctx) {
     const p = ctx.params;
@@ -237,7 +239,7 @@ export const tank = {
         const valveSrc = p.valvula ? Math.max(0, Math.min(1, Math.abs(num(inp.values.valvula, 0)))) : 1;
         inp0 = {
           pump: Math.max(0, Math.min(1, Math.abs(num(inp.values.bomba, 0)))),
-          consumo: Math.max(0, num(inp.actions.consumo ?? p.consumo, 15)),
+          consumo: Math.max(0, num(inp.actions.consumo ?? p.consumo, 15)) + (p.extraccion ? Math.max(0, num(inp.values.extraccion, 0)) : 0),
           valve: aOut > 0 ? valveSrc : 0,
         };
         const x = heightOf(F, V / vmax);

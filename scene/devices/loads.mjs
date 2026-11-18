@@ -6,8 +6,37 @@
 // 5-6 polos principales, 13-14 NA y 21-22 NC auxiliares).
 
 import { Delay, Ramp, earliest, ms } from "../device-kit.mjs";
+import { MIN_BAR, NOMINAL_BAR } from "./pneumatics.mjs";
 
 const RATINGS = ["24VDC", "230VAC"];
+
+/** Aire del cilindro (parámetro «air»): unidad de mantenimiento o compresor. */
+const AIR_PARAM = { id: "air", label: "Aire (FR o compresor)", type: "string", default: "", hint: "p. ej. FR1; vacío = aire ideal a 6 bar" };
+const airReads = (p) => (p.air ? [{ id: "air", source: `${String(p.air)}.pressure` }] : []);
+
+/**
+ * Mueve el vástago hacia goal (0/1) según la presión: sin aire indicado, a la
+ * velocidad nominal; con aire, la velocidad sigue a la presión y debajo de
+ * MIN_BAR se queda quieto. Devuelve las salidas extra (vacías sin aire, para
+ * no cambiar las trazas de las escenas sin neumática).
+ * @param {Ramp} pos @param {{ speed?: number }} st
+ */
+function driveCylinder(pos, st, t, goal, nominalMs, inp, hasAir) {
+  if (!hasAir) {
+    pos.step(t, goal, 1000 / nominalMs);
+    return {};
+  }
+  const bar = Math.max(0, inp.values.air ?? 0);
+  const speed = bar < MIN_BAR ? 0 : (1000 / nominalMs) * Math.max(0.25, Math.min(1.4, bar / NOMINAL_BAR));
+  if (speed !== st.speed || speed === 0) {
+    // Otra presión: sigue desde donde está con la velocidad nueva (o se detiene).
+    pos.set(t, pos.at(t));
+    st.speed = speed;
+  }
+  if (speed > 0) pos.step(t, goal, speed);
+  const seg = pos.segment(t);
+  return { pressure: { value: Math.round(bar * 100) / 100, rate: 0 }, moving: seg.rate !== 0 };
+}
 
 /** @type {import("../../sdk/jwsim-device.js").DeviceDefinition} */
 export const lamp = {
@@ -118,18 +147,21 @@ export const solenoidValve = {
     { id: "coil", label: "Bobina", type: "enum", options: RATINGS, default: "24VDC" },
     { id: "strokeMs", label: "Carrera de salida", type: "number", default: 500, unit: "ms" },
     { id: "returnMs", label: "Carrera de retorno", type: "number", default: 400, unit: "ms" },
+    AIR_PARAM,
   ],
   terminals: [{ id: "A1" }, { id: "A2" }],
   electrical: (p) => ({ loads: [{ id: "coil", a: "A1", b: "A2", rating: String(p.coil), coil: true }] }),
+  reads: airReads,
   create(ctx) {
     const pos = new Ramp(0);
+    const st = {};
     return {
       update(t, inp) {
         const on = inp.loads.coil.on;
-        pos.step(t, on ? 1 : 0, 1000 / Number(on ? ctx.params.strokeMs : ctx.params.returnMs));
+        const air = driveCylinder(pos, st, t, on ? 1 : 0, Number(on ? ctx.params.strokeMs : ctx.params.returnMs), inp, !!ctx.params.air);
         const seg = pos.segment(t);
         return {
-          outputs: { energized: on, position: seg, extended: seg.value >= 1 && seg.rate === 0, retracted: seg.value <= 0 && seg.rate === 0 },
+          outputs: { energized: on, position: seg, extended: seg.value >= 1 && seg.rate === 0, retracted: seg.value <= 0 && seg.rate === 0, ...air },
           nextEventNs: earliest(pos.next),
         };
       },
@@ -150,6 +182,7 @@ export const solenoidValve2 = {
     { id: "strokeMs", label: "Carrera de salida", type: "number", default: 500, unit: "ms" },
     { id: "returnMs", label: "Carrera de retorno", type: "number", default: 400, unit: "ms" },
     { id: "start", label: "Corredera al arrancar", type: "enum", options: ["adentro", "afuera"], default: "adentro" },
+    AIR_PARAM,
   ],
   terminals: [{ id: "A+1" }, { id: "A+2" }, { id: "A-1" }, { id: "A-2" }],
   electrical: (p) => ({
@@ -158,10 +191,12 @@ export const solenoidValve2 = {
       { id: "coilMinus", a: "A-1", b: "A-2", rating: String(p.coil), coil: true },
     ],
   }),
+  reads: airReads,
   create(ctx) {
     const out = ctx.params.start === "afuera";
     let spoolA = out;
     const pos = new Ramp(out ? 1 : 0);
+    const st = {};
     return {
       update(t, inp) {
         const plus = inp.loads.coilPlus.on;
@@ -169,7 +204,7 @@ export const solenoidValve2 = {
         // Memoria: solo una bobina sola mueve la corredera.
         if (plus && !minus) spoolA = true;
         else if (minus && !plus) spoolA = false;
-        pos.step(t, spoolA ? 1 : 0, 1000 / Number(spoolA ? ctx.params.strokeMs : ctx.params.returnMs));
+        const air = driveCylinder(pos, st, t, spoolA ? 1 : 0, Number(spoolA ? ctx.params.strokeMs : ctx.params.returnMs), inp, !!ctx.params.air);
         const seg = pos.segment(t);
         return {
           outputs: {
@@ -179,6 +214,7 @@ export const solenoidValve2 = {
             position: seg,
             extended: seg.value >= 1 && seg.rate === 0,
             retracted: seg.value <= 0 && seg.rate === 0,
+            ...air,
           },
           nextEventNs: earliest(pos.next),
         };

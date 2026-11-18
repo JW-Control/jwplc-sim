@@ -4,11 +4,15 @@
 // Biblioteca de dispositivos de la escena (propuesta v0.1, gate
 // JWSIM_G7_DEVICE_LIBRARY) y registro por tipo y versión.
 
+import { compressor, serviceUnit } from "./pneumatics.mjs";
+import { buildingWater, pressureRs485 } from "./water.mjs";
+import { lift } from "./lift.mjs";
+import { chlorinator, chlorineRs485, sandFilter } from "./treatment.mjs";
 import { buzzer, contactor, lamp, motor, motor1ph, motor3ph, relay, solenoidValve, solenoidValve2 } from "./loads.mjs";
 import { emergencyStop, limitSwitch, pushbuttonLit, pushbuttonNC, pushbuttonNO, pushbuttonNONC, pushbuttonNONO, selector2, selector3, selectorKey } from "./controls.mjs";
 import { jwplcBasic } from "./jwplc-basic.mjs";
 import { power230, power24, power3ph } from "./supplies.mjs";
-import { sensorCapacitive, sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
+import { sensorCapacitive, sensorCylinder, sensorInductive, sensorPhotoelectric } from "./sensors.mjs";
 import { fermenter, phRs485, pt100Rs485, waterValve } from "./process.mjs";
 import { motor2v, overloadRelay } from "./drives.mjs";
 import { vfdEl } from "./vfd-el.mjs";
@@ -38,6 +42,7 @@ export const builtinDevices = [
   sensorInductive,
   sensorCapacitive,
   sensorPhotoelectric,
+  sensorCylinder,
   floatSwitch,
   levelElectrodes,
   pressureSwitch,
@@ -52,6 +57,14 @@ export const builtinDevices = [
   levelRelay,
   solenoidValve,
   solenoidValve2,
+  compressor,
+  serviceUnit,
+  buildingWater,
+  lift,
+  sandFilter,
+  chlorinator,
+  chlorineRs485,
+  pressureRs485,
   motor,
   motor1ph,
   motor3ph,

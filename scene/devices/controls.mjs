@@ -103,6 +103,7 @@ export const limitSwitch = {
   description:
     "Interruptor de posición con contacto NA (13-14) y NC (21-22). Se acciona a mano o por la posición de otro dispositivo (p. ej. Y1.position entre 1 y 1 = cilindro fuera).",
   parameters: [
+    { id: "model", label: "Modelo", type: "enum", options: ["XCKJ", "compacto"], default: "XCKJ", hint: "compacto: de palanca con rodillo, como en los módulos de electroneumática" },
     { id: "source", label: "Accionado por", type: "string", default: "", hint: "dispositivo.salida, p. ej. Y1.position" },
     { id: "min", label: "Desde", type: "number", default: 1 },
     { id: "max", label: "Hasta", type: "number", default: 1 },

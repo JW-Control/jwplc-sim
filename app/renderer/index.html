@@ -26,6 +26,9 @@
         <select id="sel-exercise" title="Abrir un ejercicio con su escena, enunciado y calificación (se copia a la carpeta de trabajo)">
           <option value="">Ejercicios…</option>
         </select>
+        <select id="sel-arch" title="Abrir una arquitectura de la vitrina: planta completa con su programa, lista para Ejecutar (se copia a la carpeta de trabajo)">
+          <option value="">Arquitecturas…</option>
+        </select>
         <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
       </div>
       <div class="group">
@@ -61,8 +64,9 @@
           title="Proyecto del OpenPLC Editor: se edita en el editor; la vista Ladder con depuración en vivo llega en la fase 4">Ladder / IEC</button>
       </div>
       <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
-        <button class="seg active" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
+        <button class="seg active" id="schem-color" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
         <button class="seg" role="radio" aria-checked="false" disabled title="Símbolos IEC 60617 generados del mismo circuito: llega en la fase 3">Normalizado (IEC)</button>
+        <button class="seg" id="schem-pneu" role="radio" aria-checked="false" title="Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento">Neumático</button>
       </div>
     </nav>
 
@@ -165,16 +169,13 @@
           </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main">
+              <!-- Contenedor del lienzo (sin transformaciones CSS: ver scene.js, commitView). -->
+              <div id="scene-pan">
               <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
                 <defs>
-                  <!-- Grilla en coordenadas de la escena: un punto cada 20 px (bornes y cables caen en ella). -->
-                  <pattern id="scene-grid" x="-10" y="-10" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <circle cx="10" cy="10" r="1.3" fill="#2c333c"></circle>
-                  </pattern>
-                  <filter id="wire-glow-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter>
                 </defs>
                 <g id="scene-root">
-                  <rect id="scene-bg" x="-20000" y="-20000" width="40000" height="40000" fill="url(#scene-grid)"></rect>
+                  <!-- La grilla (un punto cada 20 px de la escena) la dibuja el fondo de .scene-main (scene.js, gridBg). -->
                   <g id="scene-board"></g>
                   <g id="scene-wires"></g>
                   <g id="scene-devices"></g>
@@ -183,6 +184,13 @@
                   <path id="scene-rubber" d=""></path>
                 </g>
               </svg>
+              </div>
+              <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
+              <div id="pn-view" class="pn-view" hidden>
+                <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Circuito neumático" preserveAspectRatio="xMidYMid meet"></svg>
+                <div class="pn-tools"><button id="pn-fit" class="icon" title="Ajustar: ver todo el circuito" aria-label="Ajustar">⤢</button>
+                  <span class="pn-legend"><i class="on"></i>con presión <i></i>sin presión</span></div>
+              </div>
               <!-- Herramientas del lienzo: flotan en su esquina, no restan altura. -->
               <div class="scene-float" role="toolbar" aria-label="Lienzo">
                 <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>
@@ -393,6 +401,7 @@
     <script src="sound.js"></script>
     <script src="scene-symbols.js"></script>
     <script src="scene.js"></script>
+    <script src="pneumatic.js"></script>
     <script src="tabs.js"></script>
     <script type="importmap">
       { "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }

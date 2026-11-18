@@ -1776,6 +1776,16 @@ async function populateExercises() {
   }
 }
 
+async function populateArchs() {
+  const sel = $("sel-arch");
+  for (const a of (await api.listArchs?.()) ?? []) {
+    const o = document.createElement("option");
+    o.value = a.id;
+    o.textContent = `${a.id.slice(0, 2)} · ${a.title}`;
+    sel.appendChild(o);
+  }
+}
+
 // ------------------------------------------------------------- arranque
 async function populateExamples() {
   const sel = $("sel-example");
@@ -2025,6 +2035,18 @@ function wireUi() {
     }
   });
   $("btn-grade").addEventListener("click", gradeExercise);
+  $("sel-arch").addEventListener("change", async (e) => {
+    const id = e.target.value;
+    e.target.value = "";
+    if (!id) return;
+    try {
+      const res = await api.openArch(id);
+      applyProject(res);
+      if (res?.showcase) consoleWrite(`${res.showcase.trim()}\n`, "sys");
+    } catch (err) {
+      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+    }
+  });
   $("sel-example").addEventListener("change", async (e) => {
     const dir = e.target.value;
     e.target.value = "";
@@ -2354,6 +2376,11 @@ window.jwsimTest = {
   tftDataUrl: () => $("tft").toDataURL("image/png"),
   // Ejercicios (G9): abrir por la lista, reemplazar el código del .ino
   // principal y calificar con el botón.
+  pickArch: async (id) => {
+    const sel = $("sel-arch");
+    sel.value = id;
+    sel.dispatchEvent(new Event("change"));
+  },
   pickExercise: async (id) => {
     const sel = $("sel-exercise");
     sel.value = id;
@@ -2396,6 +2423,11 @@ async function main() {
     await populateExercises();
   } catch (err) {
     fail("no se pudieron cargar los ejercicios", err);
+  }
+  try {
+    await populateArchs();
+  } catch (err) {
+    fail("no se pudieron cargar las arquitecturas", err);
   }
   // Como Arduino IDE: arranca con un sketch nuevo (setup y loop vacíos).
   try {

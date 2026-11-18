@@ -1,0 +1,424 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Secuencia electroneumática de 4 cilindros",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/secuencia_neumatica/secuencia_neumatica.ino"
+  },
+  "exercise": {
+    "level": 3,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/secuencia_neumatica",
+    "brief": {
+      "goal": "Cuatro cilindros neumáticos que siguen la secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo, vigilada por sus finales de carrera de rodillo.",
+      "steps": [
+        "OK arranca el ciclo continuo si los cuatro cilindros están en reposo.",
+        "Cada paso espera su final de carrera; si no llega en 3 s, la máquina queda en falla con el código en ERR.",
+        "ESC pausa en el paso actual y OK continúa.",
+        "LEFT (Reset) retrae todos los cilindros y deja la máquina lista."
+      ],
+      "teaches": "Secuencias electroneumáticas con finales de carrera, vigilancia por tiempo, pausa y reset.",
+      "uses": [
+        "I0_0 · A0, final de carrera de rodillo: cilindro A retraído",
+        "I0_1 · A1, final de carrera de rodillo: cilindro A extendido",
+        "I0_2 · B0, final de carrera de rodillo: cilindro B retraído",
+        "I0_3 · B1, final de carrera de rodillo: cilindro B extendido",
+        "I0_4 · C0, final de carrera de rodillo: cilindro C retraído",
+        "I0_5 · C1, final de carrera de rodillo: cilindro C extendido",
+        "I0_6 · D0, final de carrera de rodillo: cilindro D retraído",
+        "I0_7 · D1, final de carrera de rodillo: cilindro D extendido",
+        "Q0_0 · Y1, electroválvula 5/2: cilindro A",
+        "Q0_1 · Y2, electroválvula 5/2: cilindro B",
+        "Q0_2 · Y3, electroválvula 5/2: cilindro C",
+        "Q0_3 · Y4, electroválvula 5/2: cilindro D",
+        "Q0_4 · H1, piloto verde: en marcha",
+        "Q0_5 · H2, piloto amarillo: pausa",
+        "Q0_6 · H3, piloto rojo: falla",
+        "Botones del frente: OK Arranque, ESC Pausa, LEFT Reset"
+      ]
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "A0",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y1.position",
+          "min": 0,
+          "max": 0,
+          "model": "compacto"
+        },
+        "x": 960,
+        "y": 200
+      },
+      {
+        "id": "A1",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y1.position",
+          "min": 1,
+          "max": 1,
+          "model": "compacto"
+        },
+        "x": 1200,
+        "y": 200
+      },
+      {
+        "id": "B0",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y2.position",
+          "min": 0,
+          "max": 0,
+          "model": "compacto"
+        },
+        "x": 1720,
+        "y": 200
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y2.position",
+          "min": 1,
+          "max": 1,
+          "model": "compacto"
+        },
+        "x": 1960,
+        "y": 200
+      },
+      {
+        "id": "C0",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y3.position",
+          "min": 0,
+          "max": 0,
+          "model": "compacto"
+        },
+        "x": 2480,
+        "y": 200
+      },
+      {
+        "id": "C1",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y3.position",
+          "min": 1,
+          "max": 1,
+          "model": "compacto"
+        },
+        "x": 2720,
+        "y": 200
+      },
+      {
+        "id": "D0",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y4.position",
+          "min": 0,
+          "max": 0,
+          "model": "compacto"
+        },
+        "x": 3240,
+        "y": 200
+      },
+      {
+        "id": "D1",
+        "type": "jwsim/limit-switch",
+        "params": {
+          "source": "Y4.position",
+          "min": 1,
+          "max": 1,
+          "model": "compacto"
+        },
+        "x": 3480,
+        "y": 200
+      },
+      {
+        "id": "CP1",
+        "type": "jwsim/compressor",
+        "params": {
+          "consumers": "Y1, Y2, Y3, Y4"
+        },
+        "x": 0,
+        "y": 900
+      },
+      {
+        "id": "FR1",
+        "type": "jwsim/service-unit",
+        "params": {
+          "source": "CP1",
+          "setpoint": 6
+        },
+        "x": 580,
+        "y": 900
+      },
+      {
+        "id": "Y1",
+        "type": "jwsim/solenoid-valve",
+        "params": {
+          "strokeMs": 800,
+          "returnMs": 600,
+          "air": "FR1"
+        },
+        "x": 760,
+        "y": 440
+      },
+      {
+        "id": "Y2",
+        "type": "jwsim/solenoid-valve",
+        "params": {
+          "strokeMs": 800,
+          "returnMs": 600,
+          "air": "FR1"
+        },
+        "x": 1520,
+        "y": 440
+      },
+      {
+        "id": "Y3",
+        "type": "jwsim/solenoid-valve",
+        "params": {
+          "strokeMs": 800,
+          "returnMs": 600,
+          "air": "FR1"
+        },
+        "x": 2280,
+        "y": 440
+      },
+      {
+        "id": "Y4",
+        "type": "jwsim/solenoid-valve",
+        "params": {
+          "strokeMs": 800,
+          "returnMs": 600,
+          "air": "FR1"
+        },
+        "x": 3040,
+        "y": 440
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "En marcha"
+        },
+        "x": 3800,
+        "y": 440
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Pausa"
+        },
+        "x": 3980,
+        "y": 440
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 4160,
+        "y": 440
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "A0.13"
+      },
+      {
+        "from": "A0.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "A1.13"
+      },
+      {
+        "from": "A1.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B0.13"
+      },
+      {
+        "from": "B0.14",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13"
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_3"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "C0.13"
+      },
+      {
+        "from": "C0.14",
+        "to": "plc.I0_4"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "C1.13"
+      },
+      {
+        "from": "C1.14",
+        "to": "plc.I0_5"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "D0.13"
+      },
+      {
+        "from": "D0.14",
+        "to": "plc.I0_6"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "D1.13"
+      },
+      {
+        "from": "D1.14",
+        "to": "plc.I0_7"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "Y1.A1"
+      },
+      {
+        "from": "Y1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "Y2.A1"
+      },
+      {
+        "from": "Y2.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "Y3.A1"
+      },
+      {
+        "from": "Y3.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_3.1"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "Y4.A1"
+      },
+      {
+        "from": "Y4.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_4.1"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_5.1"
+      },
+      {
+        "from": "plc.Q0_5.2",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "plc.Q0_6.1"
+      },
+      {
+        "from": "plc.Q0_6.2",
+        "to": "H3.X1"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V2"
+      }
+    ]
+  }
+}

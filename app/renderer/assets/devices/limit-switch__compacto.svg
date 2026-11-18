@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fin de carrera compacto de palanca con rodillo, como los de los módulos didácticos de electroneumática (cuerpo negro sobre base azul de fijación rápida). Más chico que el XCKJ para tableros con muchos finales. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 200">
+<defs>
+<linearGradient id="lsc-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2e33"/><stop offset=".5" stop-color="#1b1e22"/><stop offset="1" stop-color="#121417"/></linearGradient>
+<linearGradient id="lsc-roll" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9edf1"/><stop offset="1" stop-color="#8d959e"/></linearGradient>
+</defs>
+<!-- Base azul de fijación al panel ranurado -->
+<rect x="6" y="64" width="108" height="104" rx="10" fill="#1f6fd1" stroke="#0d3f80" stroke-width="2"/>
+<circle cx="60" cy="150" r="10" fill="#2f86ec" stroke="#0d3f80" stroke-width="2"/>
+<!-- Cuerpo -->
+<rect x="24" y="58" width="72" height="84" rx="6" fill="url(#lsc-body)" stroke="#0b0c0e" stroke-width="2"/>
+<rect x="34" y="104" width="52" height="16" rx="3" fill="#d8323a" stroke="#7d1418" stroke-width="1.5"/>
+<text x="60" y="116" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#fff" text-anchor="middle">13-14</text>
+<circle cx="84" cy="74" r="5" fill="#3a1a1a" stroke="#0b0c0e"/>
+<circle cx="84" cy="74" r="4" fill="#ff4b3a" data-show="out.actuated"/>
+<!-- Palanca con rodillo: gira al accionarse -->
+<g data-rotate="out.actuated:0:1:0:28:60:62" data-action="actuate" data-kind="momentary">
+<rect x="55" y="16" width="10" height="48" rx="3" fill="#9aa3ad" stroke="#4b5563" stroke-width="1.5"/>
+<circle cx="60" cy="18" r="15" fill="url(#lsc-roll)" stroke="#3a3f46" stroke-width="2"/>
+<circle cx="60" cy="18" r="4" fill="#4b5563"/>
+<circle cx="60" cy="62" r="7" fill="#c9ced5" stroke="#4b5563" stroke-width="1.5"/>
+</g>
+<!-- Bornera -->
+<rect x="4" y="170" width="112" height="28" rx="4" fill="#e9ecef" stroke="#6b7280" stroke-width="1.5"/>
+<g fill="#f5f6f7" stroke="#4b5563" stroke-width="1.5">
+<circle cx="20" cy="186" r="8"/><circle cx="40" cy="186" r="8"/><circle cx="80" cy="186" r="8"/><circle cx="100" cy="186" r="8"/>
+</g>
+<g stroke="#4b5563" stroke-width="2">
+<path d="M15 186h10M20 181v10"/><path d="M35 186h10M40 181v10"/><path d="M75 186h10M80 181v10"/><path d="M95 186h10M100 181v10"/>
+</g>
+<g font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#1f2328" text-anchor="middle">
+<text x="20" y="176">13</text><text x="40" y="176">14</text><text x="80" y="176">21</text><text x="100" y="176">22</text>
+</g>
+<circle class="jw-term" data-term="13" cx="20" cy="186" r="9"/>
+<circle class="jw-term" data-term="14" cx="40" cy="186" r="9"/>
+<circle class="jw-term" data-term="21" cx="80" cy="186" r="9"/>
+<circle class="jw-term" data-term="22" cx="100" cy="186" r="9"/>
+</svg>

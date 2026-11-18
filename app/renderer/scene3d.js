@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Vista 3D (G8 3D_SCENES): los equipos de planta de la escena (cinta, tanque,
-// puerta y el cilindro de la electroválvula 5/2) en three.js, movidos por
+// puerta, el cilindro de la electroválvula 5/2, el compresor y la unidad FR) en three.js, movidos por
 // las instantáneas de la escena. Entre instantáneas, lo que se mueve a
 // velocidad conocida (piezas, nivel, puerta, vástago) se extrapola para que
 // la animación sea continua. Los sensores enlazados a un equipo de planta
-// (source) aparecen como balizas que se encienden al detectar.
+// (source) aparecen como balizas que se encienden al detectar; los sensores
+// magnéticos de cilindro, montados sobre el tubo en su extremo.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -14,26 +15,38 @@ const COL = {
   tank: 0xb8c4d0, water: 0x2f8cff, pump: 0x3f7fbf, door: 0xc9cfd6, post: 0x4b5563, rod: 0xdfe3e8, body: 0x7b8794,
   on: 0x37d67a, off: 0x3a4048, warn: 0xffb020, person: 0xe2b48c,
 };
-const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve-2"]);
-const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric"]);
+const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
+const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
+const PLANT = new Set(["jwsim/conveyor", "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", "jwsim/sand-filter", "jwsim/chlorinator", ...AIR]);
+const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
+/** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
+const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra });
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
 
 /** Texto en un plano siempre de frente (rótulo del equipo). */
+// Lienzo a 4× (1024 × 256) con mipmaps y filtrado anisotrópico: el rótulo
+// sigue nítido al acercar la cámara y no parpadea al alejarla.
 function label(text) {
   const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 64;
+  c.width = 1024;
+  c.height = 256;
   const g = c.getContext("2d");
   g.fillStyle = "rgba(20,23,27,0.85)";
-  g.roundRect(0, 8, 256, 48, 10);
+  g.roundRect(0, 32, 1024, 192, 40);
   g.fill();
   g.fillStyle = "#e7ebef";
-  g.font = "bold 28px sans-serif";
+  g.font = "bold 112px sans-serif";
   g.textAlign = "center";
-  g.fillText(text, 128, 42);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  g.textBaseline = "middle";
+  g.fillText(text, 512, 132);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
   s.scale.set(1.6, 0.4, 1);
   return s;
 }
@@ -46,6 +59,19 @@ function beacon() {
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), mat(COL.off, { emissive: 0x000000 }));
   lamp.position.y = 0.55;
   g.add(post, lamp);
+  g.userData.lamp = lamp;
+  return g;
+}
+/** Sensor magnético montado en la ranura del cilindro, con su LED. */
+function slotSensor() {
+  const g = new THREE.Group();
+  const bodyS = box(0.12, 0.035, 0.04, mat(0x1f2328));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.04, 0.025, 0);
+  const cable = cyl(0.008, 0.25, mat(0x2a2e33), 8);
+  cable.rotation.z = Math.PI / 2;
+  cable.position.set(-0.17, 0, 0);
+  g.add(bodyS, lamp, cable);
   g.userData.lamp = lamp;
   return g;
 }
@@ -160,24 +186,103 @@ function buildDoor(p) {
   return { group: g, panel, ray, person, A, size: [2 * A, 1] };
 }
 
+// Cilindro de doble efecto sobre un panel ranurado de aluminio, como en los
+// módulos didácticos de electroneumática: tapas oscuras, tubo de acero,
+// vástago cromado con cabeza redondeada y conectores azules.
+const CYL = { y: 1.0, z: 0.1, capR: 0.075, tubeR: 0.06, rear: 0.06, front: 0.74, S: 0.5, rodOut: 0.1, headR: 0.045, K: 1.8 };
 function buildCylinder(p) {
-  const S = 0.6; // carrera dibujada (m)
+  const { y, z, S } = CYL;
   const g = new THREE.Group();
-  const body = cyl(0.09, 0.8, mat(COL.body, { metalness: 0.5 }), 24);
-  body.rotation.z = Math.PI / 2;
-  body.position.set(0.4, 0.9, 0);
-  const capA = cyl(0.11, 0.06, mat(COL.frame), 24);
+  // El cilindro, sus sensores y finales van en un grupo propio a escala K
+  // (medidas de arriba en su sistema), con el eje a 1,1 m del piso.
+  const c = new THREE.Group();
+  c.scale.setScalar(CYL.K);
+  c.position.y = 1.1 - CYL.K * y;
+  const alu = mat(0xc9ced5, { metalness: 0.3, roughness: 0.45 });
+  const dark = mat(0x23272d, { roughness: 0.5 });
+  const blue = mat(0x1f6fd1, { roughness: 0.45 });
+  const steel = mat(0xd5dbe1, { metalness: 0.35, roughness: 0.3 });
+  const chrome = mat(0xf2f4f6, { metalness: 0.45, roughness: 0.15 });
+  // Panel ranurado (cubre el hueco hasta el equipo vecino) y su pie.
+  const PW = 3.8; // ancho del panel: cubre el equipo (2,6 m) y el hueco al vecino
+  const panel = box(PW, 1.3, 0.03, alu);
+  panel.position.set(1.3, 0.95, -0.04);
+  g.add(panel);
+  for (let i = 0; i < 12; i++) {
+    const slot = box(PW, 0.012, 0.01, mat(0x8a929c));
+    slot.position.set(1.3, 0.36 + i * 0.1, -0.02);
+    g.add(slot);
+  }
+  const foot = box(PW, 0.08, 0.5, alu);
+  foot.position.set(1.3, 0.04, 0.1);
+  g.add(foot, c);
+  // Soportes con perilla azul de fijación rápida.
+  for (const x of [0.03, 0.71]) {
+    const brk = box(0.07, 0.1, 0.12, dark);
+    brk.position.set(x, y - 0.07, z - 0.04);
+    const knob = cyl(0.028, 0.03, blue, 16);
+    knob.rotation.x = Math.PI / 2;
+    knob.position.set(x, y - 0.12, z + 0.035);
+    c.add(brk, knob);
+  }
+  // Tapas, tubo y conectores de aire.
+  const capA = cyl(CYL.capR, CYL.rear, dark, 32);
   capA.rotation.z = Math.PI / 2;
-  capA.position.set(0.02, 0.9, 0);
-  const capB = capA.clone();
-  capB.position.x = 0.78;
-  const rod = cyl(0.025, 0.8, mat(COL.rod, { metalness: 0.8, roughness: 0.2 }), 16);
+  capA.position.set(CYL.rear / 2, y, z);
+  const tube = cyl(CYL.tubeR, CYL.front - CYL.rear - 0.06, steel, 32);
+  tube.rotation.z = Math.PI / 2;
+  tube.position.set((CYL.rear + CYL.front - 0.06) / 2, y, z);
+  const capB = cyl(CYL.capR, 0.06, dark, 32);
+  capB.rotation.z = Math.PI / 2;
+  capB.position.set(CYL.front - 0.03, y, z);
+  const neck = cyl(0.035, 0.03, dark, 24);
+  neck.rotation.z = Math.PI / 2;
+  neck.position.set(CYL.front + 0.015, y, z);
+  c.add(capA, tube, capB, neck);
+  for (const x of [CYL.rear / 2, CYL.front - 0.03]) {
+    const fit = cyl(0.014, 0.05, blue, 12);
+    fit.position.set(x, y + CYL.capR + 0.02, z);
+    c.add(fit);
+  }
+  // Vástago cromado (se escala con la carrera) y cabeza redondeada.
+  const rod = cyl(0.018, 1, chrome, 20);
   rod.rotation.z = Math.PI / 2;
-  const tip = box(0.06, 0.16, 0.16, mat(COL.frame));
-  const stand = box(0.9, 0.9, 0.3, mat(COL.floor));
-  stand.position.set(0.4, 0.42, 0);
-  g.add(stand, body, capA, capB, rod, tip);
-  return { group: g, rod, tip, S, size: [1.6, 0.4] };
+  const tip = new THREE.Group();
+  const nut = cyl(0.03, 0.03, steel, 6);
+  nut.rotation.z = Math.PI / 2;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(CYL.headR, 24, 16), chrome);
+  head.position.x = 0.03;
+  tip.add(nut, head);
+  c.add(rod, tip);
+  return { group: g, cyl: c, rod, tip, S, size: [2.6, 0.4] };
+}
+
+/** Posición x de la cabeza del vástago para una posición 0..1. */
+const headX = (pos) => CYL.front + 0.03 + CYL.rodOut + pos * CYL.S;
+
+/** Final de carrera de rodillo (cuerpo negro sobre base azul) bajo el recorrido de la cabeza. */
+function rollerSwitch() {
+  const g = new THREE.Group();
+  const base = cyl(0.045, 0.02, mat(0x1f6fd1), 24);
+  base.rotation.x = Math.PI / 2;
+  base.position.set(0, -0.06, -0.02);
+  const body = box(0.07, 0.11, 0.06, mat(0x1b1e22, { roughness: 0.5 }));
+  body.position.y = -0.055;
+  const plug = box(0.05, 0.03, 0.02, mat(0xd8323a));
+  plug.position.set(0, -0.06, 0.04);
+  const lever = new THREE.Group();
+  const arm = box(0.012, 0.05, 0.012, mat(0x9aa3ad, { metalness: 0.7 }));
+  arm.position.y = 0.025;
+  const roller = cyl(0.016, 0.02, mat(0x2a2e33), 16);
+  roller.rotation.x = Math.PI / 2;
+  roller.position.y = 0.05;
+  lever.add(arm, roller);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.022, -0.03, 0.031);
+  g.add(base, body, plug, lever, lamp);
+  g.userData.lamp = lamp;
+  g.userData.lever = lever;
+  return g;
 }
 
 // ------------------------------------------------------------ vista
@@ -236,11 +341,14 @@ function fitView() {
   const w = V.extent ?? 4;
   const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
   const fitW = (w / 2 + 0.8) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
-  const fitH = 2.2 / Math.tan(halfFov);
+  // Alto: el del equipo más alto (el pozo del montacargas, el edificio).
+  const tall = Math.max(2.2, V.height ?? 0);
+  const fitH = (tall * 0.75) / Math.tan(halfFov);
   const d = Math.max(fitW, fitH, 4);
   const cx = w / 2;
-  V.controls.target.set(cx, 0.8, 0);
-  V.camera.position.set(cx, 0.8 + d * 0.45, d * 0.9);
+  const cy = Math.max(0.8, tall * 0.4);
+  V.controls.target.set(cx, cy, 0);
+  V.camera.position.set(cx, cy + d * 0.45, d * 0.9);
   V.controls.update();
 }
 
@@ -264,24 +372,61 @@ function rebuild(spec) {
   const huds = [];
   for (const d of plant) {
     const p = d.params ?? {};
-    const model =
-      d.type === "jwsim/conveyor" ? buildConveyor(p) : d.type === "jwsim/tank" ? buildTank(p) : d.type === "jwsim/door" ? buildDoor(p) : buildCylinder(p);
+    const BUILD = {
+      "jwsim/conveyor": buildConveyor,
+      "jwsim/tank": buildTank,
+      "jwsim/door": buildDoor,
+      "jwsim/building-water": buildBuilding,
+      "jwsim/lift": buildLift,
+      "jwsim/sand-filter": buildFilter,
+      "jwsim/chlorinator": buildChlorinator,
+      "jwsim/compressor": buildCompressor,
+      "jwsim/service-unit": buildServiceUnit,
+    };
+    const model = (BUILD[d.type] ?? buildCylinder)(p);
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : 2.2, 0);
+    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? 4 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
     const beacons = [];
-    for (const s of spec.devices.filter((q) => SENSORS.has(q.type) && String(q.params?.source ?? "").startsWith(`${d.id}.`))) {
-      const b = beacon();
-      const key = String(s.params.source).slice(d.id.length + 1);
+    for (const s of spec.devices.filter((q) => SENSORS.has(q.type) && sourceOf(q).startsWith(`${d.id}.`))) {
+      const key = sourceOf(s).slice(d.id.length + 1);
+      if (s.type === "jwsim/sensor-cylinder") {
+        // Sobre el tubo (radio 0.09, eje a 0.9 m): atrás si marca retraído, adelante si extendido.
+        const b = slotSensor();
+        b.position.set(s.params.end === "extendido" ? CYL.front - 0.14 : CYL.rear + 0.1, CYL.y + CYL.tubeR + 0.012, CYL.z);
+        const t = label(s.id);
+        t.scale.set(0.42, 0.105, 1);
+        t.position.y = 0.06;
+        b.add(t);
+        (model.cyl ?? model.group).add(b);
+        beacons.push({ id: s.id, b });
+        continue;
+      }
       const min = Number(s.params.min ?? 1);
+      if (CYLINDERS.has(d.type) && s.type === "jwsim/limit-switch") {
+        // Rodillo justo bajo la cabeza del vástago en ese extremo.
+        const b = rollerSwitch();
+        b.position.set(headX(min > 0.5 ? 1 : 0) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
+        const t = label(s.id);
+        t.scale.set(0.42, 0.105, 1);
+        t.position.y = -0.17;
+        b.add(t);
+        model.cyl.add(b);
+        beacons.push({ id: s.id, b });
+        continue;
+      }
+      const b = beacon();
       if (d.type === "jwsim/conveyor") b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
-      else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
+      else if (d.type === "jwsim/lift") {
+        const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
+        b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
+      } else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
       else b.position.set(min > 0.5 ? 1.4 : 0.9, 0, 0.35);
       const t = label(s.id);
       t.scale.set(1, 0.25, 1);
@@ -290,14 +435,291 @@ function rebuild(spec) {
       model.group.add(b);
       beacons.push({ id: s.id, b });
     }
-    V.objects.set(d.id, { type: d.type, model, beacons });
+    V.objects.set(d.id, { type: d.type, model, beacons, motor: String(p.motor ?? "").split(".")[0] });
     huds.push(d.id);
     x += w + 1.2;
   }
   V.extent = Math.max(2, x - 1.2);
+  V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   fitView();
   const empty = document.getElementById("view3d-empty");
   if (empty) empty.hidden = plant.length > 0;
+}
+
+/** Manómetro de frente: esfera blanca y aguja que gira con la presión. */
+function gauge(r) {
+  const g = new THREE.Group();
+  const rim = cyl(r, 0.03, mat(0x2a2e33, { metalness: 0.6 }), 32);
+  rim.rotation.x = Math.PI / 2;
+  const face = new THREE.Mesh(new THREE.CircleGeometry(r * 0.86, 32), mat(0xf4f5f6, { roughness: 0.4 }));
+  face.position.z = 0.017;
+  const needle = new THREE.Group();
+  const n = box(0.012, r * 0.75, 0.006, mat(0xd8282d));
+  n.position.y = (r * 0.75) / 2;
+  needle.add(n);
+  needle.position.z = 0.022;
+  g.add(rim, face, needle);
+  g.userData.needle = needle;
+  return g;
+}
+/** Aguja a 0..max bar sobre un arco de ±130°. */
+const needleTo = (gg, bar, max) => (gg.userData.needle.rotation.z = THREE.MathUtils.degToRad(130 - (Math.max(0, Math.min(max, bar)) / max) * 260));
+
+/** Compresor de pistón sobre tanque horizontal, con motor, volante y presostato. */
+function buildCompressor() {
+  const g = new THREE.Group();
+  const red = mat(0xc8312f, { metalness: 0.3, roughness: 0.45 });
+  const tank = cyl(0.32, 1.5, red, 32);
+  tank.rotation.z = Math.PI / 2;
+  tank.position.set(0.85, 0.42, 0);
+  const capL = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), red);
+  capL.rotation.z = Math.PI / 2;
+  capL.position.set(0.1, 0.42, 0);
+  const capR = capL.clone();
+  capR.rotation.z = -Math.PI / 2;
+  capR.position.x = 1.6;
+  for (const x of [0.35, 1.35]) {
+    const foot = box(0.08, 0.14, 0.5, mat(COL.post));
+    foot.position.set(x, 0.07, 0);
+    g.add(foot);
+  }
+  const plate = box(1.0, 0.04, 0.5, mat(0x3a4048));
+  plate.position.set(0.85, 0.76, 0);
+  const motor = cyl(0.14, 0.38, mat(0x2f6fb5, { metalness: 0.35 }), 24);
+  motor.rotation.z = Math.PI / 2;
+  motor.position.set(0.5, 0.92, 0.05);
+  const pump = box(0.26, 0.3, 0.26, mat(0xa8b0b8, { metalness: 0.55, roughness: 0.35 }));
+  pump.position.set(1.1, 0.93, 0.05);
+  const head = box(0.3, 0.06, 0.3, mat(0x7b8794, { metalness: 0.5 }));
+  head.position.set(1.1, 1.11, 0.05);
+  const wheel = new THREE.Group();
+  const disc = cyl(0.17, 0.03, mat(0x23272d), 28);
+  disc.rotation.x = Math.PI / 2;
+  const spoke = box(0.3, 0.035, 0.035, mat(0xe7ebef));
+  spoke.position.z = 0.02;
+  wheel.add(disc, spoke);
+  wheel.position.set(0.82, 0.95, 0.24);
+  const sw = box(0.12, 0.1, 0.08, mat(0x1f2328));
+  sw.position.set(1.45, 0.86, 0.12);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 8), mat(COL.off, { emissive: 0x000000 }));
+  led.position.set(1.45, 0.86, 0.17);
+  const gg = gauge(0.11);
+  gg.position.set(1.62, 0.72, 0.18);
+  g.add(tank, capL, capR, plate, motor, pump, head, wheel, sw, led, gg);
+  return { group: g, wheel, led, gauge: gg, size: [1.9, 0.7] };
+}
+
+/** Unidad de mantenimiento FR en su soporte: regulador con perilla, manómetro y vaso del filtro. */
+function buildServiceUnit() {
+  const g = new THREE.Group();
+  const post = box(0.06, 1.2, 0.06, mat(COL.post));
+  post.position.set(0.35, 0.6, -0.1);
+  const pipe = cyl(0.025, 0.7, mat(0xb8c0c8, { metalness: 0.6 }), 12);
+  pipe.rotation.z = Math.PI / 2;
+  pipe.position.set(0.35, 1.0, 0);
+  const bodyR = box(0.16, 0.18, 0.16, mat(0x2c3138));
+  bodyR.position.set(0.35, 1.0, 0);
+  const knob = cyl(0.06, 0.1, mat(0x3a7bd5), 20);
+  knob.position.set(0.35, 1.14, 0);
+  const bowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.045, 0.24, 20),
+    new THREE.MeshPhysicalMaterial({ color: 0xcfe6ff, transparent: true, opacity: 0.45, roughness: 0.1 }),
+  );
+  bowl.position.set(0.35, 0.79, 0);
+  const gg = gauge(0.08);
+  gg.position.set(0.35, 1.0, 0.1);
+  const inner = new THREE.Group();
+  inner.add(post, pipe, bodyR, knob, bowl, gg);
+  inner.scale.setScalar(1.4);
+  g.add(inner);
+  return { group: g, gauge: gg, size: [1.0, 0.4] };
+}
+
+/** Sala de bombas y edificio: bombas sobre su base, colector, hidroneumático, manómetro y el edificio. */
+function buildBuilding(p) {
+  const g = new THREE.Group();
+  const ids = String(p.bombas ?? "")
+    .split(/[\s,;]+/)
+    .filter(Boolean);
+  const steel = mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 });
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  const n = Math.max(1, ids.length);
+  const skidW = 0.8 * n + 0.6;
+  const skid = box(skidW, 0.08, 0.9, mat(0x3a4048));
+  skid.position.set(skidW / 2, 0.04, 0);
+  g.add(skid);
+  const pumps = ids.map((id, i) => {
+    const x = 0.5 + i * 0.8;
+    const motorB = cyl(0.14, 0.36, mat(0x2f6fb5, { metalness: 0.35 }), 24);
+    motorB.rotation.x = Math.PI / 2;
+    motorB.position.set(x, 0.26, 0.12);
+    const fanCover = cyl(0.15, 0.06, mat(0x23272d), 24);
+    fanCover.rotation.x = Math.PI / 2;
+    fanCover.position.set(x, 0.26, 0.33);
+    const volute = cyl(0.17, 0.12, mat(0x9aa3ad, { metalness: 0.5 }), 28);
+    volute.rotation.x = Math.PI / 2;
+    volute.position.set(x, 0.26, -0.12);
+    // Acople visible entre motor y bomba: gira con la velocidad.
+    const rotor = new THREE.Group();
+    const shaft = cyl(0.03, 0.08, steel, 12);
+    shaft.rotation.x = Math.PI / 2;
+    const key = box(0.14, 0.02, 0.02, mat(0xffb020));
+    rotor.add(shaft, key);
+    rotor.position.set(x, 0.26, -0.03);
+    const riser = cyl(0.035, 0.6, pipeM, 12);
+    riser.position.set(x, 0.62, -0.12);
+    const tag = label(id);
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(x, 0.05, 0.6);
+    g.add(motorB, fanCover, volute, rotor, riser, tag);
+    return { id, rotor };
+  });
+  const len = skidW + 0.6;
+  const manifold = cyl(0.05, len, pipeM, 16);
+  manifold.rotation.z = Math.PI / 2;
+  manifold.position.set(len / 2 + 0.2, 0.92, -0.12);
+  // Hidroneumático vertical sobre el colector, al final de la base.
+  const hx = skidW - 0.05;
+  const hydro = cyl(0.22, 0.7, mat(0x3a7bd5, { metalness: 0.3, roughness: 0.4 }), 28);
+  hydro.position.set(hx, 0.47, -0.42);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), hydro.material);
+  dome.position.set(hx, 0.82, -0.42);
+  const gg = gauge(0.1);
+  gg.position.set(skidW + 0.35, 1.08, -0.06);
+  // Edificio con ventanas que se encienden cuando hay consumo.
+  const bx = skidW + 1.2;
+  const bldg = box(1.2, 3.2, 1, mat(0xd9dee4, { roughness: 0.8 }));
+  bldg.position.set(bx + 0.6, 1.6, -0.3);
+  const winM = mat(0x2a2e33, { emissive: 0x000000 });
+  for (let f = 0; f < 5; f++)
+    for (let c = 0; c < 3; c++) {
+      const w = box(0.22, 0.32, 0.02, winM);
+      w.position.set(bx + 0.22 + c * 0.38, 0.45 + f * 0.6, 0.21);
+      g.add(w);
+    }
+  const up = cyl(0.04, 2.6, pipeM, 12);
+  up.position.set(bx - 0.08, 2.2, -0.12);
+  const top = cyl(0.04, 0.5, pipeM, 12);
+  top.rotation.z = Math.PI / 2;
+  top.position.set(bx + 0.15, 3.5, -0.12);
+  g.add(manifold, hydro, dome, gg, bldg, up, top);
+  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, height: 3.8, size: [bx + 1.3, 1] };
+}
+
+/** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
+const LIFT_K = 0.5;
+function buildLift(p) {
+  const g = new THREE.Group();
+  const n = Math.max(2, Math.min(6, Math.round(Number(p.pisos ?? 3))));
+  const H = Math.max(0.5, Number(p.entrePisos ?? 3)) * LIFT_K;
+  const top = (n - 1) * H;
+  const tall = top + 1.6;
+  const post = mat(0x5b6470, { metalness: 0.4 });
+  for (const [x, z] of [[0, -0.55], [1.1, -0.55], [0, 0.55], [1.1, 0.55]]) {
+    const pst = box(0.06, tall, 0.06, post);
+    pst.position.set(x, tall / 2, z);
+    g.add(pst);
+  }
+  // Máquina: motor y tambor sobre el pozo.
+  const deck = box(1.3, 0.06, 1.3, mat(0x3a4048));
+  deck.position.set(0.55, tall, 0);
+  const mot = cyl(0.12, 0.34, mat(0x2f6fb5, { metalness: 0.35 }), 20);
+  mot.rotation.z = Math.PI / 2;
+  mot.position.set(0.3, tall + 0.16, 0);
+  const drum = new THREE.Group();
+  const dr = cyl(0.11, 0.3, mat(0x9aa3ad, { metalness: 0.5 }), 20);
+  dr.rotation.z = Math.PI / 2;
+  const mark = box(0.32, 0.02, 0.03, mat(0xffb020));
+  mark.position.y = 0.11;
+  drum.add(dr, mark);
+  drum.position.set(0.72, tall + 0.14, 0);
+  g.add(deck, mot, drum);
+  // Losas y puertas de cada piso (a la derecha del pozo).
+  const doors = [];
+  for (let i = 0; i < n; i++) {
+    const slab = box(1.4, 0.08, 1.4, mat(0x9aa3ad, { roughness: 0.9 }));
+    slab.position.set(1.9, i * H - 0.04, 0);
+    const door = box(0.04, 0.95, 0.9, mat(0x8a939d, { metalness: 0.3, transparent: true, opacity: 0.85 }));
+    door.position.set(1.18, i * H + 0.48, 0);
+    const tag = label(i === 0 ? "PB" : `P${i}`);
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(2.4, i * H + 0.3, 0.6);
+    g.add(slab, door, tag);
+    doors.push(door);
+  }
+  // Cabina con la carga.
+  const cab = new THREE.Group();
+  const floor = box(0.95, 0.05, 0.95, mat(0x3a4048));
+  floor.position.y = 0.025;
+  const roof = box(0.95, 0.04, 0.95, mat(0xc9cfd6));
+  roof.position.y = 1.0;
+  const back = box(0.03, 1.0, 0.95, mat(0xc9cfd6, { metalness: 0.4 }));
+  back.position.set(-0.46, 0.5, 0);
+  const side1 = box(0.95, 1.0, 0.03, mat(0xc9cfd6, { metalness: 0.4, transparent: true, opacity: 0.5 }));
+  side1.position.set(0, 0.5, 0.46);
+  const side2 = side1.clone();
+  side2.position.z = -0.46;
+  const crate = box(0.4, 0.32, 0.4, mat(0xa87a3c));
+  crate.position.set(-0.1, 0.21, 0);
+  const extra = box(0.5, 0.36, 0.5, mat(0xd8282d));
+  extra.position.set(0.05, 0.55, 0.05);
+  extra.visible = false;
+  cab.add(floor, roof, back, side1, side2, crate, extra);
+  cab.position.set(0.55, 0, 0);
+  const rope = cyl(0.01, 1, mat(0x23272d), 6);
+  rope.position.set(0.55, 0, 0);
+  g.add(cab, rope);
+  return { group: g, cab, rope, drum, doors, extra, tall, height: tall + 0.6, size: [2.7, 1.4] };
+}
+
+/** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
+function buildFilter() {
+  const g = new THREE.Group();
+  const shell = cyl(0.42, 1.5, mat(0x2f6fb5, { metalness: 0.3, roughness: 0.4, transparent: true, opacity: 0.55 }), 32);
+  shell.position.set(0.6, 0.95, 0);
+  const capT = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), shell.material);
+  capT.position.set(0.6, 1.7, 0);
+  const gravel = cyl(0.4, 0.25, mat(0x7f8790), 28);
+  gravel.position.set(0.6, 0.33, 0);
+  const bedM = mat(0xe2c98f, { roughness: 0.95 });
+  const sand = cyl(0.4, 0.5, bedM, 28);
+  sand.position.set(0.6, 0.71, 0);
+  const anth = cyl(0.4, 0.2, mat(0x2a2e33, { roughness: 0.9 }), 28);
+  anth.position.set(0.6, 1.06, 0);
+  const waterM = mat(0x9cc3ee, { transparent: true, opacity: 0.45 });
+  const water = cyl(0.4, 0.5, waterM, 28);
+  water.position.set(0.6, 1.42, 0);
+  for (const x of [0.38, 0.82]) {
+    const leg = box(0.06, 0.25, 0.06, mat(COL.post));
+    leg.position.set(x, 0.12, 0);
+    g.add(leg);
+  }
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  const inP = cyl(0.04, 0.6, pipeM, 12);
+  inP.rotation.z = Math.PI / 2;
+  inP.position.set(0.0, 1.85, 0);
+  const outP = cyl(0.04, 0.7, pipeM, 12);
+  outP.rotation.z = Math.PI / 2;
+  outP.position.set(1.2, 0.3, 0);
+  const gg = gauge(0.1);
+  gg.position.set(0.6, 1.25, 0.45);
+  g.add(shell, capT, gravel, sand, anth, water, inP, outP, gg);
+  return { group: g, bedM, waterM, gauge: gg, height: 2.3, size: [1.6, 0.9] };
+}
+
+/** Dosificadora de cloro: tanque de hipoclorito con la bomba encima y su LED. */
+function buildChlorinator() {
+  const g = new THREE.Group();
+  const tank = cyl(0.2, 0.55, mat(0xf4f5f6, { roughness: 0.5 }), 24);
+  tank.position.set(0.3, 0.28, 0);
+  const liquid = cyl(0.18, 0.5, mat(0xe8f27a, { transparent: true, opacity: 0.6 }), 24);
+  liquid.position.set(0.3, 0.27, 0);
+  const head = box(0.26, 0.16, 0.18, mat(0xd8282d));
+  head.position.set(0.3, 0.64, 0);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), mat(COL.off, { emissive: 0x000000 }));
+  led.position.set(0.38, 0.66, 0.1);
+  g.add(tank, liquid, head, led);
+  return { group: g, led, liquid, height: 1.2, size: [0.6, 0.4] };
 }
 
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
@@ -332,16 +754,54 @@ function frame(now) {
       m.panel.position.x = m.A / 2 + pos * m.A;
       m.person.visible = !!out.persona;
       m.ray.material.opacity = out.persona ? 0.25 : 0.8;
+    } else if (o.type === "jwsim/sand-filter") {
+      const c = Math.max(0, Math.min(1, Number(out.colmatacion ?? 0) / 100));
+      m.bedM.color.setRGB(0.886 - 0.5 * c, 0.788 - 0.5 * c, 0.561 - 0.4 * c);
+      m.waterM.color.setHex(out.lavando ? 0x9a7a4a : 0x9cc3ee);
+      needleTo(m.gauge, Number(out.dp ?? 0), 2);
+    } else if (o.type === "jwsim/chlorinator") {
+      m.led.material.color.setHex(out.dosificando ? COL.on : COL.off);
+      m.led.material.emissive.setHex(out.dosificando ? 0x1f8a46 : 0x000000);
+      const lv = Math.max(0.02, Number(out.tanque ?? 0) / 100);
+      m.liquid.scale.y = lv;
+      m.liquid.position.y = 0.02 + (0.5 * lv) / 2;
+    } else if (o.type === "jwsim/lift") {
+      const y = Number(out.altura ?? 0) * LIFT_K;
+      m.cab.position.y = y;
+      m.rope.scale.y = Math.max(0.01, m.tall - y - 1.0);
+      m.rope.position.y = (m.tall + y + 1.0) / 2;
+      m.drum.rotation.x += out.movimiento ? (Number(outOf(String(o.motor ?? "")).speed ?? 0) || 0) * 0.3 : 0;
+      m.doors.forEach((dd, i) => {
+        dd.position.z = out[`puerta${i}`] ? 0.8 : 0;
+      });
+      m.extra.visible = !!out.sobrecarga;
+    } else if (o.type === "jwsim/building-water") {
+      for (const pm of m.pumps) pm.rotor.rotation.z += Number(outOf(pm.id).speed ?? 0) * 0.6;
+      needleTo(m.gauge, Number(out.presion ?? 0), 10);
+      const q = Math.min(1, Number(out.qConsumo ?? 0) / 120);
+      m.windows.emissive.setRGB(0.55 * q, 0.75 * q, 1.0 * q);
+      m.pipes.color.setHex(Number(out.presion ?? 0) > 0.5 ? 0x1f56c8 : 0x9cc3ee);
+    } else if (o.type === "jwsim/compressor") {
+      needleTo(m.gauge, Number(out.pressure ?? 0), 12);
+      if (out.running) m.wheel.rotation.z -= 0.5;
+      m.led.material.color.setHex(out.running ? COL.on : COL.off);
+      m.led.material.emissive.setHex(out.running ? 0x1f8a46 : 0x000000);
+    } else if (o.type === "jwsim/service-unit") {
+      needleTo(m.gauge, Number(out.pressure ?? 0), 10);
     } else {
       const pos = Math.max(0, Math.min(1, Number(out.position ?? 0)));
-      const ext = pos * m.S;
-      m.rod.position.set(0.8 + ext / 2 - 0.2, 0.9, 0);
-      m.rod.scale.y = Math.max(0.05, (ext + 0.4) / 0.8);
-      m.tip.position.set(0.8 + ext + 0.03, 0.9, 0);
+      // Vástago desde el interior de la tapa hasta la tuerca de la cabeza.
+      const x0 = CYL.front - 0.05;
+      const x1 = headX(pos) - 0.03;
+      m.rod.scale.y = x1 - x0;
+      m.rod.position.set((x0 + x1) / 2, CYL.y, CYL.z);
+      m.tip.position.set(x1, CYL.y, CYL.z);
     }
     for (const { id: sid, b } of o.beacons) {
       const so = outOf(sid);
-      lightBeacon(b, !!(so.actuated ?? so.detecting));
+      const on = !!(so.actuated ?? so.detecting);
+      lightBeacon(b, on);
+      if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
     }
   }
   V.controls.update();

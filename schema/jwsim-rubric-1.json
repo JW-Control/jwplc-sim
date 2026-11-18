@@ -56,6 +56,13 @@
         "faults": {
           "$ref": "jwsim-test-1.json#/$defs/run/properties/faults"
         },
+        "stim": {
+          "type": "array",
+          "description": "Líneas de estímulo de la placa en el formato .stim («1500 BTN_OK=1»): sirven para los botones del frente (BTN_*), que no son dispositivos de la escena.",
+          "items": {
+            "type": "string"
+          }
+        },
         "checks": {
           "type": "array",
           "minItems": 1,

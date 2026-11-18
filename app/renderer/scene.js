@@ -365,7 +365,7 @@
 
   // Centra la vista en un punto de la escena (referencias: «ir al otro lado»).
   function focusOn(x, y) {
-    const r = $("scene-svg").getBoundingClientRect();
+    const r = svgRect();
     S.pan = { x: r.width / 2 - x * S.zoom, y: r.height / 2 - y * S.zoom };
     render();
   }
@@ -580,7 +580,6 @@
 
   function renderWires() {
     const g = $("scene-wires");
-    g.textContent = "";
     // Los recorridos se recalculan solo si cambió la geometría (no con cada
     // instantánea de la simulación). Al arrastrar un equipo o un punto de
     // doblez se vuelven a trazar solo los cables afectados, con A* y los
@@ -771,8 +770,66 @@
         if (own) handles += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
       });
     }
-    g.innerHTML = html;
-    $("scene-handles").innerHTML = handles;
+    // Solo se reemplaza el DOM si cambió algo: con la simulación corriendo
+    // llega una instantánea por cuadro y rehacer todos los cables (y sus
+    // rótulos) en cada una obligaba a maquetar y pintar de nuevo el esquema.
+    if (S.wiresHtml !== html || !g.firstChild) {
+      S.wiresHtml = html;
+      g.innerHTML = html;
+    }
+    if (S.handlesHtml !== handles) {
+      S.handlesHtml = handles;
+      $("scene-handles").innerHTML = handles;
+    }
+  }
+
+  // Cambia un atributo solo si su valor es otro. Volver a poner el mismo
+  // transform en un grupo SVG hace que Chrome maquete de nuevo todos los textos
+  // que contiene (con la simulación, en cada instantánea).
+  function setAttr(el, name, value) {
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  // Reemplaza el contenido SVG de un elemento parcheando solo lo que cambió.
+  // Con la simulación corriendo un equipo se redibuja en cada instantánea
+  // (p. ej. la electroválvula mientras el vástago se mueve): reemplazar todo
+  // su DOM obligaba a maquetar de nuevo sus textos y a pintarlo entero. Si la
+  // estructura es la misma (lo habitual: misma plantilla, otro estado) solo
+  // se copian los atributos y textos distintos.
+  const patchBox = document.createElementNS(NS, "g");
+  function setSvgHtml(el, html) {
+    if (!el.firstChild) {
+      el.innerHTML = html;
+      return;
+    }
+    patchBox.innerHTML = html;
+    patchChildren(el, patchBox);
+    patchBox.textContent = "";
+  }
+  function patchChildren(a, b) {
+    const an = a.childNodes;
+    const bn = b.childNodes;
+    if (an.length !== bn.length) {
+      a.replaceChildren(...bn);
+      return;
+    }
+    for (let i = 0; i < an.length; i++) {
+      const x = an[i];
+      const y = bn[i];
+      if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName) {
+        a.replaceChild(y.cloneNode(true), x);
+        continue;
+      }
+      if (x.nodeType !== 1) {
+        if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue;
+        continue;
+      }
+      const xe = /** @type {Element} */ (x);
+      const ye = /** @type {Element} */ (y);
+      for (const at of [...xe.attributes]) if (!ye.hasAttribute(at.name)) xe.removeAttribute(at.name);
+      for (const at of ye.attributes) if (xe.getAttribute(at.name) !== at.value) xe.setAttribute(at.name, at.value);
+      patchChildren(xe, ye);
+    }
   }
 
   function renderDevice(dev, force = false) {
@@ -787,7 +844,7 @@
       $(sym.board ? "scene-board" : "scene-devices").appendChild(g);
       force = true;
     }
-    g.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    setAttr(g, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     g.classList.toggle("selected", S.sel?.kind === "device" && S.sel.id === dev.id);
     // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
     const pre = `${dev.id}.`;
@@ -798,7 +855,7 @@
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
     const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
-    tg?.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
     S.rendered.set(dev.id, sig);
     if (sym.board) {
@@ -830,14 +887,19 @@
       leds.innerHTML = html;
     } else {
       const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
-      g.innerHTML =
+      setSvgHtml(
+        g,
+        // Zona de clic de todo el equipo, debajo del dibujo: el interior de
+        // una plantilla no recibe el puntero (style.css, .dev .tpl *).
+        `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
         `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
-          : "");
+          : ""),
+      );
     }
     // Bornes en su propia capa, encima de los cables (un clic en un borne ya
     // cableado empieza otro cable en vez de seleccionar el existente).
@@ -848,7 +910,7 @@
       t.dataset.id = dev.id;
       $("scene-terms").appendChild(t);
     }
-    t.setAttribute("transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
+    setAttr(t, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (t.childElementCount && !force) return;
     let th = "";
     for (const [id, [x, y]] of Object.entries(sym.screws)) {
@@ -871,7 +933,7 @@
     for (const g of [...$("scene-board").children, ...$("scene-devices").children, ...$("scene-terms").children]) if (!keep.has(g.dataset.id)) g.remove();
     for (const dev of S.spec.devices) renderDevice(dev, force);
     renderWires();
-    $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+    commitView();
     renderSide();
     // La ficha de la paleta avisa si la simulación impide agregar equipos.
     if (S.pal.shownRunning !== S.running) {
@@ -1048,20 +1110,57 @@
     for (const f of S.snap?.findings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     for (const f of S.snap?.warnings ?? []) items.push(["warn", f.message, f.load?.split(".")[0]]);
     if (S.error) items.unshift(["bad", S.error, null]);
-    diag.innerHTML = items.length
+    const diagHtml = items.length
       ? items.slice(-30).map(([c, m, d]) => `<li class="${c}" data-dev="${esc(d ?? "")}">${esc(m)}</li>`).join("")
       : `<li class="ok">${S.snap ? "Sin fallas ni avisos" : "—"}</li>`;
+    if (S.diagHtml !== diagHtml) {
+      S.diagHtml = diagHtml;
+      diag.innerHTML = diagHtml;
+    }
     $("scene-rearm").disabled = !S.running || !(S.snap?.faults?.length || S.snap?.devices.some((d) => d.tripped || d.damaged.length));
   }
 
   // ------------------------------------------------------------ edición
+  // Zoom y desplazamiento: se cambia solo la transformación de #scene-root,
+  // como mucho una vez por cuadro (requestAnimationFrame). No se usa ninguna
+  // transformación CSS sobre el SVG ni sobre un contenedor: en Chrome con GPU
+  // (Windows) dejaba un área de recorte vieja y, al soltar, equipos y cables
+  // cortados con una línea recta. El costo de cada paso lo bajan los textos
+  // con text-rendering: geometricPrecision (style.css), que ya no se vuelven a
+  // maquetar al cambiar la escala.
+  var viewFrame = 0; // var: render() puede correr antes de esta línea
+  function svgRect() {
+    return $("scene-svg").getBoundingClientRect();
+  }
+  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena.
+  function gridBg(pan, zoom) {
+    const main = $("scene-pan").parentElement;
+    const step = 20 * zoom;
+    const r = Math.max(0.6, 1.3 * zoom);
+    main.style.backgroundImage = step < 6 ? "none" : `radial-gradient(circle, #2c333c ${r}px, transparent ${r + 0.7}px)`;
+    main.style.backgroundSize = `${step}px ${step}px`;
+    main.style.backgroundPosition = `${pan.x - 10 * zoom}px ${pan.y - 10 * zoom}px`;
+  }
+  function commitView() {
+    if (viewFrame) {
+      cancelAnimationFrame(viewFrame);
+      viewFrame = 0;
+    }
+    setAttr($("scene-root"), "transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+    gridBg(S.pan, S.zoom);
+  }
+  function viewFast() {
+    if (!viewFrame) viewFrame = requestAnimationFrame(() => ((viewFrame = 0), commitView()));
+  }
+
+
   function toWorld(e) {
-    const r = $("scene-svg").getBoundingClientRect();
+    const r = svgRect();
     return { x: (e.clientX - r.left - S.pan.x) / S.zoom, y: (e.clientY - r.top - S.pan.y) / S.zoom };
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", "sensor-cylinder": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
@@ -1292,6 +1391,7 @@
     S.error = r.error ?? null;
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
+    window.JwsimPneu?.onSnapshot(S.snap);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
@@ -1520,7 +1620,7 @@
       if (S.drag.kind === "pan") {
         if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
-        $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        viewFast();
         // La punta del cable en curso sigue al puntero con la vista nueva.
         updateRubber(e);
       } else if (S.drag.kind === "vertex") {
@@ -1567,6 +1667,7 @@
       if (S.drag?.kind === "pan") {
         const clicked = !S.drag.panned;
         S.drag = null;
+        commitView();
         if (clicked) cancelWiring();
         return;
       }
@@ -1596,13 +1697,13 @@
       "wheel",
       (e) => {
         e.preventDefault();
-        const r = svg.getBoundingClientRect();
+        const r = svgRect();
         const mx = e.clientX - r.left;
         const my = e.clientY - r.top;
         const z = Math.min(3, Math.max(0.2, S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
         S.pan = { x: mx - ((mx - S.pan.x) * z) / S.zoom, y: my - ((my - S.pan.y) * z) / S.zoom };
         S.zoom = z;
-        $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
+        viewFast();
         updateRubber(e);
       },
       { passive: false },
@@ -1775,7 +1876,7 @@
   }
 
   function fit() {
-    const box = $("scene-svg").getBoundingClientRect();
+    const box = svgRect();
     if (!S.spec.devices.length || !box.width) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     // Margen para los cables que pasan por encima y por debajo de los equipos
@@ -1787,6 +1888,18 @@
       y0 = Math.min(y0, (d.y ?? 0) - 70 - refs);
       x1 = Math.max(x1, (d.x ?? 0) + s.w);
       y1 = Math.max(y1, (d.y ?? 0) + s.h + 60 + refs);
+    }
+    // Los cables trazados pueden salir más allá de ese margen: se suma su caja real.
+    try {
+      const wb = /** @type {SVGGraphicsElement} */ (/** @type {unknown} */ ($("scene-wires"))).getBBox();
+      if (wb.width || wb.height) {
+        x0 = Math.min(x0, wb.x - 10);
+        y0 = Math.min(y0, wb.y - 10);
+        x1 = Math.max(x1, wb.x + wb.width + 10);
+        y1 = Math.max(y1, wb.y + wb.height + 10);
+      }
+    } catch {
+      /* sin caja (vista oculta): basta con los equipos */
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
     // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).
@@ -2170,6 +2283,7 @@
       S.sel = null;
       S.fitted = false;
       S.rendered.clear();
+      window.JwsimPneu?.onSpec();
       if (S.spec.devices.length) setView("scene");
       else if (S.view === "scene") setView("scene");
       if (!S.running) analyze();
@@ -2248,7 +2362,7 @@
         return { w: s.w, h: s.h };
       },
       toScreen: (x, y) => {
-        const r = $("scene-svg").getBoundingClientRect();
+        const r = svgRect();
         return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
       },
       wire: (a, b) => addWire(a, b),
@@ -2343,6 +2457,7 @@
       }
       S.snap = snap;
       window.Jwsim3D?.onSnapshot(snap);
+      window.JwsimPneu?.onSnapshot(snap);
       render();
     });
     const sound = $("scene-sound");

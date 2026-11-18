@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Red de agua del edificio con tanque hidroneumático: edificio, montante, manómetro de la red y perilla del consumo (grifos abiertos). Sin bornes: se enlaza por sus parámetros. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 400" data-terms="none">
+<defs>
+<linearGradient id="bw-bld" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cfd5dc"/><stop offset="1" stop-color="#9aa3ad"/></linearGradient>
+<linearGradient id="bw-hid" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f56c8"/><stop offset=".45" stop-color="#5b93ea"/><stop offset="1" stop-color="#1a4bb0"/></linearGradient>
+<linearGradient id="bw-knob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4f56"/><stop offset=".5" stop-color="#25282c"/><stop offset="1" stop-color="#121315"/></linearGradient>
+</defs>
+<rect x="6" y="6" width="348" height="388" rx="16" fill="#1d2126" stroke="#3a4048" stroke-width="2"/>
+<text x="180" y="30" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="900" fill="#e7ebef">RED DEL EDIFICIO</text>
+<!-- Edificio con ventanas que se iluminan con el consumo -->
+<rect x="196" y="48" width="132" height="210" fill="url(#bw-bld)" stroke="#5b6470" stroke-width="1.5"/>
+<g fill="#2a2e33">
+<rect x="210" y="62" width="26" height="30"/><rect x="249" y="62" width="26" height="30"/><rect x="288" y="62" width="26" height="30"/>
+<rect x="210" y="104" width="26" height="30"/><rect x="249" y="104" width="26" height="30"/><rect x="288" y="104" width="26" height="30"/>
+<rect x="210" y="146" width="26" height="30"/><rect x="249" y="146" width="26" height="30"/><rect x="288" y="146" width="26" height="30"/>
+<rect x="210" y="188" width="26" height="30"/><rect x="249" y="188" width="26" height="30"/><rect x="288" y="188" width="26" height="30"/>
+</g>
+<g data-show="out.qConsumo" fill="#8fd0ff" opacity=".85">
+<rect x="210" y="62" width="26" height="30"/><rect x="288" y="104" width="26" height="30"/><rect x="249" y="146" width="26" height="30"/><rect x="210" y="188" width="26" height="30"/><rect x="288" y="188" width="26" height="30"/>
+</g>
+<rect x="240" y="226" width="44" height="32" fill="#5b6470"/>
+<!-- Montante -->
+<path d="M120 300V70H196" fill="none" stroke="#1f56c8" stroke-width="8" stroke-linejoin="round"/>
+<!-- Hidroneumático -->
+<rect x="30" y="196" width="60" height="96" rx="28" fill="url(#bw-hid)" stroke="#123a8a" stroke-width="1.5"/>
+<path d="M90 268H120" stroke="#1f56c8" stroke-width="8"/>
+<text x="60" y="246" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="900" fill="#e7ebef" data-text="param.hidro">24</text>
+<text x="60" y="258" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#e7ebef">L</text>
+<!-- Manómetro de la red -->
+<circle cx="70" cy="120" r="52" fill="#2a2e33"/>
+<circle cx="70" cy="120" r="46" fill="#f4f5f6"/>
+<g stroke="#2a2e33" stroke-width="2"><path d="M37.4 152.6l5-5"/><path d="M24 120h7"/><path d="M37.4 87.4l5 5"/><path d="M70 74v7"/><path d="M102.6 87.4l-5 5"/><path d="M116 120h-7"/><path d="M102.6 152.6l-5-5"/></g>
+<text x="70" y="148" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="800" fill="#5b6470">bar</text>
+<g data-rotate="out.presion|param.presion0:0:10:-135:135:70:120"><path d="M68 120L70 82L72 120Z" fill="#d8282d"/></g>
+<circle cx="70" cy="120" r="5" fill="#2a2e33"/>
+<path d="M120 120H122" stroke="#1f56c8" stroke-width="8"/>
+<path d="M116 120H120" stroke="#2a2e33" stroke-width="6"/>
+<!-- Lecturas -->
+<rect x="20" y="304" width="164" height="76" rx="8" fill="#0b1014" stroke="#2c333c"/>
+<text x="102" y="334" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="#8fe3ff" data-text="out.presion|param.presion0:d2:bar">3,00 bar</text>
+<text x="30" y="354" font-family="sans-serif" font-size="10" font-weight="700" fill="#9aa3ad">bombas</text>
+<text x="176" y="354" text-anchor="end" font-family="monospace" font-size="11" font-weight="700" fill="#e7ebef" data-text="out.qBombas:d0:L/min">0 L/min</text>
+<text x="30" y="370" font-family="sans-serif" font-size="10" font-weight="700" fill="#9aa3ad">consumo</text>
+<text x="176" y="370" text-anchor="end" font-family="monospace" font-size="11" font-weight="700" fill="#e7ebef" data-text="out.qConsumo:d0:L/min">0 L/min</text>
+<g data-show="out.seco"><rect x="20" y="276" width="96" height="20" rx="4" fill="#d8282d"/><text x="68" y="290" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="900" fill="#fff">EN SECO</text></g>
+<!-- Perilla del consumo (se arrastra hacia arriba o abajo) -->
+<text x="270" y="282" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="900" fill="#9aa3ad">CONSUMO</text>
+<g data-action="consumo" data-kind="drag" data-drag="y:0:-0.4:0:300">
+<circle cx="270" cy="330" r="44" fill="#000" opacity="0"/>
+<g data-rotate="out.consumo|param.consumo:0:300:-135:135:270:330">
+<circle cx="270" cy="332" r="32" fill="#000" opacity=".4"/>
+<circle cx="270" cy="330" r="32" fill="url(#bw-knob)" stroke="#16181b" stroke-width="1.2"/>
+<rect x="268" y="300" width="4" height="14" rx="1.5" fill="#5b93ea"/>
+</g></g>
+<text x="270" y="388" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#e7ebef" data-text="out.consumo|param.consumo:d0:L/min">60 L/min</text>
+</svg>
