@@ -1055,10 +1055,14 @@
   }
 
   // ------------------------------------------------------------ edición
-  // Vista rápida al hacer zoom o mover la vista: mientras dura el gesto, el
-  // SVG ya dibujado se escala y se desplaza con una transformación CSS (la
-  // compone la GPU, sin volver a pintar los símbolos); al soltar la rueda
-  // (140 ms) o el botón se aplica la transformación real y se redibuja nítido.
+  // Vista rápida al hacer zoom o mover la vista: mientras dura el gesto, la
+  // capa #scene-pan (que envuelve al SVG) se escala y se desplaza con una
+  // transformación CSS, sin tocar la maquetación de los símbolos; al soltar la
+  // rueda (140 ms) o el botón se aplica la transformación real del SVG.
+  // Sin will-change: con la capa compuesta aparte, Chrome (GPU, Windows) podía
+  // conservar el área de recorte del gesto y al soltar dejar equipos
+  // cortados con una línea recta; sin ella cada paso se repinta completo y el
+  // costo por paso medido es el mismo.
   /** @type {{ pan: { x: number, y: number }, zoom: number, rect: DOMRect, t?: any } | null} */
   var fastView = null; // var: render() puede correr antes de esta línea
   function svgRect() {
@@ -1080,7 +1084,6 @@
       clearTimeout(fastView.t);
       fastView = null;
       svg.style.transform = "";
-      svg.style.willChange = "";
     }
     $("scene-root").setAttribute("transform", `translate(${S.pan.x} ${S.pan.y}) scale(${S.zoom})`);
     gridBg(S.pan, S.zoom);
@@ -1090,7 +1093,6 @@
     if (!fastView) {
       fastView = { pan: { ...S.pan }, zoom: S.zoom, rect: $("scene-svg").getBoundingClientRect() };
       svg.style.transformOrigin = "0 0";
-      svg.style.willChange = "transform";
     }
     const k = S.zoom / fastView.zoom;
     svg.style.transform = `translate(${S.pan.x - fastView.pan.x * k}px, ${S.pan.y - fastView.pan.y * k}px) scale(${k})`;
