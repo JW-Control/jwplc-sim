@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Variador Delta VFD-EL (VFD007EL21A, estructura A, 72 x 174 mm). Vista frontal. Escala 4 px/mm (manual VFD-EL §1.3 y §3.1). -->
+<!-- Variador de frecuencia monofásico 0,75 kW (medidas de un VFD-EL, estructura A, 72 x 174 mm). Vista frontal. Escala 4 px/mm. Sin marcas de terceros. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 700">
 <defs>
 <linearGradient id="vfdel-zmk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b6f72"/><stop offset=".5" stop-color="#4a4d50"/><stop offset="1" stop-color="#36383b"/></linearGradient>
@@ -59,10 +59,7 @@
 <rect x="572.8" y="91.6" width="12" height="7" rx="1" fill="#3b3e42"/>
 <rect x="337" y="104.4" width="286" height="204.79999999999998" rx="6" fill="#7b7e82" stroke="#3a3c3f" stroke-width="1.2"/>
 <rect x="347.6" y="111.6" width="263.19999999999993" height="188.4" rx="7" fill="url(#vfdel-face)" stroke="#111" stroke-width="1.2"/>
-<path d="M376 140.4l7 -12 7 12z" fill="none" stroke="#e9ebee" stroke-width="2"/>
-<path d="M381 137.4q3 -6 9 -2" fill="none" stroke="#e9ebee" stroke-width="1.6"/>
-<text x="397.6" y="140.4" font-family="sans-serif" font-size="13" font-weight="900" font-style="italic" fill="#e9ebee">DELTA</text>
-<text x="455.2" y="140.4" font-family="sans-serif" font-size="13" font-weight="900" font-style="italic" fill="#e9ebee">VFD-EL</text>
+<rect x="376" y="127" width="122" height="15" fill="#262b33"/><text x="381" y="139" font-size="10" font-weight="800" fill="#fff" text-anchor="start" letter-spacing=".5">JW</text><path d="M397 138 l3 -5 l3 5" fill="none" stroke="#7cb342" stroke-width="1.6"/><text x="493" y="139" font-size="10" font-weight="700" fill="#e9edf1" text-anchor="end">variador 0,75 kW</text>
 <rect x="376" y="143.2" width="122.0" height="42.400000000000006" rx="2" fill="#3a0f0c" stroke="#120404" stroke-width="1"/>
 <rect x="378" y="145.2" width="118.0" height="38.400000000000006" rx="1" fill="#2a0806"/>
 <g data-seg="out.lcd:4" data-on="#ff3b26" data-off="#3c120e">

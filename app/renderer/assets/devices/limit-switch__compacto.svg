@@ -1,39 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Fin de carrera compacto de palanca con rodillo, como los de los módulos didácticos de electroneumática (cuerpo negro sobre base azul de fijación rápida). Más chico que el XCKJ para tableros con muchos finales. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 200">
-<defs>
-<linearGradient id="lsc-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2e33"/><stop offset=".5" stop-color="#1b1e22"/><stop offset="1" stop-color="#121417"/></linearGradient>
-<linearGradient id="lsc-roll" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9edf1"/><stop offset="1" stop-color="#8d959e"/></linearGradient>
-</defs>
-<!-- Base azul de fijación al panel ranurado -->
-<rect x="6" y="64" width="108" height="104" rx="10" fill="#1f6fd1" stroke="#0d3f80" stroke-width="2"/>
-<circle cx="60" cy="150" r="10" fill="#2f86ec" stroke="#0d3f80" stroke-width="2"/>
-<!-- Cuerpo -->
-<rect x="24" y="58" width="72" height="84" rx="6" fill="url(#lsc-body)" stroke="#0b0c0e" stroke-width="2"/>
-<rect x="34" y="104" width="52" height="16" rx="3" fill="#d8323a" stroke="#7d1418" stroke-width="1.5"/>
-<text x="60" y="116" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#fff" text-anchor="middle">13-14</text>
-<circle cx="84" cy="74" r="5" fill="#3a1a1a" stroke="#0b0c0e"/>
-<circle cx="84" cy="74" r="4" fill="#ff4b3a" data-show="out.actuated"/>
-<!-- Palanca con rodillo: gira al accionarse -->
-<g data-rotate="out.actuated:0:1:0:28:60:62" data-action="actuate" data-kind="momentary">
-<rect x="55" y="16" width="10" height="48" rx="3" fill="#9aa3ad" stroke="#4b5563" stroke-width="1.5"/>
-<circle cx="60" cy="18" r="15" fill="url(#lsc-roll)" stroke="#3a3f46" stroke-width="2"/>
-<circle cx="60" cy="18" r="4" fill="#4b5563"/>
-<circle cx="60" cy="62" r="7" fill="#c9ced5" stroke="#4b5563" stroke-width="1.5"/>
-</g>
-<!-- Bornera -->
-<rect x="4" y="170" width="112" height="28" rx="4" fill="#e9ecef" stroke="#6b7280" stroke-width="1.5"/>
-<g fill="#f5f6f7" stroke="#4b5563" stroke-width="1.5">
-<circle cx="20" cy="186" r="8"/><circle cx="40" cy="186" r="8"/><circle cx="80" cy="186" r="8"/><circle cx="100" cy="186" r="8"/>
-</g>
-<g stroke="#4b5563" stroke-width="2">
-<path d="M15 186h10M20 181v10"/><path d="M35 186h10M40 181v10"/><path d="M75 186h10M80 181v10"/><path d="M95 186h10M100 181v10"/>
-</g>
-<g font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#1f2328" text-anchor="middle">
-<text x="20" y="176">13</text><text x="40" y="176">14</text><text x="80" y="176">21</text><text x="100" y="176">22</text>
-</g>
-<circle class="jw-term" data-term="13" cx="20" cy="186" r="9"/>
-<circle class="jw-term" data-term="14" cx="40" cy="186" r="9"/>
-<circle class="jw-term" data-term="21" cx="80" cy="186" r="9"/>
-<circle class="jw-term" data-term="22" cx="100" cy="186" r="9"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 200" width="120" height="200" font-family="Segoe UI,Noto Sans,Arial,sans-serif"><defs><linearGradient id="jwc-mot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f86c6"/><stop offset=".5" stop-color="#2f62a0"/><stop offset="1" stop-color="#244c7c"/></linearGradient>
+<linearGradient id="jwc-cyl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset=".5" stop-color="#dfe3e8"/><stop offset="1" stop-color="#c3c9d0"/></linearGradient>
+<linearGradient id="jwc-zone" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cb342" stop-opacity=".55"/><stop offset="1" stop-color="#7cb342" stop-opacity=".2"/></linearGradient>
+<pattern id="jwc-hys" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f0a020" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="5" stroke="#f0a020" stroke-width="1.4"/></pattern></defs><g data-rotate="out.actuated:0:1:0:28:60:62" data-action="actuate" data-kind="momentary" style="cursor:pointer"><path d="M60 62 L82 29" fill="none" stroke="#8b949e" stroke-width="7" stroke-linecap="round"/><circle cx="82" cy="29" r="11" fill="#f4f6f8" stroke="#5b6570" stroke-width="1.2"/><circle cx="82" cy="29" r="3.8499999999999996" fill="#8b949e" stroke="none" stroke-width="0"/></g><rect x="22" y="54" width="76" height="98" rx="6" fill="#3f6fa8" stroke="#5b6570" stroke-width="1.2"/><rect x="32" y="66" width="56" height="49.0" rx="4" fill="#262b33" stroke="#5b6570" stroke-width="1.2"/><circle cx="60" cy="62" r="9" fill="#c3c9d0" stroke="#5b6570" stroke-width="1.2"/><circle cx="60" cy="62" r="3" fill="#5b6570" stroke="none" stroke-width="0"/><circle cx="84" cy="121.0" r="3.5" fill="#4a5058" stroke="#5b6570" stroke-width="1"/><g data-show="out.actuated"><circle cx="84" cy="121.0" r="7.0" fill="#ff5a4e" stroke="none" stroke-width="0" opacity=".25"/><circle cx="84" cy="121.0" r="3.5" fill="#ff5a4e" stroke="#5b6570" stroke-width="1"/></g><text x="60" y="144" font-size="9" font-weight="700" fill="#eaf1fb" text-anchor="middle">1NA + 1NC</text><rect x="14" y="154" width="92" height="40" fill="#d4d9df" stroke="#5b6570" stroke-width="1.2"/><circle cx="20" cy="186" r="7" fill="#f4f6f8" stroke="#5b6570" stroke-width="1.2"/><circle cx="20" cy="186" r="4.8" fill="none" stroke="#c9cfd6" stroke-width="1"/><path d="M16.5 186h7 M20 182.5v7" fill="none" stroke="#39414b" stroke-width="1.8" stroke-linecap="round"/><circle class="jw-term" data-term="13" cx="20" cy="186" r="8"/><text x="20" y="172" font-size="7.5" font-weight="700" fill="#2b3138" text-anchor="middle">13</text><circle cx="40" cy="186" r="7" fill="#f4f6f8" stroke="#5b6570" stroke-width="1.2"/><circle cx="40" cy="186" r="4.8" fill="none" stroke="#c9cfd6" stroke-width="1"/><path d="M36.5 186h7 M40 182.5v7" fill="none" stroke="#39414b" stroke-width="1.8" stroke-linecap="round"/><circle class="jw-term" data-term="14" cx="40" cy="186" r="8"/><text x="40" y="172" font-size="7.5" font-weight="700" fill="#2b3138" text-anchor="middle">14</text><circle cx="80" cy="186" r="7" fill="#f4f6f8" stroke="#5b6570" stroke-width="1.2"/><circle cx="80" cy="186" r="4.8" fill="none" stroke="#c9cfd6" stroke-width="1"/><path d="M76.5 186h7 M80 182.5v7" fill="none" stroke="#39414b" stroke-width="1.8" stroke-linecap="round"/><circle class="jw-term" data-term="21" cx="80" cy="186" r="8"/><text x="80" y="172" font-size="7.5" font-weight="700" fill="#2b3138" text-anchor="middle">21</text><circle cx="100" cy="186" r="7" fill="#f4f6f8" stroke="#5b6570" stroke-width="1.2"/><circle cx="100" cy="186" r="4.8" fill="none" stroke="#c9cfd6" stroke-width="1"/><path d="M96.5 186h7 M100 182.5v7" fill="none" stroke="#39414b" stroke-width="1.8" stroke-linecap="round"/><circle class="jw-term" data-term="22" cx="100" cy="186" r="8"/><text x="100" y="172" font-size="7.5" font-weight="700" fill="#2b3138" text-anchor="middle">22</text><text x="30" y="162" font-size="6.5" font-weight="700" fill="#6b7581" text-anchor="600">NA</text><text x="90" y="162" font-size="6.5" font-weight="700" fill="#6b7581" text-anchor="600">NC</text></svg>
