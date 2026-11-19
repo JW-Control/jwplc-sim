@@ -1,7 +1,7 @@
 # Mando de 22 mm (160 x 240) y AD16 (120 x 200), estilo plano (sin degradados):
 # cuerpo gris con hombros, rótulos de borne en blanco, sin tornillos a la vista
 # (el casquillo lo pone el simulador en el borde). La lente o el capuchón ocupan
-# casi todo el ancho. Piloto: aro negro ancho (AD16 con difusor punteado);
+# casi todo el ancho. Piloto: aro negro con símbolo de lámpara (variante 5);
 # pulsador: aro claro fino. Se distinguen a primera vista.
 from kit import *
 import math
@@ -14,39 +14,42 @@ def shoulders(x0,x1,y0,y1,tab=30,inset=None):
     """Silueta con hombros: lengüetas arriba y abajo más angostas que el cuerpo."""
     i = inset if inset is not None else (x1-x0)*0.14
     return (f'<path d="M{x0+i} {y0} H{x1-i} V{y0+tab} H{x1} V{y1-tab} H{x1-i} V{y1} H{x0+i} V{y1-tab} H{x0} V{y0+tab} H{x0+i} Z" '
-            f'fill="{BODYM}" stroke="{OUT}" stroke-width="2" stroke-linejoin="round"/>')
+            f'fill="{BODYM}" stroke="{OUT}" stroke-width="2" stroke-linejoin="round"/>'
+            + (lambda j,k: f'<path d="M{x0+i+k} {y0+k} H{x1-i-k} V{y0+tab+k} H{x1-k} V{y1-tab-k} H{x1-i-k} V{y1-k} H{x0+i+k} V{y1-tab-k} H{x0+k} V{y0+tab+k} H{x0+i+k} Z" '
+                          f'fill="none" stroke="{j}" stroke-width="1.2" stroke-linejoin="round"/>')('#6c747d',5))
 def hits(top,bot,h):
     return ''.join(hit(t,x,17) for t,x in top)+''.join(hit(t,x,h-17,side='b') for t,x in bot)
 def labels(top,bot,h,size=17):
     return ''.join(emb(x,38,t,size) for t,x in top)+''.join(emb(x,h-20,t,size) for t,x in bot)
 
-def lens(cx,cy,R,ring,lit='out.lit',dots=False):
-    """Aro negro ancho y lente plana: apagada, el color oscurecido; encendida, el color vivo."""
-    s=circ(cx,cy,ring,KNOB,OUT,2)
+def lamp_sym(cx,cy,r,lit):
+    """Símbolo de lámpara (círculo con aspa) dentro de la lente."""
+    d=r*0.707
+    sym=(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none"/>'
+         f'<path d="M{cx-d:.1f} {cy-d:.1f} L{cx+d:.1f} {cy+d:.1f} M{cx+d:.1f} {cy-d:.1f} L{cx-d:.1f} {cy+d:.1f}"/>')
+    sw=max(2.2,r*0.16)
+    return (g(sym,stroke='#ffffff',stroke_width=f'{sw:.1f}',stroke_linecap='round',opacity='.28',data_show='!'+lit)
+            +g(sym,stroke='#ffffff',stroke_width=f'{sw:.1f}',stroke_linecap='round',opacity='.95',data_show=lit))
+
+def lens(cx,cy,R,ring,lit='out.lit',symbol=True):
+    """Aro negro con filete, lente plana con contorno y símbolo de lámpara."""
+    s=circ(cx,cy,ring,KNOB,OUT,2)+circ(cx,cy,ring-3,'none','#4a5159',1.2)
     s+=circ(cx,cy,R,'#888','none',0,data_fill='param.color')
     s+=circ(cx,cy,R,'#0b0d10','none',0,opacity='.58',data_show='!'+lit)
-    if dots:
-        d=''
-        step=R*0.26
-        n=int(R/step)
-        for i in range(-n,n+1):
-            for j in range(-n,n+1):
-                x,y=cx+i*step,cy+j*step
-                if (i*step)**2+(j*step)**2 <= (R-step*0.6)**2: d+=f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{R*0.07:.1f}"/>'
-        s+=g(d,fill='#fff',opacity='.18',data_show='!'+lit)+g(d,fill='#fff',opacity='.4',data_show=lit)
-    s+=circ(cx,cy,R,'none',OUT,1.4)
+    if symbol: s+=lamp_sym(cx,cy,R*0.5,lit)
+    s+=circ(cx,cy,R,'none','#0b0d10',1.8)
     return s
 
 # ---------------- pilotos: la lente ocupa casi todo el ancho del cuerpo
-def pilot(name,W,H,cx,cy,R,ring,top,bot,body,dots=False):
+def pilot(name,W,H,cx,cy,R,ring,top,bot,body):
     b=shoulders(*body)
-    b+=lens(cx,cy,R,ring,dots=dots)
+    b+=lens(cx,cy,R,ring)
     b+=labels(top,bot,H)
     b+=soot(cx,cy,R,R-6)
     b+=hits(top,bot,H)
     svg(name,W,H,b)
 pilot('lamp',160,240,80,120,44,58,[('X1',80)],[('X2',80)],(22,138,4,236,30))
-pilot('lamp__ad16',120,200,60,100,36,44,[('X1',60)],[('X2',60)],(14,106,4,196,26),dots=True)
+pilot('lamp__ad16',120,200,60,100,36,44,[('X1',60)],[('X2',60)],(14,106,4,196,26))
 
 # ---------------- pulsadores: la misma proporción; capuchón plano casi del ancho, aro claro fino
 def push_frame(top,bot,H=240):
@@ -54,9 +57,10 @@ def push_frame(top,bot,H=240):
     b+=labels(top,bot,H)
     return b
 def cap(cx,cy,R):
-    up=circ(cx,cy,R+8,RING,OUT,2)+circ(cx,cy,R,'#888',OUT,1.6,data_fill='param.color')
-    dn=(circ(cx,cy,R+8,RING,OUT,2)+circ(cx,cy,R+1,'#2b2f35','none',0)
-        +circ(cx,cy,R-5,'#888',OUT,1.6,data_fill='param.color')+circ(cx,cy,R-5,'#000','none',0,opacity='.3'))
+    rim=circ(cx,cy,R+8,RING,OUT,2)+circ(cx,cy,R+5,'none','#aab1b9',1.2)
+    up=rim+circ(cx,cy,R,'#888',OUT,1.6,data_fill='param.color')+circ(cx,cy,R-6,'none','#ffffff',1.4,opacity='.35')
+    dn=(rim+circ(cx,cy,R+1,'#2b2f35',OUT,1.4)
+        +circ(cx,cy,R-11,'#888',OUT,1.6,data_fill='param.color')+circ(cx,cy,R-11,'#000','none',0,opacity='.45'))
     return g(g(up,data_show='!out.pressed')+g(dn,data_show='out.pressed'),data_action='press',data_kind='momentary',style='cursor:pointer')
 PB={'pushbutton-no':([('13',80)],[('14',80)]),
     'pushbutton-nc':([('11',80)],[('12',80)]),
@@ -68,8 +72,8 @@ for name,(tt,bb) in PB.items():
 # pulsador luminoso: cuerpo y aro claro del pulsador, lente del piloto; se hunde
 tt,bb=[('13',60),('X1',100)],[('14',60),('X2',100)]
 b=push_frame(tt,bb)
-up=circ(80,120,60,RING,OUT,2)+lens(80,120,44,52)
-dn=circ(80,120,60,RING,OUT,2)+lens(80,120,40,48)
+up=circ(80,120,60,RING,OUT,2)+circ(80,120,57,'none','#aab1b9',1.2)+lens(80,120,46,50)
+dn=circ(80,120,60,RING,OUT,2)+circ(80,120,57,'none','#aab1b9',1.2)+circ(80,120,51,'#2b2f35',OUT,1.4)+lens(80,120,38,42)+circ(80,120,38,'#000','none',0,opacity='.25')
 b+=g(g(up,data_show='!out.pressed')+g(dn,data_show='out.pressed'),data_action='press',data_kind='momentary',style='cursor:pointer')
 b+=soot(80,120,44,38)+hits(tt,bb,240)
 svg('pushbutton-lit',160,240,b)
@@ -83,8 +87,10 @@ def arrow(cx,cy,r,col,op='1'):
     return s
 tt,bb=[('11',60),('23',100)],[('12',60),('24',100)]
 b=push_frame(tt,bb)
-up=circ(80,120,66,'#b3201c',OUT,2)+arrow(80,120,38,'#eef2f6')
-dn=circ(80,120,61,'#7d1613',OUT,2)+arrow(80,120,34,'#c9d0d8','.7')
+plate=circ(80,120,70,'#f2c230',OUT,2)+circ(80,120,66,'none','#c99a12',1.2)
+b+=plate
+up=circ(80,120,58,'#b3201c',OUT,2)+circ(80,120,53,'none','#d9473f',1.4)+arrow(80,120,32,'#eef2f6')
+dn=circ(80,120,50,'#7d1613',OUT,2)+arrow(80,120,27,'#c9d0d8','.7')
 b+=g(g(up,data_show='!out.pressed')+g(dn,data_show='out.pressed'),data_action='press',data_kind='toggle',style='cursor:pointer')
 b+=hits(tt,bb,240)
 svg('emergency-stop',160,240,b)
@@ -92,7 +98,7 @@ svg('emergency-stop',160,240,b)
 # ---------------- selectores: perilla negra grande, aro claro fino y maneta con franja blanca
 def selector(name,tt,bb,options,rot,marks,key=False):
     b=push_frame(tt,bb)
-    b+=circ(80,120,60,RING,OUT,2)
+    b+=circ(80,120,60,RING,OUT,2)+circ(80,120,57,'none','#aab1b9',1.2)
     for ang,l in marks:
         x=80+44*math.sin(math.radians(ang)); y=120-44*math.cos(math.radians(ang))
         b+=text(round(x,1),round(y+4,1),l,10,'#2b3138',800)
