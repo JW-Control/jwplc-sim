@@ -1,8 +1,11 @@
 # Campo, a escala reducida: motores, electroválvulas, finales, sensores, interruptores, transmisores, torre, calibrador, PC.
+import kit
+kit.replica()
 from kit import *
 import math
 DEFS='''<pattern id="jwc-hys" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f0a020" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="5" stroke="#f0a020" stroke-width="1.4"/></pattern>'''
-def lbl(x,y,s,size=8.5,fill=TXT,anchor='middle',w=700): return text(x,y,s,size,fill,w,anchor)
+def lbl(x,y,s,size=8.5,fill=TXT,anchor='middle',w=700):
+    return text(x,y,s,round(size*1.2,1),fill,800,anchor,stroke='#ffffff',stroke_width='2.6',paint_order='stroke',stroke_linejoin='round') if fill==TXT else text(x,y,s,round(size*1.15,1),fill,800,anchor)
 def dtext(x,y,expr,sample,size=10,fill=TXT,anchor='middle',w=800,mono=False,show=None):
     ff=' font-family="Consolas,DejaVu Sans Mono,monospace"' if mono else ''
     return f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{w}" fill="{fill}" text-anchor="{anchor}"{ff}{a(data_text=expr,data_show=show)}>{sample}</text>'
@@ -20,7 +23,7 @@ def motor(name,terms,kind='3~',cap=False,extra=''):
     if cap:
         b+=rect(64,52,52,22,'#3a414b',10)+lbl(90,67,'cap.',8,LIGHT)
     b+=rect(56,72,180,110,'#2f62a0',12)
-    for i in range(8): b+=rect(66+i*21,80,10,94,'#3d73b3',4,'none',0,opacity='.7')
+    for i in range(6): b+=rect(64,84+i*16,166,6,'#244f86',3,'none',0)  # aletas axiales de la carcasa
     b+=path('M236 84 h28 q8 0 8 8 v70 q0 8 -8 8 h-28z',fill='#2a568c')
     for i in range(5): b+=path(f'M244 {96+i*15} h22',stroke=BLUE2,sw=3,stroke_linecap='round')
     b+=rect(18,118,38,18,STEEL,3)+rect(26,123,14,6,'#8b949e',1,'none',0)
@@ -106,22 +109,26 @@ svg('solenoid-valve-2',480,220,b,DEFS)
 def lswitch(name,H,body_col,pivot,lever_len,roller_r,rot_expr,datum):
     W=120; py=pivot
     b=''
-    lever=path(f'M60 {py} L{60+lever_len*0.55:.0f} {py-lever_len*0.83:.0f}',stroke='#8b949e',sw=7,stroke_linecap='round')
+    lever=path(f'M60 {py} L{60+lever_len*0.55:.0f} {py-lever_len*0.83:.0f}',stroke='#1f2328',sw=10,stroke_linecap='round')
+    lever+=path(f'M60 {py} L{60+lever_len*0.55:.0f} {py-lever_len*0.83:.0f}',stroke='#7d868f',sw=6,stroke_linecap='round')
     rx=60+lever_len*0.55; ry=py-lever_len*0.83
-    lever+=circ(round(rx),round(ry),roller_r,'#f4f6f8')+circ(round(rx),round(ry),roller_r*0.35,'#8b949e','none',0)
+    lever+=circ(round(rx),round(ry),roller_r,'#2b2f35')+circ(round(rx),round(ry),roller_r*0.4,'#c3c9d0')
     b+=g(lever,data_rotate=rot_expr,data_action='actuate',data_kind='momentary',style='cursor:pointer')
-    b+=rect(22,py-8,76,H-py-40,body_col,6)
-    b+=rect(32,py+4,56,(H-py-40)*0.5,DARK,4)
-    b+=circ(60,py,9,STEEL)+circ(60,py,3,LINE,'none',0)
-    b+=led(84,py+(H-py-40)*0.5+10,'out.actuated',3.5,'#ff5a4e')
-    b+=text(60,H-56,datum,9,'#eaf1fb',700)
+    bh=H-py-40
+    b+=rect(22,py-8,76,bh,body_col,6)
+    b+=rect(28,py-16,64,30,'#8f98a2',5)          # cabeza giratoria
+    b+=rect(30,py+22,60,bh*0.5,'#eef0f2',3)       # tapa con sus 4 tornillos
+    for xx,yy in [(36,py+28),(84,py+28),(36,py+16+bh*0.5),(84,py+16+bh*0.5)]: b+=circ(xx,yy,2.6,'#9aa3ad','#1f2328',1)
+    b+=circ(60,py,9,STEEL)+circ(60,py,3,'#1f2328','none',0)
+    b+=led(60,py+(H-py-40)*0.5+8,'out.actuated',3.5,'#ff5a4e')
+    b+=text(60,H-56,datum,10,'#ffffff' if body_col.startswith('#3') else '#1e2226',900)
     b+=band(14,H-46,92,40)
     for t,x in [('13',20),('14',40),('21',80),('22',100)]: b+=term(x,H-14,t,side='b',lab='none',r=7)+lbl(x,H-28,t,7.5)
     b+=lbl(30,H-38,'NA',6.5,MUTED,600)+lbl(90,H-38,'NC',6.5,MUTED,600)
     return b
 b=lswitch('limit-switch__compacto',200,'#3f6fa8',62,40,11,'out.actuated:0:1:0:28:60:62','1NA + 1NC')
 svg('limit-switch__compacto',120,200,b,DEFS)
-b=lswitch('limit-switch',240,'#3a414b',74,52,14,'out.actuated:0:1:0:25:60:74','1NA + 1NC')
+b=lswitch('limit-switch',240,'#c9ced4',74,52,14,'out.actuated:0:1:0:25:60:74','1NA + 1NC')
 svg('limit-switch',120,240,b,DEFS)
 
 # ------------------------------------------------ sensores inductivo y capacitivo (620 x 260), zona exagerada

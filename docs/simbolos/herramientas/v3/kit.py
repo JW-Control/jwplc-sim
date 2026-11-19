@@ -63,3 +63,25 @@ def svg(name,w,h,body,defs='',root=''):
     s=(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" font-family="{FONT}"{root}>'
        +(f'<defs>{defs}</defs>' if defs else '')+body+'</svg>\n')
     open(OUT+name+'.svg','w').write(s)
+
+# ---------------- estilo «réplica» (19/11): contorno oscuro grueso, tornillos grandes, bornera más oscura.
+# Las familias que lo usan llaman kit.replica() ANTES de «from kit import *».
+OL='#1f2328'; HOODC='#c4c9cf'
+def replica():
+    g_=globals()
+    _rect,_circ,_path=g_['rect'],g_['circ'],g_['path']
+    def fix(stroke,sw):
+        if stroke in (LINE,OL) and float(sw)>0: return OL,max(float(sw),2.2)
+        return stroke,sw
+    def rect2(x,y,w,h,fill=BODY,rx=0,stroke=LINE,sw=SW,**k):
+        s,w_=fix(stroke,sw); return _rect(x,y,w,h,fill,rx,s,w_,**k)
+    def circ2(x,y,r,fill=BODY,stroke=LINE,sw=SW,**k):
+        s,w_=fix(stroke,sw); return _circ(x,y,r,fill,s,w_,**k)
+    def path2(d,fill='none',stroke=LINE,sw=SW,**k):
+        s,w_=fix(stroke,sw); return _path(d,fill,s,w_,**k)
+    def screw2(x,y,r=8):
+        r=min(r*1.2,9.5) if r<10 else r*1.15; d=r*0.55
+        return (_circ(x,y,r,'#fbfbfc',OL,2.2)+_circ(x,y,r-2.8,'none','#a3aab2',1.1)
+                +_path(f'M{x-d:.1f} {y}h{2*d:.1f} M{x} {y-d:.1f}v{2*d:.1f}',stroke='#2a2e33',sw=max(2.4,r*0.3),stroke_linecap='round'))
+    def band2(x,y,w,h,rx=0): return _rect(x,y,w,h,HOODC,rx,OL,2)
+    g_.update(rect=rect2,circ=circ2,path=path2,screw=screw2,band=band2,BAND=HOODC,LINE=OL)

@@ -1,4 +1,6 @@
 # Bloques de proceso y neumática de planta: edificio, filtro, montacargas, compresor, unidad de mantenimiento, clorador.
+import kit
+kit.replica()
 from kit import *
 import math
 DEFS=''''''
