@@ -1,9 +1,7 @@
 # Bloques de proceso y neumática de planta: edificio, filtro, montacargas, compresor, unidad de mantenimiento, clorador.
 from kit import *
 import math
-DEFS='''<linearGradient id="jwp-tank" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f86c6"/><stop offset=".45" stop-color="#6d9fd8"/><stop offset="1" stop-color="#2f62a0"/></linearGradient>
-<linearGradient id="jwp-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0605a"/><stop offset=".5" stop-color="#c9302c"/><stop offset="1" stop-color="#9c2421"/></linearGradient>
-<linearGradient id="jwp-steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c3c9d0"/><stop offset=".45" stop-color="#eef1f4"/><stop offset="1" stop-color="#9aa3ad"/></linearGradient>'''
+DEFS=''''''
 def lbl(x,y,s,size=8.5,fill=TXT,anchor='middle',w=700): return text(x,y,s,size,fill,w,anchor)
 def dtext(x,y,expr,sample,size=10,fill=TXT,anchor='middle',w=800,mono=False,show=None):
     ff=' font-family="Consolas,DejaVu Sans Mono,monospace"' if mono else ''
@@ -33,7 +31,7 @@ b=card(360,400,'red del edificio')
 b+=gauge(70,120,46,'out.presion|param.presion0',10,'bar')
 b+=dtext(70,190,'out.presion|param.presion0:d2:bar','3,00 bar',13,TXT)
 # hidroneumático
-b+=rect(36,208,68,96,'url(#jwp-tank)',30)+dtext(70,256,'param.hidro','24',13,'#fff')+lbl(70,270,'L',9,'#eaf1fb')
+b+=rect(36,208,68,96,'#4f86c6',30)+dtext(70,256,'param.hidro','24',13,'#fff')+lbl(70,270,'L',9,'#eaf1fb')
 b+=path('M70 304 V318 H150 V150',stroke=WATER,sw=5)
 b+=tag(70,330,'EN SECO',RED,show='out.seco')
 # edificio
@@ -54,7 +52,7 @@ svg('building-water',360,400,b,DEFS,' data-terms="none"')
 
 # ------------------------------------------------ filtro de arena (320 x 420)
 b=card(320,420,'filtro de arena')
-b+=rect(50,40,140,300,'url(#jwp-tank)',60)
+b+=rect(50,40,140,300,'#4f86c6',60)
 b+=rect(64,150,112,150,'#e3cf9a',6,'none',0)+rect(64,262,112,38,'#b89a63',4,'none',0)
 b+=rect(64,150,112,22,'#8a6a3a',0,'none',0,opacity='.6',data_show='out.colmatacion>50')
 b+=rect(64,150,112,46,'#6b4f28',0,'none',0,opacity='.7',data_show='out.colmatacion>80')
@@ -90,7 +88,7 @@ svg('lift',300,520,b,DEFS,' data-terms="none"')
 # ------------------------------------------------ compresor (360 x 240)
 b=band(40,8,140,48)
 b+=term(80,32,'L',lab='none')+lbl(80,52,'L',8.5)+term(140,32,'N',lab='none')+lbl(140,52,'N',8.5)
-b+=rect(20,140,300,70,'url(#jwp-red)',35)+lbl(170,182,'50 L · 8 bar',11,'#fff',800)
+b+=rect(20,140,300,70,'#c9302c',35)+lbl(170,182,'50 L · 8 bar',11,'#fff',800)
 b+=path('M60 210 l-8 20 h30 l-8 -20z M260 210 l-8 20 h30 l-8 -20z',fill='#3a414b')
 b+=rect(40,70,100,66,'#2f62a0',6)+lbl(90,108,'M 1~',12,'#eaf1fb',800)
 b+=g(circ(152,84,7,LEDON,'none',0)+lbl(152,72,'ON',8,'#2f8a3a',800),data_show='out.running')
@@ -101,7 +99,7 @@ svg('compressor',360,240,b,DEFS)
 
 # ------------------------------------------------ unidad de mantenimiento (200 x 280)
 b=rect(10,108,180,14,AIR,2,'none',0)+lbl(24,102,'entrada',8,MUTED,700,'start')+lbl(176,102,'salida',8,MUTED,700,'end')
-b+=rect(70,90,60,50,'url(#jwp-steel)',4)
+b+=rect(70,90,60,50,'#d4d9df',4)
 b+=gauge(100,46,34,'out.pressure|param.setpoint',10,'bar')
 b+=path('M100 80 V90',stroke=LINE,sw=4)
 b+=rect(76,140,48,90,'#d9e7f5',10,LINE,1,opacity='.95')+rect(82,186,36,36,'#9fc6ea',6,'none',0)

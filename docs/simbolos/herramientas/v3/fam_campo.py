@@ -1,10 +1,7 @@
 # Campo, a escala reducida: motores, electroválvulas, finales, sensores, interruptores, transmisores, torre, calibrador, PC.
 from kit import *
 import math
-DEFS='''<linearGradient id="jwc-mot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f86c6"/><stop offset=".5" stop-color="#2f62a0"/><stop offset="1" stop-color="#244c7c"/></linearGradient>
-<linearGradient id="jwc-cyl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset=".5" stop-color="#dfe3e8"/><stop offset="1" stop-color="#c3c9d0"/></linearGradient>
-<linearGradient id="jwc-zone" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cb342" stop-opacity=".55"/><stop offset="1" stop-color="#7cb342" stop-opacity=".2"/></linearGradient>
-<pattern id="jwc-hys" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f0a020" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="5" stroke="#f0a020" stroke-width="1.4"/></pattern>'''
+DEFS='''<pattern id="jwc-hys" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f0a020" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="5" stroke="#f0a020" stroke-width="1.4"/></pattern>'''
 def lbl(x,y,s,size=8.5,fill=TXT,anchor='middle',w=700): return text(x,y,s,size,fill,w,anchor)
 def dtext(x,y,expr,sample,size=10,fill=TXT,anchor='middle',w=800,mono=False,show=None):
     ff=' font-family="Consolas,DejaVu Sans Mono,monospace"' if mono else ''
@@ -22,7 +19,7 @@ def motor(name,terms,kind='3~',cap=False,extra=''):
     b+=rect(cx-34,58,68,14,'#2a568c',0)
     if cap:
         b+=rect(64,52,52,22,'#3a414b',10)+lbl(90,67,'cap.',8,LIGHT)
-    b+=rect(56,72,180,110,'url(#jwc-mot)',12)
+    b+=rect(56,72,180,110,'#2f62a0',12)
     for i in range(8): b+=rect(66+i*21,80,10,94,'#3d73b3',4,'none',0,opacity='.7')
     b+=path('M236 84 h28 q8 0 8 8 v70 q0 8 -8 8 h-28z',fill='#2a568c')
     for i in range(5): b+=path(f'M244 {96+i*15} h22',stroke=BLUE2,sw=3,stroke_linecap='round')
@@ -52,7 +49,7 @@ PRESS=AIR; EXH='#9cc8f5'
 def cylinder(stroke=80):
     rod=rect(150,38,184,12,'#f4f6f8',2)+rect(334,33,16,22,'#b9c0c8',2)
     b=g(rod,data_translate=f'out.position:0:1:x:{stroke}')
-    b+=rect(20,24,250,40,'url(#jwc-cyl)',4)
+    b+=rect(20,24,250,40,'#e3e7eb',4)
     b+=rect(14,18,26,52,'#b9c0c8',3)+rect(250,18,26,52,'#b9c0c8',3)
     b+=lbl(145,49,'Ø20 × 100',11)
     for x in (27,263): b+=circ(x,70,5,'#2f8cff',LINE,1)
@@ -130,8 +127,8 @@ svg('limit-switch',120,240,b,DEFS)
 # ------------------------------------------------ sensores inductivo y capacitivo (620 x 260), zona exagerada
 def prox(name,Sn,Hy,hpx,cap=False):
     b=''
-    b+=g(g(path(f'M248 46 L418 16.6 V143.4 L248 114 Z',fill='url(#jwc-zone)',stroke=JWG,sw=1.2),opacity='.4'),data_show='!out.detecting')
-    b+=g(path(f'M248 46 L418 16.6 V143.4 L248 114 Z',fill='url(#jwc-zone)',stroke=JWG,sw=1.2),data_show='out.detecting')
+    b+=g(g(path(f'M248 46 L418 16.6 V143.4 L248 114 Z',fill=JWG,fill_opacity='.35',stroke=JWG,sw=1.2),opacity='.4'),data_show='!out.detecting')
+    b+=g(path(f'M248 46 L418 16.6 V143.4 L248 114 Z',fill=JWG,fill_opacity='.35',stroke=JWG,sw=1.2),data_show='out.detecting')
     b+=path(f'M418 16.6 L{418+hpx} 8 V152 L418 143.4 Z',fill='url(#jwc-hys)',stroke=AMBER,sw=1.2)
     b+=path('M418 143.4 V172',stroke=JWG,sw=1.2)
     b+=text(414,168,f'detección {Sn}',10,'#a5d67a',700,'end')+text(422+hpx,168,f'histéresis {Hy}',10,AMBER,700,'start')

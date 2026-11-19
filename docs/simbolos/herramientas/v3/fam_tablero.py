@@ -1,7 +1,7 @@
 # Tablero de riel DIN: térmicos, redes, fuentes, contactores, relés, SSR, E/S remotas, medidor, conversor, controlador.
 from kit import *
 import math
-DEFS='''<linearGradient id="jwt-win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2128"/><stop offset="1" stop-color="#2b323b"/></linearGradient>'''
+DEFS=''''''
 
 def module(x,w,h,top=0,ears=True):
     """Módulo DIN: cuerpo claro, hombros más angostos arriba y abajo."""
@@ -83,7 +83,7 @@ def contactor(name,aux_t,aux_b,auxlbl):
         b+=term(x,254,t,side='b',lab='none')+lbl(x,246,t,7.5)
     b+=jw(6,90,188,'KM · 9 A')
     # ventana del indicador
-    b+=rect(70,112,60,64,'url(#jwt-win)',5,LINE,1)
+    b+=rect(70,112,60,64,'#22272e',5,LINE,1)
     b+=g(rect(82,120,36,22,'#3fae54',3,'none',0)+lbl(100,135,'O',12,'#fff'),data_show='!out.closed')
     b+=g(rect(82,146,36,22,RED,3,'none',0)+lbl(100,161,'I',12,'#fff'),data_show='out.closed')
     b+=lbl(40,140,'L1 L2 L3',7.5,MUTED,600)

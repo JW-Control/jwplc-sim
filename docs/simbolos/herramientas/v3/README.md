@@ -2,7 +2,7 @@
 
 Estilo aprobado por JW Control el 19/11/2026: cuerpo plano gris claro, contorno
 fino gris, tornillos Phillips iguales con su número de borne, franja JW con un
-solo dato y sin marcas de terceros. El verde JW indica «energizado». Los equipos de campo
+solo dato, sin marcas de terceros y sin degradados (todo color plano). El mando (22 mm y AD16) sigue a EduVolt en la idea, no en el dibujo: cuerpo gris con hombros, rótulos de borne en relieve y sin tornillos a la vista; el piloto es angosto con aro negro y el pulsador, ancho con marco oscuro cuadrado y aro claro. El verde JW indica «energizado». Los equipos de campo
 van a escala reducida (el motor ya no es más grande que el tablero).
 
     python3 docs/simbolos/herramientas/v3/fam_mando.py     # 15 de mando y medición
@@ -22,5 +22,5 @@ mantienen su tamaño y la posición de sus bornes. Los de campo se achican:
 - unidad de mantenimiento: 200 × 280;
 - calibrador: 200 × 300.
 
-`vfd-el.svg` mantiene el dibujo anterior. Solo se cambió el logo y el modelo
-por la franja JW. `fermentador.svg` no cambia.
+`vfd-el.svg` y `fermentador.svg` se editan a mano: sin logo de marca y sin degradados (cada uno pasó al color medio de su degradado).
+
