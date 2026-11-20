@@ -75,7 +75,7 @@ motor_generic()
 # ------------------------------------------------ electroválvula 5/2 + cilindro
 PRESS=AIR; EXH='#9cc8f5'
 def cylinder(stroke=140):
-    rod=rect(150,38,184,12,'#f4f6f8',2)+rect(334,33,16,22,'#b9c0c8',2)
+    rod=rect(90,38,244,12,'#f4f6f8',2)+rect(334,33,16,22,'#b9c0c8',2)
     b=g(rod,data_translate=f'out.position:0:1:x:{stroke}')
     b+=rect(20,24,250,40,'#e3e7eb',4)
     b+=rect(14,18,26,52,'#b9c0c8',3)+rect(250,18,26,52,'#b9c0c8',3)
