@@ -48,18 +48,22 @@ try {
     const a0 = sp.devices.find((d) => d.id === "A0");
     const a1 = sp.devices.find((d) => d.id === "A1");
     const rows = document.querySelectorAll(".cyl-fc-table tbody tr").length;
-    return { y1, a0, a1, rows };
+    const tA0 = window.JwsimScene.terminalOf("A0.14");
+    return { y1, a0, a1, rows, tA0 };
   });
   criteria.PAIR_CREATED_ABOVE_PISTON = {
     ok: hasSection &&
       afterPair.rows === 2 &&
       afterPair.a0?.type === "jwsim/limit-switch" &&
+      afterPair.a0.params?.orientacion === "abajo" &&
       afterPair.a0.params?.source === "Y1.position" &&
       afterPair.a0.params?.min === 0 &&
+      afterPair.a0.x === afterPair.y1.x + 260 &&
       afterPair.a0.y < afterPair.y1.y &&
+      afterPair.tA0?.side === "t" &&
       afterPair.a1?.params?.min === 1 &&
-      afterPair.a1.y < afterPair.y1.y &&
-      afterPair.a1.x > afterPair.a0.x,
+      afterPair.a1.x === afterPair.y1.x + 380 &&
+      afterPair.a1.y < afterPair.y1.y,
     afterPair,
   };
   log(`PAIR_CREATED_ABOVE_PISTON ${JSON.stringify(criteria.PAIR_CREATED_ABOVE_PISTON)}`);
@@ -92,6 +96,30 @@ try {
   };
   log(`RENAME_AND_INTERMEDIATE_MARK ${JSON.stringify(criteria.RENAME_AND_INTERMEDIATE_MARK)}`);
 
+  // Agregar también Y2 biestable para verificar alineación de sus bornes A+ y A−.
+  await t(() => {
+    window.jwsimTest.scene.add("jwsim/solenoid-valve-2", 600, 720, "Y2");
+    window.jwsimTest.scene.select("Y1");
+  });
+  await sleep(250);
+  const y2Terms = await t(() => ({
+    ap1: window.JwsimScene.terminalOf("Y2.A+1"),
+    ap2: window.JwsimScene.terminalOf("Y2.A+2"),
+    am1: window.JwsimScene.terminalOf("Y2.A-1"),
+    am2: window.JwsimScene.terminalOf("Y2.A-2"),
+  }));
+  criteria.BISTABLE_TERMS_ALIGNED = {
+    ok: y2Terms.ap1 && y2Terms.ap2 && y2Terms.am1 && y2Terms.am2 &&
+      Math.abs(y2Terms.ap1.fx - 80 / 440) < 0.01 &&
+      Math.abs(y2Terms.ap2.fx - 120 / 440) < 0.01 &&
+      Math.abs(y2Terms.am1.fx - 260 / 440) < 0.01 &&
+      Math.abs(y2Terms.am2.fx - 300 / 440) < 0.01,
+    y2Terms,
+  };
+  log(`BISTABLE_TERMS_ALIGNED ${JSON.stringify(criteria.BISTABLE_TERMS_ALIGNED)}`);
+
+  await win.click("#scene-fit");
+  await sleep(250);
   await win.screenshot({ path: join(OUT, "colores-marcas.png") });
 
   // 3. Ver en Neumático que S0, S2 y A1 aparecen sobre el vástago en sus posiciones.
@@ -134,7 +162,7 @@ try {
   await app.close();
 }
 
-const ok = ["PAIR_CREATED_ABOVE_PISTON", "RENAME_AND_INTERMEDIATE_MARK", "SHOWN_IN_PNEUMATIC", "CONVERT_AND_UNDO"]
+const ok = ["PAIR_CREATED_ABOVE_PISTON", "RENAME_AND_INTERMEDIATE_MARK", "BISTABLE_TERMS_ALIGNED", "SHOWN_IN_PNEUMATIC", "CONVERT_AND_UNDO"]
   .every((k) => criteria[k]?.ok);
 mkdirSync(join(ROOT, "build", "gates"), { recursive: true });
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_CYLINDER_SENSORS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
