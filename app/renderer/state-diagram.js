@@ -25,27 +25,59 @@
     text: "#d7dee7",
     muted: "#8794a2",
   };
-  function refreshThemeColors() {
-    const cs = getComputedStyle(document.documentElement);
-    const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
-    COLORS.bg = v("--panel", "#1b1f24");
-    COLORS.bandA = COLORS.bg;
-    COLORS.bandB = v("--panel-2", "#1f242b");
-    COLORS.grid = v("--border", "#2b3139");
-    COLORS.text = v("--text", "#d7dee7");
-    COLORS.muted = v("--muted", "#8794a2");
-    COLORS.cyl = v("--accent", "#2f8cff");
-    COLORS.coil = v("--warn", "#ffb020");
-    COLORS.sensor = v("--ok", "#37d67a");
-    COLORS.thresh = v("--err", "#ff5d5d");
+  function isDarkTheme() {
+    const m = document.querySelector('meta[name="color-scheme"]')?.content;
+    if (m === "dark") return true;
+    if (m === "light") return false;
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
+  }
+  function refreshThemeColors(forceDark) {
+    const dark = typeof forceDark === "boolean" ? forceDark : isDarkTheme();
+    if (dark) {
+      Object.assign(COLORS, {
+        bg: "#1b1f24",
+        bandA: "#1b1f24",
+        bandB: "#20252b",
+        grid: "#2b3139",
+        text: "#d7dee7",
+        muted: "#8794a2",
+        cyl: "#2f8cff",
+        cylFill: "rgba(47, 140, 255, 0.14)",
+        coil: "#ffb020",
+        coilFill: "rgba(255, 176, 32, 0.16)",
+        sensor: "#37d67a",
+        sensorFill: "rgba(55, 214, 122, 0.16)",
+        pressure: "#55aef0",
+        pressureFill: "rgba(85, 174, 240, 0.14)",
+        thresh: "#ff5d5d",
+      });
+    } else {
+      Object.assign(COLORS, {
+        bg: "#ffffff",
+        bandA: "#ffffff",
+        bandB: "#f1f5f9",
+        grid: "#d0d7de",
+        text: "#1f2328",
+        muted: "#59636e",
+        cyl: "#0969da",
+        cylFill: "rgba(9, 105, 218, 0.13)",
+        coil: "#d97706",
+        coilFill: "rgba(217, 119, 6, 0.15)",
+        sensor: "#1a7f37",
+        sensorFill: "rgba(26, 127, 55, 0.15)",
+        pressure: "#0284c7",
+        pressureFill: "rgba(2, 132, 199, 0.13)",
+        thresh: "#cf222e",
+      });
+    }
   }
   refreshThemeColors();
-  window.addEventListener("jwsim:themechange", () => {
-    refreshThemeColors();
+  window.addEventListener("jwsim:themechange", (e) => {
+    refreshThemeColors(e?.detail?.dark);
     if (typeof scheduleDraw === "function") scheduleDraw();
   });
 
-  const LABEL_W = 84;
+  const LABEL_W = 96;
   const PAD_R = 12;
   const PAD_T = 8;
   const AXIS_H = 22;
@@ -66,10 +98,44 @@
     raf: 0,
     dirty: true,
     running: false,
+    lastSnap: null,
   };
 
   const spec = () => window.JwsimScene?.specForView?.() ?? { devices: [], wiring: [] };
   const visibleChannels = () => S.meta.channels.filter((c) => S.active.has(c.id));
+
+  function trackTitle(ch) {
+    if (ch.kind === "cyl") return /^Cil/i.test(ch.shortLabel) ? ch.shortLabel : `Cil. ${ch.shortLabel}`;
+    if (ch.kind === "coil") return `Bob. ${ch.shortLabel}`;
+    if (ch.kind === "sensor") return `FC ${ch.shortLabel}`;
+    return ch.shortLabel;
+  }
+
+  function restingValueOf(ch) {
+    const out = S.lastSnap?.devices?.find((d) => d.id === ch.deviceId)?.outputs;
+    if (out && ch.key in out) {
+      const raw = out[ch.key];
+      const n = typeof raw === "boolean" ? (raw ? 1 : 0) : Number(raw?.value ?? raw);
+      if (Number.isFinite(n)) return n;
+    }
+    const devs = spec().devices ?? [];
+    const dev = devs.find((d) => d.id === ch.deviceId);
+    if (!dev) return 0;
+    const p = dev.params ?? {};
+    if (ch.kind === "cyl") return dev.type === "jwsim/solenoid-valve-2" && p.start === "afuera" ? 1 : 0;
+    if (ch.kind === "coil") return 0;
+    if (ch.kind === "pressure") return dev.type === "jwsim/service-unit" ? Number(p.setpoint ?? 6) : Number(p.start ?? 8);
+    if (ch.kind === "sensor") {
+      const vId = dev.type === "jwsim/sensor-cylinder" ? p.cylinder : String(p.source ?? "").replace(/\.position$/, "");
+      const valve = devs.find((d) => d.id === vId);
+      const pos0 = valve?.type === "jwsim/solenoid-valve-2" && valve.params?.start === "afuera" ? 1 : 0;
+      if (dev.type === "jwsim/sensor-cylinder") return (p.end === "extendido" ? pos0 >= 0.95 : pos0 <= 0.05) ? 1 : 0;
+      const min = Number(p.min ?? 1);
+      const max = Number(p.max ?? min);
+      return pos0 >= min - 1e-3 && pos0 <= max + 1e-3 ? 1 : 0;
+    }
+    return 0;
+  }
 
   function applyDefaultSelection(resetSelection) {
     const allIds = new Set(S.meta.channels.map((c) => c.id));
@@ -510,20 +576,34 @@
           ctx.stroke();
         }
         ctx.restore();
+      } else {
+        // En reposo (antes de simular): línea base punteada en el valor inicial de cada variable.
+        const v0 = restingValueOf(ch);
+        const y0 = yOf(v0);
+        ctx.save();
+        ctx.strokeStyle = COLORS[ch.kind];
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(LABEL_W, y0);
+        ctx.lineTo(LABEL_W + plotW, y0);
+        ctx.stroke();
+        ctx.restore();
       }
 
-      // Etiqueta izquierda de pista + valor leído.
-      const vNow = readT != null ? Core.valueAt(samples, ch, readT) : undefined;
+      // Etiqueta izquierda de pista + valor leído (o valor inicial en reposo).
+      const vNow = readT != null ? Core.valueAt(samples, ch, readT) : restingValueOf(ch);
       ctx.fillStyle = COLORS[ch.kind];
       ctx.fillRect(6, ty + 7, 3, th - 14);
       ctx.font = 'bold 11px "Cascadia Code", Consolas, monospace';
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = COLORS.text;
-      ctx.fillText(ch.shortLabel, 14, ty + th * 0.38, LABEL_W - 20);
+      ctx.fillText(trackTitle(ch), 14, ty + th * 0.38, LABEL_W - 18);
       ctx.font = '10px "Cascadia Code", Consolas, monospace';
       ctx.fillStyle = vNow !== undefined && (ch.kind === "cyl" || ch.kind === "pressure" || vNow >= 0.5) ? COLORS[ch.kind] : COLORS.muted;
-      ctx.fillText(formatVal(ch, vNow), 14, ty + th * 0.72, LABEL_W - 20);
+      ctx.fillText(formatVal(ch, vNow), 14, ty + th * 0.72, LABEL_W - 18);
 
       // Punto de intersección sobre el cursor.
       if (hoverInData && vNow !== undefined) {
@@ -552,7 +632,9 @@
       if (!channels.length) {
         readout.textContent = "Sin señales visibles";
       } else if (!samples.length || readT == null) {
-        readout.textContent = "Sin datos aún";
+        const parts = channels.slice(0, 5).map((ch) => `${ch.shortLabel}: ${formatVal(ch, restingValueOf(ch))}`);
+        const extra = channels.length > 5 ? ` (+${channels.length - 5})` : "";
+        readout.textContent = `En reposo (${channels.length} var.) · ${parts.join(" · ")}${extra}`;
       } else {
         const parts = channels.slice(0, 6).map((ch) => `${ch.shortLabel}: ${formatVal(ch, Core.valueAt(samples, ch, readT))}`);
         const extra = channels.length > 6 ? ` (+${channels.length - 6})` : "";
@@ -582,8 +664,10 @@
       scheduleDraw();
     },
     onSnapshot(snap, running = false) {
+      if (snap) S.lastSnap = snap;
       S.running = !!running;
       if (recorder?.push(snap, S.running)) scheduleDraw();
+      else if (!S.running && !(recorder?.samples().length > 0)) scheduleDraw();
     },
     setVisible(on) {
       mount();
