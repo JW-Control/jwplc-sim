@@ -110,10 +110,10 @@ try {
   }));
   criteria.BISTABLE_TERMS_ALIGNED = {
     ok: y2Terms.ap1 && y2Terms.ap2 && y2Terms.am1 && y2Terms.am2 &&
-      Math.abs(y2Terms.ap1.fx - 80 / 520) < 0.01 &&
+      Math.abs(y2Terms.ap1.fx - 100 / 520) < 0.01 &&
       Math.abs(y2Terms.ap2.fx - 120 / 520) < 0.01 &&
       Math.abs(y2Terms.am1.fx - 260 / 520) < 0.01 &&
-      Math.abs(y2Terms.am2.fx - 300 / 520) < 0.01,
+      Math.abs(y2Terms.am2.fx - 280 / 520) < 0.01,
     y2Terms,
   };
   log(`BISTABLE_TERMS_ALIGNED ${JSON.stringify(criteria.BISTABLE_TERMS_ALIGNED)}`);
