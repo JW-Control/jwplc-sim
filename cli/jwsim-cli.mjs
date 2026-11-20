@@ -12,6 +12,7 @@
 //   jwsim-cli device build|test|pack <carpeta>     (SDK de dispositivos, G7)
 //   jwsim-cli device install <tipo>[@versión] [--index <url|archivo>]
 //   jwsim-cli device list [--index <url|archivo>]
+//   jwsim-cli scene  describe|new|normalize|validate|preview|build  (Escenas JSON)
 //
 // Opciones de build: --target native|windows, --out <dir> (build y run),
 // --cc gcc|clang, --board <id>, --package <dir> (checkout de platform-jwplc
@@ -24,11 +25,12 @@
 // fallas; 2 uso incorrecto; 3 el sketch no compila; 4 la simulación terminó
 // mal (FATAL, vigilante, caída); 5 entorno (toolchain o package).
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
+import { runSceneCommand } from "./lib/scene-cli.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
 import { BEHAVIORS, writeDevice } from "./lib/device-gen.mjs";
 import { readComponent, writeComponent } from "./lib/component-files.mjs";
@@ -54,7 +56,13 @@ const USAGE = `uso:
   jwsim-cli grade  <ejercicio.jwsim|carpeta> [<sketch_dir>] [--solution] [--runs N] [--json] [--report archivo]
   jwsim-cli device build|test|pack <carpeta> [--json]
   jwsim-cli device install <tipo>[@versión] [--index url|archivo] [--json]
-  jwsim-cli device list [--index url|archivo] [--json]`;
+  jwsim-cli device list [--index url|archivo] [--json]
+  jwsim-cli scene describe [<tipo>] [--json]
+  jwsim-cli scene new <salida.jwsim> [--sketch ruta] [--template base] [--json]
+  jwsim-cli scene normalize <entrada.json> [-o salida.jwsim] [--json]
+  jwsim-cli scene validate <archivo.jwsim> [--fast] [--strict] [--json]
+  jwsim-cli scene preview <archivo.jwsim> [--out dir] [--view 2d|3d|both] [--smoke-ms ms] [--json]
+  jwsim-cli scene build <entrada.json> --out <dir> [--create-ino] [--strict] [--json]`;
 
 class CliError extends Error {
   constructor(code, message) {
@@ -91,6 +99,14 @@ function parse(argv) {
     else if (a === "--set") (opts.set ??= []).push(value(++i, a));
     else if (a === "--link") opts.link = true;
     else if (a === "--try") opts.try = value(++i, a);
+    else if (a === "-o" || a === "--output") opts.outFile = value(++i, a);
+    else if (a === "--sketch") opts.sketch = value(++i, a);
+    else if (a === "--template") opts.template = value(++i, a);
+    else if (a === "--view") opts.view = value(++i, a);
+    else if (a === "--strict") opts.strict = true;
+    else if (a === "--fast") opts.fast = true;
+    else if (a === "--create-ino") opts.createIno = true;
+    else if (a === "--smoke-ms") opts.smokeMs = Number(value(++i, a));
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -450,6 +466,10 @@ async function main() {
       emit({ ok: false, error: err.message, security: err instanceof IndexError });
       return code;
     }
+  }
+
+  if (cmd === "scene") {
+    return runSceneCommand({ opts, CliError, EXIT, emit });
   }
 
   throw new CliError(EXIT.USAGE, `comando desconocido '${cmd}'`);
