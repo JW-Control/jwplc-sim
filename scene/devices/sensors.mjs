@@ -65,11 +65,11 @@ function sensor(kind) {
     : [{ id: "target", label: "Objeto", kind: "toggle" }];
   const NAMES = { inductive: "Sensor inductivo", capacitive: "Sensor capacitivo", photoelectric: "Sensor fotoeléctrico", cylinder: "Sensor magnético de cilindro" };
   const DESCRIPTIONS = {
-    inductive: `Sensor inductivo de 3 hilos Autonics PR18-8D (M18, detecta metal a Sn = ${K.sn} mm sobre acero, histéresis ${K.hysteresis * 100} %). Otros metales acortan el alcance (latón 50 %, aluminio 45 %, cobre 40 %) y los no metales no se detectan. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
-    capacitive: `Sensor capacitivo de 3 hilos Autonics CR18-8D (M18 de plástico, Sn ajustable hasta ${K.sn} mm, histéresis ${K.hysteresis * 100} %). Detecta metales y no metales: agua y metal al 100 %, vidrio y madera 50 %, plástico 45 %, papel 20 %, por eso sirve para nivel de líquidos o granos a través de un tanque de plástico. El potenciómetro de sensibilidad ajusta el alcance. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
+    inductive: `Sensor inductivo de 3 hilos M18 ( detecta metal a Sn = ${K.sn} mm sobre acero, histéresis ${K.hysteresis * 100} %). Otros metales acortan el alcance (latón 50 %, aluminio 45 %, cobre 40 %) y los no metales no se detectan. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
+    capacitive: `Sensor capacitivo de 3 hilos M18 de plástico ( Sn ajustable hasta ${K.sn} mm, histéresis ${K.hysteresis * 100} %). Detecta metales y no metales: agua y metal al 100 %, vidrio y madera 50 %, plástico 45 %, papel 20 %, por eso sirve para nivel de líquidos o granos a través de un tanque de plástico. El potenciómetro de sensibilidad ajusta el alcance. Arrastre la pieza frente a la cara activa o acciónelo por la posición de otro dispositivo.`,
     photoelectric: "Sensor fotoeléctrico difuso de 3 hilos. Se acciona a mano o por la posición de otro dispositivo.",
     cylinder:
-      "Final de carrera magnético de 3 hilos (tipo Festo SMT-8M, PNP) montado en la ranura del cilindro: detecta el imán del émbolo en el extremo elegido. Indique la electroválvula que mueve el cilindro (p. ej. Y1) y si marca el vástago retraído o extendido; en la vista 3D aparece sobre el cilindro.",
+      "Final de carrera magnético de 3 hilos (PNP) montado en la ranura del cilindro: detecta el imán del émbolo en el extremo elegido. Indique la electroválvula que mueve el cilindro (p. ej. Y1) y si marca el vástago retraído o extendido; en la vista 3D aparece sobre el cilindro.",
   };
   /** @type {import("../../sdk/jwsim-device.js").ParameterSpec[]} */
   const targetParams = cylinder

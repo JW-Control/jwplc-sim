@@ -18,7 +18,7 @@ export const power24 = {
   name: "Fuente 24 VDC",
   category: "Alimentación",
   description:
-    "Fuente de riel DIN de 24 VDC (Mean Well MDR-60, HDR-60 o NDR-120) con protección contra cortocircuito (dispara y se rearma desde la escena). Salida +V/−V con dos bornes cada una; la MDR tiene relé DC OK.",
+    "Fuente de riel DIN de 24 VDC (modelos MDR-60, HDR-60 o NDR-120) con protección contra cortocircuito (dispara y se rearma desde la escena). Salida +V/−V con dos bornes cada una; la MDR tiene relé DC OK.",
   parameters: [{ id: "model", label: "Modelo", type: "enum", options: MODELS_24, default: "MDR-60" }],
   terminals: [
     { id: "+V1", label: "+V (+24 V)" },

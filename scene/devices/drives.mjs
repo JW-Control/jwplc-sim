@@ -30,10 +30,10 @@ const fmtA = (v) => `${Number(v.toFixed(2))}`.replace(".", ",");
 export const overloadRelay = {
   type: "jwsim/overload-relay",
   version: "1.2.0",
-  name: "Relé térmico CHINT NR2-25",
+  name: "Relé térmico",
   category: "Protección",
   description:
-    "Relé de sobrecarga térmico tripolar CHINT NR2-25 (clase 10A, IEC 60947-4-1) que se monta bajo el contactor: polos 1-2, 3-4 y 5-6, contactos 95-96 NC (va en serie con la bobina del contactor) y 97-98 NO (señal de disparo), separados eléctricamente. Dispara por falta de fase (corriente desequilibrada) después del tiempo de disparo, o con la lengüeta TEST. STOP abre 95-96 mientras se pulsa. RESET azul: en H el rearme es manual (pulsar RESET quitada la causa); en A se rearma solo al enfriarse. Mide la corriente de cada polo (la de las cargas aguas abajo) y dispara por sobrecarga según su curva de clase 10: con 7,2 veces el ajuste del dial en unos 3 s, con 1,5 veces en menos de 2 min y con 1,05 veces no dispara. Después de un disparo por sobrecarga hay que esperar a que se enfríe para rearmar.",
+    "Relé de sobrecarga térmico tripolar (clase 10A, IEC 60947-4-1) que se monta bajo el contactor: polos 1-2, 3-4 y 5-6, contactos 95-96 NC (va en serie con la bobina del contactor) y 97-98 NO (señal de disparo), separados eléctricamente. Dispara por falta de fase (corriente desequilibrada) después del tiempo de disparo, o con la lengüeta TEST. STOP abre 95-96 mientras se pulsa. RESET azul: en H el rearme es manual (pulsar RESET quitada la causa); en A se rearma solo al enfriarse. Mide la corriente de cada polo (la de las cargas aguas abajo) y dispara por sobrecarga según su curva de clase 10: con 7,2 veces el ajuste del dial en unos 3 s, con 1,5 veces en menos de 2 min y con 1,05 veces no dispara. Después de un disparo por sobrecarga hay que esperar a que se enfríe para rearmar.",
   parameters: [
     { id: "range", label: "Rango", type: "enum", options: NR2_25_RANGES, default: "2.5-4 A" },
     { id: "ajuste", label: "Ajuste (dial)", type: "number", default: 3.2, unit: "A", hint: "dentro del rango; corriente nominal del motor" },

@@ -16,6 +16,7 @@
 // Determinismo: sin reloj de pared ni aleatorios; los dispositivos se
 // evalúan en el orden de la escena.
 
+import { mountLinks } from "./mount.mjs";
 import { crc16 } from "./modbus.mjs";
 import { analyze, solve } from "./netlist.mjs";
 import { Registry } from "./devices/index.mjs";
@@ -54,7 +55,7 @@ const MAX_EVENTS = 20000;
 /**
  * @typedef {import("../sdk/jwsim-device.js").DeviceDefinition} DeviceDefinition
  * @typedef {import("../sdk/jwsim-device.js").DeviceStep} DeviceStep
- * @typedef {{ id: string, type: string, version?: string, params?: Record<string, unknown>, x?: number, y?: number }} DeviceSpec
+ * @typedef {{ id: string, type: string, version?: string, params?: Record<string, unknown>, x?: number, y?: number, rotation?: number, mount?: string }} DeviceSpec
  * @typedef {{ devices: DeviceSpec[], wiring: { from: string, to: string }[] }} SceneSpec
  * @typedef {{ t: bigint, kind: "fault" | "output" | "action" | "signal" | "rearm" | "inject" | "clear", device?: string, key?: string, value?: unknown, message?: string, type?: string }} SceneEvent
  * @typedef {{ kind: "stuck", device: string, value?: boolean }
@@ -182,7 +183,9 @@ export class Scene {
         out: {},
       });
     }
-    for (const w of spec.wiring ?? []) {
+    // Acoples (térmico bajo el contactor): uniones internas, como cables sin dibujo.
+    const links = mountLinks(spec).map(([from, to]) => ({ from, to }));
+    for (const w of [...(spec.wiring ?? []), ...links]) {
       const ends = [w.from, w.to].map((e) => this.#terminal(e));
       this.wires.push([ends[0], ends[1]]);
       for (const e of ends) {

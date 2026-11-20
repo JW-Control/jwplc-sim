@@ -170,10 +170,10 @@ const PAGES = ["F", "H", "A", "U", "dir", "sel"];
 export const vfdEl = {
   type: "jwsim/vfd-el",
   version: "1.3.0",
-  name: "Variador Delta VFD-EL",
+  name: "Variador de frecuencia",
   category: "Actuadores",
   description:
-    "Variador de frecuencia Delta VFD007EL21A (estructura A: entrada monofásica 220 V en R/L1-S/L2, salida trifásica 220 V en U/T1 V/T2 W/T3, 0,75 kW). Se programa como el real: con el teclado (MODE recorre F, H, A, U, Frd/rEu y la selección de parámetros GG.NN; ENTER entra y guarda; ▲▼ cambian) o desde este inspector, y por Modbus (dirección GGNNH = Pr.GG.NN). El potenciómetro fija la frecuencia si 02.00 = 4. Entradas MI en modo NPN: se activan al unirlas a DCM. Relé RA/RB/RC según 03.00. Modbus por el puerto RS-485 (SG+/SG-): 2000H operar/sentido, 2001H frecuencia × 100, 2002H EF/reset; 2100H falla, 2101H estado, 2102H-2109H monitoreo (2104H corriente de salida × 10, la del motor conectado). Elija una plantilla de taller para empezar.",
+    "Variador de frecuencia de 0,75 kW (estructura A: entrada monofásica 220 V en R/L1-S/L2, salida trifásica 220 V en U/T1 V/T2 W/T3, 0,75 kW). Se programa como el real: con el teclado (MODE recorre F, H, A, U, Frd/rEu y la selección de parámetros GG.NN; ENTER entra y guarda; ▲▼ cambian) o desde este inspector, y por Modbus (dirección GGNNH = Pr.GG.NN). El potenciómetro fija la frecuencia si 02.00 = 4. Entradas MI en modo NPN: se activan al unirlas a DCM. Relé RA/RB/RC según 03.00. Modbus por el puerto RS-485 (SG+/SG-): 2000H operar/sentido, 2001H frecuencia × 100, 2002H EF/reset; 2100H falla, 2101H estado, 2102H-2109H monitoreo (2104H corriente de salida × 10, la del motor conectado). Elija una plantilla de taller para empezar.",
   parameters: [
     ...VFD_EL_PARAMS.filter((p) => p.inspector !== false).map((p) => ({
       id: p.code,
