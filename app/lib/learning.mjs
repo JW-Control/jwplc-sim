@@ -12,16 +12,20 @@ export const PASS_GRADE = 14;
 export const LEVEL_NAMES = { 1: "Fundamentos", 2: "Secuencias y procesos", 3: "Alarmas y procesos continuos" };
 
 /** @typedef {{ id: string, title: string, level: number, brief?: { goal?: string, steps?: string[], uses?: string[], teaches?: string } }} Exercise */
-/** @typedef {{ done: Record<string, { at: number, via: "goals" | "grade", grade?: number }>, unlockAll: boolean }} Progress */
+/** @typedef {{ done: Record<string, { at: number, via: "goals" | "grade", grade?: number }>, unlockAll: boolean, lessons?: Record<string, number> }} Progress */
 
 /** @returns {Progress} */
-export const emptyProgress = () => ({ done: {}, unlockAll: false });
+export const emptyProgress = () => ({ done: {}, unlockAll: false, lessons: {} });
 
 /** Lee el progreso guardado; si falta o está dañado, empieza de cero. @param {string} file */
 export function loadProgress(file) {
   try {
     const p = JSON.parse(readFileSync(file, "utf8"));
-    return { done: p && typeof p.done === "object" && p.done ? p.done : {}, unlockAll: !!p?.unlockAll };
+    return {
+      done: p && typeof p.done === "object" && p.done ? p.done : {},
+      unlockAll: !!p?.unlockAll,
+      lessons: p && typeof p.lessons === "object" && p.lessons ? p.lessons : {},
+    };
   } catch {
     return emptyProgress();
   }
@@ -31,6 +35,17 @@ export function loadProgress(file) {
 export function saveProgress(file, p) {
   if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(p, null, 2) + "\n");
+}
+
+/**
+ * Marca una lección del curso como vista (se abrió en el simulador).
+ * @param {Progress} p @param {string} id @returns {boolean} si cambió algo
+ */
+export function markLesson(p, id) {
+  p.lessons ??= {};
+  if (p.lessons[id]) return false;
+  p.lessons[id] = Date.now();
+  return true;
 }
 
 /**
@@ -70,7 +85,17 @@ export function levels(exercises, p, { unlockAll = p.unlockAll } = {}) {
         next = e.id;
         state = "next";
       }
-      return { id: e.id, title: e.title, level, state, teaches: e.brief?.teaches ?? "", grade: p.done[e.id]?.grade ?? null };
+      return {
+        id: e.id,
+        title: e.title,
+        level,
+        state,
+        teaches: e.brief?.teaches ?? "",
+        grade: p.done[e.id]?.grade ?? null,
+        brief: e.brief ?? null,
+        intro: e.intro ?? "",
+        goals: e.goals ?? [],
+      };
     });
     const doneCount = items.filter((x) => x.state === "done").length;
     out.push({ level, name: LEVEL_NAMES[level] ?? `Nivel ${level}`, open, done: doneCount, total: items.length, items });

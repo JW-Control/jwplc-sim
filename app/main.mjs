@@ -22,7 +22,8 @@ import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
-import { levels, loadProgress, markDone, nextAfter, saveProgress } from "./lib/learning.mjs";
+import { levels, loadProgress, markDone, markLesson, nextAfter, saveProgress } from "./lib/learning.mjs";
+import { buildCourse } from "./lib/course.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -343,6 +344,23 @@ ipcMain.handle("api:catalog", () => {
 // ---------------------------------------------------------------- ejercicios (G9)
 const EXERCISES = join(import.meta.dirname, "..", "exercises");
 
+// Para la ficha del reto en Inicio: el primer párrafo del enunciado y los
+// objetivos en vivo de la rúbrica.
+function exerciseExtras(dir) {
+  let intro = "";
+  let goals = [];
+  try {
+    const md = readFileSync(join(dir, "ENUNCIADO.md"), "utf8").replace(/\r\n/g, "\n");
+    const para = md.split(/\n\s*\n/).map((x) => x.trim()).find((x) => x && !x.startsWith("#"));
+    intro = (para ?? "").replace(/^\*\*Nivel \d+\.\*\*\s*/, "").replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  } catch {}
+  try {
+    const r = JSON.parse(readFileSync(join(dir, "rubrica.json"), "utf8"));
+    goals = (r.goals ?? []).map((g) => ({ id: g.id, text: g.description ?? g.id, extra: g.extra === "merit" }));
+  } catch {}
+  return { intro, goals };
+}
+
 function listExercises() {
   if (!existsSync(EXERCISES)) return [];
   const out = [];
@@ -351,7 +369,7 @@ function listExercises() {
     if (!existsSync(f)) continue;
     try {
       const { project } = loadProject(f);
-      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1, brief: project.exercise.brief ?? null });
+      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1, brief: project.exercise.brief ?? null, ...exerciseExtras(join(EXERCISES, d)) });
     } catch {
       // un ejercicio roto no impide listar los demás
     }
@@ -373,6 +391,20 @@ ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   if (changed) saveProgress(progressFile(), p);
   const ex = listExercises();
   return { changed, done: !!p.done[id], next: nextAfter(ex, p, String(id), unlockOpts(p)), teaches: ex.find((e) => e.id === id)?.brief?.teaches ?? "" };
+});
+// Curso JWPLC Basic (lecciones del package) y lecciones ya abiertas.
+ipcMain.handle("course:list", () => {
+  try {
+    return buildCourse(listExamples());
+  } catch {
+    return [];
+  }
+});
+ipcMain.handle("learn:lessons", () => loadProgress(progressFile()).lessons ?? {});
+ipcMain.handle("learn:lessonSeen", (_e, id) => {
+  const p = loadProgress(progressFile());
+  if (markLesson(p, String(id))) saveProgress(progressFile(), p);
+  return p.lessons;
 });
 ipcMain.handle("learn:unlockAll", (_e, on) => {
   const p = loadProgress(progressFile());
@@ -403,7 +435,14 @@ function listArchs() {
     const f = join(ARCHS, d, `${d}.jwsim`);
     if (!existsSync(f)) continue;
     try {
-      out.push({ id: d, title: loadProject(f).project.name });
+      let summary = "";
+      try {
+        // VITRINA.md: la primera línea es el título; las siguientes, hasta «Recorrido», la descripción.
+        const lines = readFileSync(join(ARCHS, d, "VITRINA.md"), "utf8").split(/\r?\n/).slice(1);
+        const end = lines.findIndex((l) => /^\s*(Recorrido|Fallas)/.test(l));
+        summary = lines.slice(0, end < 0 ? 3 : end).map((l) => l.trim()).filter(Boolean).join(" ");
+      } catch {}
+      out.push({ id: d, title: loadProject(f).project.name, summary });
     } catch {
       // una arquitectura rota no impide listar las demás
     }
@@ -1436,8 +1475,8 @@ function buildMenu() {
       {
         label: "Archivo",
         submenu: [
-          { label: "Proyectos (inicio)…", click: send("startScreen") },
-          { label: "Centro de aprendizaje…", click: send("learnCenter") },
+          { label: "Inicio…", click: send("startScreen") },
+          { label: "Ruta de aprendizaje…", click: send("learnCenter") },
           { label: "Nuevo proyecto…", accelerator: "CmdOrCtrl+Alt+N", click: send("newProject") },
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
