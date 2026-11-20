@@ -168,39 +168,61 @@
             </button>
           </div>
           <div id="scene-view" class="scene-view" hidden>
-            <div class="scene-main">
-              <!-- Contenedor del lienzo (sin transformaciones CSS: ver scene.js, commitView). -->
-              <div id="scene-pan">
-              <div id="scene-grid" aria-hidden="true"></div>
-              <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
-                <defs>
-                </defs>
-                <g id="scene-root">
-                  <!-- La grilla (cuadrícula cada 20 px de la escena) la dibuja #scene-grid (scene.js, gridBg). -->
-                  <g id="scene-board"></g>
-                  <g id="scene-wires"></g>
-                  <g id="scene-devices"></g>
-                  <g id="scene-leads"></g>
-                  <g id="scene-terms"></g>
-                  <g id="scene-handles"></g>
-                  <path id="scene-rubber" d=""></path>
-                </g>
-              </svg>
+            <div class="scene-main left-collapsed">
+              <!-- Barra lateral izquierda (tipo Altium): toggle del diagrama de estados. -->
+              <nav class="side-bar side-bar-left" id="scene-left-bar" aria-label="Paneles izquierdos de la escena">
+                <button class="side-tab-left" data-left-pane="states" id="scene-tab-states"
+                  title="Diagrama de estados: la escena necesita una electroválvula con cilindro"
+                  aria-label="Diagrama de estados" aria-pressed="false" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 19V5M3 19h18"/>
+                    <path d="M5 15h3l3-7h4l3 7h3"/>
+                  </svg>
+                </button>
+              </nav>
+              <aside class="scene-left" id="scene-left">
+                <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
+              </aside>
+              <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
+                aria-label="Ancho del diagrama de estados"
+                title="Arrastrar para cambiar el ancho del diagrama (doble clic: restablecer)" tabindex="0"></div>
+              <div class="scene-stage">
+                <!-- Contenedor del lienzo (sin transformaciones CSS: ver scene.js, commitView). -->
+                <div id="scene-pan">
+                <div id="scene-grid" aria-hidden="true"></div>
+                <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
+                  <defs>
+                  </defs>
+                  <g id="scene-root">
+                    <!-- La grilla (cuadrícula cada 20 px de la escena) la dibuja #scene-grid (scene.js, gridBg). -->
+                    <g id="scene-board"></g>
+                    <g id="scene-wires"></g>
+                    <g id="scene-devices"></g>
+                    <g id="scene-leads"></g>
+                    <g id="scene-terms"></g>
+                    <g id="scene-handles"></g>
+                    <path id="scene-rubber" d=""></path>
+                  </g>
+                </svg>
+                </div>
+                <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
+                <div id="pn-view" class="pn-view" hidden>
+                  <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Circuito neumático" preserveAspectRatio="xMidYMid meet"></svg>
+                  <div class="pn-tools"><button id="pn-fit" class="icon" title="Ajustar: ver todo el circuito" aria-label="Ajustar">⤢</button>
+                    <span class="pn-legend"><i class="on"></i>con presión <i></i>sin presión</span></div>
+                </div>
+                <!-- Herramientas del lienzo: flotan en su esquina, no restan altura. -->
+                <div class="scene-float" role="toolbar" aria-label="Lienzo">
+                  <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>
+                  <button id="scene-redo" class="icon" title="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>↷</button>
+                  <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
+                  <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
+                  <button id="scene-sound" class="icon" title="Sonido (relés, contactores y buzzer)" aria-label="Sonido">🔊</button>
+                </div>
               </div>
-              <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
-              <div id="pn-view" class="pn-view" hidden>
-                <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Circuito neumático" preserveAspectRatio="xMidYMid meet"></svg>
-                <div class="pn-tools"><button id="pn-fit" class="icon" title="Ajustar: ver todo el circuito" aria-label="Ajustar">⤢</button>
-                  <span class="pn-legend"><i class="on"></i>con presión <i></i>sin presión</span></div>
-              </div>
-              <!-- Herramientas del lienzo: flotan en su esquina, no restan altura. -->
-              <div class="scene-float" role="toolbar" aria-label="Lienzo">
-                <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>
-                <button id="scene-redo" class="icon" title="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>↷</button>
-                <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
-                <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
-                <button id="scene-sound" class="icon" title="Sonido (relés, contactores y buzzer)" aria-label="Sonido">🔊</button>
-              </div>
+              <div class="scene-splitter" id="scene-side-splitter" role="separator" aria-orientation="vertical"
+                aria-label="Ancho del panel derecho"
+                title="Arrastrar para cambiar el ancho del panel derecho (doble clic: restablecer)" tabindex="0"></div>
               <aside class="scene-side" id="scene-side">
                 <!-- Como Fritzing: panel «Equipos» (las miniaturas) y, debajo, la «Ficha» (el Inspector), con un divisor entre los dos. -->
                 <section class="side-pane parts-pane" data-pane="add" hidden>

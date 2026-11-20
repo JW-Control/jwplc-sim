@@ -1928,9 +1928,140 @@ function wireSplitter() {
   });
 }
 
-// Panel lateral de la escena: pestañas Agregar y Propiedades en una barra
-// vertical a la derecha (como un IDE). Clic en la pestaña activa: se pliega.
+// Paneles laterales de la escena (tipo Altium): barra izquierda (Diagrama de
+// estados) y barra derecha (Reto, Equipos, Propiedades), ambos con ancho
+// ajustable por divisor y plegado en un clic.
 const SIDE_KEY = "jwsim.scenePane";
+const SIDE_W_KEY = "jwsim.sceneSideW";
+const LEFT_KEY = "jwsim.sceneLeftPane";
+const LEFT_W_KEY = "jwsim.sceneLeftW";
+const SCENE_MIN_STAGE = 260;
+const SCENE_LEFT_DEF = 440;
+const SCENE_LEFT_MIN = 260;
+const SCENE_LEFT_MAX = 680;
+const SCENE_SIDE_MIN = 240;
+const SCENE_SIDE_MAX = 560;
+let leftAvail = false;
+
+function scenePaneWidth(side, fallback) {
+  const raw = Number(storeGet(side === "left" ? LEFT_W_KEY : SIDE_W_KEY));
+  return raw > 0 ? raw : fallback;
+}
+function clampSideWidths() {
+  const main = document.querySelector(".scene-main");
+  if (!main) return;
+  const total = main.getBoundingClientRect().width;
+  const leftOpen = !main.classList.contains("left-collapsed");
+  const sideOpen = !main.classList.contains("side-collapsed");
+  const rails = 72 + (leftOpen ? 5 : 0) + (sideOpen ? 5 : 0);
+  const avail = total > 0 ? Math.max(0, total - rails - SCENE_MIN_STAGE) : 1200;
+
+  const sideDef = main.dataset.pane === "reto" ? 380 : 340;
+  let lw = leftOpen ? Math.max(SCENE_LEFT_MIN, Math.min(SCENE_LEFT_MAX, scenePaneWidth("left", SCENE_LEFT_DEF))) : 0;
+  let rw = sideOpen ? Math.max(SCENE_SIDE_MIN, Math.min(SCENE_SIDE_MAX, scenePaneWidth("right", sideDef))) : 0;
+
+  if (total > 0 && lw + rw > avail) {
+    const excess = lw + rw - avail;
+    if (leftOpen && sideOpen) {
+      const dl = Math.min(Math.max(0, lw - SCENE_LEFT_MIN), Math.round(excess * 0.6));
+      lw -= dl;
+      rw = Math.max(SCENE_SIDE_MIN, rw - (excess - dl));
+      if (lw + rw > avail) lw = Math.max(180, avail - rw);
+    } else if (leftOpen) {
+      lw = Math.max(180, avail);
+    } else if (sideOpen) {
+      rw = Math.max(180, avail);
+    }
+  }
+  if (leftOpen) main.style.setProperty("--scene-left-w", `${Math.round(lw)}px`);
+  else main.style.removeProperty("--scene-left-w");
+  if (sideOpen && storeGet(SIDE_W_KEY)) main.style.setProperty("--scene-side-w", `${Math.round(rw)}px`);
+  else if (sideOpen && total > 0 && rw < sideDef) main.style.setProperty("--scene-side-w", `${Math.round(rw)}px`);
+  else main.style.removeProperty("--scene-side-w");
+}
+function setSideWidth(side, px, save = true) {
+  const key = side === "left" ? LEFT_W_KEY : SIDE_W_KEY;
+  if (px === null) {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+    clampSideWidths();
+    window.JwsimStateDiag?.resize?.();
+    return;
+  }
+  const min = side === "left" ? SCENE_LEFT_MIN : SCENE_SIDE_MIN;
+  const max = side === "left" ? SCENE_LEFT_MAX : SCENE_SIDE_MAX;
+  const w = Math.round(Math.max(min, Math.min(max, px)));
+  if (save) storeSet(key, String(w));
+  const main = document.querySelector(".scene-main");
+  main?.style.setProperty(side === "left" ? "--scene-left-w" : "--scene-side-w", `${w}px`);
+  clampSideWidths();
+  window.JwsimStateDiag?.resize?.();
+}
+function wireSceneSplitter(id, side) {
+  const bar = $(id);
+  const main = document.querySelector(".scene-main");
+  if (!bar || !main) return;
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add("dragging");
+    document.body.classList.add("resizing");
+    const widthAt = (ev) => {
+      const r = main.getBoundingClientRect();
+      return side === "left" ? ev.clientX - r.left - 36 : r.right - 36 - ev.clientX;
+    };
+    const move = (ev) => setSideWidth(side, widthAt(ev), false);
+    const up = (ev) => {
+      bar.removeEventListener("pointermove", move);
+      bar.removeEventListener("pointerup", up);
+      bar.removeEventListener("pointercancel", up);
+      bar.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      setSideWidth(side, widthAt(ev), true);
+    };
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", up);
+    bar.addEventListener("pointercancel", up);
+  });
+  bar.addEventListener("dblclick", () => setSideWidth(side, null));
+  bar.addEventListener("keydown", (e) => {
+    const dir = e.key === "ArrowLeft" ? -24 : e.key === "ArrowRight" ? 24 : 0;
+    if (!dir) return;
+    e.preventDefault();
+    const el = $(side === "left" ? "scene-left" : "scene-side");
+    const cur = el?.getBoundingClientRect().width ?? (side === "left" ? SCENE_LEFT_DEF : 340);
+    setSideWidth(side, cur + (side === "left" ? dir : -dir), true);
+  });
+}
+function setLeftPane(pane, save = true) {
+  const main = document.querySelector(".scene-main");
+  const open = leftAvail ? pane : null;
+  main.classList.toggle("left-collapsed", !open);
+  for (const t of document.querySelectorAll(".side-tab-left")) {
+    const on = t.dataset.leftPane === open;
+    t.classList.toggle("active", on);
+    t.setAttribute("aria-pressed", String(on));
+  }
+  for (const p of document.querySelectorAll(".left-pane")) p.hidden = p.dataset.leftPane !== open;
+  main.dataset.leftPane = open ?? "";
+  if (save) storeSet(LEFT_KEY, pane || "none");
+  clampSideWidths();
+  window.JwsimStateDiag?.setVisible?.(!!open);
+}
+function setLeftAvailability(hasPneu) {
+  leftAvail = !!hasPneu;
+  const btn = $("scene-tab-states");
+  if (btn) {
+    btn.disabled = !leftAvail;
+    btn.title = leftAvail
+      ? "Diagrama de estados en vivo (FluidSIM): cilindros, bobinas, sensores y presión"
+      : "Diagrama de estados: la escena necesita una electroválvula con cilindro";
+  }
+  const saved = storeGet(LEFT_KEY);
+  setLeftPane(leftAvail && saved === "states" ? "states" : null, false);
+}
 function setScenePane(pane, save = true) {
   const main = document.querySelector(".scene-main");
   main.classList.toggle("side-collapsed", !pane);
@@ -1942,11 +2073,19 @@ function setScenePane(pane, save = true) {
   for (const p of document.querySelectorAll(".side-pane")) p.hidden = p.dataset.pane !== pane;
   main.dataset.pane = pane ?? "";
   if (save) storeSet(SIDE_KEY, pane || "none");
+  clampSideWidths();
   if (pane === "add") $("scene-add-filter").focus();
 }
 function wireSceneSide() {
   const saved = storeGet(SIDE_KEY);
   setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  setLeftAvailability(false);
+  wireSceneSplitter("scene-left-splitter", "left");
+  wireSceneSplitter("scene-side-splitter", "right");
+  window.addEventListener("resize", () => {
+    clampSideWidths();
+    window.JwsimStateDiag?.resize?.();
+  });
   // Ir al reto: la vista del esquema con su pestaña abierta.
   window.JwsimShowReto = () => {
     window.JwsimScene?.setView("scene");
@@ -1954,9 +2093,19 @@ function wireSceneSide() {
   };
   for (const t of document.querySelectorAll(".side-tab"))
     t.addEventListener("click", () => setScenePane(document.querySelector(".scene-main").dataset.pane === t.dataset.pane ? null : t.dataset.pane));
+  for (const t of document.querySelectorAll(".side-tab-left"))
+    t.addEventListener("click", () => {
+      if (t.disabled) return;
+      setLeftPane(document.querySelector(".scene-main").dataset.leftPane === t.dataset.leftPane ? null : t.dataset.leftPane, true);
+    });
   // Al seleccionar un equipo o un cable con el panel abierto, se ven sus propiedades.
   // Con el reto abierto no se cambia: el alumno opera la escena mirando los objetivos.
-  window.JwsimScenePane = { showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false) };
+  window.JwsimScenePane = {
+    showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false),
+    setLeftAvailability,
+    setLeftPane,
+    isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
+  };
 }
 
 // Panel inferior: alto ajustable con su divisor y plegable a una barra con

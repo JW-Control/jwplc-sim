@@ -1284,25 +1284,71 @@ button.io.on {
   flex: 1;
   min-height: 0;
   /* Durante el zoom o el arrastre de la vista el SVG se escala con CSS:
-     no debe pintar fuera de su zona ni sobre el panel lateral. */
+     no debe pintar fuera de su zona ni sobre los paneles laterales. */
   overflow: hidden;
   /* Fondo y grilla del lienzo: quedan fijos aunque el SVG se mueva con CSS. */
   background-color: #101317;
   background-repeat: repeat;
+  --left-col: var(--scene-left-w, 440px);
+  --left-spl: 5px;
+  --side-spl: 5px;
+  --side-col: var(--scene-side-w, 340px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px 36px;
+  grid-template-columns: 36px var(--left-col) var(--left-spl) minmax(0, 1fr) var(--side-spl) var(--side-col) 36px;
 }
-/* Panel lateral plegado: queda solo la barra de pestañas. */
-.scene-main.side-collapsed {
-  grid-template-columns: minmax(0, 1fr) 36px;
+/* Panel lateral izquierdo plegado: queda solo la barra de pestañas izquierda. */
+.scene-main.left-collapsed {
+  --left-col: 0px;
+  --left-spl: 0px;
 }
-.scene-main.side-collapsed .scene-side {
+.scene-main.left-collapsed .scene-left,
+.scene-main.left-collapsed #scene-left-splitter {
   display: none;
 }
-.side-bar {
+/* Panel lateral derecho plegado: queda solo la barra de pestañas derecha. */
+.scene-main.side-collapsed {
+  --side-spl: 0px;
+  --side-col: 0px;
+}
+.scene-main.side-collapsed .scene-side,
+.scene-main.side-collapsed #scene-side-splitter {
+  display: none;
+}
+.scene-stage {
+  grid-column: 4;
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  overflow: hidden;
+}
+.scene-splitter {
+  grid-row: 1;
   position: relative;
   z-index: 2;
-  background: var(--panel, #15181c);
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.12s;
+  touch-action: none;
+}
+#scene-left-splitter {
+  grid-column: 3;
+}
+#scene-side-splitter {
+  grid-column: 5;
+}
+.scene-splitter:hover,
+.scene-splitter.dragging,
+.scene-splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+.side-bar {
+  grid-column: 7;
+  grid-row: 1;
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1311,7 +1357,35 @@ button.io.on {
   border-left: 1px solid var(--border);
   background: var(--panel-2);
 }
-.side-tab {
+.side-bar.side-bar-left {
+  grid-column: 1;
+  border-left: 0;
+  border-right: 1px solid var(--border);
+}
+.scene-left {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel, #15181c);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.left-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.left-pane[hidden] {
+  display: none;
+}
+.side-tab,
+.side-tab-left {
   width: 30px;
   height: 30px;
   padding: 5px;
@@ -1320,18 +1394,22 @@ button.io.on {
   background: transparent;
   color: var(--muted);
 }
-.side-tab svg {
+.side-tab svg,
+.side-tab-left svg {
   width: 100%;
   height: 100%;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.side-tab:hover {
+.side-tab:hover:not(:disabled),
+.side-tab-left:hover:not(:disabled) {
   color: var(--text);
 }
-.side-tab.active {
+.side-tab.active,
+.side-tab-left.active {
   color: #fff;
   border-color: var(--accent);
   background: #24364d;
@@ -1699,10 +1777,12 @@ button.io.on {
   cursor: grab;
 }
 .scene-side {
+  grid-column: 6;
+  grid-row: 1;
   position: relative;
   z-index: 2;
+  min-width: 0;
   background: var(--panel, #15181c);
-  border-left: 1px solid var(--border);
   overflow: auto;
   padding: 8px 10px;
   font-size: 12px;
@@ -2886,7 +2966,7 @@ body[data-tab="plant"] .view3d-empty {
 .learn { overflow-x: hidden; }
 
 /* ---- Reto en el panel derecho del esquema */
-.scene-main[data-pane="reto"]:not(.side-collapsed) { grid-template-columns: minmax(0, 1fr) 380px 36px; }
+.scene-main[data-pane="reto"]:not(.side-collapsed) { --side-col: var(--scene-side-w, 380px); }
 .reto-pane .ex-brief { margin: 0 0 10px; padding: 10px; font-size: 12px; }
 .reto-pane .ex-brief.collapsed { white-space: normal; }
 .reto-pane .brief-sec p { font-size: 13px; }
