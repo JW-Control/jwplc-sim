@@ -2995,6 +2995,7 @@
     load(sc) {
       S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
       normalizeCables();
+      S.dirty = false;
       S.undoStack = [];
       S.redoStack = [];
       updateUndoRedoButtons();
@@ -3025,6 +3026,10 @@
     specForSave() {
       const sc = cleanSpec();
       return sc.devices.length > 1 || sc.wiring.length ? sc : { devices: [], wiring: [] };
+    },
+    isDirty: () => !!S.dirty,
+    markSaved: () => {
+      S.dirty = false;
     },
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.

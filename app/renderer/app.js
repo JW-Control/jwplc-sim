@@ -597,7 +597,9 @@ function loadSketch(sketch) {
   if (state.sim === "error") setStatus("idle", "Detenido");
   $("sb-build").textContent = "";
   state.project = null;
+  state.pendingProjectReload = null;
   state.pendingInputs = null;
+  api.watchProject?.(null);
   showProjectStatus();
   for (const m of state.models.values()) m.dispose();
   state.models.clear();
@@ -1373,9 +1375,10 @@ function speedFromFactor(f) {
 }
 
 function showProjectStatus() {
+  const el = $("sb-project");
   const p = state.project;
   if (!p) {
-    $("sb-project").textContent = "";
+    el.textContent = "";
     return;
   }
   const name = (path) => path.split(/[\\/]/).pop();
@@ -1385,13 +1388,29 @@ function showProjectStatus() {
     const missing = p.missing.some((m) => m.link === k);
     parts.push(`${label}: ${name(p.links[k])}${missing ? " (no encontrado)" : ""}`);
   }
-  $("sb-project").textContent = parts.join(" · ");
+  el.textContent = parts.join(" · ");
+  if (state.pendingProjectReload) {
+    const btn = document.createElement("button");
+    btn.id = "sb-project-reload";
+    btn.type = "button";
+    btn.textContent = "Recargar .jwsim";
+    btn.title = "El archivo .jwsim cambió en disco: haz clic para recargarlo";
+    btn.style.marginLeft = "8px";
+    btn.addEventListener("click", () => {
+      const next = state.pendingProjectReload;
+      if (!next) return;
+      applyProject(next, { keepSketch: next.sketch?.dir === state.sketch?.dir });
+      consoleWrite(`[jwsim] proyecto recargado desde disco: ${next.file}\n`, "sys");
+    });
+    el.appendChild(btn);
+  }
 }
 
-function applyProject(res) {
+function applyProject(res, { keepSketch = false } = {}) {
   if (!res) return;
-  loadSketch(res.sketch);
+  if (!keepSketch) loadSketch(res.sketch);
   state.project = res;
+  state.pendingProjectReload = null;
   const sim = res.project.simulation ?? {};
   if (typeof sim.realtimeFactor === "number") setSpeed(speedFromFactor(sim.realtimeFactor));
   const scene = res.project.scene ?? {};
@@ -1399,6 +1418,7 @@ function applyProject(res) {
   state.pendingInputs = scene.inputs ?? null;
   for (const [signal, v] of Object.entries(state.pendingInputs ?? {})) renderSignal(signal, !!v);
   window.JwsimScene?.load(scene);
+  api.watchProject?.(res.file);
   showProjectStatus();
   showExercise(res.file);
   if (res.migratedFrom !== null) {
@@ -1442,8 +1462,28 @@ async function saveProjectFile() {
   });
   if (!res) return;
   state.project = { links: {}, missing: [], ...state.project, file: res.file, project: res.project };
+  state.pendingProjectReload = null;
+  window.JwsimScene?.markSaved?.();
+  api.watchProject?.(res.file);
   showProjectStatus();
   consoleWrite(`[jwsim] proyecto guardado: ${res.file}\n`, "sys");
+}
+
+function onExternalProjectChange({ file, res }) {
+  if (!state.project?.file || !res) return;
+  const norm = (p) => String(p).replace(/\\/g, "/").toLowerCase();
+  if (norm(file) !== norm(state.project.file)) return;
+  const codeDirty = [...state.models].some(([name, model]) => model.getValue() !== state.saved.get(name));
+  const sceneDirty = !!window.JwsimScene?.isDirty?.();
+  const running = state.sim === "running" || state.sim === "paused" || state.sim === "building";
+  if (!codeDirty && !sceneDirty && !running) {
+    applyProject(res, { keepSketch: res.sketch?.dir === state.sketch?.dir });
+    consoleWrite(`[jwsim] proyecto recargado desde disco: ${res.file}\n`, "sys");
+    return;
+  }
+  state.pendingProjectReload = res;
+  showProjectStatus();
+  consoleWrite(`[jwsim] el proyecto cambió en disco; haz clic en «Recargar .jwsim» para aplicar sin perder cambios locales\n`, "sys");
 }
 
 // Edición externa (Arduino IDE u otro editor): se recarga el archivo y, si
@@ -2262,6 +2302,7 @@ function wireUi() {
   paintBuzSound();
   for (const b of document.querySelectorAll(".mode .seg[data-mode]")) b.addEventListener("click", () => setInputMode(b.dataset.mode));
   api.onFileChanged(onExternalChange);
+  api.onProjectChanged?.(onExternalProjectChange);
   api.onOpenTarget(openFromEditor);
   $("btn-dbg-continue").addEventListener("click", () => dbgCommand("continue"));
   $("btn-dbg-next").addEventListener("click", () => dbgCommand("next"));

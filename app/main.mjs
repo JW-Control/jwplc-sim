@@ -117,6 +117,7 @@ let debug = null; // DebugSession adjunta al runner actual
 let debugAttaching = null;
 const breakpoints = new Map(); // ruta absoluta -> líneas
 let watcher = null;
+let projectWatcher = null;
 // Contenido que la propia app escribió: un evento de fs.watch con ese mismo
 // contenido no es una edición externa.
 const ownWrites = new Map();
@@ -691,7 +692,41 @@ ipcMain.handle("project:save", async (_e, { file, project, sketchDir, simulation
     simulation,
     scene,
   });
+  const abs = resolve(target);
+  if (existsSync(abs)) ownWrites.set(abs, readFileSync(abs, "utf8"));
   return { file: target, project: saved };
+});
+
+// Vigila el archivo .jwsim abierto: permite reflejar ediciones hechas por
+// agentes o editores externos sin perder trabajo manual del usuario.
+ipcMain.handle("project:watch", (_e, file) => {
+  projectWatcher?.close();
+  projectWatcher = null;
+  if (!file) return false;
+  const abs = resolve(file);
+  if (existsSync(abs)) ownWrites.set(abs, readFileSync(abs, "utf8"));
+  const dir = dirname(abs);
+  const name = basename(abs).toLowerCase();
+  let timer = null;
+  projectWatcher = watch(dir, (_event, rawName) => {
+    if (rawName && basename(String(rawName)).toLowerCase() !== name) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!existsSync(abs) || !statSync(abs).isFile()) return;
+      const content = readFileSync(abs, "utf8");
+      if (ownWrites.get(abs) === content) return;
+      let res;
+      try {
+        res = openProject(abs);
+      } catch {
+        // Ignorar JSON truncado temporalmente a mitad de escritura externa.
+        return;
+      }
+      ownWrites.set(abs, content);
+      forward("project:changed", { file: abs, res, at: Date.now() });
+    }, 80);
+  });
+  return true;
 });
 
 // ---------------------------------------------------------------- recarga externa
