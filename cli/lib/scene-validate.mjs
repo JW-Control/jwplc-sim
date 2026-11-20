@@ -7,7 +7,7 @@
 import { canMount, mountPos } from "../../scene/mount.mjs";
 import { migrateScene, Scene } from "../../scene/scene.mjs";
 import { validate as validateSchema } from "./project.mjs";
-import { buildRegistry, describeDevice, getDeviceLayout } from "./scene-spec.mjs";
+import { buildRegistry, describeDevice, discoverOutputs, getDeviceLayout } from "./scene-spec.mjs";
 
 const GRID = 20;
 
@@ -280,9 +280,11 @@ export function validateSceneProject(project, { fast = false, strict = false, re
 
   // 5. Enlaces de Planta 3D / sensores / proceso
   const outputCache = new Map();
-  const outputsOf = (type) => {
-    if (!outputCache.has(type)) outputCache.set(type, describeDevice(type, { registry })?.outputs ?? []);
-    return outputCache.get(type);
+  const outputsOf = (targetId, targetDef) => {
+    const params = resolvedParamsById.get(targetId) ?? {};
+    const key = `${targetDef.type}:${JSON.stringify(params)}`;
+    if (!outputCache.has(key)) outputCache.set(key, discoverOutputs(targetDef, registry, params));
+    return outputCache.get(key);
   };
   devices.forEach((d, idx) => {
     const def = defById.get(d.id);
@@ -310,7 +312,7 @@ export function validateSceneProject(project, { fast = false, strict = false, re
       if (dot <= 0 || !outName) {
         sceneCanRun = false;
         const targetDef = defById.get(targetId);
-        const outs = targetDef ? outputsOf(targetDef.type) : [];
+        const outs = targetDef ? outputsOf(targetId, targetDef) : [];
         const prefOut = (l.param === "motor" && outs.includes("speed")) ? "speed" : outs[0];
         err(
           `/scene/devices/${idx}/params`,
@@ -321,7 +323,7 @@ export function validateSceneProject(project, { fast = false, strict = false, re
       }
       if (outName) {
         const targetDef = defById.get(targetId);
-        const outs = targetDef ? outputsOf(targetDef.type) : [];
+        const outs = targetDef ? outputsOf(targetId, targetDef) : [];
         if (outs.length && !outs.includes(outName)) {
           const guess = nearest(outName, outs);
           warn(

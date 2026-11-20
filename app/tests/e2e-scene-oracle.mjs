@@ -24,7 +24,7 @@ const proj = normalizeProject({
       { id: "PS1", type: "power-24vdc" },
       { id: "plc", type: "jwplc-basic" },
       { id: "M1", type: "motor-3ph" },
-      { id: "CV1", type: "conveyor", params: { motor: "M1" } },
+      { id: "CV1", type: "conveyor", params: { motor: "M1.speed" } },
     ],
     wiring: ["PS1.+V1 -> plc.24VDC [rojo]", "PS1.-V1 -> plc.M0 [azul]"],
   },
@@ -38,6 +38,21 @@ assert.deepEqual(res.warnings, []);
 assert.equal(res.routes.every((r) => r.routed), true);
 assert.ok(existsSync(res.screenshots.schematic) && statSync(res.screenshots.schematic).size > 5000);
 assert.ok(existsSync(res.screenshots.plant3d) && statSync(res.screenshots.plant3d).size > 5000);
+
+// 2. Escena rota (enlace inexistente en Scene real) debe marcar ok=false en previewSceneProject
+const badFile = join(projDir, "bad.jwsim");
+const badProj = normalizeProject({
+  name: "OracleBad",
+  program: { kind: "arduino", sketch: "./s/s.ino" },
+  scene: {
+    devices: [{ id: "M1", type: "motor-3ph" }, { id: "CV1", type: "conveyor", params: { motor: "M1" } }],
+    wiring: [],
+  },
+});
+writeFileSync(badFile, JSON.stringify(badProj, null, 2) + "\n", "utf8");
+const badRes = await previewSceneProject(badFile, { outDir: join(outDir, "bad"), view: "2d" });
+assert.equal(badRes.ok, false, "un error en #scene-diag .bad debe hacer fallar scene preview");
+assert.ok(badRes.sceneErrors.length >= 1);
 
 // 2. Prueba vía jwsim-cli scene preview --json
 const cliOut = join(outDir, "cli");

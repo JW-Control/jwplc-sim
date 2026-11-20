@@ -132,7 +132,7 @@ export async function runSceneCommand({ opts, CliError, EXIT, emit }) {
     const proj = readJsonFile(arg, CliError, EXIT);
     const v = validateSceneProject(proj, { fast: !!opts.fast, strict: !!opts.strict });
     if (!opts.json) printValidationText(v);
-    emit({ ok: v.ok, subcommand: sub, file: resolve(arg), ...v });
+    emit({ ok: v.ok, subcommand: sub, file: resolve(arg), ...v }, v.ok ? EXIT.OK : EXIT.FAIL);
     return v.ok ? EXIT.OK : EXIT.FAIL;
   }
 
@@ -144,7 +144,7 @@ export async function runSceneCommand({ opts, CliError, EXIT, emit }) {
     const validation = validateSceneProject(project, { strict: !!opts.strict });
     if (!validation.ok) {
       if (!opts.json) printValidationText(validation);
-      emit({ ok: false, subcommand: sub, validation });
+      emit({ ok: false, subcommand: sub, validation }, EXIT.FAIL);
       return EXIT.FAIL;
     }
     const outDir = resolve(opts.outDir);
@@ -197,7 +197,7 @@ export async function runSceneCommand({ opts, CliError, EXIT, emit }) {
       for (const [k, p] of Object.entries(res.screenshots)) console.log(`[jwsim-cli] captura ${k}: ${p}`);
       console.log(`[jwsim-cli] preview ${res.ok ? "OK" : "CON AVISOS"}`);
     }
-    emit({ subcommand: sub, ...res });
+    emit({ subcommand: sub, ...res }, res.ok ? EXIT.OK : EXIT.FAIL);
     return res.ok ? EXIT.OK : EXIT.FAIL;
   }
 

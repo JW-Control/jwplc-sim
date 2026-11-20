@@ -84,6 +84,12 @@ test("scene validate --strict falla con código 1 cuando hay advertencias", () =
       },
     }),
   );
-  assert.equal(runCli("scene", "validate", f, "--json").status, 0);
-  assert.equal(runCli("scene", "validate", f, "--strict", "--json").status, 1);
+  const okRun = runCli("scene", "validate", f, "--json");
+  assert.equal(okRun.status, 0);
+  assert.equal(JSON.parse(okRun.stdout).exit_code, 0);
+  const reportFile = join(dir, "val-report.json");
+  const strictRun = runCli("scene", "validate", f, "--strict", "--json", "--report", reportFile);
+  assert.equal(strictRun.status, 1);
+  assert.equal(JSON.parse(strictRun.stdout).exit_code, 1);
+  assert.equal(JSON.parse(readFileSync(reportFile, "utf8")).exit_code, 1);
 });

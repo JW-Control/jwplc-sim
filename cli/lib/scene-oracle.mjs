@@ -54,7 +54,15 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
     await win.waitForSelector(".monaco-editor .view-lines", { timeout: 45000 });
     await win.waitForFunction(() => window.JwsimSymbols && window.JwsimSymbols.templates.size > 0, null, { timeout: 30000 });
     await win.evaluate((f) => window.jwsimTest.openProjectFile(f), absFile);
-    await win.waitForTimeout(400);
+    await win.waitForFunction(
+      () => {
+        const spec = window.jwsimTest?.scene?.spec?.();
+        const devs = spec?.devices?.length ?? 0;
+        return document.querySelectorAll("#scene-devices .dev").length >= devs;
+      },
+      null,
+      { timeout: 15000 },
+    ).catch(() => {});
 
     const screenshots = {};
     if (view === "2d" || view === "both") {
@@ -70,6 +78,7 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
     const diag = await win.evaluate(() => ({
       warnings: [...(window.JwsimSymbols?.warnings ?? [])],
       routes: window.jwsimTest?.scene?.routes?.() ?? [],
+      sceneErrors: [...document.querySelectorAll("#scene-diag li.bad")].map((li) => li.textContent.trim()).filter(Boolean),
     }));
 
     if (view === "3d" || view === "both") {
@@ -89,11 +98,13 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
     let smoke;
     if (Number.isFinite(smokeMs) && smokeMs > 0) {
       await win.click("#btn-run");
+      let sawTransition = false;
       const t0 = Date.now();
       while (Date.now() - t0 < 60000) {
         const st = await win.evaluate(() => window.jwsimTest.status());
-        if (st !== "building") break;
-        await win.waitForTimeout(150);
+        if (st === "building") sawTransition = true;
+        else if (st === "running" || st === "paused" || st === "error" || (sawTransition && st !== "building")) break;
+        await win.waitForTimeout(100);
       }
       await win.waitForTimeout(smokeMs);
       const finalStatus = await win.evaluate(() => window.jwsimTest.status());
@@ -105,11 +116,14 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
     }
 
     const allWarnings = [...new Set([...diag.warnings, ...consoleWarnings])];
-    const ok = allWarnings.length === 0 && (!smoke || smoke.ran);
+    const unrouted = diag.routes.filter((r) => r.routed === false);
+    const ok = allWarnings.length === 0 && diag.sceneErrors.length === 0 && unrouted.length === 0 && (!smoke || smoke.ran);
     return {
       ok,
       file: absFile,
       warnings: allWarnings,
+      sceneErrors: diag.sceneErrors,
+      unrouted,
       routes: diag.routes,
       screenshots,
       ...(smoke ? { smoke } : {}),

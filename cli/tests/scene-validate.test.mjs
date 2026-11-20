@@ -78,3 +78,11 @@ test("detecta cortocircuito en t=0 y promueve warnings con --strict", () => {
   assert.ok(normal.warnings.length >= 1);
   assert.equal(strict.ok, false);
 });
+
+test("valida salidas dependientes de parámetros (compressor -> solenoid-valve.moving) sin falsos avisos en --strict", async () => {
+  const { readFileSync } = await import("node:fs");
+  const ex10 = JSON.parse(readFileSync("exercises/10-secuencia-neumatica/10-secuencia-neumatica.jwsim", "utf8"));
+  const res = validateSceneProject(ex10, { strict: true });
+  assert.equal(res.ok, true, JSON.stringify({ errors: res.errors, warnings: res.warnings }));
+  assert.equal(res.warnings.length, 0);
+});

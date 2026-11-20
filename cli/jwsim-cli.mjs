@@ -165,8 +165,8 @@ async function main() {
   const opts = parse(rest);
   let report;
   let code = EXIT.OK;
-  const emit = (obj) => {
-    report = { command: cmd, ...obj, exit_code: code };
+  const emit = (obj, exitCode = code) => {
+    report = { command: cmd, ...obj, exit_code: exitCode };
     if (opts.report) {
       mkdirSync(dirname(resolve(opts.report)), { recursive: true });
       writeFileSync(resolve(opts.report), JSON.stringify(report, null, 2) + "\n");

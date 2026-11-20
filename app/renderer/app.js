@@ -1399,14 +1399,14 @@ function showProjectStatus() {
     btn.addEventListener("click", () => {
       const next = state.pendingProjectReload;
       if (!next) return;
-      applyProject(next, { keepSketch: next.sketch?.dir === state.sketch?.dir });
+      applyProject(next, { keepSketch: next.sketch?.dir === state.sketch?.dir, preserveView: true });
       consoleWrite(`[jwsim] proyecto recargado desde disco: ${next.file}\n`, "sys");
     });
     el.appendChild(btn);
   }
 }
 
-function applyProject(res, { keepSketch = false } = {}) {
+function applyProject(res, { keepSketch = false, preserveView = false } = {}) {
   if (!res) return;
   if (!keepSketch) loadSketch(res.sketch);
   state.project = res;
@@ -1417,7 +1417,7 @@ function applyProject(res, { keepSketch = false } = {}) {
   if (scene.inputMode) setInputMode(scene.inputMode);
   state.pendingInputs = scene.inputs ?? null;
   for (const [signal, v] of Object.entries(state.pendingInputs ?? {})) renderSignal(signal, !!v);
-  window.JwsimScene?.load(scene);
+  window.JwsimScene?.load(scene, { preserveView });
   api.watchProject?.(res.file);
   showProjectStatus();
   showExercise(res.file);
@@ -1477,7 +1477,7 @@ function onExternalProjectChange({ file, res }) {
   const sceneDirty = !!window.JwsimScene?.isDirty?.();
   const running = state.sim === "running" || state.sim === "paused" || state.sim === "building";
   if (!codeDirty && !sceneDirty && !running) {
-    applyProject(res, { keepSketch: res.sketch?.dir === state.sketch?.dir });
+    applyProject(res, { keepSketch: res.sketch?.dir === state.sketch?.dir, preserveView: true });
     consoleWrite(`[jwsim] proyecto recargado desde disco: ${res.file}\n`, "sys");
     return;
   }

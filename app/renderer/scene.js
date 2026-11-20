@@ -2992,7 +2992,7 @@
 
   const Scene = {
     // Escena del proyecto (campo "scene" del .jwsim).
-    load(sc) {
+    load(sc, { preserveView = false } = {}) {
       S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
       normalizeCables();
       S.dirty = false;
@@ -3014,8 +3014,13 @@
       S.rendered.clear();
       window.JwsimPneu?.onSpec();
       window.JwsimStateDiag?.onSpec?.({ resetProject: true });
-      if (S.spec.devices.length) setView("scene");
-      else if (S.view === "scene") setView("scene");
+      if (!preserveView) {
+        if (S.spec.devices.length) setView("scene");
+        else if (S.view === "scene") setView("scene");
+      } else {
+        if (S.view === "scene") render(true);
+        else if (S.view === "3d") window.Jwsim3D?.show(true);
+      }
       if (!S.running) analyze();
     },
     // Para correr: solo si hay algo más que la placa sola.

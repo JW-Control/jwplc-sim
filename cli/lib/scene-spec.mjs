@@ -88,7 +88,7 @@ export const PREFIX_BY_TYPE = {
   door: "P",
 };
 
-const LINK_PARAM_RE = /^(source|motor|bomba|bombas|cylinder|agua|valvula|extraccion|cisterna)$/i;
+const LINK_PARAM_RE = /^(source|motor|bomba|bombas|cylinder|agua|valvula|extraccion|cisterna|air|consumers|servicio|retrolavado)$/i;
 const snap = (v) => Math.round(v / GRID) * GRID;
 const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -296,31 +296,38 @@ function variantsFor(def, registry) {
 
 /**
  * Descubre las salidas (`outputs`) reales del dispositivo sin fallar si sus
- * parámetros por defecto enlazan a equipos aún ausentes (`M1`, `M1, M2`, etc.).
+ * parámetros enlazan a equipos aún ausentes (`M1`, `CP1`, `Y1`, etc.).
  */
-function discoverOutputs(def, registry) {
+export function discoverOutputs(def, registry = buildRegistry(), givenParams = {}) {
+  let params = {};
   try {
-    const params = resolveParams(def);
+    params = resolveParams(def, givenParams);
+  } catch {
+    params = { ...givenParams };
+  }
+  try {
     const links = def.links?.(params) ?? [];
     const reads = (def.reads?.(params) ?? []).filter((r) => r.source);
     const extraDevices = new Map();
     for (const l of [...links, ...reads]) {
       const targetId = String(l.source).split(".")[0];
       if (!targetId || targetId === "D1" || extraDevices.has(targetId)) continue;
-      extraDevices.set(targetId, {
-        id: targetId,
-        type: targetId.startsWith("Y") ? "jwsim/solenoid-valve" : "jwsim/motor",
-      });
+      const stubType = targetId.startsWith("Y")
+        ? "jwsim/solenoid-valve"
+        : /^C(P)?\d*$/i.test(targetId)
+          ? "jwsim/compressor"
+          : "jwsim/motor";
+      extraDevices.set(targetId, { id: targetId, type: stubType });
     }
     const sc = new Scene(
-      { devices: [{ id: "D1", type: def.type }, ...extraDevices.values()], wiring: [] },
+      { devices: [{ id: "D1", type: def.type, params }, ...extraDevices.values()], wiring: [] },
       { registry },
     );
     const d1 = sc.snapshot().devices.find((d) => d.id === "D1");
     if (d1) return Object.keys(d1.outputs ?? {});
   } catch {}
   try {
-    const inst = def.create({ id: "D1", params: resolveParams(def) });
+    const inst = def.create({ id: "D1", params });
     const step = inst.update?.(0n, { loads: {}, actions: {}, signals: {}, values: {}, wired: new Set() });
     return Object.keys(step?.outputs ?? {});
   } catch {

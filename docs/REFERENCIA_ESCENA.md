@@ -75,8 +75,8 @@ Total de tipos integrados: **65** · Grilla obligatoria: **20 px**.
 
 | Tipo | Prefijo | Tamaño | Bornes | Variantes / Enlaces | Descripción corta |
 |---|---|---|---|---|---|
-| `jwsim/solenoid-valve` | `Y` | 520×220 | `A1`, `A2` | salidas: energized, position, extended, retracted | Electroválvula 5/2 monoestable (retorno por resorte) con cilindro de doble efecto. position va de 0 (adentro) a 1 (afuera) en el tiempo d... |
-| `jwsim/solenoid-valve-2` | `Y` | 520×220 | `A+1`, `A+2`, `A-1`, `A-2` | salidas: coilPlus, coilMinus, spoolA, position, extended, retracted | Electroválvula 5/2 de doble solenoide (con memoria) y cilindro de doble efecto. Un pulso en A+ (A+1/A+2) pasa la corredera a P→A y el cil... |
+| `jwsim/solenoid-valve` | `Y` | 520×220 | `A1`, `A2` | enlaces: air<br>salidas: energized, position, extended, retracted | Electroválvula 5/2 monoestable (retorno por resorte) con cilindro de doble efecto. position va de 0 (adentro) a 1 (afuera) en el tiempo d... |
+| `jwsim/solenoid-valve-2` | `Y` | 520×220 | `A+1`, `A+2`, `A-1`, `A-2` | enlaces: air<br>salidas: coilPlus, coilMinus, spoolA, position, extended, retracted | Electroválvula 5/2 de doble solenoide (con memoria) y cilindro de doble efecto. Un pulso en A+ (A+1/A+2) pasa la corredera a P→A y el cil... |
 | `jwsim/chlorinator` | `CL` | 200×300 | `A1`, `A2` | enlaces: agua<br>salidas: cloro, dosificando, marcha, tanque, sinCaudal | Bomba dosificadora de diafragma con tanque de hipoclorito de sodio, bobina de 24 VDC en A1-A2 (marcha mientras está energizada). Inyecta ... |
 | `jwsim/motor` | `M` | 220×200 | `U1`, `U2` | salidas: energized, speed, running, direction | Motor monofásico de 230 VAC o de 24 VDC (U1-U2). speed va de -1 a 1 con rampa de arranque y de parada; en CC el sentido sigue a la polari... |
 | `jwsim/motor-1ph` | `M` | 320×260 | `U1`, `U2`, `PE` | var: por defecto, bornera=4 cables<br>salidas: energized, bloqueado, corriente, speed, running, direction… | Motor monofásico de 220 V con capacitor de arranque (1 HP, 1720 rpm): bobinado principal U1-U2 y auxiliar Z1-Z2 con el capacitor. El auxi... |
@@ -89,7 +89,7 @@ Total de tipos integrados: **65** · Grilla obligatoria: **20 px**.
 
 | Tipo | Prefijo | Tamaño | Bornes | Variantes / Enlaces | Descripción corta |
 |---|---|---|---|---|---|
-| `jwsim/compressor` | `C` | 360×240 | `L`, `N` | salidas: pressure, running, powered, consumers | Compresor de pistón con tanque y presostato: arranca cuando la presión baja a la de arranque y para al llegar a la de corte. Los cilindro... |
+| `jwsim/compressor` | `C` | 360×240 | `L`, `N` | enlaces: consumers<br>salidas: pressure, running, powered, consumers | Compresor de pistón con tanque y presostato: arranca cuando la presión baja a la de arranque y para al llegar a la de corte. Los cilindro... |
 | `jwsim/service-unit` | `UM` | 200×280 | *(sin bornes)* | enlaces: source<br>salidas: pressure, inlet | Filtro-regulador con manómetro: entrega a los cilindros la presión regulada, o la del compresor si es menor. Sin compresor indicado entre... |
 
 ## Planta
@@ -98,7 +98,7 @@ Total de tipos integrados: **65** · Grilla obligatoria: **20 px**.
 |---|---|---|---|---|---|
 | `jwsim/building-water` | `RED` | 360×400 | *(sin bornes)* | enlaces: bombas, cisterna<br>salidas: presion, qBombas, qConsumo, consumo, reposicion, seco… | Montante y red de un edificio con tanque hidroneumático. Las bombas (motores de la escena en «Bombas», p. ej. M1, M2) succionan de la cis... |
 | `jwsim/lift` | `ASC` | 300×520 | *(sin bornes)* | enlaces: motor<br>salidas: altura, piso, enPiso, pisoTxt, puerta0, puerta1… | Cabina de montacargas en su pozo, movida por un motor de la escena (parámetro Motor, p. ej. M1.speed: positivo sube). altura es la del pi... |
-| `jwsim/sand-filter` | `FIL` | 320×420 | *(sin bornes)* | enlaces: bomba<br>salidas: dp, qServicio, qRetrolavado, qRel, colmatacion, turbidez… | Filtro a presión de arena y antracita. Lo alimenta la bomba de captación (parámetro Bomba, p. ej. M1.speed) y lo gobiernan dos válvulas: ... |
+| `jwsim/sand-filter` | `FIL` | 320×420 | *(sin bornes)* | enlaces: bomba, servicio, retrolavado<br>salidas: dp, qServicio, qRetrolavado, qRel, colmatacion, turbidez… | Filtro a presión de arena y antracita. Lo alimenta la bomba de captación (parámetro Bomba, p. ej. M1.speed) y lo gobiernan dos válvulas: ... |
 | `jwsim/conveyor` | `CV` | 280×120 | *(sin bornes)* | enlaces: motor<br>salidas: sensorA, sensorB, piezas, avance, salidas, enCinta | Cinta de rodillos movida por un motor de la escena (parámetro Motor, p. ej. M1.speed: la velocidad del motor de -1 a 1). Las piezas se po... |
 | `jwsim/conveyor-physics` | `CV` | 280×120 | *(sin bornes)* | enlaces: motor<br>salidas: sensorA, sensorB, piezas, velPiezas, avance, salidas… | Cinta movida por un motor de la escena (Motor, p. ej. M1.speed de -1 a 1) en la que las cajas tienen masa y fricción: la siguen al arranc... |
 | `jwsim/tank` | `T` | 200×220 | *(sin bornes)* | enlaces: bomba, extraccion, valvula<br>salidas: nivel, nivelPct, alturaM, volumenL, caudalEntrada, caudalSalida… | Tanque con modelo de balance de volumen discretizado. Forma (cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de cí... |

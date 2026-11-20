@@ -50,12 +50,17 @@ try {
   await win.evaluate((f) => window.jwsimTest.openProjectFile(f), projFile);
   await until(() => win.evaluate(() => window.jwsimTest.scene.spec().devices.length === 2));
 
-  // 1. Limpio: edición externa en disco se recarga automáticamente
+  // 1. Limpio: cambiar primero a pestaña "program", tolerar JSON truncado a mitad de escritura y recargar sin robar pestaña
+  await win.evaluate(() => window.JwsimTabs.select("program"));
+  assert.equal(await win.evaluate(() => document.body.dataset.tab), "program");
+  writeFileSync(projFile, '{"format":"jwsim","version":', "utf8");
+  await win.waitForTimeout(140);
   writeProj(["H2"]);
   const autoReloaded = await until(() =>
     win.evaluate(() => window.jwsimTest.scene.spec().devices.some((d) => d.id === "H2")),
   );
   assert.equal(autoReloaded, true, "debió recargar H2 automáticamente desde disco");
+  assert.equal(await win.evaluate(() => document.body.dataset.tab), "program", "la recarga automática no debe robar la pestaña activa");
 
   // 2. Sucio: edición local en la escena impide sobrescritura y muestra aviso no bloqueante
   await win.evaluate(() => window.jwsimTest.scene.add("jwsim/lamp", 600, 0, "H_LOCAL"));
