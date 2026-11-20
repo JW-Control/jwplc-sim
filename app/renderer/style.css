@@ -3667,3 +3667,163 @@ body[data-schem="pneu"] .scene-float {
 body.dock-collapsed #btn-dock-toggle {
   margin-left: auto;
 }
+
+/* ------------------------------------------------ diagrama de estados (state-diagram.js) */
+.sd-head {
+  margin: 0;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sd-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.sd-badge.live {
+  background: rgba(55, 214, 122, 0.16);
+  color: var(--ok);
+}
+.sd-badge.frozen {
+  background: rgba(255, 176, 32, 0.18);
+  color: var(--warn);
+}
+.sd-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+.sd-tools select {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+#sd-freeze.active {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.sd-pop-wrap {
+  position: relative;
+  margin-left: auto;
+}
+.sd-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: 245px;
+  max-height: 320px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3b4450 var(--panel-2);
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+}
+.sd-popover[hidden] {
+  display: none;
+}
+.sd-pop-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sd-pop-group {
+  margin-bottom: 6px;
+}
+.sd-pop-gtitle {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+.sd-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sd-pop-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.sd-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.sd-dot.cyl { background: var(--accent); }
+.sd-dot.coil { background: var(--warn); }
+.sd-dot.sensor { background: var(--ok); }
+.sd-dot.pressure { background: #55aef0; }
+.sd-pop-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sd-readout {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #3b4450 var(--panel);
+  background: var(--panel);
+}
+#sd-canvas {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.sd-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+.sd-empty[hidden] {
+  display: none;
+}
+.sd-foot {
+  padding: 4px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+}
