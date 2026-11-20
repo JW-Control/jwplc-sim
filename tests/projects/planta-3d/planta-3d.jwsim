@@ -53,7 +53,7 @@
       {
         "id": "S0",
         "type": "jwsim/pushbutton-nc",
-        "x": 560,
+        "x": 600,
         "y": -300,
         "params": {
           "label": "Parada",
@@ -63,7 +63,7 @@
       {
         "id": "B1",
         "type": "jwsim/sensor-inductive",
-        "x": 700,
+        "x": 780,
         "y": -300,
         "params": {
           "source": "C1.sensorB"
@@ -72,7 +72,7 @@
       {
         "id": "LH",
         "type": "jwsim/limit-switch",
-        "x": 840,
+        "x": 2300,
         "y": -300,
         "params": {
           "source": "T1.nivel",
@@ -83,7 +83,7 @@
       {
         "id": "LL",
         "type": "jwsim/limit-switch",
-        "x": 960,
+        "x": 1920,
         "y": -300,
         "params": {
           "source": "T1.nivel",
@@ -94,7 +94,7 @@
       {
         "id": "BO",
         "type": "jwsim/limit-switch",
-        "x": 1080,
+        "x": 1660,
         "y": -300,
         "params": {
           "source": "P1.posicion",
@@ -105,7 +105,7 @@
       {
         "id": "BC",
         "type": "jwsim/limit-switch",
-        "x": 1200,
+        "x": 1520,
         "y": -300,
         "params": {
           "source": "P1.posicion",
@@ -116,7 +116,7 @@
       {
         "id": "BF",
         "type": "jwsim/sensor-photoelectric",
-        "x": 1320,
+        "x": 1400,
         "y": -300,
         "params": {
           "source": "P1.persona"
@@ -125,25 +125,25 @@
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 300,
+        "x": 1820,
         "y": 700
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 480,
+        "x": 1540,
         "y": 700
       },
       {
         "id": "KM3",
         "type": "jwsim/contactor",
-        "x": 660,
+        "x": 2960,
         "y": 700
       },
       {
         "id": "KM4",
         "type": "jwsim/contactor",
-        "x": 840,
+        "x": 3220,
         "y": 700
       },
       {
@@ -155,7 +155,7 @@
       {
         "id": "M1",
         "type": "jwsim/motor",
-        "x": 300,
+        "x": 1080,
         "y": 1000,
         "params": {
           "label": "Cinta"
@@ -164,7 +164,7 @@
       {
         "id": "M2",
         "type": "jwsim/motor",
-        "x": 480,
+        "x": 1260,
         "y": 1000,
         "params": {
           "label": "Bomba"
@@ -173,7 +173,7 @@
       {
         "id": "M3",
         "type": "jwsim/motor",
-        "x": 700,
+        "x": 3480,
         "y": 1000,
         "params": {
           "rating": "24VDC",

@@ -12,7 +12,7 @@ const F = { id: "F", type: "jwsim/overload-relay", params: { range: "2.5-4 A", a
 
 test("acople: el térmico va bajo el contactor y sus puentes 1-3-5 entran en 2-4-6", () => {
   assert.equal(canMount(F, KM), true);
-  assert.deepEqual(mountPos(F, KM), { x: 100, y: 320 });
+  assert.deepEqual(mountPos(F, KM), { x: 100, y: 380 });
   assert.deepEqual(mountLinks({ devices: [KM, F] }), [["F.1", "KM.2"], ["F.3", "KM.4"], ["F.5", "KM.6"]]);
   assert.equal(canMount(F, { id: "Q", type: "jwsim/breaker" }), false, "solo a un contactor");
   assert.equal(canMount(F, { ...KM, rotation: 90 }), false, "sin girar");

@@ -169,7 +169,7 @@
   // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
   // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
   // hide: bornes del acoplado que quedan dentro del anfitrión (sin cable posible).
-  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 280, hide: ["1", "3", "5"] } };
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 340, hide: ["1", "3", "5"] } };
   const MOUNT_SNAP = 40;
   const baseType = (t) => String(t ?? "").split("/").pop();
   const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;
@@ -196,15 +196,15 @@
   /** ¿El equipo está acoplado (o a punto de acoplarse mientras se arrastra)? */
   const isMounted = (dev) => (S.drag?.kind === "device" && S.drag.dev === dev ? !!S.drag.mountTo : !!dev.mount && canMount(dev, devById(dev.mount)));
   /**
-   * El acoplado se dibuja delante del anfitrión: su cuerpo tapa el borde
-   * inferior del contactor y sus puentes suben hasta los bornes 2-4-6.
+   * El acoplado se dibuja detrás del anfitrión: la bornera 2-4-6 del
+   * contactor tapa sus puentes y solo asoman los bloques de contacto.
    */
   function raiseGuest(g) {
     const box = $("scene-devices");
     const el = box.querySelector(`[data-id="${CSS.escape(g.id)}"]`);
     const host = g.mount ?? S.drag?.mountTo;
     const hel = host && box.querySelector(`[data-id="${CSS.escape(host)}"]`);
-    if (el && hel && hel.nextSibling !== el) hel.after(el);
+    if (el && hel && hel.previousSibling !== el) hel.before(el);
   }
   /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
   function settleMounts() {
@@ -956,6 +956,10 @@
         const tipEnd = p.sy - dir * 7;
         const tipStart = tipEnd - dir * 5;
         const sleeveStart = (dir > 0 ? Math.max : Math.min)(p.y, tipStart - dir * 11);
+        // Borne de abajo de un anfitrión tapado por el acoplado (el contactor
+        // con el térmico debajo): el cable entra por detrás, sin tramo visible.
+        const covered = !p.up && guestsOf(devOf(t)).some(isMounted);
+        if (covered) continue;
         for (const i of list) {
           const w = S.spec.wiring[i];
           const x = p.x + offset(t, i);
@@ -2726,6 +2730,27 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
+    // ancho y del alto, y de qué lado sale) y el color de cada cable.
+    terminalOf(end) {
+      const i = end.indexOf(".");
+      const dev = devById(end.slice(0, i));
+      if (!dev) return null;
+      const sym = symbolFor(dev);
+      const p = sym.terms[end.slice(i + 1)];
+      if (!p) return null;
+      return { fx: p[0] / sym.w, fy: p[1] / sym.h, side: sym.sides[end.slice(i + 1)] ?? (p[1] < sym.h / 2 ? "t" : "b") };
+    },
+    // Para la vista 3D: acciones del equipo (pulsar, girar, accionar…), su
+    // estado actual y accionarlas (solo con la simulación en marcha).
+    actionsOf(id) {
+      const dev = devById(id);
+      return dev ? (S.defs.get(dev.type)?.actions ?? []) : [];
+    },
+    actionState: (id, action) => out(id).actions?.[action],
+    act: (id, action, value) => act(id, action, value),
+    running: () => !!S.running,
+    wireHex: (w) => (S.busWires?.has(w) || (!w.color && BUS_POL(termOf(w.from)) && BUS_POL(termOf(w.from)) === BUS_POL(termOf(w.to))) ? busColor(w) : WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro),
     // Pestañas de la ventana (tabs.js): cambian la vista del panel derecho.
     setView: (v) => setView(v),
     view: () => S.view,
