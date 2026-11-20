@@ -84,7 +84,7 @@
     return `${letter}_${Date.now() % 1000}`;
   }
 
-  /** Posición (x, y) en la grilla 2D encima del émbolo del cilindro. */
+  /** Posición (x, y) en la grilla 2D encima de la contracción/extensión del émbolo. */
   function sensorPlacement(valve, kind, pos, existingDevices = [], ignoreId = null) {
     const bx = Number(valve?.x ?? 0);
     const by = Number(valve?.y ?? 0);
@@ -95,14 +95,16 @@
       x = snap20(bx + (p >= 0.5 ? 160 : 20));
       y = snap20(by - 120);
     } else {
-      x = snap20(bx + 200 + p * 240);
+      x = snap20(bx + 260 + p * 120);
       y = snap20(by - (kind === "XCKJ" ? 260 : 220));
     }
+    const minDx = kind === "magnetic" ? 80 : 110;
+    const minDy = kind === "magnetic" ? 100 : 180;
     const occupied = (cx, cy) =>
       (existingDevices ?? []).some(
-        (d) => d.id !== ignoreId && Math.abs((d.x ?? 0) - cx) < 40 && Math.abs((d.y ?? 0) - cy) < 40,
+        (d) => d.id !== ignoreId && Math.abs((d.x ?? 0) - cx) < minDx && Math.abs((d.y ?? 0) - cy) < minDy,
       );
-    while (occupied(x, y)) y -= 220;
+    while (occupied(x, y)) y -= kind === "magnetic" ? 120 : 220;
     return { x, y };
   }
 
@@ -114,7 +116,7 @@
   }
 
   /** Construye el dispositivo sensor listo para insertar en spec.devices. */
-  function buildSensorDevice(valve, { id, kind = "compacto", pos = 0 }, existingDevices = []) {
+  function buildSensorDevice(valve, { id, kind = "compacto", pos = 0, orientacion = "abajo" }, existingDevices = []) {
     const p = clampPos(pos);
     const coords = sensorPlacement(valve, kind, p, existingDevices, id);
     if (kind === "magnetic") {
@@ -132,7 +134,7 @@
       id,
       type: "jwsim/limit-switch",
       version: "1.0.0",
-      params: { model: kind === "XCKJ" ? "XCKJ" : "compacto", source: `${valve.id}.position`, min, max },
+      params: { model: kind === "XCKJ" ? "XCKJ" : "compacto", orientacion, source: `${valve.id}.position`, min, max },
       x: coords.x,
       y: coords.y,
     };
@@ -211,7 +213,8 @@
     const nextKind = patch.kind ?? cur.kind;
     const nextPos = patch.pos !== undefined ? clampPos(patch.pos) : cur.pos;
     if (patch.kind !== undefined || patch.pos !== undefined) {
-      const built = buildSensorDevice(valve, { id: finalId, kind: nextKind, pos: nextPos }, devices);
+      const keepOri = dev.type === "jwsim/limit-switch" ? (dev.params?.orientacion ?? "abajo") : "abajo";
+      const built = buildSensorDevice(valve, { id: finalId, kind: nextKind, pos: nextPos, orientacion: keepOri }, devices);
       const typeChanged = built.type !== dev.type;
       dev.type = built.type;
       dev.version = built.version;
