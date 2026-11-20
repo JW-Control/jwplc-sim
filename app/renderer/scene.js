@@ -1366,8 +1366,8 @@
           ];
           const optHtml = (sel) => kindOpts.map(([val, lbl]) => `<option value="${val}"${val === sel ? " selected" : ""}>${lbl}</option>`).join("");
           let fcHtml =
-            `<div class="cyl-fc-bar">` +
-            `<select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select>` +
+            `<label class="insp-row wide"><span>Tipo de sensor</span><select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select></label>` +
+            `<div class="cyl-fc-actions">` +
             `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || !canApplyPair ? "disabled" : ""} title="Colocar o convertir ${esc(letter)}0 (0) y ${esc(letter)}1 (1)">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
             `<button type="button" class="small" data-cyl-add="${esc(dev.id)}" ${dis} title="Agregar otra marca en cualquier posición 0..1">+ Marca</button>` +
             `</div>` +
