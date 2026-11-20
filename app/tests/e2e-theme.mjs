@@ -57,6 +57,8 @@ const probe = () =>
     const runBox = document.getElementById("btn-run").getBoundingClientRect();
     const pauseBox = document.getElementById("btn-pause").getBoundingClientRect();
     const stopBox = document.getElementById("btn-stop").getBoundingClientRect();
+    const tbRunBox = document.querySelector(".tb-run").getBoundingClientRect();
+    const tbCenterDelta = Math.abs((tbRunBox.left + tbRunBox.right) / 2 - window.innerWidth / 2);
     return {
       meta: document.querySelector('meta[name="color-scheme"]')?.content,
       bg: cs.backgroundColor,
@@ -72,6 +74,7 @@ const probe = () =>
       btnRunText: document.getElementById("btn-run").textContent,
       runGap: Math.round(stopBox.left - pauseBox.right),
       runW: Math.round(runBox.width),
+      tbCenterDelta: Math.round(tbCenterDelta),
       gridFilter: grid.filter,
       state: window.jwsimTest.getTheme(),
     };
@@ -152,6 +155,7 @@ try {
       dark.btnProjBg !== "rgba(0, 0, 0, 0)" &&
       dark.btnNewMissing &&
       dark.runGap >= 4 &&
+      dark.tbCenterDelta <= 2 &&
       dark.statusWidth <= 1 &&
       halfScreen.toolbarScrollW <= halfScreen.innerWidth &&
       halfScreen.themeRight <= halfScreen.innerWidth,

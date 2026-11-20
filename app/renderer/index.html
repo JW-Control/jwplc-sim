@@ -16,37 +16,40 @@
   </head>
   <body>
     <header class="toolbar">
-      <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
-      <div class="group tb-files">
-        <button id="btn-projects" title="Proyectos: nuevo proyecto Arduino u OpenPLC, abrir, recientes">Proyectos</button>
-        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
-        <button id="btn-open-editor" title="Programar este proyecto IEC en el OpenPLC Editor" hidden>Abrir en OpenPLC Editor</button>
-      </div>
-      <span class="tb-sep" aria-hidden="true"></span>
-      <div class="group tb-libs">
-        <button id="btn-examples" class="ex-btn" aria-haspopup="menu" aria-expanded="false"
-          title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">Ejemplos ▾</button>
-        <select id="sel-exercise" title="Abrir un ejercicio con su escena, enunciado y calificación (se copia a la carpeta de trabajo)">
-          <option value="">Ejercicios…</option>
-        </select>
-        <select id="sel-arch" title="Abrir una arquitectura de la vitrina: planta completa con su programa, lista para Ejecutar (se copia a la carpeta de trabajo)">
-          <option value="">Arquitecturas…</option>
-        </select>
+      <div class="group tb-left">
+        <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
+        <div class="group tb-files">
+          <button id="btn-projects" title="Proyectos: nuevo proyecto Arduino u OpenPLC, abrir, recientes">Proyectos</button>
+          <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
+          <button id="btn-open-editor" title="Programar este proyecto IEC en el OpenPLC Editor" hidden>Abrir en OpenPLC Editor</button>
+        </div>
+        <span class="tb-sep" aria-hidden="true"></span>
+        <div class="group tb-libs">
+          <button id="btn-examples" class="ex-btn" aria-haspopup="menu" aria-expanded="false"
+            title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">Ejemplos ▾</button>
+          <select id="sel-exercise" title="Abrir un ejercicio con su escena, enunciado y calificación (se copia a la carpeta de trabajo)">
+            <option value="">Ejercicios…</option>
+          </select>
+          <select id="sel-arch" title="Abrir una arquitectura de la vitrina: planta completa con su programa, lista para Ejecutar (se copia a la carpeta de trabajo)">
+            <option value="">Arquitecturas…</option>
+          </select>
+        </div>
       </div>
       <div class="group tb-run">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
         <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
         <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
+      </div>
+      <div class="group tb-right">
         <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
           <option value="1">×1</option>
           <option value="10">×10</option>
           <option value="0">Máx</option>
         </select>
-      </div>
-      <div class="group tb-right">
         <div class="clock" title="Tiempo virtual del PLC simulado">
           <span class="label">t</span><span id="clock">00:00:00.000</span>
         </div>
+        <span class="tb-sep" aria-hidden="true"></span>
         <div id="status" class="status idle">Detenido</div>
         <button id="btn-com" class="com-status" aria-haspopup="dialog" aria-expanded="false"
           title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
