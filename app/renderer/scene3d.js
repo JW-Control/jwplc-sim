@@ -804,9 +804,11 @@ function rebuild(spec) {
       }
       const min = Number(s.params.min ?? (s.params.alto != null ? Number(s.params.alto) / 100 : 1));
       if (CYLINDERS.has(d.type) && s.type === "jwsim/limit-switch") {
-        // Rodillo justo bajo la cabeza del vástago en ese extremo.
+        // Rodillo justo bajo la cabeza del vástago en su posición (0..1).
+        const max = Number(s.params.max ?? min);
+        const cylPos = Math.max(0, Math.min(1, (min + max) / 2));
         const b = rollerSwitch();
-        b.position.set(headX(min > 0.5 ? 1 : 0) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
+        b.position.set(headX(cylPos) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
         const t = label(s.id);
         t.scale.set(0.42, 0.105, 1);
         t.position.y = -0.17;
