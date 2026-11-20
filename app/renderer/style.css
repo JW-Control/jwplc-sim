@@ -4317,7 +4317,7 @@ body.dock-collapsed #btn-dock-toggle {
   display: none;
 }
 .dev-cyl-tag {
-  font: 700 11px/1 "Cascadia Code", Consolas, monospace;
+  font: 700 20px/1 "Cascadia Code", Consolas, monospace;
   fill: var(--accent);
   paint-order: stroke;
   stroke: var(--surface-scene);

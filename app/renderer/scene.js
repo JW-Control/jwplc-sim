@@ -1152,7 +1152,7 @@
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-2" y="-2" width="${sym.w + 4}" height="${sym.h + 4}" rx="3"/>` +
-        (cylTag ? `<text class="dev-cyl-tag" x="14" y="12">${esc(cylTag)}</text>` : "") +
+        (cylTag ? `<text class="dev-cyl-tag" x="4" y="-8">${esc(cylTag)}</text>` : "") +
         // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
         (hosting
           ? ""
