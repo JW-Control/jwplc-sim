@@ -174,12 +174,59 @@ try {
   };
   log(`LIVE_AND_KEEP_ON_STOP ${JSON.stringify(criteria.LIVE_AND_KEEP_ON_STOP)}`);
 
-  // 4. Filtro + Señales, congelado y Limpiar.
+  // 4. Filtro + Señales, chips directos, botón × por pista, drag & drop desde el plano, congelado y Limpiar.
   await win.click("#sd-signals-btn");
   await sleep(150);
   await win.click('#sd-popover [data-preset="cyl"]');
   await sleep(150);
   const onlyCyl = await t(() => window.JwsimStateDiag.debug());
+
+  // Chip directo "Bobinas": un clic activa las 4 bobinas (total 8 pistas), otro clic las oculta (vuelve a 4).
+  await win.click('#sd-chips [data-kind-chip="coil"]');
+  await sleep(150);
+  const withCoils = await t(() => window.JwsimStateDiag.debug().visibleIds.length);
+  await win.click('#sd-chips [data-kind-chip="coil"]');
+  await sleep(150);
+
+  // Clic en el botón × de la primera pista (Y1.position) en la columna izquierda (x=83, y=20).
+  const cRect = await win.$eval("#sd-canvas", (c) => { const r = c.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+  await win.mouse.move(cRect.x + 83, cRect.y + 20);
+  await win.mouse.click(cRect.x + 83, cRect.y + 20);
+  await sleep(150);
+  const afterCloseX = await t(() => window.JwsimStateDiag.debug().visibleIds);
+
+  // Arrastrar Y1 desde el esquema hacia #state-diag-pane lo vuelve a agregar sin mover Y1 en el esquema.
+  await win.click("#scene-fit");
+  await sleep(200);
+  const dragPts = await t(() => {
+    const y1Dev = window.jwsimTest.scene.spec().devices.find((d) => d.id === "Y1");
+    const hit = document.querySelector('#scene-devices > g[data-id="Y1"] .dev-hit');
+    const hr = hit.getBoundingClientRect();
+    const pr = document.getElementById("state-diag-pane").getBoundingClientRect();
+    return {
+      x0: y1Dev.x,
+      y0: y1Dev.y,
+      fromX: hr.left + hr.width / 2,
+      fromY: hr.top + hr.height / 2,
+      toX: pr.left + pr.width / 2,
+      toY: pr.top + pr.height / 2,
+    };
+  });
+  await win.mouse.move(dragPts.fromX, dragPts.fromY);
+  await win.mouse.down();
+  await win.mouse.move(dragPts.toX, dragPts.toY, { steps: 8 });
+  const dropTargetActive = await t(() => document.getElementById("state-diag-pane").classList.contains("sd-drop-target"));
+  await win.mouse.up();
+  await sleep(200);
+  const afterDrop = await t(() => {
+    const y1Dev = window.jwsimTest.scene.spec().devices.find((d) => d.id === "Y1");
+    return {
+      visibleIds: window.JwsimStateDiag.debug().visibleIds,
+      y1X: y1Dev.x,
+      y1Y: y1Dev.y,
+    };
+  });
+
   await win.click("#sd-freeze");
   await sleep(150);
   const frozen = await t(() => window.JwsimStateDiag.debug().frozen);
@@ -187,8 +234,14 @@ try {
   await sleep(150);
   const cleared = await t(() => window.JwsimStateDiag.debug());
   criteria.CONTROLS = {
-    ok: onlyCyl.visibleIds.length === 4 && frozen === true && cleared.samples === 0 && cleared.frozen === false,
-    onlyCyl: onlyCyl.visibleIds, frozen, cleared,
+    ok: onlyCyl.visibleIds.length === 4 &&
+      withCoils === 8 &&
+      afterCloseX.length === 3 && !afterCloseX.includes("Y1.position") &&
+      dropTargetActive &&
+      afterDrop.visibleIds.includes("Y1.position") &&
+      afterDrop.y1X === dragPts.x0 && afterDrop.y1Y === dragPts.y0 &&
+      frozen === true && cleared.samples === 0 && cleared.frozen === false,
+    onlyCyl: onlyCyl.visibleIds, withCoils, afterCloseX, dropTargetActive, afterDrop, frozen, cleared,
   };
   log(`CONTROLS ${JSON.stringify(criteria.CONTROLS)}`);
 
