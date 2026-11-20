@@ -206,6 +206,26 @@ try {
     before, afterCyl, afterShort, afterDetach, afterCyl2,
   };
   log(`GROUP_DRAG_SNAP_AND_DETACH ${JSON.stringify(criteria.GROUP_DRAG_SNAP_AND_DETACH)}`);
+
+  // 6. Cambiar tipo global (#cyl-fc-default-kind) convierte los sensores ya colocados sin borrarlos.
+  await t(() => window.jwsimTest.scene.select("Y1"));
+  await sleep(200);
+  await win.selectOption("#cyl-fc-default-kind", "XCKJ");
+  await sleep(250);
+  const asXckj = await t(() => window.jwsimTest.scene.spec().devices.filter((d) => d.id === "S0" || d.id === "A1"));
+  await win.selectOption("#cyl-fc-default-kind", "magnetic");
+  await sleep(250);
+  const asMag = await t(() => window.jwsimTest.scene.spec().devices.filter((d) => d.id === "S0" || d.id === "A1"));
+  await win.screenshot({ path: join(OUT, "colores-magneticos.png") });
+  criteria.GLOBAL_KIND_SWITCH = {
+    ok: asXckj.length === 2 &&
+      asXckj.every((d) => d.type === "jwsim/limit-switch" && d.params?.model === "XCKJ") &&
+      asMag.length === 2 &&
+      asMag.every((d) => d.type === "jwsim/sensor-cylinder") &&
+      asMag.find((d) => d.id === "A1")?.x === afterCyl2.y1.x + 160,
+    asXckj, asMag,
+  };
+  log(`GLOBAL_KIND_SWITCH ${JSON.stringify(criteria.GLOBAL_KIND_SWITCH)}`);
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
   log(`ERROR ${e}`);
@@ -220,6 +240,7 @@ const ok = [
   "SHOWN_IN_PNEUMATIC",
   "CONVERT_AND_UNDO",
   "GROUP_DRAG_SNAP_AND_DETACH",
+  "GLOBAL_KIND_SWITCH",
 ].every((k) => criteria[k]?.ok);
 mkdirSync(join(ROOT, "build", "gates"), { recursive: true });
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_CYLINDER_SENSORS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
