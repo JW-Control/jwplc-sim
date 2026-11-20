@@ -1672,6 +1672,22 @@ button.io.on {
   grid-row: 1;
   min-width: 0;
   min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+/* Cuadrícula en su propia capa (scene.js, gridBg): se desplaza con transform. */
+#scene-grid {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(100% + 320px);
+  height: calc(100% + 320px);
+  pointer-events: none;
+  background-repeat: repeat;
+  will-change: transform;
+}
+#scene-svg {
+  position: relative;
 }
 #scene-svg {
   display: block;
@@ -1866,6 +1882,25 @@ button.io.on {
 .ferrule-tip {
   pointer-events: none;
 }
+/* Par trenzado (RS-485): hilos más finos y sin brillo. */
+.wire.twist .wire-outline {
+  stroke-width: 4.2;
+}
+.wire.twist .wire-core {
+  stroke-width: 2.8;
+}
+.wire.twist.selected .wire-outline {
+  stroke-width: 6.5;
+}
+.wire.twist .wire-hit {
+  stroke-width: 10;
+}
+.twist-sleeve {
+  fill: #1d2025;
+  stroke: #0c0d0f;
+  stroke-width: 1;
+  pointer-events: none;
+}
 .wire-handle {
   fill: #2f8cff;
   stroke: #fff;
@@ -1894,7 +1929,7 @@ button.io.on {
   stroke-width: 9;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.3;
+  stroke-opacity: 0.3;
   pointer-events: none;
 }
 .wire.selected .wire-outline {
@@ -2433,7 +2468,7 @@ body[data-tab="plant"] .view3d-empty {
   stroke-width: calc(var(--cable-w) + 7px);
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.3;
+  stroke-opacity: 0.3;
   pointer-events: none;
 }
 .cable.selected .cable-outline {

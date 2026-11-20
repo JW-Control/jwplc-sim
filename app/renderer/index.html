@@ -171,14 +171,16 @@
             <div class="scene-main">
               <!-- Contenedor del lienzo (sin transformaciones CSS: ver scene.js, commitView). -->
               <div id="scene-pan">
+              <div id="scene-grid" aria-hidden="true"></div>
               <svg id="scene-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Escena">
                 <defs>
                 </defs>
                 <g id="scene-root">
-                  <!-- La grilla (cuadrícula cada 20 px de la escena) la dibuja el fondo de .scene-main (scene.js, gridBg). -->
+                  <!-- La grilla (cuadrícula cada 20 px de la escena) la dibuja #scene-grid (scene.js, gridBg). -->
                   <g id="scene-board"></g>
                   <g id="scene-wires"></g>
                   <g id="scene-devices"></g>
+                  <g id="scene-leads"></g>
                   <g id="scene-terms"></g>
                   <g id="scene-handles"></g>
                   <path id="scene-rubber" d=""></path>

@@ -65,7 +65,7 @@
           "label": "Izquierda",
           "color": "verde"
         },
-        "x": 760,
+        "x": 820,
         "y": 0
       },
       {
@@ -75,7 +75,7 @@
           "label": "Derecha",
           "color": "verde"
         },
-        "x": 920,
+        "x": 980,
         "y": 0
       },
       {
@@ -85,19 +85,19 @@
           "label": "Parada",
           "color": "rojo"
         },
-        "x": 1100,
+        "x": 1160,
         "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 1340,
+        "x": 1400,
         "y": 0
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 1560,
+        "x": 1660,
         "y": 0
       },
       {
@@ -107,7 +107,7 @@
           "color": "amarillo",
           "label": "Marcha"
         },
-        "x": 1800,
+        "x": 1900,
         "y": 0
       },
       {

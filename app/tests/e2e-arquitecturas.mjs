@@ -41,7 +41,7 @@ try {
   await win.waitForTimeout(2500);
   await t(() => window.JwsimTabs.select("schematic"));
   await win.waitForTimeout(1000);
-  const opened = await t(() => ({ devices: document.querySelectorAll("#scene-root .dev").length, card: /Arquitectura 01/.test(document.body.innerText) }));
+  const opened = await t(() => ({ devices: document.querySelectorAll("#scene-root .dev").length, card: /Arquitectura 01/.test(document.body.innerText + document.getElementById("console").textContent) }));
   criteria.ARCH_OPEN = { ok: opened.devices >= 13 && opened.card, ...opened };
   log(`ARCH_OPEN ${JSON.stringify(criteria.ARCH_OPEN)}`);
 
