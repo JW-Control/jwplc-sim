@@ -1011,6 +1011,7 @@
         if (own) handles += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
       });
     }
+    if (S.drag?.snapGhostHtml) handles += S.drag.snapGhostHtml;
     // Solo se reemplaza el DOM si cambió algo: con la simulación corriendo
     // llega una instantánea por cuadro y rehacer todos los cables (y sus
     // rótulos) en cada una obligaba a maquetar y pintar de nuevo el esquema.
@@ -1134,6 +1135,9 @@
       leds.innerHTML = html;
     } else {
       const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
+      const invertLimit = baseType(dev.type) === "limit-switch" && p.orientacion === "abajo";
+      const labelX = invertLimit ? 28 : sym.w / 2;
+      const labelY = invertLimit ? sym.h - 14 : sym.h + 16;
       setSvgHtml(
         g,
         // Zona de clic de todo el equipo, debajo del dibujo: el interior de
@@ -1144,7 +1148,7 @@
         // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
         (hosting
           ? ""
-          : `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
+          : `<text class="dev-id" x="${labelX}" y="${labelY}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
@@ -2027,13 +2031,20 @@
           S.sel = { kind: "device", id: dev.id };
         }
         const selIds = selectedDeviceIds();
+        const CS = window.JwsimCylinderSensors;
         if (selIds.length > 1) {
           const selSet = new Set(selIds);
           const items = selIds.map((id) => devById(id)).filter(Boolean).map((d) => ({ dev: d, x0: d.x ?? 0, y0: d.y ?? 0 }));
           const guestItems = [];
+          const cylGuestItems = [];
           for (const { dev: d } of items) {
             for (const g of guestsOf(d.id)) {
               if (!selSet.has(g.id)) guestItems.push({ dev: g, host: d });
+            }
+            if (CS?.isValve(d)) {
+              for (const s of CS.groupedSensorsForValve(S.spec.devices, d.id)) {
+                if (!selSet.has(s.id)) cylGuestItems.push({ dev: s, x0: s.x ?? 0, y0: s.y ?? 0 });
+              }
             }
           }
           const movingIds = new Set([...items.map((it) => it.dev.id), ...guestItems.map((it) => it.dev.id)]);
@@ -2046,13 +2057,34 @@
             dy: w.y - (dev.y ?? 0),
             items,
             guestItems,
+            cylGuestItems,
             movingIds,
             collapseTo: mod ? null : dev.id,
             moved: false,
             snapshot: currentSnapshot(),
           };
         } else {
-          S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false, snapshot: currentSnapshot() };
+          const cylGuests = CS?.isValve(dev)
+            ? CS.groupedSensorsForValve(S.spec.devices, dev.id).map((s) => ({ dev: s, x0: s.x ?? 0, y0: s.y ?? 0 }))
+            : [];
+          const linkedValve = CS ? CS.linkedValveOf(S.spec.devices, dev) : null;
+          const cylHome = linkedValve ? CS.sensorHome(S.spec.devices, dev, linkedValve) : null;
+          const wasAtHome = !!cylHome && Math.hypot((dev.x ?? 0) - cylHome.x, (dev.y ?? 0) - cylHome.y) <= 40;
+          S.drag = {
+            kind: "device",
+            dev,
+            x0: dev.x ?? 0,
+            y0: dev.y ?? 0,
+            dx: w.x - (dev.x ?? 0),
+            dy: w.y - (dev.y ?? 0),
+            cylGuests,
+            cylHome,
+            wasAtHome,
+            snapActive: false,
+            snapGhostHtml: "",
+            moved: false,
+            snapshot: currentSnapshot(),
+          };
         }
         svg.setPointerCapture(e.pointerId);
         render();
@@ -2145,6 +2177,11 @@
             renderDevice(g.dev);
             raiseGuest(g.dev);
           }
+          for (const cg of S.drag.cylGuestItems ?? []) {
+            cg.dev.x = snap(cg.x0 + ddx);
+            cg.dev.y = snap(cg.y0 + ddy);
+            renderDevice(cg.dev);
+          }
           for (const it of S.drag.items) if (it.dev.mount && S.drag.movingIds.has(it.dev.mount)) raiseGuest(it.dev);
           if (!S.wireFrame) {
             S.wireFrame = requestAnimationFrame(() => {
@@ -2170,6 +2207,22 @@
             Object.assign(g, mountPos(g, S.drag.dev));
             renderDevice(g);
             raiseGuest(g);
+          }
+          for (const cg of S.drag.cylGuests ?? []) {
+            cg.dev.x = snap(cg.x0 + (nx - S.drag.x0));
+            cg.dev.y = snap(cg.y0 + (ny - S.drag.y0));
+            renderDevice(cg.dev);
+          }
+          if (S.drag.cylHome) {
+            const CS = window.JwsimCylinderSensors;
+            const snapNow = Math.hypot(nx - S.drag.cylHome.x, ny - S.drag.cylHome.y) <= (CS?.GROUP_SNAP_RADIUS ?? 100);
+            S.drag.snapActive = snapNow;
+            if (snapNow && (nx !== S.drag.cylHome.x || ny !== S.drag.cylHome.y)) {
+              const sym = symbolFor(S.drag.dev);
+              S.drag.snapGhostHtml = `<rect x="${S.drag.cylHome.x}" y="${S.drag.cylHome.y}" width="${sym.w}" height="${sym.h}" rx="4" fill="rgba(59,130,246,0.10)" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+            } else {
+              S.drag.snapGhostHtml = "";
+            }
           }
           // Un trazado por cuadro como máximo.
           if (!S.wireFrame) {
@@ -2210,6 +2263,14 @@
       }
       const moved = S.drag?.moved;
       const snapshot = S.drag?.snapshot;
+      let didMove = moved;
+      if (moved && S.drag.kind === "device" && S.drag.cylHome && S.drag.snapActive) {
+        const dev = S.drag.dev;
+        dev.x = S.drag.cylHome.x;
+        dev.y = S.drag.cylHome.y;
+        renderDevice(dev);
+        if (S.drag.wasAtHome && dev.x === S.drag.x0 && dev.y === S.drag.y0) didMove = false;
+      }
       if (moved && S.drag.kind === "device" && mountRule(S.drag.dev)) {
         const dev = S.drag.dev;
         const was = dev.mount;
@@ -2228,13 +2289,13 @@
         if (detached) changed();
       }
       const collapseTo = !moved && S.drag?.kind === "devices" ? S.drag.collapseTo : null;
-      if (moved) S.dirty = true;
+      if (didMove) S.dirty = true;
       S.drag = null;
       if (collapseTo) {
         S.sel = { kind: "device", id: collapseTo };
         render();
       }
-      if (moved && snapshot) {
+      if (didMove && snapshot) {
         S.undoStack.push(snapshot);
         if (S.undoStack.length > 50) S.undoStack.shift();
         S.redoStack.length = 0;
