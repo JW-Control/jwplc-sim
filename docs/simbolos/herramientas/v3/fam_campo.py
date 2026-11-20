@@ -112,20 +112,19 @@ def coil(x,expr_led,flip=False):
     b+=text(x+29,174,'bobina',8,'#9aa3ad',600)
     return b
 
-# monoestable 520 x 220: bornes A1 A2 compactos abajo a la derecha
+# monoestable 520 x 220: bornes A1 A2 compactos pegados bajo la bobina
 b=cylinder()+hoses('out.energized',110,150)+valve_body(80,'out.energized')+coil(184,'out.energized')
-b+=path('M242 168 H260 Q266 168 266 176 V188',stroke=DARK,sw=4)
-b+=band(264,188,52,26)+term(280,204,'A1',side='b',lab='none',r=5)+lbl(280,195,'A1',6.5)+term(300,204,'A2',side='b',lab='none',r=5)+lbl(300,195,'A2',6.5)
+b+=band(184,184,52,26)+term(200,200,'A1',side='b',lab='none',r=5)+lbl(200,192,'A1',6.5)+term(220,200,'A2',side='b',lab='none',r=5)+lbl(220,192,'A2',6.5)
 b+=soot(213,150,40,30)
 svg('solenoid-valve',520,220,b,DEFS)
 
-# biestable 520 x 220: bobina A+ a la izquierda, A− a la derecha, borneras compactas alineadas bajo cada bobina
+# biestable 520 x 220: borneras compactas pegadas bajo cada bobina (A+ y A−)
 b=cylinder()
 b+=hoses('out.spoolA',170,210)+valve_body(140,'out.spoolA')
-b+=coil(80,'out.coilPlus',flip=True)+text(109,116,'A+',9,TXT,800)
-b+=coil(246,'out.coilMinus')+text(275,116,'A−',9,TXT,800)
-b+=band(64,188,72,26)+term(80,204,'A+1',side='b',lab='none',r=5)+lbl(80,195,'A+1',6.5)+term(120,204,'A+2',side='b',lab='none',r=5)+lbl(120,195,'A+2',6.5)
-b+=band(244,188,72,26)+term(260,204,'A-1',side='b',lab='none',r=5)+lbl(260,195,'A−1',6.5)+term(300,204,'A-2',side='b',lab='none',r=5)+lbl(300,195,'A−2',6.5)
+b+=coil(82,'out.coilPlus',flip=True)+text(111,116,'A+',9,TXT,800)
+b+=coil(244,'out.coilMinus')+text(273,116,'A−',9,TXT,800)
+b+=band(84,184,52,26)+term(100,200,'A+1',side='b',lab='none',r=5)+lbl(100,192,'A+1',6.5)+term(120,200,'A+2',side='b',lab='none',r=5)+lbl(120,192,'A+2',6.5)
+b+=band(244,184,52,26)+term(260,200,'A-1',side='b',lab='none',r=5)+lbl(260,192,'A−1',6.5)+term(280,200,'A-2',side='b',lab='none',r=5)+lbl(280,192,'A−2',6.5)
 b+=soot(190,150,40,30)
 svg('solenoid-valve-2',520,220,b,DEFS)
 
