@@ -89,11 +89,16 @@
     visible: false,
     meta: { groups: [], channels: [], hasPneumatics: false },
     active: new Set(),
+    order: [],
     userCustomized: false,
     windowMs: 10000,
     frozen: false,
     panEndMs: null,
     hoverX: null,
+    hoverTrackId: null,
+    hoverCloseId: null,
+    trackDrag: null,
+    lastTracks: [],
     drag: null,
     raf: 0,
     dirty: true,
@@ -102,7 +107,22 @@
   };
 
   const spec = () => window.JwsimScene?.specForView?.() ?? { devices: [], wiring: [] };
-  const visibleChannels = () => S.meta.channels.filter((c) => S.active.has(c.id));
+  const visibleChannels = () => {
+    const byId = new Map(S.meta.channels.map((c) => [c.id, c]));
+    const ordered = [];
+    const seen = new Set();
+    for (const id of S.order) {
+      const ch = byId.get(id);
+      if (ch && S.active.has(id) && !seen.has(id)) {
+        ordered.push(ch);
+        seen.add(id);
+      }
+    }
+    for (const ch of S.meta.channels) {
+      if (S.active.has(ch.id) && !seen.has(ch.id)) ordered.push(ch);
+    }
+    return ordered;
+  };
 
   function trackTitle(ch) {
     if (ch.kind === "cyl") return /^Cil/i.test(ch.shortLabel) ? ch.shortLabel : `Cil. ${ch.shortLabel}`;
@@ -139,6 +159,11 @@
 
   function applyDefaultSelection(resetSelection) {
     const allIds = new Set(S.meta.channels.map((c) => c.id));
+    if (resetSelection) S.order = S.meta.channels.map((c) => c.id);
+    else {
+      S.order = S.order.filter((id) => allIds.has(id));
+      for (const c of S.meta.channels) if (!S.order.includes(c.id)) S.order.push(c.id);
+    }
     if (resetSelection || !S.userCustomized) {
       S.active.clear();
       // Por defecto: cilindros + bobinas + sensores (presión opcional desde + Señales).
@@ -149,6 +174,67 @@
     } else {
       for (const id of [...S.active]) if (!allIds.has(id)) S.active.delete(id);
     }
+  }
+
+  function renderChips() {
+    const bar = $("sd-chips");
+    if (!bar) return;
+    const kinds = [
+      ["cyl", "Cilindros"],
+      ["coil", "Bobinas"],
+      ["sensor", "Finales"],
+      ["pressure", "Presión"],
+    ];
+    let html = "";
+    for (const [k, lbl] of kinds) {
+      const ofKind = S.meta.channels.filter((c) => c.kind === k);
+      if (!ofKind.length) continue;
+      const anyOn = ofKind.some((c) => S.active.has(c.id));
+      html +=
+        `<button type="button" class="sd-chip${anyOn ? " active" : ""}" data-kind-chip="${k}" title="Clic para mostrar u ocultar ${lbl.toLowerCase()}">` +
+        `<i class="sd-dot ${k}"></i><span>${lbl}</span></button>`;
+    }
+    bar.innerHTML = html;
+  }
+
+  function toggleKind(kind) {
+    const ofKind = S.meta.channels.filter((c) => c.kind === kind);
+    if (!ofKind.length) return;
+    S.userCustomized = true;
+    const anyOn = ofKind.some((c) => S.active.has(c.id));
+    for (const c of ofKind) {
+      if (anyOn) S.active.delete(c.id);
+      else S.active.add(c.id);
+    }
+    renderChips();
+    if (!$("sd-popover")?.hidden) renderPopover();
+    scheduleDraw();
+  }
+
+  function removeChannel(chId) {
+    if (!S.active.has(chId)) return;
+    S.userCustomized = true;
+    S.active.delete(chId);
+    if (S.hoverTrackId === chId) S.hoverTrackId = null;
+    if (S.hoverCloseId === chId) S.hoverCloseId = null;
+    renderChips();
+    if (!$("sd-popover")?.hidden) renderPopover();
+    scheduleDraw();
+  }
+
+  function addDevice(devId) {
+    if (!Core) return [];
+    const toAdd = Core.channelsForDevice(S.meta, devId, S.active);
+    if (!toAdd.length) return [];
+    S.userCustomized = true;
+    for (const id of toAdd) {
+      S.active.add(id);
+      if (!S.order.includes(id)) S.order.push(id);
+    }
+    renderChips();
+    if (!$("sd-popover")?.hidden) renderPopover();
+    scheduleDraw();
+    return toAdd;
   }
 
   function mount() {
@@ -167,12 +253,19 @@
       `<div class="sd-pop-wrap"><button id="sd-signals-btn" class="small" aria-haspopup="true" aria-expanded="false">+ Señales</button>` +
       `<div id="sd-popover" class="sd-popover" hidden></div></div>` +
       `</div>` +
+      `<div id="sd-chips" class="sd-chips"></div>` +
       `<div id="sd-readout" class="sd-readout">Sin datos aún</div>` +
       `<div class="sd-canvas-wrap" id="sd-wrap">` +
       `<canvas id="sd-canvas"></canvas>` +
+      `<div id="sd-drop-hint" class="sd-drop-hint">Suelta aquí para agregar al Diagrama de estados</div>` +
       `<div id="sd-empty" class="sd-empty">Ejecuta la simulación para trazar las curvas de estado.</div>` +
       `</div>` +
-      `<div class="sd-foot">Rueda: zoom temporal · Arrastra: recorrer historial</div>`;
+      `<div class="sd-foot">Rueda: zoom · Arrastra etiqueta: ordenar · ×: quitar · Arrastra equipo del plano aquí</div>`;
+
+    $("sd-chips").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-kind-chip]");
+      if (btn) toggleKind(btn.dataset.kindChip);
+    });
 
     $("sd-freeze").addEventListener("click", () => toggleFreeze());
     $("sd-clear").addEventListener("click", () => {
@@ -213,9 +306,38 @@
     });
 
     const canvas = $("sd-canvas");
+    const hitTrackAt = (x, y) => {
+      if (x < 0 || x >= LABEL_W) return { trackId: null, closeId: null };
+      for (const tr of S.lastTracks) {
+        if (y >= tr.y && y < tr.y + tr.h) {
+          const onClose = x >= LABEL_W - 22 && x <= LABEL_W - 4 && y >= tr.y + 4 && y <= tr.y + 22;
+          return { trackId: tr.id, closeId: onClose ? tr.id : null };
+        }
+      }
+      return { trackId: null, closeId: null };
+    };
     canvas.addEventListener("pointermove", (e) => {
       const r = canvas.getBoundingClientRect();
       const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      if (S.trackDrag) {
+        for (const tr of S.lastTracks) {
+          if (y >= tr.y && y < tr.y + tr.h && tr.id !== S.trackDrag.id) {
+            const visIds = visibleChannels().map((c) => c.id);
+            const fromIdx = visIds.indexOf(S.trackDrag.id);
+            const toIdx = visIds.indexOf(tr.id);
+            if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+              visIds.splice(fromIdx, 1);
+              visIds.splice(toIdx, 0, S.trackDrag.id);
+              const rest = S.order.filter((id) => !visIds.includes(id));
+              S.order = [...visIds, ...rest];
+              scheduleDraw();
+            }
+            break;
+          }
+        }
+        return;
+      }
       if (S.drag) {
         const dx = e.clientX - S.drag.x;
         if (!S.drag.active) {
@@ -238,23 +360,51 @@
         scheduleDraw();
         return;
       }
+      const hit = hitTrackAt(x, y);
+      S.hoverTrackId = hit.trackId;
+      S.hoverCloseId = hit.closeId;
+      canvas.style.cursor = hit.closeId ? "pointer" : hit.trackId ? "grab" : "crosshair";
       S.hoverX = x >= LABEL_W && x <= r.width - PAD_R ? x : null;
       scheduleDraw();
     });
     canvas.addEventListener("pointerleave", () => {
-      if (!S.drag) {
+      if (!S.drag && !S.trackDrag) {
         S.hoverX = null;
+        S.hoverTrackId = null;
+        S.hoverCloseId = null;
         scheduleDraw();
       }
     });
     canvas.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0 || !(recorder?.samples().length > 1)) return;
+      if (e.button !== 0) return;
       const r = canvas.getBoundingClientRect();
-      if (e.clientX - r.left < LABEL_W) return;
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      if (x < LABEL_W) {
+        const hit = hitTrackAt(x, y);
+        if (hit.closeId) {
+          removeChannel(hit.closeId);
+          return;
+        }
+        if (hit.trackId) {
+          S.trackDrag = { id: hit.trackId };
+          canvas.style.cursor = "grabbing";
+          canvas.setPointerCapture(e.pointerId);
+        }
+        return;
+      }
+      if (!(recorder?.samples().length > 1)) return;
       S.drag = { x: e.clientX, active: false, endMs: S.panEndMs ?? Math.max(0, recorder.lastTimeMs()) };
       canvas.setPointerCapture(e.pointerId);
     });
-    const endDrag = () => (S.drag = null);
+    const endDrag = () => {
+      S.drag = null;
+      if (S.trackDrag) {
+        S.trackDrag = null;
+        canvas.style.cursor = S.hoverTrackId ? "grab" : "crosshair";
+        scheduleDraw();
+      }
+    };
     canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
 
@@ -352,6 +502,7 @@
           }
         }
         renderPopover();
+        renderChips();
         scheduleDraw();
       });
     }
@@ -360,6 +511,7 @@
         S.userCustomized = true;
         if (inp.checked) S.active.add(inp.dataset.chid);
         else S.active.delete(inp.dataset.chid);
+        renderChips();
         scheduleDraw();
       });
     }
@@ -443,6 +595,10 @@
       tr.y = y;
       ctx.fillStyle = i % 2 === 0 ? COLORS.bandA : COLORS.bandB;
       ctx.fillRect(0, y, w, tr.h);
+      if (S.hoverTrackId === tr.ch.id || S.trackDrag?.id === tr.ch.id) {
+        ctx.fillStyle = "rgba(47, 140, 255, 0.10)";
+        ctx.fillRect(0, y, LABEL_W, tr.h);
+      }
       ctx.strokeStyle = COLORS.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -451,6 +607,7 @@
       ctx.stroke();
       y += tr.h;
     }
+    S.lastTracks = tracks.map((t) => ({ id: t.ch.id, y: t.y, h: t.h }));
 
     // Rejilla temporal vertical y eje inferior.
     const axisY = Math.max(y, h - AXIS_H);
@@ -592,18 +749,35 @@
         ctx.restore();
       }
 
-      // Etiqueta izquierda de pista + valor leído (o valor inicial en reposo).
+      // Etiqueta izquierda de pista + valor leído (o valor inicial en reposo) + botón × para quitar.
       const vNow = readT != null ? Core.valueAt(samples, ch, readT) : restingValueOf(ch);
+      const isHovered = S.hoverTrackId === ch.id;
+      const isCloseHover = S.hoverCloseId === ch.id;
       ctx.fillStyle = COLORS[ch.kind];
       ctx.fillRect(6, ty + 7, 3, th - 14);
       ctx.font = 'bold 11px "Cascadia Code", Consolas, monospace';
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = COLORS.text;
-      ctx.fillText(trackTitle(ch), 14, ty + th * 0.38, LABEL_W - 18);
+      ctx.fillText(trackTitle(ch), 13, ty + th * 0.38, LABEL_W - (isHovered ? 32 : 18));
       ctx.font = '10px "Cascadia Code", Consolas, monospace';
       ctx.fillStyle = vNow !== undefined && (ch.kind === "cyl" || ch.kind === "pressure" || vNow >= 0.5) ? COLORS[ch.kind] : COLORS.muted;
-      ctx.fillText(formatVal(ch, vNow), 14, ty + th * 0.72, LABEL_W - 18);
+      ctx.fillText(formatVal(ch, vNow), 13, ty + th * 0.72, LABEL_W - 18);
+
+      // Botón × en la esquina superior derecha de la etiqueta para ocultar esa pista con un clic.
+      if (isHovered) {
+        const bx = LABEL_W - 13;
+        const by = ty + 12;
+        ctx.fillStyle = isCloseHover ? "rgba(255, 93, 93, 0.22)" : "rgba(135, 148, 162, 0.16)";
+        ctx.beginPath();
+        ctx.arc(bx, by, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = isCloseHover ? COLORS.thresh : COLORS.muted;
+        ctx.fillText("×", bx, by + 0.5);
+      }
 
       // Punto de intersección sobre el cursor.
       if (hoverInData && vNow !== undefined) {
@@ -659,6 +833,7 @@
       }
       applyDefaultSelection(resetProject);
       window.JwsimScenePane?.setLeftAvailability?.(S.meta.hasPneumatics);
+      renderChips();
       if (!$("sd-popover")?.hidden) renderPopover();
       syncControls();
       scheduleDraw();
@@ -668,6 +843,35 @@
       S.running = !!running;
       if (recorder?.push(snap, S.running)) scheduleDraw();
       else if (!S.running && !(recorder?.samples().length > 0)) scheduleDraw();
+    },
+    addDevice,
+    removeChannel,
+    toggleKind,
+    onSceneDragMove(clientX, clientY, devId) {
+      const host = $("state-diag-pane");
+      if (!host || !S.visible || !Core) return false;
+      const chs = Core.channelsForDevice(S.meta, devId, S.active);
+      if (!chs.length) {
+        host.classList.remove("sd-drop-target");
+        return false;
+      }
+      const r = host.getBoundingClientRect();
+      const inside = r.width > 40 && clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+      host.classList.toggle("sd-drop-target", inside);
+      const hint = $("sd-drop-hint");
+      if (hint && inside) hint.textContent = `Suelta aquí para graficar ${devId} en el Diagrama de estados`;
+      return inside;
+    },
+    onSceneDragDrop(clientX, clientY, devId) {
+      const host = $("state-diag-pane");
+      if (!host) return false;
+      const wasTarget = host.classList.contains("sd-drop-target");
+      host.classList.remove("sd-drop-target");
+      if (!S.visible || !Core) return false;
+      const r = host.getBoundingClientRect();
+      const inside = wasTarget || (r.width > 40 && clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom);
+      if (!inside) return false;
+      return addDevice(devId).length > 0;
     },
     setVisible(on) {
       mount();
