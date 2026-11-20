@@ -193,6 +193,19 @@ try {
   await win.click('#sd-chips [data-kind-chip="coil"]');
   await sleep(150);
 
+  // Un clic en la franja de color de la primera pista abre el menú de estilo y lo deja abierto.
+  const swRect = await win.$eval("#sd-canvas", (c) => { const r = c.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+  await win.mouse.move(swRect.x + 7, swRect.y + 20);
+  await sleep(100);
+  await win.mouse.click(swRect.x + 7, swRect.y + 20);
+  await sleep(300);
+  const swatchPop = await t(() => {
+    const sp = document.getElementById("sd-style-pop");
+    return { open: !sp.hidden, title: sp.querySelector(".sd-style-head span")?.textContent ?? "" };
+  });
+  await win.keyboard.press("Escape");
+  await sleep(100);
+
   // Clic en el botón × de la primera pista (Y1.position) en la columna izquierda (x=101 = LABEL_W 116 − 15, y=20).
   const cRect = await win.$eval("#sd-canvas", (c) => { const r = c.getBoundingClientRect(); return { x: r.left, y: r.top }; });
   await win.mouse.move(cRect.x + 101, cRect.y + 20);
@@ -254,7 +267,9 @@ try {
       afterDrop.visibleIds.includes("Y1.position") &&
       afterDrop.y1Color === "#e11d48" &&
       afterDrop.y1X === dragPts.x0 && afterDrop.y1Y === dragPts.y0 &&
-      frozen === true && cleared.samples === 0 && cleared.frozen === false,
+      frozen === true && cleared.samples === 0 && cleared.frozen === false &&
+      swatchPop.open && swatchPop.title.startsWith("Cil."),
+    swatchPop,
     onlyCyl: onlyCyl.visibleIds, distinctColors, thickWidth, withCoils, afterCloseX, dropTargetActive, stylePopOpenOnDrop, afterDrop, frozen, cleared,
   };
   log(`CONTROLS ${JSON.stringify(criteria.CONTROLS)}`);

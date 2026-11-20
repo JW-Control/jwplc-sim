@@ -106,6 +106,7 @@
     hoverTrackId: null,
     hoverCloseId: null,
     hoverSwatchId: null,
+    swatchClick: false,
     styleTargetId: null,
     trackDrag: null,
     lastTracks: [],
@@ -516,6 +517,9 @@
         if (hit.swatchId) {
           e.stopPropagation();
           openStylePop(hit.swatchId, y);
+          // El «click» que sigue a este pointerdown sube al document y cerraría
+          // el menú recién abierto: se marca para frenarlo en el canvas.
+          S.swatchClick = true;
           return;
         }
         if (hit.trackId) {
@@ -528,6 +532,12 @@
       if (!(recorder?.samples().length > 1)) return;
       S.drag = { x: e.clientX, active: false, endMs: S.panEndMs ?? Math.max(0, recorder.lastTimeMs()) };
       canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("click", (e) => {
+      if (S.swatchClick) {
+        S.swatchClick = false;
+        e.stopPropagation();
+      }
     });
     canvas.addEventListener("dblclick", (e) => {
       const r = canvas.getBoundingClientRect();
