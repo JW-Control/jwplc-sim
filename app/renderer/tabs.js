@@ -31,6 +31,19 @@
     } catch {}
   };
 
+  function placeFaultsMenu() {
+    const fm = $("faults-menu");
+    if (!fm) return;
+    if (tab === "schematic" || tab === "plant") {
+      const sub = $("mtab-sub-schematic");
+      if (fm.parentElement !== $("main-tabs")) $("main-tabs").insertBefore(fm, sub);
+    } else {
+      const head = document.querySelector(".board-card .panel-head");
+      const mode = head?.querySelector(".mode:last-of-type");
+      if (head && fm.parentElement !== head) head.insertBefore(fm, mode ?? null);
+    }
+  }
+
   function paint() {
     document.body.dataset.tab = tab;
     for (const b of document.querySelectorAll(".mtab")) {
@@ -40,6 +53,7 @@
     }
     $("mtab-sub-program").hidden = tab !== "program";
     $("mtab-sub-schematic").hidden = tab !== "schematic";
+    placeFaultsMenu();
     paintSchem();
     miniPlc(tab === "plant");
   }

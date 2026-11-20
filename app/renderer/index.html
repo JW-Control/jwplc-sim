@@ -9,17 +9,23 @@
       content="default-src 'self'; script-src 'self' 'sha256-75FO2RBp+XPH4ZEjooP+6jYpgQhdX+zQDjDF7LQhOmE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:"
     />
     <title>JWPLC Sim</title>
+    <meta name="color-scheme" content="light dark" />
+    <script src="theme-init.js"></script>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="../node_modules/monaco-editor/min/vs/editor/editor.main.css" />
   </head>
   <body>
     <header class="toolbar">
       <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
-      <div class="group">
+      <div class="group tb-files">
         <button id="btn-new" title="Nuevo sketch (Ctrl+N)">Nuevo</button>
         <button id="btn-open" title="Abrir sketch (Ctrl+O)">Abrir…</button>
+        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
         <button id="btn-projects" title="Proyectos: nuevo proyecto Arduino u OpenPLC, abrir, recientes">Proyectos</button>
         <button id="btn-open-editor" title="Programar este proyecto IEC en el OpenPLC Editor" hidden>Abrir en OpenPLC Editor</button>
+      </div>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <div class="group tb-libs">
         <select id="sel-example" title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">
           <option value="">Ejemplos…</option>
         </select>
@@ -29,26 +35,31 @@
         <select id="sel-arch" title="Abrir una arquitectura de la vitrina: planta completa con su programa, lista para Ejecutar (se copia a la carpeta de trabajo)">
           <option value="">Arquitecturas…</option>
         </select>
-        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
       </div>
-      <div class="group">
+      <span class="tb-sep" aria-hidden="true"></span>
+      <div class="group tb-run">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
-        <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
-        <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
+        <div class="group tb-run-sec">
+          <button id="btn-pause" class="seg" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
+          <button id="btn-stop" class="seg" title="Detener (Mayús+F5)" disabled>■ Detener</button>
+        </div>
+        <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
+          <option value="1">×1</option>
+          <option value="10">×10</option>
+          <option value="0">Máx</option>
+        </select>
       </div>
-      <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
-        <option value="1">×1</option>
-        <option value="10">×10</option>
-        <option value="0">Máx</option>
-      </select>
-      <div class="clock" title="Tiempo virtual del PLC simulado">
-        <span class="label">t</span><span id="clock">00:00:00.000</span>
+      <div class="group tb-right">
+        <div class="clock" title="Tiempo virtual del PLC simulado">
+          <span class="label">t</span><span id="clock">00:00:00.000</span>
+        </div>
+        <div id="status" class="status idle">Detenido</div>
+        <button id="btn-com" class="com-status" aria-haspopup="dialog" aria-expanded="false"
+          title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
+          <span class="com-dot" aria-hidden="true"></span><span id="com-label">Sin COM</span>
+        </button>
+        <button id="btn-theme" class="theme-btn" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar tema"></button>
       </div>
-      <div id="status" class="status idle">Detenido</div>
-      <button id="btn-com" class="com-status" aria-haspopup="dialog" aria-expanded="false"
-        title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
-        <span class="com-dot" aria-hidden="true"></span><span id="com-label">Sin COM</span>
-      </button>
     </header>
 
     <!-- Pestañas de la ventana (tabs.js): Programa = editor con la placa (o la

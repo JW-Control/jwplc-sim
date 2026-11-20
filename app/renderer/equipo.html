@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
 <title>JWPLC real · pantalla en vivo</title>
 <style>
-:root{--bg:#14171b;--panel:#1d2127;--edge:#2c323b;--txt:#e6e9ee;--dim:#8d97a5;--acc:#2f81f7;--bad:#e5534b}
+:root{color-scheme:light dark;--bg:light-dark(#f5f7fa,#14171b);--panel:light-dark(#ffffff,#1d2127);--edge:light-dark(#d0d7de,#2c323b);--txt:light-dark(#1f2328,#e6e9ee);--dim:light-dark(#59636e,#8d97a5);--acc:light-dark(#0969da,#2f81f7);--bad:light-dark(#cf222e,#e5534b)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,sans-serif}
 main{max-width:560px;margin:0 auto;padding:40px 24px;display:flex;flex-direction:column;gap:16px}

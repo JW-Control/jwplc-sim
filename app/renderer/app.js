@@ -2416,8 +2416,14 @@ function initMonaco() {
         rules: [],
         colors: { "editor.background": "#14171b", "editorGutter.background": "#14171b" },
       });
+      monacoRef.editor.defineTheme("jwsim-light", {
+        base: "vs",
+        inherit: true,
+        rules: [],
+        colors: { "editor.background": "#f5f7fa", "editorGutter.background": "#f5f7fa" },
+      });
       editor = monacoRef.editor.create($("editor"), {
-        theme: "jwsim-dark",
+        theme: isDarkTheme() ? "jwsim-dark" : "jwsim-light",
         automaticLayout: true,
         fontSize: 13,
         minimap: { enabled: false },
@@ -2560,8 +2566,52 @@ async function comToggle() {
   comShow(r.current, r.error ?? "");
 }
 
+const systemDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+function storedTheme() {
+  try {
+    const v = localStorage.getItem("jwsim-theme");
+    return v === "light" || v === "dark" ? v : "system";
+  } catch {
+    return "system";
+  }
+}
+function isDarkTheme(mode = storedTheme()) {
+  if (mode === "dark") return true;
+  if (mode === "light") return false;
+  return systemDarkQuery.matches;
+}
+function syncThemeUi(mode) {
+  const dark = isDarkTheme(mode);
+  const meta = document.querySelector('meta[name="color-scheme"]');
+  if (meta) meta.content = mode === "light" || mode === "dark" ? mode : "light dark";
+  const btn = $("btn-theme");
+  if (btn) {
+    btn.innerHTML = `<span class="theme-ico" aria-hidden="true">${dark ? "☾" : "☀"}</span><span class="theme-lbl">${dark ? "Oscuro" : "Claro"}</span>`;
+    btn.title = dark ? "Tema actual: oscuro (clic para cambiar a claro)" : "Tema actual: claro (clic para cambiar a oscuro)";
+    btn.setAttribute("aria-label", btn.title);
+  }
+  monacoRef?.editor?.setTheme(dark ? "jwsim-dark" : "jwsim-light");
+  window.dispatchEvent(new CustomEvent("jwsim:themechange", { detail: { theme: mode, dark } }));
+}
+async function setThemeMode(mode, { persist = true } = {}) {
+  const next = mode === "light" || mode === "dark" ? mode : "system";
+  try {
+    if (next === "system") localStorage.removeItem("jwsim-theme");
+    else localStorage.setItem("jwsim-theme", next);
+  } catch {}
+  syncThemeUi(next);
+  if (persist) await api.setTheme?.(next);
+}
+function toggleThemeQuick() {
+  const target = isDarkTheme() ? "light" : "dark";
+  const matchesSystem = (target === "dark") === systemDarkQuery.matches;
+  return setThemeMode(matchesSystem ? "system" : target);
+}
+
 // Ganchos para las pruebas E2E (abrir un proyecto sin el diálogo del SO).
 window.jwsimTest = {
+  getTheme: () => ({ theme: storedTheme(), dark: isDarkTheme() }),
+  setTheme: (mode) => setThemeMode(mode),
   // Pantalla ampliada: abierta y ancho en píxeles físicos; modo de la TFT.
   tftZoom: () => ({
     open: !$("tft-zoom").hidden,
@@ -2632,6 +2682,21 @@ window.jwsimTest = {
 async function main() {
   buildBoard();
   wireUi();
+  $("btn-theme")?.addEventListener("click", () => toggleThemeQuick());
+  systemDarkQuery.addEventListener("change", () => {
+    if (storedTheme() === "system") syncThemeUi("system");
+  });
+  api.onThemeChanged?.(({ theme }) => setThemeMode(theme, { persist: false }));
+  const pref = await api.getTheme?.().catch(() => null);
+  if (pref?.theme) {
+    try {
+      if (pref.theme === "system") localStorage.removeItem("jwsim-theme");
+      else localStorage.setItem("jwsim-theme", pref.theme);
+    } catch {}
+    syncThemeUi(pref.theme);
+  } else {
+    syncThemeUi(storedTheme());
+  }
   setStatus("idle", "Detenido");
   const info = await api.info();
   state.packageRef = info.packageRef;

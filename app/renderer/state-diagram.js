@@ -25,6 +25,25 @@
     text: "#d7dee7",
     muted: "#8794a2",
   };
+  function refreshThemeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+    COLORS.bg = v("--panel", "#1b1f24");
+    COLORS.bandA = COLORS.bg;
+    COLORS.bandB = v("--panel-2", "#1f242b");
+    COLORS.grid = v("--border", "#2b3139");
+    COLORS.text = v("--text", "#d7dee7");
+    COLORS.muted = v("--muted", "#8794a2");
+    COLORS.cyl = v("--accent", "#2f8cff");
+    COLORS.coil = v("--warn", "#ffb020");
+    COLORS.sensor = v("--ok", "#37d67a");
+    COLORS.thresh = v("--err", "#ff5d5d");
+  }
+  refreshThemeColors();
+  window.addEventListener("jwsim:themechange", () => {
+    refreshThemeColors();
+    if (typeof scheduleDraw === "function") scheduleDraw();
+  });
 
   const LABEL_W = 84;
   const PAD_R = 12;
@@ -187,7 +206,7 @@
       { passive: false },
     );
 
-    new ResizeObserver(() => resize()).observe($("sd-wrap"));
+    new ResizeObserver(() => window.JwsimStateDiag?.resize?.()).observe($("sd-wrap"));
     syncControls();
   }
 

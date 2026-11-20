@@ -934,7 +934,8 @@
     const W = cv.width;
     const H = cv.height;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#10151b";
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--surface-deep").trim() || "#10151b";
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     const h = st.bench.hist;
     const keys = st.bench.watch;

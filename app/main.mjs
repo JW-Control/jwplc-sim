@@ -8,7 +8,7 @@ import { basename, dirname, extname, join, relative, resolve, sep } from "node:p
 import { spawn } from "node:child_process";
 import { Worker } from "node:worker_threads";
 
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from "electron";
 
 import { buildApiCatalog } from "../cli/lib/api-catalog.mjs";
 import { BEHAVIORS, generateDevice, MODELS, normalizeSpec, RAMP, symbolLayout, writeDevice } from "../cli/lib/device-gen.mjs";
@@ -280,6 +280,38 @@ ipcMain.handle("code:format", (_e, { text, name, dir }) => {
     return { error: err.message };
   }
 });
+
+const themeCfgFile = () => join(app.getPath("userData"), "preferencias.json");
+const VALID_THEMES = new Set(["system", "light", "dark"]);
+function loadThemePref() {
+  try {
+    const raw = JSON.parse(readFileSync(themeCfgFile(), "utf8"));
+    return VALID_THEMES.has(raw?.theme) ? raw.theme : "system";
+  } catch {
+    return "system";
+  }
+}
+function saveThemePref(theme) {
+  const mode = VALID_THEMES.has(theme) ? theme : "system";
+  try {
+    const cur = existsSync(themeCfgFile()) ? JSON.parse(readFileSync(themeCfgFile(), "utf8")) : {};
+    writeFileSync(themeCfgFile(), `${JSON.stringify({ ...cur, theme: mode }, null, 2)}\n`);
+  } catch {}
+  return mode;
+}
+function applyThemePref(mode, persist = true) {
+  const theme = persist ? saveThemePref(mode) : VALID_THEMES.has(mode) ? mode : "system";
+  nativeTheme.themeSource = theme;
+  const bg = nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa";
+  win?.setBackgroundColor?.(bg);
+  realWin?.setBackgroundColor?.(nativeTheme.shouldUseDarkColors ? "#14171b" : "#f5f7fa");
+  if (app.isReady()) buildMenu();
+  forward("app:themeChanged", { theme, dark: nativeTheme.shouldUseDarkColors });
+  return { theme, dark: nativeTheme.shouldUseDarkColors };
+}
+
+ipcMain.handle("app:getTheme", () => ({ theme: nativeTheme.themeSource, dark: nativeTheme.shouldUseDarkColors }));
+ipcMain.handle("app:setTheme", (_e, theme) => applyThemePref(theme, true));
 
 ipcMain.handle("app:info", () => {
   try {
@@ -1291,7 +1323,7 @@ function openRealDevice() {
     width: 1040,
     height: 760,
     title: "JWPLC real",
-    backgroundColor: "#14171b",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#14171b" : "#f5f7fa",
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
@@ -1383,6 +1415,14 @@ function buildMenu() {
           { label: "Placa", accelerator: "CmdOrCtrl+4", click: send("tab:board") },
           { type: "separator" },
           { label: "Panel inferior", accelerator: "CmdOrCtrl+J", click: send("dock") },
+          {
+            label: "Tema",
+            submenu: [
+              { label: "Seguir al sistema", type: "radio", checked: nativeTheme.themeSource === "system", click: () => applyThemePref("system") },
+              { label: "Claro", type: "radio", checked: nativeTheme.themeSource === "light", click: () => applyThemePref("light") },
+              { label: "Oscuro", type: "radio", checked: nativeTheme.themeSource === "dark", click: () => applyThemePref("dark") },
+            ],
+          },
           { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
           { type: "separator" },
@@ -1438,6 +1478,13 @@ ipcMain.handle("app:takeOpenTarget", () => {
 
 app.whenReady().then(() => {
   if (!primary && pendingOpen) return;
+  nativeTheme.themeSource = loadThemePref();
+  nativeTheme.on("updated", () => {
+    const bg = nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa";
+    win?.setBackgroundColor?.(bg);
+    realWin?.setBackgroundColor?.(nativeTheme.shouldUseDarkColors ? "#14171b" : "#f5f7fa");
+    forward("app:themeChanged", { theme: nativeTheme.themeSource, dark: nativeTheme.shouldUseDarkColors });
+  });
   buildMenu();
   win = new BrowserWindow({
     width: 1440,
@@ -1447,7 +1494,7 @@ app.whenReady().then(() => {
     title: "JWPLC Sim",
     // Ícono de la ventana y de la barra de tareas (en Windows empaquetado lo da el .exe).
     icon: join(import.meta.dirname, "icon", process.platform === "win32" ? "icon.ico" : "icon.png"),
-    backgroundColor: "#16191d",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa",
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
       contextIsolation: true,

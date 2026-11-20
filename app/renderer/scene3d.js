@@ -534,9 +534,17 @@ function init() {
     return;
   }
   V.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const isDark = () => {
+    const m = document.querySelector('meta[name="color-scheme"]')?.content;
+    if (m === "dark") return true;
+    if (m === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  };
+  const pal = (dark) => (dark ? { bg: 0x14171b, floor: 0x1b1f24, grid: 0x2c333b } : { bg: 0xe8edf3, floor: 0xdde3ec, grid: 0xbac4d1 });
+  const c0 = pal(isDark());
   V.scene = new THREE.Scene();
-  V.scene.background = new THREE.Color(0x14171b);
-  V.scene.fog = new THREE.Fog(0x14171b, 18, 45);
+  V.scene.background = new THREE.Color(c0.bg);
+  V.scene.fog = new THREE.Fog(c0.bg, 18, 45);
   V.camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
   V.camera.position.set(4, 5, 9);
   V.controls = new OrbitControls(V.camera, canvas);
@@ -548,12 +556,26 @@ function init() {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(5, 10, 6);
   V.scene.add(sun);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), mat(COL.floor));
+  const floorMat = mat(c0.floor);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
   floor.rotation.x = -Math.PI / 2;
   V.scene.add(floor);
-  const grid = new THREE.GridHelper(80, 80, COL.grid, COL.grid);
+  let grid = new THREE.GridHelper(80, 80, c0.grid, c0.grid);
   grid.position.y = 0.002;
   V.scene.add(grid);
+  const apply3dTheme = (dark) => {
+    const p = pal(dark);
+    V.scene.background.setHex(p.bg);
+    V.scene.fog.color.setHex(p.bg);
+    floorMat.color.setHex(p.floor);
+    V.scene.remove(grid);
+    grid.geometry?.dispose?.();
+    grid.material?.dispose?.();
+    grid = new THREE.GridHelper(80, 80, p.grid, p.grid);
+    grid.position.y = 0.002;
+    V.scene.add(grid);
+  };
+  window.addEventListener("jwsim:themechange", (e) => apply3dTheme(!!e.detail?.dark));
   V.root = new THREE.Group();
   V.scene.add(V.root);
   new ResizeObserver(resize).observe(canvas.parentElement);
@@ -766,7 +788,7 @@ function rebuild(spec) {
       "jwsim/service-unit": buildServiceUnit,
     };
     const model = (BUILD[d.type] ?? buildCylinder)(p, spec);
-    if (model.panel) V.panel = model.panel;
+    if (model.panel?.vfds) V.panel = model.panel;
     // Montacargas: los pulsadores de llamada van en la botonera de su piso.
     if (model.station) {
       model.calls = [];
