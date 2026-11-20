@@ -48,12 +48,20 @@ try {
   }));
   await win.click("#scene-tab-states");
   await sleep(350);
-  const inColor = await t(() => ({
-    open: !document.querySelector(".scene-main").classList.contains("left-collapsed"),
-    leftW: Math.round(document.getElementById("scene-left").getBoundingClientRect().width),
-    colorVisible: document.getElementById("scene-pan").getBoundingClientRect().width > 200,
-    sideOpen: document.getElementById("scene-side").getBoundingClientRect().width > 200,
-  }));
+  const inColor = await t(() => {
+    const c = document.getElementById("sd-canvas");
+    const px = c.getContext("2d").getImageData(2, 12, 1, 1).data;
+    return {
+      open: !document.querySelector(".scene-main").classList.contains("left-collapsed"),
+      leftW: Math.round(document.getElementById("scene-left").getBoundingClientRect().width),
+      colorVisible: document.getElementById("scene-pan").getBoundingClientRect().width > 200,
+      sideOpen: document.getElementById("scene-side").getBoundingClientRect().width > 200,
+      idleReadout: document.getElementById("sd-readout").textContent,
+      visibleIds: window.JwsimStateDiag.debug().visibleIds,
+      bgNotBlack: px[0] > 10 || px[1] > 10 || px[2] > 10,
+    };
+  });
+  await win.screenshot({ path: join(OUT, "reposo-sin-correr.png") });
   await win.click("#schem-pneu");
   await sleep(350);
   const inPneu = await t(() => ({
@@ -64,6 +72,7 @@ try {
   criteria.TOGGLE_BOTH_VIEWS = {
     ok: !initLeft.disabled && initLeft.collapsed && initLeft.leftW === 0 &&
       inColor.open && inColor.leftW > 300 && inColor.colorVisible && inColor.sideOpen &&
+      inColor.bgNotBlack && /En reposo/.test(inColor.idleReadout) && inColor.visibleIds.length >= 16 &&
       inPneu.open && inPneu.pneuVisible && inPneu.canvasW > 300,
     initLeft, inColor, inPneu,
   };
