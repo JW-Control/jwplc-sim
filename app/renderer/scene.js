@@ -168,7 +168,7 @@
 
   // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
   // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
-  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 240 } };
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 280 } };
   const MOUNT_SNAP = 40;
   const baseType = (t) => String(t ?? "").split("/").pop();
   const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;
@@ -176,6 +176,11 @@
     !!mountRule(g) && !!h && g.id !== h.id && mountRule(g).hosts.includes(baseType(h.type)) && !(g.rotation ?? 0) && !(h.rotation ?? 0);
   const mountPos = (g, h) => ({ x: (h.x ?? 0) + mountRule(g).dx, y: (h.y ?? 0) + mountRule(g).dy });
   const guestsOf = (id) => S.spec.devices.filter((d) => d.mount === id);
+  /** Rótulo del equipo; el acoplado lleva también el de su anfitrión ("KM + F"). */
+  const mountLabel = (dev) => {
+    const h = dev.mount && devById(dev.mount);
+    return h && canMount(dev, h) ? `${esc(h.id)} + ${esc(dev.id)}` : esc(dev.id);
+  };
   /** Anfitrión libre más cercano a la posición (x, y) del equipo, dentro del imán. */
   function mountTarget(dev, x, y) {
     let best = null;
@@ -187,10 +192,13 @@
     }
     return best;
   }
-  /** El acoplado se dibuja encima del anfitrión (sus puentes tapan los bornes). */
+  /** El acoplado se dibuja detrás del anfitrión: sus puentes entran en él. */
   function raiseGuest(g) {
-    const el = $("scene-devices").querySelector(`[data-id="${CSS.escape(g.id)}"]`);
-    if (el) $("scene-devices").appendChild(el);
+    const box = $("scene-devices");
+    const el = box.querySelector(`[data-id="${CSS.escape(g.id)}"]`);
+    const host = g.mount ?? S.drag?.mountTo;
+    const hel = host && box.querySelector(`[data-id="${CSS.escape(host)}"]`);
+    if (el && hel && el.nextSibling !== hel) box.insertBefore(el, hel);
   }
   /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
   function settleMounts() {
@@ -937,7 +945,10 @@
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
-        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
+        // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
+        (guestsOf(dev.id).some((g) => canMount(g, dev))
+          ? ""
+          : `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
@@ -1003,8 +1014,11 @@
       const def = dev && S.defs.get(dev.type);
       if (dev && def) {
         const st = out(dev.id);
-        html += `<div class="insp-title">${esc(dev.id)} <span class="muted">${esc(def.name)} · ${esc(def.type)}@${esc(def.version)}</span></div>`;
-        html += `<p class="insp-desc">${esc(def.description)}</p>`;
+        html += `<div class="insp-title" title="${esc(def.type)}@${esc(def.version)}">${esc(dev.id)} <span class="muted">${esc(def.name)}</span></div>`;
+        // Acople (térmico bajo el contactor): una línea, sin más.
+        if (dev.mount) html += `<p class="insp-desc">Acoplado bajo ${esc(dev.mount)}</p>`;
+        else if (guestsOf(dev.id).length) html += `<p class="insp-desc">Con ${guestsOf(dev.id).map((g) => esc(g.id)).join(", ")} acoplado</p>`;
+        if (def.description) html += `<details class="insp-group insp-about" data-group="__about" ${S.openGroups.has("__about") ? "open" : ""}><summary>Qué es</summary><p class="insp-desc">${esc(def.description)}</p></details>`;
         // Plantillas de taller: dejan el equipo listo para un uso típico.
         if (def.presets?.length) {
           html += `<div class="insp-sub">Plantillas de taller</div><div class="preset-pick">`;
@@ -1043,17 +1057,17 @@
           html += `<label class="insp-row${wide ? " wide" : ""}"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${input}</label>`;
         }
         if (group !== null) html += `</details>`;
-        const vals = Object.entries(st.outputs ?? {});
+        const vals = S.running ? Object.entries(st.outputs ?? {}) : [];
         if (vals.length) {
           // El estado cambia con cada instantánea: va en su propio contenedor
           // para no reemplazar el resto del inspector (botones, campos).
-          stateHtml = `<div class="insp-sub">Estado${S.snap ? ` · t = ${S.snap.t_ms.toFixed(1)} ms` : ""}</div><table class="insp-vals">`;
+          stateHtml = `<table class="insp-vals">`;
           for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
           stateHtml += "</table>";
-          html += `<div class="insp-state"></div>`;
+          html += `<details class="insp-group" data-group="__estado" ${S.openGroups.has("__estado") ? "open" : ""}><summary>Estado interno</summary><div class="insp-state"></div></details>`;
         }
         // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
-        const opts = dev.type === "jwsim/jwplc-basic" ? [] : faultOptions(dev, def, st);
+        const opts = dev.type === "jwsim/jwplc-basic" || !S.running ? [] : faultOptions(dev, def, st);
         if (opts.length) {
           const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
           html += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
@@ -1062,26 +1076,20 @@
             const data = esc(JSON.stringify({ kind: f.kind, device: dev.id, ...(f.kind === "stuck" ? { value: f.value } : {}) }));
             html += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
           }
-          html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
+          html += `</div>`;
         }
-        if (dev.mount) html += `<p class="insp-desc">Acoplado bajo <b>${esc(dev.mount)}</b>, sin cables: sus puentes 1-3-5 entran en 2-4-6. Arrástrelo lejos para separarlo.</p>`;
-        else if (mountRule(dev)) html += `<p class="insp-desc muted">Se engrapa bajo un contactor: arrástrelo hasta su borde inferior y queda conectado sin cables.</p>`;
-        if (guestsOf(dev.id).length) html += `<p class="insp-desc">Lleva acoplado: <b>${guestsOf(dev.id).map((g) => esc(g.id)).join(", ")}</b> (se mueve con él).</p>`;
-        if (dev.type !== "jwsim/jwplc-basic") html += `<p class="insp-desc muted">Supr o Ctrl+X lo quita; Ctrl+C / Ctrl+V lo copia; Ctrl+Z deshace.</p>`;
       }
     } else if (sel?.kind === "wire") {
       const w = S.spec.wiring[sel.id];
       if (w) {
-        const cur = wireColorName(w);
         html += `<div class="insp-title">Cable</div><p class="insp-desc">${esc(w.from)} — ${esc(w.to)}</p>`;
         html += `<div class="insp-sub">Color</div><div class="wire-swatches">`;
         html += `<button class="swatch auto${w.color ? "" : " on"}" data-color="" title="Automático (según el polo)">A</button>`;
         for (const [name, hex] of Object.entries(WIRE_COLORS)) {
           html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
         }
-        html += `</div><p class="insp-desc">Actual: ${esc(cur)}.${plainWire(w) ? " Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita." : ""}</p>`;
+        html += `</div>`;
         if (plainWire(w) && w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable; Ctrl+Z deshace.</p>`;
         // Cable multipolar y referencia: solo cambian el dibujo.
         const dis = S.running ? "disabled" : "";
         const swatch = (x) => `<span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>`;
@@ -1118,7 +1126,6 @@
       if (c && idx.length) {
         const dis = S.running ? "disabled" : "";
         html += `<div class="insp-title">Cable ${esc(c.id)} <span class="muted">${idx.length} hilos · ${esc(pairOf(S.spec.wiring[idx[0]]))}</span></div>`;
-        html += `<p class="insp-desc">Cable multipolar: los hilos van juntos en una funda y se abren junto a cada equipo. Solo cambia el dibujo; cada hilo sigue uniendo sus dos bornes.</p>`;
         html += `<label class="insp-row wide"><span>Nombre</span><input type="text" data-cable-field="label" value="${esc(c.label ?? "")}" placeholder="p. ej. 4×1 mm² mando" ${dis}/></label>`;
         html +=
           `<label class="insp-check"><input type="checkbox" id="scene-cable-ref" ${c.ref ? "checked" : ""} ${dis}/>` +
@@ -1129,7 +1136,6 @@
           html += `<tr data-select-wire="${i}" title="Elegir este hilo"><td><span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>${esc(x.from)}</td><td>${esc(x.to)}</td></tr>`;
         }
         html += `</table><button class="small" data-cable-act="ungroup" ${dis}>Desagrupar (Ctrl+Mayús+G)</button>`;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable con todos sus hilos; Ctrl+Z deshace.</p>`;
       }
     } else {
       // Nada seleccionado: información general de la escena.
@@ -1137,7 +1143,10 @@
       const nWire = S.spec.wiring.length;
       html += `<div class="insp-title">Escena</div><table class="insp-vals"><tr><td>Dispositivos</td><td>${nDev}</td></tr><tr><td>Cables</td><td>${nWire}</td></tr>` +
         `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
-      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr o Ctrl+X quita lo seleccionado; Ctrl+C y Ctrl+V copian y pegan; Ctrl+Z y Ctrl+Y deshacen y rehacen. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
+      html += `<p class="insp-desc muted">Elija un equipo o un cable para ver sus propiedades.</p>`;
+      html += `<details class="insp-group" data-group="__atajos" ${S.openGroups.has("__atajos") ? "open" : ""}><summary>Atajos</summary><table class="insp-vals">` +
+        `<tr><td>Cablear</td><td>clic en un borne y en otro</td></tr><tr><td>Quitar</td><td>Supr</td></tr><tr><td>Copiar / pegar</td><td>Ctrl+C / Ctrl+V</td></tr>` +
+        `<tr><td>Deshacer / rehacer</td><td>Ctrl+Z / Ctrl+Y</td></tr><tr><td>Acoplar el térmico</td><td>arrástrelo bajo el contactor</td></tr></table></details>`;
     }
     if (side.dataset.key !== html) {
       side.innerHTML = html;
