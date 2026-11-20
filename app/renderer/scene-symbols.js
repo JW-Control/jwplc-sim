@@ -158,7 +158,7 @@
   }
 
   // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
-  // contact.<contacto>, damaged, tripped; con "!" niega, "=v" compara y
+  // contact.<contacto>, damaged, tripped, mounted; con "!" niega, "=v" compara y
   // "a|b" toma b si a no tiene valor (p. ej. out.distance|param.distance:
   // la salida con la simulación en marcha, el parámetro en edición).
   function valueOf(expr, ctx) {
@@ -181,6 +181,8 @@
     let v =
       ns === "out" ? ctx.o[key] : ns === "param" ? ctx.p[key] : ns === "contact" ? ctx.st.contacts?.[key] :
       ns === "damaged" ? !!ctx.st.damaged?.length : ns === "tripped" ? !!ctx.st.tripped :
+      // mounted: el equipo está acoplado a otro (térmico bajo el contactor).
+      ns === "mounted" ? !!ctx.st.mounted :
       // wired.<borne>: hay un cable en ese borne (sin cable: sin valor, para "a|b").
       ns === "wired" ? (ctx.wired.has(key) ? true : undefined) : undefined;
     if (cmp !== undefined) v = String(v) === cmp;
@@ -599,7 +601,7 @@
         const led = (x, on, col, t) => `<circle cx="${x}" cy="118" r="5" fill="${on ? col : "#2a2d31"}" stroke="${ink}"/><text class="sym-tag light" x="${x}" y="134">${t}</text>`;
         return (
           `<rect class="dev-box" x="10" y="22" width="${w - 20}" height="${h - 44}" rx="8" fill="#2e3237" stroke="${ink}" stroke-width="1.6"/>` +
-          `<text class="sym-big light" x="${cx}" y="44">DELTA · VFD-EL</text>` +
+          `<text class="sym-big light" x="${cx}" y="44">VFD</text>` +
           terminals(type, lay) +
           `<rect x="${cx - 80}" y="58" width="160" height="40" rx="4" fill="#120606" stroke="${ink}"/>` +
           `<text x="${cx}" y="87" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="#ff3b26">${esc(o.lcd ?? "")}</text>` +

@@ -1186,7 +1186,12 @@ de G2: modo de las entradas y su nivel inicial. **[G7]** `scene.devices` y
 `scene.wiring` son la escena (§4.1; esquema propio en
 [`schema/jwsim-scene-1.json`](../schema/jwsim-scene-1.json)). Cada
 dispositivo tiene `id`, `type` (`autor/nombre`), la `version` mínima (misma
-versión mayor), `params` y su posición `x`/`y` en la vista. Cada cable une
+versión mayor), `params` y su posición `x`/`y` en la vista. Opcional,
+`mount: "<id>"`: el equipo va acoplado a otro sin cables, como el relé
+térmico engrapado bajo el contactor (sus puentes 1-3-5 entran en 2-4-6); la
+posición sale de la del anfitrión y las uniones internas las agrega la
+escena (`scene/mount.mjs`). En el esquema se acopla arrastrándolo cerca de
+su lugar y se separa arrastrándolo lejos. Cada cable une
 dos bornes `<dispositivo>.<borne>`. La versión 0 es el borrador
 previo a v1 (`{"jwsim": 0, "sketch", "openplc", "hmi", "realtime", "seed"}`)
 y sirve para probar la ruta de migración.

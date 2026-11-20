@@ -166,6 +166,61 @@
   // ------------------------------------------------------------ dibujo
   const devById = (id) => S.spec.devices.find((d) => d.id === id);
 
+  // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
+  // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
+  // hide: bornes del acoplado que quedan dentro del anfitrión (sin cable posible).
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 280, hide: ["1", "3", "5"] } };
+  const MOUNT_SNAP = 40;
+  const baseType = (t) => String(t ?? "").split("/").pop();
+  const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;
+  const canMount = (g, h) =>
+    !!mountRule(g) && !!h && g.id !== h.id && mountRule(g).hosts.includes(baseType(h.type)) && !(g.rotation ?? 0) && !(h.rotation ?? 0);
+  const mountPos = (g, h) => ({ x: (h.x ?? 0) + mountRule(g).dx, y: (h.y ?? 0) + mountRule(g).dy });
+  const guestsOf = (id) => S.spec.devices.filter((d) => d.mount === id);
+  /** Rótulo del equipo; el acoplado lleva también el de su anfitrión ("KM + F"). */
+  const mountLabel = (dev) => {
+    const h = dev.mount && devById(dev.mount);
+    return h && canMount(dev, h) ? `${esc(h.id)} + ${esc(dev.id)}` : esc(dev.id);
+  };
+  /** Anfitrión libre más cercano a la posición (x, y) del equipo, dentro del imán. */
+  function mountTarget(dev, x, y) {
+    let best = null;
+    for (const h of S.spec.devices) {
+      if (!canMount(dev, h) || guestsOf(h.id).some((g) => g.id !== dev.id)) continue;
+      const p = mountPos(dev, h);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d <= MOUNT_SNAP && (!best || d < best.d)) best = { h, p, d };
+    }
+    return best;
+  }
+  /** ¿El equipo está acoplado (o a punto de acoplarse mientras se arrastra)? */
+  const isMounted = (dev) => (S.drag?.kind === "device" && S.drag.dev === dev ? !!S.drag.mountTo : !!dev.mount && canMount(dev, devById(dev.mount)));
+  /**
+   * El acoplado se dibuja delante del anfitrión: su cuerpo tapa el borde
+   * inferior del contactor y sus puentes suben hasta los bornes 2-4-6.
+   */
+  function raiseGuest(g) {
+    const box = $("scene-devices");
+    const el = box.querySelector(`[data-id="${CSS.escape(g.id)}"]`);
+    const host = g.mount ?? S.drag?.mountTo;
+    const hel = host && box.querySelector(`[data-id="${CSS.escape(host)}"]`);
+    if (el && hel && hel.nextSibling !== el) hel.after(el);
+  }
+  /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
+  function settleMounts() {
+    for (const g of S.spec.devices) {
+      if (!g.mount) continue;
+      const h = devById(g.mount);
+      if (!canMount(g, h)) {
+        delete g.mount;
+        continue;
+      }
+      const p = mountPos(g, h);
+      g.x = p.x;
+      g.y = p.y;
+    }
+  }
+
   // Borne: entrada del cable (x, y), tornillo (sx, sy) y lado (arriba/abajo).
   function termPos(end) {
     const i = end.indexOf(".");
@@ -594,7 +649,9 @@
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
       const affected = (w, i) =>
-        S.drag.kind === "device" ? w.from.startsWith(`${S.drag.dev.id}.`) || w.to.startsWith(`${S.drag.dev.id}.`) : S.drag.kind === "vertex" && i === S.drag.i;
+        S.drag.kind === "device"
+          ? [S.drag.dev, ...guestsOf(S.drag.dev.id)].some((d) => w.from.startsWith(`${d.id}.`) || w.to.startsWith(`${d.id}.`))
+          : S.drag.kind === "vertex" && i === S.drag.i;
       if (moving) {
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
         ctx.limit = 40000;
@@ -849,11 +906,13 @@
     // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
     const pre = `${dev.id}.`;
     const wired = [...new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]).filter((e) => e.startsWith(pre)).map((e) => e.slice(pre.length)))].sort();
-    const st = { ...out(dev.id), id: dev.id, wired };
+    const mounted = isMounted(dev);
+    const st = { ...out(dev.id), id: dev.id, wired, mounted };
+    const hosting = guestsOf(dev.id).some((x) => canMount(x, dev));
     // Un símbolo con giro (data-spin) se redibuja en cada instante simulado.
     const pp = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
-    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired]);
+    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired, mounted, hosting, dev.mount]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
@@ -893,8 +952,11 @@
         // una plantilla no recibe el puntero (style.css, .dev .tpl *).
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
-        `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
-        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
+        `<rect class="sel-frame" x="-2" y="-2" width="${sym.w + 4}" height="${sym.h + 4}" rx="3"/>` +
+        // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
+        (hosting
+          ? ""
+          : `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
@@ -911,9 +973,13 @@
       $("scene-terms").appendChild(t);
     }
     setAttr(t, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
-    if (t.childElementCount && !force) return;
+    const hide = mounted ? new Set(mountRule(dev)?.hide ?? []) : new Set();
+    const tkey = [...hide].join(",");
+    if (t.childElementCount && !force && t.dataset.hide === tkey) return;
+    t.dataset.hide = tkey;
     let th = "";
     for (const [id, [x, y]] of Object.entries(sym.screws)) {
+      if (hide.has(id)) continue;
       // El borne es el tornillo dibujado: el círculo es invisible (resalta
       // al pasar el mouse).
       th += `<g class="term" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 10}"/>`;
@@ -931,7 +997,9 @@
     if (S.view !== "scene") return;
     const keep = new Set(S.spec.devices.map((d) => d.id));
     for (const g of [...$("scene-board").children, ...$("scene-devices").children, ...$("scene-terms").children]) if (!keep.has(g.dataset.id)) g.remove();
+    settleMounts();
     for (const dev of S.spec.devices) renderDevice(dev, force);
+    for (const dev of S.spec.devices) if (dev.mount) raiseGuest(dev);
     renderWires();
     commitView();
     renderSide();
@@ -943,6 +1011,59 @@
   }
 
   // ------------------------------------------------------------ panel lateral
+  const fmtN = (n) => String(Math.round(Number(n) * 100) / 100).replace(".", ",");
+  /**
+   * Cómo actúa el equipo con sus ajustes actuales, en una o dos frases. Los
+   * equipos de protección lo calculan; los demás toman la primera frase de su
+   * descripción (la completa queda en «Más información»).
+   * @returns {{ title: string, text: string } | null}
+   */
+  function explainDevice(dev, def) {
+    const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
+    const range = () => {
+      const [lo, hi] = String(p.range ?? "").replace(" A", "").split("-").map(Number);
+      const ir = Math.min(hi, Math.max(lo, Number(p.ajuste) || lo));
+      return { lo, hi, ir };
+    };
+    switch (baseType(dev.type)) {
+      case "overload-relay": {
+        const { ir } = range();
+        const auto = String(p.rearme).startsWith("auto");
+        return {
+          title: "Térmico",
+          text: `Dispara por sobrecarga sobre 1,15 × Ir = ${fmtN(1.15 * ir)} A (clase 10: con 1,5 × Ir en menos de 2 min, con 7,2 × Ir en unos 3 s) y por falta de fase. Al disparar abre 95-96 y cierra 97-98; ${auto ? "se rearma solo al enfriarse" : "se rearma con RESET una vez frío"}.`,
+        };
+      }
+      case "motor-protector": {
+        const { hi, ir } = range();
+        return {
+          title: "Térmico y magnético",
+          text: `Térmico: dispara sobre 1,15 × Ir = ${fmtN(1.15 * ir)} A (clase 10). Magnético: al instante desde 13 × ${fmtN(hi)} A = ${fmtN(13 * hi)} A. Disparado queda en TRIP: llevar la perilla a O y luego a I.`,
+        };
+      }
+      case "breaker": {
+        const In = Number(p.In) || 0;
+        const k = { B: 4, C: 7.5, D: 15 }[p.curve] ?? 7.5;
+        return {
+          title: `Curva ${p.curve}`,
+          text: `Térmico: no dispara con 1,13 × In = ${fmtN(1.13 * In)} A y sí con 1,45 × In = ${fmtN(1.45 * In)} A. Magnético: al instante desde ${fmtN(k)} × In = ${fmtN(k * In)} A.`,
+        };
+      }
+      case "contactor":
+        return {
+          title: "Bobina",
+          text: `Con ${p.coil} en A1-A2 cierra los polos 1-2, 3-4 y 5-6 y ${p.aux === "01" ? "abre el auxiliar 21-22 NC" : "cierra el auxiliar 13-14 NA"}.`,
+        };
+    }
+    const d = String(def.description ?? "").trim();
+    if (!d) return null;
+    // Primera frase (sin cortar decimales ni abreviaturas como «p. ej.»).
+    const m = d.match(/^(.{20,}?[^.\s]{3}\.)(\s|$)/s);
+    let first = m ? m[1] : d;
+    if (first.length > 220) first = first.slice(0, first.lastIndexOf(" ", 210)) + "…";
+    return { title: "Funcionamiento", text: first };
+  }
+
   function renderSide() {
     const side = $("scene-inspector");
     const sel = S.sel;
@@ -958,82 +1079,148 @@
       const def = dev && S.defs.get(dev.type);
       if (dev && def) {
         const st = out(dev.id);
-        html += `<div class="insp-title">${esc(dev.id)} <span class="muted">${esc(def.name)} · ${esc(def.type)}@${esc(def.version)}</span></div>`;
-        html += `<p class="insp-desc">${esc(def.description)}</p>`;
-        // Plantillas de taller: dejan el equipo listo para un uso típico.
-        if (def.presets?.length) {
-          html += `<div class="insp-sub">Plantillas de taller</div><div class="preset-pick">`;
-          for (const pr of def.presets) {
-            const on = presetMatches(dev, def, pr);
-            html += `<button class="preset-opt${on ? " on" : ""}" data-preset="${esc(pr.id)}" ${S.running ? "disabled" : ""}><b>${esc(pr.label)}</b><span>${esc(pr.description ?? "")}</span></button>`;
-          }
-          html += `</div>`;
-        }
-        let group = null;
-        for (const p of def.parameters) {
-          const v = dev.params?.[p.id] ?? p.default;
-          const dis = S.running ? "disabled" : "";
-          // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
-          if ((p.group ?? null) !== group) {
-            if (group !== null) html += `</details>`;
-            group = p.group ?? null;
-            if (group !== null) html += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
-          }
-          let input;
-          if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
-            // Placa de bornes con sus chapas: se elige con un clic.
-            const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
-            html += `<div class="insp-sub">${esc(p.label)}</div><div class="bornera-pick">`;
-            for (const o of p.options) {
-              html += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
-                `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
-            }
-            html += `</div>`;
-            continue;
-          }
-          if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
-          else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
-          else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
-          const wide = p.type === "enum" && p.options.some((o) => String(o).length > 16);
-          html += `<label class="insp-row${wide ? " wide" : ""}"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${input}</label>`;
-        }
-        if (group !== null) html += `</details>`;
-        const vals = Object.entries(st.outputs ?? {});
-        if (vals.length) {
-          // El estado cambia con cada instantánea: va en su propio contenedor
-          // para no reemplazar el resto del inspector (botones, campos).
-          stateHtml = `<div class="insp-sub">Estado${S.snap ? ` · t = ${S.snap.t_ms.toFixed(1)} ms` : ""}</div><table class="insp-vals">`;
-          for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
-          stateHtml += "</table>";
-          html += `<div class="insp-state"></div>`;
-        }
+        const dis = S.running ? "disabled" : "";
+        // Cabecera: rótulo y tipo; debajo, categoría y bornes.
+        const lay = symbolFor(dev).lay;
+        const terms = def.terminals.filter((t) => !lay?.terms || t.id in lay.terms);
+        const ends = new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]));
+        const linked = new Set(isMounted(dev) ? (mountRule(dev)?.hide ?? []) : []);
+        for (const g of guestsOf(dev.id)) if (canMount(g, dev)) for (const t of ["2", "4", "6"]) linked.add(t);
+        const nWired = terms.filter((t) => ends.has(`${dev.id}.${t.id}`) || linked.has(t.id)).length;
+        html += `<div class="insp-head" title="${esc(def.type)}@${esc(def.version)}"><b>${esc(dev.id)}</b><span>${esc(def.name)}</span></div>`;
+        html += `<div class="insp-meta">${esc(def.category ?? "Otros")} · ${terms.length} bornes</div>`;
         // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
-        const opts = dev.type === "jwsim/jwplc-basic" ? [] : faultOptions(dev, def, st);
+        const opts = dev.type === "jwsim/jwplc-basic" || !S.running ? [] : faultOptions(dev, def, st);
+        let fh = "";
         if (opts.length) {
           const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
-          html += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
+          fh += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
           for (const f of opts) {
             const on = act.some((a) => a.kind === f.kind && (f.kind !== "stuck" || (a.value !== false) === f.value));
             const data = esc(JSON.stringify({ kind: f.kind, device: dev.id, ...(f.kind === "stuck" ? { value: f.value } : {}) }));
-            html += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
+            fh += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
           }
-          html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
+          fh += `</div>`;
         }
-        if (dev.type !== "jwsim/jwplc-basic") html += `<p class="insp-desc muted">Supr o Ctrl+X lo quita; Ctrl+C / Ctrl+V lo copia; Ctrl+Z deshace.</p>`;
+        // En marcha, las fallas van arriba: es lo que se usa durante la simulación.
+        html += fh;
+        const sec = (key, title, body, open, note = "") =>
+          `<details class="insp-group insp-sec" data-group="${key}" ${open ? "open" : ""}><summary><span>${title}</span>${note ? `<em>${note}</em>` : ""}</summary><div class="insp-body">${body}</div></details>`;
+        const isOpen = (key, byDefault) => (byDefault ? !S.openGroups.has(`!${key}`) : S.openGroups.has(key));
+        // Parámetro: fila con «por defecto» o el botón para volver a él.
+        const paramRow = (p) => {
+          const v = dev.params?.[p.id] ?? p.default;
+          const isDef = String(v) === String(p.default);
+          let input;
+          if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+          else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
+          else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
+          const mark = isDef
+            ? `<i class="insp-def">por defecto</i>`
+            : `<button class="insp-reset" data-reset="${esc(p.id)}" title="Volver al valor por defecto (${esc(p.default)})" ${dis}>↺</button>`;
+          return `<div class="insp-field"><div class="insp-lbl"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${mark}</div>${input}</div>`;
+        };
+        // Ajustes: lo que se elige al montar el tablero. Los tiempos y
+        // constantes del modelo van aparte, en «Parámetros de simulación».
+        const isSim = (p) => p.sim ?? (p.unit === "ms" || /^tau/i.test(p.id));
+        let body = "";
+        if (def.presets?.length) {
+          body += `<div class="preset-pick">`;
+          for (const pr of def.presets) {
+            const on = presetMatches(dev, def, pr);
+            body += `<button class="preset-opt${on ? " on" : ""}" data-preset="${esc(pr.id)}" ${dis}><b>${esc(pr.label)}</b><span>${esc(pr.description ?? "")}</span></button>`;
+          }
+          body += `</div>`;
+        }
+        let group = null;
+        for (const p of def.parameters.filter((x) => !isSim(x))) {
+          const v = dev.params?.[p.id] ?? p.default;
+          // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
+          if ((p.group ?? null) !== group) {
+            if (group !== null) body += `</details>`;
+            group = p.group ?? null;
+            if (group !== null) body += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
+          }
+          if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
+            // Placa de bornes con sus chapas: se elige con un clic.
+            const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
+            body += `<div class="insp-lbl"><span>${esc(p.label)}</span></div><div class="bornera-pick">`;
+            for (const o of p.options) {
+              body += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
+                `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
+            }
+            body += `</div>`;
+            continue;
+          }
+          body += paramRow(p);
+        }
+        if (group !== null) body += `</details>`;
+        if (body) html += sec("__ajustes", "Ajustes", body, isOpen("__ajustes", true));
+        // Cómo funciona con los ajustes actuales, en dos líneas; el resto, a pedido.
+        const ex = explainDevice(dev, def);
+        if (ex) {
+          const more = def.description && def.description !== ex.text
+            ? `<details class="insp-more"><summary>Más información</summary><p>${esc(def.description)}</p></details>`
+            : "";
+          html += sec("__func", esc(ex.title), `<p class="insp-desc">${esc(ex.text)}</p>${more}`, isOpen("__func", true));
+        }
+        const simP = def.parameters.filter(isSim);
+        if (simP.length) html += sec("__sim", "Parámetros de simulación", simP.map(paramRow).join(""), isOpen("__sim", false));
+        // Acople: el térmico se engrapa bajo un contactor (o el contactor lo recibe).
+        const hostRule = Object.values(MOUNTS).some((r) => r.hosts.includes(baseType(dev.type)));
+        if (mountRule(dev) || hostRule) {
+          let ab = "";
+          if (mountRule(dev)) {
+            if (dev.mount && isMounted(dev)) {
+              ab += `<p class="insp-desc">Acoplado bajo <b>${esc(dev.mount)}</b>: sus puentes entran en 2/T1, 4/T2 y 6/T3 del contactor, sin cables.</p>`;
+              ab += `<button class="small" data-unmount="${esc(dev.id)}" ${dis}>Separar</button>`;
+            } else {
+              const free = S.spec.devices.filter((h) => canMount(dev, h) && !guestsOf(h.id).some((x) => x.id !== dev.id));
+              ab += `<p class="insp-desc">Se acopla bajo un contactor. También se acopla al arrastrarlo debajo de él.</p>`;
+              ab += free.length
+                ? `<div class="mount-pick">${free.map((h) => `<button class="small" data-mount="${esc(h.id)}" ${dis}>Acoplar a ${esc(h.id)}</button>`).join("")}</div>`
+                : `<p class="insp-desc muted">No hay contactores libres en el esquema.</p>`;
+            }
+          } else {
+            const gs = guestsOf(dev.id).filter((x) => canMount(x, dev));
+            ab += gs.length
+              ? `<p class="insp-desc">Tiene acoplado <b>${gs.map((x) => esc(x.id)).join(", ")}</b> debajo.</p>` +
+                gs.map((x) => `<button class="small" data-unmount="${esc(x.id)}" ${dis}>Separar ${esc(x.id)}</button>`).join("")
+              : `<p class="insp-desc">Admite un relé térmico acoplado debajo: arrástrelo bajo el contactor.</p>`;
+          }
+          html += sec("__acople", "Acople", ab, isOpen("__acople", false));
+        }
+        // Bornes: cuáles tienen cable (o quedan unidos por el acople).
+        let tb = `<table class="insp-vals insp-terms">`;
+        for (const t of terms) {
+          const key = `${dev.id}.${t.id}`;
+          const w = S.spec.wiring.filter((x) => x.from === key || x.to === key).map((x) => (x.from === key ? x.to : x.from));
+          const where = w.length ? w.map(esc).join(", ") : linked.has(t.id) ? "acople" : "—";
+          tb += `<tr class="${w.length || linked.has(t.id) ? "on" : ""}"><td>${esc(t.label ?? t.id)}</td><td>${where}</td></tr>`;
+        }
+        tb += `</table>`;
+        html += sec("__bornes", "Bornes", tb, isOpen("__bornes", false), `${nWired} de ${terms.length} conectados`);
+        const vals = S.running ? Object.entries(st.outputs ?? {}) : [];
+        if (vals.length) {
+          // El estado cambia con cada instantánea: va en su propio contenedor
+          // para no reemplazar el resto del inspector (botones, campos).
+          stateHtml = `<table class="insp-vals">`;
+          for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
+          stateHtml += "</table>";
+          html += `<details class="insp-group insp-sec" data-group="__estado" ${S.openGroups.has("__estado") ? "open" : ""}><summary><span>Estado en simulación</span></summary><div class="insp-body insp-state"></div></details>`;
+        }
       }
     } else if (sel?.kind === "wire") {
       const w = S.spec.wiring[sel.id];
       if (w) {
-        const cur = wireColorName(w);
         html += `<div class="insp-title">Cable</div><p class="insp-desc">${esc(w.from)} — ${esc(w.to)}</p>`;
         html += `<div class="insp-sub">Color</div><div class="wire-swatches">`;
         html += `<button class="swatch auto${w.color ? "" : " on"}" data-color="" title="Automático (según el polo)">A</button>`;
         for (const [name, hex] of Object.entries(WIRE_COLORS)) {
           html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
         }
-        html += `</div><p class="insp-desc">Actual: ${esc(cur)}.${plainWire(w) ? " Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita." : ""}</p>`;
+        html += `</div>`;
         if (plainWire(w) && w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable; Ctrl+Z deshace.</p>`;
         // Cable multipolar y referencia: solo cambian el dibujo.
         const dis = S.running ? "disabled" : "";
         const swatch = (x) => `<span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>`;
@@ -1070,7 +1257,6 @@
       if (c && idx.length) {
         const dis = S.running ? "disabled" : "";
         html += `<div class="insp-title">Cable ${esc(c.id)} <span class="muted">${idx.length} hilos · ${esc(pairOf(S.spec.wiring[idx[0]]))}</span></div>`;
-        html += `<p class="insp-desc">Cable multipolar: los hilos van juntos en una funda y se abren junto a cada equipo. Solo cambia el dibujo; cada hilo sigue uniendo sus dos bornes.</p>`;
         html += `<label class="insp-row wide"><span>Nombre</span><input type="text" data-cable-field="label" value="${esc(c.label ?? "")}" placeholder="p. ej. 4×1 mm² mando" ${dis}/></label>`;
         html +=
           `<label class="insp-check"><input type="checkbox" id="scene-cable-ref" ${c.ref ? "checked" : ""} ${dis}/>` +
@@ -1081,7 +1267,6 @@
           html += `<tr data-select-wire="${i}" title="Elegir este hilo"><td><span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>${esc(x.from)}</td><td>${esc(x.to)}</td></tr>`;
         }
         html += `</table><button class="small" data-cable-act="ungroup" ${dis}>Desagrupar (Ctrl+Mayús+G)</button>`;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable con todos sus hilos; Ctrl+Z deshace.</p>`;
       }
     } else {
       // Nada seleccionado: información general de la escena.
@@ -1089,7 +1274,10 @@
       const nWire = S.spec.wiring.length;
       html += `<div class="insp-title">Escena</div><table class="insp-vals"><tr><td>Dispositivos</td><td>${nDev}</td></tr><tr><td>Cables</td><td>${nWire}</td></tr>` +
         `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
-      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr o Ctrl+X quita lo seleccionado; Ctrl+C y Ctrl+V copian y pegan; Ctrl+Z y Ctrl+Y deshacen y rehacen. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
+      html += `<p class="insp-desc muted">Elija un equipo o un cable para ver sus propiedades.</p>`;
+      html += `<details class="insp-group" data-group="__atajos" ${S.openGroups.has("__atajos") ? "open" : ""}><summary>Atajos</summary><table class="insp-vals">` +
+        `<tr><td>Cablear</td><td>clic en un borne y en otro</td></tr><tr><td>Quitar</td><td>Supr</td></tr><tr><td>Copiar / pegar</td><td>Ctrl+C / Ctrl+V</td></tr>` +
+        `<tr><td>Deshacer / rehacer</td><td>Ctrl+Z / Ctrl+Y</td></tr><tr><td>Acoplar el térmico</td><td>arrástrelo bajo el contactor</td></tr></table></details>`;
     }
     if (side.dataset.key !== html) {
       side.innerHTML = html;
@@ -1132,14 +1320,25 @@
   function svgRect() {
     return $("scene-svg").getBoundingClientRect();
   }
-  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena.
+  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena:
+  // cuadrícula tenue cada 20 px (5 mm) y una línea algo más marcada cada
+  // 100 px. Los equipos miden y se colocan en múltiplos de 20: calzan en ella.
   function gridBg(pan, zoom) {
     const main = $("scene-pan").parentElement;
     const step = 20 * zoom;
-    const r = Math.max(0.6, 1.3 * zoom);
-    main.style.backgroundImage = step < 6 ? "none" : `radial-gradient(circle, #2c333c ${r}px, transparent ${r + 0.7}px)`;
-    main.style.backgroundSize = `${step}px ${step}px`;
-    main.style.backgroundPosition = `${pan.x - 10 * zoom}px ${pan.y - 10 * zoom}px`;
+    const big = 100 * zoom;
+    const line = (c, dir) => `linear-gradient(${dir}, ${c} 1px, transparent 1px)`;
+    const minor = "rgba(255,255,255,0.035)";
+    const major = "rgba(255,255,255,0.07)";
+    const layers = [line(major, "to right"), line(major, "to bottom")];
+    const sizes = [`${big}px ${big}px`, `${big}px ${big}px`];
+    if (step >= 6) {
+      layers.push(line(minor, "to right"), line(minor, "to bottom"));
+      sizes.push(`${step}px ${step}px`, `${step}px ${step}px`);
+    }
+    main.style.backgroundImage = layers.join(", ");
+    main.style.backgroundSize = sizes.join(", ");
+    main.style.backgroundPosition = layers.map(() => `${pan.x}px ${pan.y}px`).join(", ");
   }
   function commitView() {
     if (viewFrame) {
@@ -1311,6 +1510,7 @@
       if (devById(id)?.type === "jwsim/jwplc-basic") return;
       S.spec.devices = S.spec.devices.filter((d) => d.id !== id);
       S.spec.wiring = S.spec.wiring.filter((w) => !w.from.startsWith(`${id}.`) && !w.to.startsWith(`${id}.`));
+      for (const g of guestsOf(id)) delete g.mount;
     }
     S.sel = null;
     changed();
@@ -1398,7 +1598,7 @@
 
   function cleanSpec() {
     return {
-      devices: S.spec.devices.map(({ id, type, version, params, x, y }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0 })),
+      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}) })),
       wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
         from,
         to,
@@ -1633,13 +1833,23 @@
           renderWires();
         }
       } else {
-        const nx = snap(w.x - S.drag.dx);
-        const ny = snap(w.y - S.drag.dy);
+        let nx = snap(w.x - S.drag.dx);
+        let ny = snap(w.y - S.drag.dy);
+        // Imán: cerca de su lugar bajo un anfitrión, el equipo se acopla.
+        const tgt = mountRule(S.drag.dev) ? mountTarget(S.drag.dev, nx, ny) : null;
+        if (tgt) ({ x: nx, y: ny } = tgt.p);
+        S.drag.mountTo = tgt?.h.id ?? null;
         if (nx !== S.drag.dev.x || ny !== S.drag.dev.y) {
           S.drag.dev.x = nx;
           S.drag.dev.y = ny;
           S.drag.moved = true;
           renderDevice(S.drag.dev);
+          if (S.drag.mountTo) raiseGuest(S.drag.dev);
+          for (const g of guestsOf(S.drag.dev.id)) {
+            Object.assign(g, mountPos(g, S.drag.dev));
+            renderDevice(g);
+            raiseGuest(g);
+          }
           // Un trazado por cuadro como máximo.
           if (!S.wireFrame) {
             S.wireFrame = requestAnimationFrame(() => {
@@ -1679,6 +1889,13 @@
       }
       const moved = S.drag?.moved;
       const snapshot = S.drag?.snapshot;
+      if (moved && S.drag.kind === "device" && mountRule(S.drag.dev)) {
+        const dev = S.drag.dev;
+        const was = dev.mount;
+        if (S.drag.mountTo) dev.mount = S.drag.mountTo;
+        else delete dev.mount;
+        if (was !== dev.mount) changed();
+      }
       if (moved) S.dirty = true;
       S.drag = null;
       if (moved && snapshot) {
@@ -1829,11 +2046,39 @@
       (e) => {
         const d = e.target;
         if (!d.classList?.contains("insp-group")) return;
-        if (d.open) S.openGroups.add(d.dataset.group);
-        else S.openGroups.delete(d.dataset.group);
+        // Ajustes y Funcionamiento empiezan abiertos: se recuerda que se cerraron.
+        const k = d.dataset.group;
+        if (k === "__ajustes" || k === "__func") {
+          if (d.open) S.openGroups.delete(`!${k}`);
+          else S.openGroups.add(`!${k}`);
+        } else if (d.open) S.openGroups.add(k);
+        else S.openGroups.delete(k);
       },
       true,
     );
+    // Volver un parámetro a su valor por defecto; acoplar y separar.
+    $("scene-inspector").addEventListener("click", (e) => {
+      const r = e.target.closest("[data-reset],[data-mount],[data-unmount]");
+      if (!r || r.disabled || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (r.dataset.reset) {
+        const p = S.defs.get(dev.type)?.parameters.find((x) => x.id === r.dataset.reset);
+        if (p) setParam(dev, p.id, p.default);
+        return;
+      }
+      pushHistory();
+      if (r.dataset.mount) {
+        dev.mount = r.dataset.mount;
+      } else {
+        const g = devById(r.dataset.unmount);
+        const h = g && devById(g.mount);
+        delete g.mount;
+        // Suelto, a la derecha de su contactor.
+        if (h) Object.assign(g, { x: (h.x ?? 0) + symbolFor(h).w + 80, y: h.y ?? 0 });
+      }
+      S.routeKey = null;
+      changed();
+    });
     // Selectores gráficos de parámetros (bornera del motor trifásico).
     $("scene-inspector").addEventListener("click", (e) => {
       const b = e.target.closest("[data-setparam]");

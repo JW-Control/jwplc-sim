@@ -122,7 +122,7 @@ export const levelRelay = {
   name: "Relé de nivel por electrodos",
   category: "Maniobra",
   description:
-    "Relé de control de nivel para líquidos conductores (tipo Schneider RM4-LG01 / CHINT NJYW1): alimentación A1-A2, electrodos E1 (alto), E2 (bajo) y E3 (referencia) y un conmutado 11-12-14. Vaciado: cierra 11-14 cuando el líquido llega a E1 y abre cuando baja de E2 (bomba que vacía). Llenado: al revés, cierra 11-14 con el nivel bajo E2 y abre al llegar a E1 (bomba que llena). Un electrodo sin cablear se lee seco. LED U: alimentado; LED R: relé cerrado.",
+    "Relé de control de nivel para líquidos conductores: alimentación A1-A2, electrodos E1 (alto), E2 (bajo) y E3 (referencia) y un conmutado 11-12-14. Vaciado: cierra 11-14 cuando el líquido llega a E1 y abre cuando baja de E2 (bomba que vacía). Llenado: al revés, cierra 11-14 con el nivel bajo E2 y abre al llegar a E1 (bomba que llena). Un electrodo sin cablear se lee seco. LED U: alimentado; LED R: relé cerrado.",
   parameters: [
     { id: "coil", label: "Alimentación A1-A2", type: "enum", options: RATINGS, default: "24VDC" },
     { id: "modo", label: "Función", type: "enum", options: ["llenado", "vaciado"], default: "llenado" },
@@ -163,7 +163,7 @@ export const levelRelay = {
 
 // ------------------------------------------------------------------ presostato y termostato
 /**
- * Interruptor por umbral con diferencial (familia Danfoss KP): al subir hasta
+ * Interruptor por umbral con diferencial: al subir hasta
  * Corte cierra 1-4 y abre 1-2; vuelve al bajar hasta Corte − Diferencial.
  * @param {{ type: string, name: string, description: string, q: string, label: string, unit: string, min: number, max: number, corte: number, dif: number, inicial: number, d: number }} o
  * @returns {import("../../sdk/jwsim-device.js").DeviceDefinition}
@@ -233,7 +233,7 @@ export const pressureSwitch = thresholdSwitch({
   type: "jwsim/pressure-switch",
   name: "Presostato",
   description:
-    "Presostato de diferencial ajustable (tipo Danfoss KP35, -0,2 a 7,5 bar) con contacto conmutado: al subir la presión hasta Corte cierra 1-4 y abre 1-2; vuelve al bajar hasta Corte − Diferencial (p. ej. una bomba de agua que arranca a 3 bar por 1-2 y para a 4 bar). La presión se arrastra en el símbolo o se lee de otro dispositivo.",
+    "Presostato de diferencial ajustable (-0,2 a 7,5 bar) con contacto conmutado: al subir la presión hasta Corte cierra 1-4 y abre 1-2; vuelve al bajar hasta Corte − Diferencial (p. ej. una bomba de agua que arranca a 3 bar por 1-2 y para a 4 bar). La presión se arrastra en el símbolo o se lee de otro dispositivo.",
   q: "presion",
   label: "Presión",
   unit: "bar",
@@ -249,7 +249,7 @@ export const thermostat = thresholdSwitch({
   type: "jwsim/thermostat",
   name: "Termostato",
   description:
-    "Termostato de bulbo y capilar con diferencial ajustable (tipo Danfoss KP77, 20 a 60 °C) y contacto conmutado: al subir la temperatura hasta Corte cierra 1-4 (p. ej. un ventilador) y abre 1-2 (una resistencia); vuelve al bajar hasta Corte − Diferencial. La temperatura se arrastra en el símbolo o se lee de otro dispositivo (p. ej. F1.tMasa del fermentador).",
+    "Termostato de bulbo y capilar con diferencial ajustable (20 a 60 °C) y contacto conmutado: al subir la temperatura hasta Corte cierra 1-4 (p. ej. un ventilador) y abre 1-2 (una resistencia); vuelve al bajar hasta Corte − Diferencial. La temperatura se arrastra en el símbolo o se lee de otro dispositivo (p. ej. F1.tMasa del fermentador).",
   q: "temperatura",
   label: "Temperatura",
   unit: "°C",

@@ -43,7 +43,8 @@ def band(x,y,w,h,rx=0):
 def jw(x,y,w,txt='',h=13,size=9):
     s=f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{DARK}"/>'
     s+=text(x+5,y+h-3,'JW',size,'#fff',800,'start',letter_spacing='.5')
-    s+=path(f'M{x+21} {y+h-4} l3 -5 l3 5',stroke=JWG,sw=1.6)
+    if w>=size*5.2+(len(txt)*size*0.62+6 if txt else 0):
+        s+=text(x+size*2.1+3,y+h-3.5,'CONTROL',round(size*0.5,1),'#c9ced4',800,'start',letter_spacing='.4')
     if txt: s+=text(x+w-5,y+h-3,txt,size,'#e9edf1',700,'end')
     return s
 def led(x,y,expr,r=4,on=LEDON,off='#4a5058'):

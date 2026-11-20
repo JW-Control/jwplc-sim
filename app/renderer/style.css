@@ -39,14 +39,31 @@ body {
   grid-template-rows: auto auto minmax(0, 1fr) 5px var(--dock-h, 260px) auto;
   grid-template-columns: minmax(0, 1fr);
 }
-/* Panel inferior plegado por completo: el área de trabajo llega a la barra
-   de estado; se vuelve a abrir desde ella (o con Ctrl+J). */
+/* Panel inferior plegado: queda una barra con sus pestañas (un clic en una
+   lo abre) y el área de trabajo gana el resto de la altura. */
 body.dock-collapsed {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
 }
-body.dock-collapsed .dock,
-body.dock-collapsed .dock-splitter {
+body.dock-collapsed .dock-splitter,
+body.dock-collapsed .dock-body,
+body.dock-collapsed #opt-ts,
+body.dock-collapsed #btn-view-clear,
+body.dock-collapsed #view-note {
   display: none;
+}
+body.dock-collapsed .dock .ptab.active {
+  box-shadow: none;
+}
+/* Llegó salida al monitor serie mientras no se miraba. */
+.ptab.fresh::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
 }
 
 button,
@@ -464,7 +481,8 @@ body.resizing-v {
   line-height: 18px;
   border-radius: 4px;
 }
-body:not(.dock-collapsed) #sb-dock {
+/* La barra plegada ya tiene su botón: el de la barra de estado sobra. */
+#sb-dock {
   display: none;
 }
 .dock .log {
@@ -3425,4 +3443,112 @@ body[data-schem="pneu"] .scene-float {
 /* El contorno del cilindro va encima de las cámaras: sin relleno. */
 .pn-view .pn-cyl {
   fill: none;
+}
+
+/* Propiedades por secciones: cabecera, Ajustes, Funcionamiento, Parámetros
+   de simulación, Acople y Bornes (plegables). */
+.insp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+}
+.insp-head b {
+  font-weight: 800;
+}
+.insp-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.insp-meta {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 2px 0 8px;
+}
+.insp-sec > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 12.5px;
+}
+.insp-sec > summary em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 11px;
+}
+.insp-body {
+  padding: 0 0 10px;
+}
+.insp-field {
+  margin: 6px 0 10px;
+}
+.insp-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.insp-field select,
+.insp-field input[type="text"],
+.insp-field input[type="number"] {
+  width: 100%;
+  font: inherit;
+  padding: 4px 6px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.insp-def {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.insp-reset {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+.insp-more > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+}
+.insp-more p {
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+.insp-terms td:first-child {
+  font-weight: 600;
+}
+.insp-terms tr:not(.on) td {
+  color: var(--muted);
+}
+.insp-terms tr.on td:first-child::before {
+  content: "● ";
+  color: var(--ok);
+}
+.mount-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body.dock-collapsed #btn-dock-toggle {
+  margin-left: auto;
 }

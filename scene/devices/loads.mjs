@@ -107,7 +107,7 @@ export const contactor = {
   version: "1.0.0",
   name: "Contactor",
   category: "Maniobra",
-  description: "Contactor de 3 polos (1-2, 3-4, 5-6) con un contacto auxiliar incorporado: 13-14 NA (aux 10, CJX2-0910) o 21-22 NC (aux 01, CJX2-0901).",
+  description: "Contactor de 3 polos (1-2, 3-4, 5-6) con un contacto auxiliar incorporado: 13-14 NA (aux 10) o 21-22 NC (aux 01).",
   parameters: [
     { id: "coil", label: "Bobina", type: "enum", options: RATINGS, default: "24VDC" },
     { id: "aux", label: "Auxiliar", type: "enum", options: ["10", "01"], default: "10" },
@@ -277,7 +277,7 @@ export const motor3ph = {
   name: "Motor trifásico",
   category: "Actuadores",
   description:
-    "Motor de inducción trifásico 220Δ/380Y (WEG W22). La bornera (U1 V1 W1 / W2 U2 V2) se arma con chapas en triángulo (la conexión de la red de 220 V) o en estrella, y entonces solo se cablean U1, V1, W1 y PE; con «6 cables» salen los seis bornes para un arranque estrella-triángulo con contactores. En estrella arranca con un tercio del par. La secuencia de fases fija el sentido (cruzar dos fases lo invierte). Con una fase cortada no arranca (falta de fase).",
+    "Motor de inducción trifásico 220Δ/380Y. La bornera (U1 V1 W1 / W2 U2 V2) se arma con chapas en triángulo (la conexión de la red de 220 V) o en estrella, y entonces solo se cablean U1, V1, W1 y PE; con «6 cables» salen los seis bornes para un arranque estrella-triángulo con contactores. En estrella arranca con un tercio del par. La secuencia de fases fija el sentido (cruzar dos fases lo invierte). Con una fase cortada no arranca (falta de fase).",
   parameters: [
     { id: "bornera", label: "Bornera", type: "enum", options: ["triangulo", "estrella", "6 cables"], default: "triangulo" },
     { id: "accelMs", label: "Arranque en triángulo", type: "number", default: 500, unit: "ms" },
@@ -358,7 +358,7 @@ export const motor1ph = {
   name: "Motor monofásico",
   category: "Actuadores",
   description:
-    "Motor monofásico WEG de 220 V con capacitor de arranque (1 HP, 1720 rpm): bobinado principal U1-U2 y auxiliar Z1-Z2 con el capacitor. El auxiliar solo actúa al arrancar (el interruptor centrífugo lo saca sobre el 75 % de la velocidad): sin él el motor zumba y no arranca. El sentido lo da la polaridad del auxiliar respecto del principal; invertir Z1-Z2 con el motor a velocidad no lo invierte (hay que dejarlo parar). Bornera: «2 cables» trae el auxiliar puenteado de fábrica (U1, U2 y PE); «4 cables» saca Z1 y Z2 para invertir el giro desde el tablero.",
+    "Motor monofásico de 220 V con capacitor de arranque (1 HP, 1720 rpm): bobinado principal U1-U2 y auxiliar Z1-Z2 con el capacitor. El auxiliar solo actúa al arrancar (el interruptor centrífugo lo saca sobre el 75 % de la velocidad): sin él el motor zumba y no arranca. El sentido lo da la polaridad del auxiliar respecto del principal; invertir Z1-Z2 con el motor a velocidad no lo invierte (hay que dejarlo parar). Bornera: «2 cables» trae el auxiliar puenteado de fábrica (U1, U2 y PE); «4 cables» saca Z1 y Z2 para invertir el giro desde el tablero.",
   parameters: [
     { id: "bornera", label: "Bornera", type: "enum", options: ["2 cables", "4 cables"], default: "2 cables" },
     { id: "rpm", label: "Velocidad nominal", type: "number", default: 1720, unit: "rpm" },
