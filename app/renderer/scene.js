@@ -1320,25 +1320,34 @@
   function svgRect() {
     return $("scene-svg").getBoundingClientRect();
   }
-  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena:
+  // Grilla del lienzo, alineada con la escena:
   // cuadrícula tenue cada 20 px (5 mm) y una línea algo más marcada cada
   // 100 px. Los equipos miden y se colocan en múltiplos de 20: calzan en ella.
+  // Una sola imagen de 100 × 100 (5 × 5 celdas) que se repite: pintar
+  // gradientes CSS de 20 px en todo el lienzo en cada cuadro del arrastre
+  // costaba más que la escena entera (medido: ~8 veces el rasterizado).
+  const GRID_TILE = (minor) =>
+    `url("data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'>` +
+        (minor ? `<path d='M20 0V100M40 0V100M60 0V100M80 0V100M0 20H100M0 40H100M0 60H100M0 80H100' stroke='rgba(255,255,255,0.035)' stroke-width='1' shape-rendering='crispEdges'/>` : "") +
+        `<path d='M0.5 0V100M0 0.5H100' stroke='rgba(255,255,255,0.07)' stroke-width='1' shape-rendering='crispEdges'/></svg>`,
+    )}")`;
+  const GRID_IMG = { minor: GRID_TILE(true), major: GRID_TILE(false) };
   function gridBg(pan, zoom) {
-    const main = $("scene-pan").parentElement;
-    const step = 20 * zoom;
+    // Capa propia (#scene-grid) que se mueve con transform: al arrastrar la
+    // vista solo se recompone, no se vuelve a pintar. Es una casilla más
+    // grande que el lienzo y se desplaza módulo 100 px de escena.
+    const el = $("scene-grid");
     const big = 100 * zoom;
-    const line = (c, dir) => `linear-gradient(${dir}, ${c} 1px, transparent 1px)`;
-    const minor = "rgba(255,255,255,0.035)";
-    const major = "rgba(255,255,255,0.07)";
-    const layers = [line(major, "to right"), line(major, "to bottom")];
-    const sizes = [`${big}px ${big}px`, `${big}px ${big}px`];
-    if (step >= 6) {
-      layers.push(line(minor, "to right"), line(minor, "to bottom"));
-      sizes.push(`${step}px ${step}px`, `${step}px ${step}px`);
+    const img = 20 * zoom >= 6 ? GRID_IMG.minor : GRID_IMG.major;
+    if (el.dataset.img !== img) {
+      el.dataset.img = img;
+      el.style.backgroundImage = img;
     }
-    main.style.backgroundImage = layers.join(", ");
-    main.style.backgroundSize = sizes.join(", ");
-    main.style.backgroundPosition = layers.map(() => `${pan.x}px ${pan.y}px`).join(", ");
+    const size = `${big}px ${big}px`;
+    if (el.style.backgroundSize !== size) el.style.backgroundSize = size;
+    const mod = (v) => ((v % big) + big) % big - big;
+    el.style.transform = `translate3d(${mod(pan.x)}px, ${mod(pan.y)}px, 0)`;
   }
   function commitView() {
     if (viewFrame) {
