@@ -165,6 +165,12 @@
 
   // ------------------------------------------------------------ dibujo
   const devById = (id) => S.spec.devices.find((d) => d.id === id);
+  const selectedDeviceIds = () => (S.sel?.kind === "device" ? [S.sel.id] : S.sel?.kind === "devices" ? [...S.sel.ids] : []);
+  const isDeviceSelected = (id) => (S.sel?.kind === "device" ? S.sel.id === id : S.sel?.kind === "devices" ? S.sel.ids.includes(id) : false);
+  function setSelectedDevices(ids) {
+    const uniq = [...new Set(ids)].filter((id) => devById(id));
+    S.sel = !uniq.length ? null : uniq.length === 1 ? { kind: "device", id: uniq[0] } : { kind: "devices", ids: uniq };
+  }
 
   // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
   // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
@@ -721,9 +727,15 @@
       S.busWires = new Set(S.bus.flatMap((b) => b.idx.map((i) => S.spec.wiring[i])));
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
+      const movingIds =
+        S.drag?.kind === "device"
+          ? new Set([S.drag.dev.id, ...guestsOf(S.drag.dev.id).map((g) => g.id)])
+          : S.drag?.kind === "devices"
+            ? S.drag.movingIds
+            : null;
       const affected = (w, i) =>
-        S.drag.kind === "device"
-          ? [S.drag.dev, ...guestsOf(S.drag.dev.id)].some((d) => w.from.startsWith(`${d.id}.`) || w.to.startsWith(`${d.id}.`))
+        movingIds
+          ? [...movingIds].some((id) => w.from.startsWith(`${id}.`) || w.to.startsWith(`${id}.`))
           : S.drag.kind === "vertex" && i === S.drag.i;
       if (moving) {
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
@@ -1078,7 +1090,7 @@
       force = true;
     }
     setAttr(g, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
-    g.classList.toggle("selected", S.sel?.kind === "device" && S.sel.id === dev.id);
+    g.classList.toggle("selected", isDeviceSelected(dev.id));
     // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
     const pre = `${dev.id}.`;
     const wired = [...new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]).filter((e) => e.startsWith(pre)).map((e) => e.slice(pre.length)))].sort();
@@ -1243,7 +1255,7 @@
   function renderSide() {
     const side = $("scene-inspector");
     const sel = S.sel;
-    const selKey = sel ? `${sel.kind}:${sel.id}` : "";
+    const selKey = sel ? (sel.kind === "devices" ? `devices:${sel.ids.join(",")}` : `${sel.kind}:${sel.id}`) : "";
     if (selKey && selKey !== S.lastSelKey && !S.keepPane) window.JwsimScenePane?.showProps();
     if (selKey !== S.lastSelKey) S.groupExclude = new Set();
     S.lastSelKey = selKey;
@@ -1444,6 +1456,11 @@
         }
         html += `</table><button class="small" data-cable-act="ungroup" ${dis}>Desagrupar (Ctrl+Mayús+G)</button>`;
       }
+    } else if (sel?.kind === "devices") {
+      const devs = sel.ids.map((id) => devById(id)).filter(Boolean);
+      html += `<div class="insp-head"><b>${devs.length} equipos seleccionados</b></div>`;
+      html += `<p class="insp-desc">${devs.map((d) => esc(d.id)).join(", ")}</p>`;
+      html += `<p class="insp-desc muted">Arrastre cualquiera de ellos para mover el grupo. Ctrl+clic suma o quita equipos; Supr los quita.</p>`;
     } else {
       // Nada seleccionado: información general de la escena.
       const nDev = S.spec.devices.filter((d) => d.type !== "jwsim/jwplc-basic").length;
@@ -1452,7 +1469,7 @@
         `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
       html += `<p class="insp-desc muted">Elija un equipo o un cable para ver sus propiedades.</p>`;
       html += `<details class="insp-group" data-group="__atajos" ${S.openGroups.has("__atajos") ? "open" : ""}><summary>Atajos</summary><table class="insp-vals">` +
-        `<tr><td>Cablear</td><td>clic en un borne y en otro</td></tr><tr><td>Quitar</td><td>Supr</td></tr><tr><td>Copiar / pegar</td><td>Ctrl+C / Ctrl+V</td></tr>` +
+        `<tr><td>Cablear</td><td>clic en un borne y en otro</td></tr><tr><td>Selección múltiple</td><td>Ctrl+clic</td></tr><tr><td>Quitar</td><td>Supr</td></tr><tr><td>Copiar / pegar</td><td>Ctrl+C / Ctrl+V</td></tr>` +
         `<tr><td>Deshacer / rehacer</td><td>Ctrl+Z / Ctrl+Y</td></tr><tr><td>Acoplar el térmico</td><td>arrástrelo bajo el contactor</td></tr></table></details>`;
     }
     if (side.dataset.key !== html) {
@@ -1551,7 +1568,7 @@
   function currentSnapshot() {
     return {
       spec: structuredClone(cleanSpec()),
-      sel: S.sel ? { ...S.sel } : null,
+      sel: S.sel ? structuredClone(S.sel) : null,
     };
   }
 
@@ -1584,7 +1601,7 @@
     S.redoStack.push(curr);
     const prev = S.undoStack.pop();
     S.spec = structuredClone(prev.spec);
-    S.sel = prev.sel ? { ...prev.sel } : null;
+    S.sel = prev.sel ? structuredClone(prev.sel) : null;
     changed();
     updateUndoRedoButtons();
   }
@@ -1600,7 +1617,7 @@
     S.undoStack.push(curr);
     const next = S.redoStack.pop();
     S.spec = structuredClone(next.spec);
-    S.sel = next.sel ? { ...next.sel } : null;
+    S.sel = next.sel ? structuredClone(next.sel) : null;
     changed();
     updateUndoRedoButtons();
   }
@@ -1644,7 +1661,7 @@
   // Cortar: un equipo queda en el portapapeles (Ctrl+V lo vuelve a poner);
   // un cable solo se quita. La placa no se corta.
   function cut() {
-    if (S.running || !S.sel) return;
+    if (S.running || !S.sel || S.sel.kind === "devices") return;
     if (S.sel.kind === "device") {
       if (devById(S.sel.id)?.type === "jwsim/jwplc-basic") return;
       copy();
@@ -1684,6 +1701,18 @@
 
   function removeSelected() {
     if (S.running || !S.sel) return;
+    if (S.sel.kind === "devices") {
+      const ids = S.sel.ids.filter((id) => devById(id)?.type !== "jwsim/jwplc-basic");
+      if (!ids.length) return;
+      pushHistory();
+      const drop = new Set(ids);
+      S.spec.devices = S.spec.devices.filter((d) => !drop.has(d.id));
+      S.spec.wiring = S.spec.wiring.filter((w) => !drop.has(w.from.split(".")[0]) && !drop.has(w.to.split(".")[0]));
+      for (const id of ids) for (const g of guestsOf(id)) if (!drop.has(g.id)) delete g.mount;
+      S.sel = null;
+      changed();
+      return;
+    }
     pushHistory();
     if (S.sel.kind === "wire") S.spec.wiring.splice(S.sel.id, 1);
     else if (S.sel.kind === "cable") {
@@ -1767,6 +1796,7 @@
     S.dirty = true;
     clearTimeout(S.analyzeTimer);
     S.analyzeTimer = setTimeout(analyze, 120);
+    window.JwsimStateDiag?.onSpec?.();
     render();
   }
 
@@ -1777,6 +1807,7 @@
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
     window.JwsimPneu?.onSnapshot(S.snap);
+    window.JwsimStateDiag?.onSnapshot?.(S.snap, false);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
@@ -1945,8 +1976,46 @@
       }
       if (devEl) {
         const dev = devById(devEl.dataset.id);
-        S.sel = { kind: "device", id: dev.id };
-        S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false, snapshot: currentSnapshot() };
+        const mod = e.ctrlKey || e.metaKey;
+        if (mod) {
+          const cur = selectedDeviceIds();
+          if (cur.includes(dev.id)) {
+            setSelectedDevices(cur.filter((id) => id !== dev.id));
+            render();
+            return;
+          }
+          setSelectedDevices([...cur, dev.id]);
+        } else if (!isDeviceSelected(dev.id)) {
+          S.sel = { kind: "device", id: dev.id };
+        }
+        const selIds = selectedDeviceIds();
+        if (selIds.length > 1) {
+          const selSet = new Set(selIds);
+          const items = selIds.map((id) => devById(id)).filter(Boolean).map((d) => ({ dev: d, x0: d.x ?? 0, y0: d.y ?? 0 }));
+          const guestItems = [];
+          for (const { dev: d } of items) {
+            for (const g of guestsOf(d.id)) {
+              if (!selSet.has(g.id)) guestItems.push({ dev: g, host: d });
+            }
+          }
+          const movingIds = new Set([...items.map((it) => it.dev.id), ...guestItems.map((it) => it.dev.id)]);
+          S.drag = {
+            kind: "devices",
+            anchor: dev,
+            ax0: dev.x ?? 0,
+            ay0: dev.y ?? 0,
+            dx: w.x - (dev.x ?? 0),
+            dy: w.y - (dev.y ?? 0),
+            items,
+            guestItems,
+            movingIds,
+            collapseTo: mod ? null : dev.id,
+            moved: false,
+            snapshot: currentSnapshot(),
+          };
+        } else {
+          S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false, snapshot: currentSnapshot() };
+        }
         svg.setPointerCapture(e.pointerId);
         render();
         return;
@@ -2017,6 +2086,35 @@
           S.drag.moved = true;
           renderWires();
         }
+      } else if (S.drag.kind === "devices") {
+        const ddx = snap(w.x - S.drag.dx) - S.drag.ax0;
+        const ddy = snap(w.y - S.drag.dy) - S.drag.ay0;
+        let any = false;
+        for (const it of S.drag.items) {
+          const nx = snap(it.x0 + ddx);
+          const ny = snap(it.y0 + ddy);
+          if (nx !== it.dev.x || ny !== it.dev.y) {
+            it.dev.x = nx;
+            it.dev.y = ny;
+            renderDevice(it.dev);
+            any = true;
+          }
+        }
+        if (any) {
+          S.drag.moved = true;
+          for (const g of S.drag.guestItems) {
+            Object.assign(g.dev, mountPos(g.dev, g.host));
+            renderDevice(g.dev);
+            raiseGuest(g.dev);
+          }
+          for (const it of S.drag.items) if (it.dev.mount && S.drag.movingIds.has(it.dev.mount)) raiseGuest(it.dev);
+          if (!S.wireFrame) {
+            S.wireFrame = requestAnimationFrame(() => {
+              S.wireFrame = 0;
+              renderWires();
+            });
+          }
+        }
       } else {
         let nx = snap(w.x - S.drag.dx);
         let ny = snap(w.y - S.drag.dy);
@@ -2081,8 +2179,23 @@
         else delete dev.mount;
         if (was !== dev.mount) changed();
       }
+      if (moved && S.drag.kind === "devices") {
+        let detached = false;
+        for (const it of S.drag.items) {
+          if (it.dev.mount && !S.drag.movingIds.has(it.dev.mount)) {
+            delete it.dev.mount;
+            detached = true;
+          }
+        }
+        if (detached) changed();
+      }
+      const collapseTo = !moved && S.drag?.kind === "devices" ? S.drag.collapseTo : null;
       if (moved) S.dirty = true;
       S.drag = null;
+      if (collapseTo) {
+        S.sel = { kind: "device", id: collapseTo };
+        render();
+      }
       if (moved && snapshot) {
         S.undoStack.push(snapshot);
         if (S.undoStack.length > 50) S.undoStack.shift();
@@ -2152,7 +2265,7 @@
     // Edición ▸ Cortar (y Ctrl+X si lo atiende el menú).
     window.addEventListener("cut", (e) => {
       if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
-      if (S.sel) {
+      if (S.sel && S.sel.kind !== "devices") {
         cut();
         e.preventDefault();
       }
@@ -2714,6 +2827,7 @@
       S.fitted = false;
       S.rendered.clear();
       window.JwsimPneu?.onSpec();
+      window.JwsimStateDiag?.onSpec?.({ resetProject: true });
       if (S.spec.devices.length) setView("scene");
       else if (S.view === "scene") setView("scene");
       if (!S.running) analyze();
@@ -2831,7 +2945,8 @@
       cables: () => structuredClone(cablesOf()),
       group: (indices) => groupWires(indices),
       select: (id) => {
-        S.sel = typeof id === "number" ? { kind: "wire", id } : String(id).startsWith("cable:") ? { kind: "cable", id: id.slice(6) } : { kind: "device", id };
+        if (Array.isArray(id)) setSelectedDevices(id);
+        else S.sel = id == null ? null : typeof id === "number" ? { kind: "wire", id } : String(id).startsWith("cable:") ? { kind: "cable", id: id.slice(6) } : { kind: "device", id };
         render();
       },
       analyze: () => analyze(),
@@ -2915,6 +3030,7 @@
       S.snap = snap;
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
+      window.JwsimStateDiag?.onSnapshot?.(snap, S.running);
       render();
     });
     const sound = $("scene-sound");
