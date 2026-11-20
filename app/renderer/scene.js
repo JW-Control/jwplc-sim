@@ -2730,6 +2730,27 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
+    // ancho y del alto, y de qué lado sale) y el color de cada cable.
+    terminalOf(end) {
+      const i = end.indexOf(".");
+      const dev = devById(end.slice(0, i));
+      if (!dev) return null;
+      const sym = symbolFor(dev);
+      const p = sym.terms[end.slice(i + 1)];
+      if (!p) return null;
+      return { fx: p[0] / sym.w, fy: p[1] / sym.h, side: sym.sides[end.slice(i + 1)] ?? (p[1] < sym.h / 2 ? "t" : "b") };
+    },
+    // Para la vista 3D: acciones del equipo (pulsar, girar, accionar…), su
+    // estado actual y accionarlas (solo con la simulación en marcha).
+    actionsOf(id) {
+      const dev = devById(id);
+      return dev ? (S.defs.get(dev.type)?.actions ?? []) : [];
+    },
+    actionState: (id, action) => out(id).actions?.[action],
+    act: (id, action, value) => act(id, action, value),
+    running: () => !!S.running,
+    wireHex: (w) => (S.busWires?.has(w) || (!w.color && BUS_POL(termOf(w.from)) && BUS_POL(termOf(w.from)) === BUS_POL(termOf(w.to))) ? busColor(w) : WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro),
     // Pestañas de la ventana (tabs.js): cambian la vista del panel derecho.
     setView: (v) => setView(v),
     view: () => S.view,
