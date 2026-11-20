@@ -18,11 +18,11 @@ const criteria = {};
 const log = (m) => console.log(`[e2e] ${m}`);
 
 const dir10 = join(workspace, "10-secuencia-neumatica");
-cpSync(join(ROOT, "exercises", "10-secuencia-neumatica"), dir10, { recursive: true });
+cpSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "10-secuencia-neumatica"), dir10, { recursive: true });
 cpSync(join(dir10, "solucion", "secuencia_neumatica"), join(dir10, "sketch", "secuencia_neumatica"), { recursive: true });
 
 const dir01 = join(workspace, "01-marcha-parada");
-cpSync(join(ROOT, "exercises", "01-marcha-parada"), dir01, { recursive: true });
+cpSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "01-marcha-parada"), dir01, { recursive: true });
 
 createRequire(import.meta.url)("electron");
 const env = { ...process.env, JWSIM_WORKSPACE: workspace, JWSIM_HOME: join(ROOT, ".jwsim") };

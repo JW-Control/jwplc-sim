@@ -40,7 +40,7 @@ Advanced figura como «próximamente».
 
 ## Qué tenemos hoy en JWPLC Sim
 
-Nueve ejercicios (`exercises/`) con enunciado, escena cableada y
+Nueve ejercicios (`JWPLC_Aprende/extras/retos/`) con enunciado, escena cableada y
 `rubrica.json`. **Calificar** compila el sketch, corre cada caso con
 acciones programadas (por ejemplo, «a los 0 ms, S1 a la posición 1») y da
 una nota de 0 a 20, con el detalle de qué falló y en qué instante. La

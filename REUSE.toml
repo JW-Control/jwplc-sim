@@ -52,10 +52,11 @@ precedence = "override"
 SPDX-FileCopyrightText = "2024-present Automation Standard LLC and Contributors"
 SPDX-License-Identifier = "MIT"
 
-# Ejercicios (G9): MIT, para que alumnos y docentes copien plantillas,
-# soluciones y rúbricas sin atar su trabajo a la GPL.
+# Material de aprendizaje (JWPLC_Aprende: curso, retos, arquitecturas e
+# imágenes): MIT, para que alumnos y docentes copien plantillas, soluciones y
+# rúbricas sin atar su trabajo a la GPL.
 [[annotations]]
-path = ["exercises/**"]
+path = ["JWPLC_Aprende/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "MIT"

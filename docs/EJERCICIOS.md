@@ -33,10 +33,10 @@ tocó (plantilla, enunciado, rúbrica); lo que editó se conserva
 **En la línea de comandos:**
 
 ```text
-node cli/jwsim-cli.mjs grade exercises/01-marcha-parada            # el sketch del proyecto
-node cli/jwsim-cli.mjs grade exercises/01-marcha-parada mi_sketch  # otro sketch
-node cli/jwsim-cli.mjs grade exercises/01-marcha-parada --solution # la solución de referencia
-node cli/jwsim-cli.mjs grade exercises/01-marcha-parada mi_sketch --runs 100 --json
+node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/01-marcha-parada            # el sketch del proyecto
+node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/01-marcha-parada mi_sketch  # otro sketch
+node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/01-marcha-parada --solution # la solución de referencia
+node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/01-marcha-parada mi_sketch --runs 100 --json
 ```
 
 Código de salida: 0 calificado (con `--runs`, misma nota en todas), 1 notas
@@ -110,7 +110,7 @@ prueba de la interfaz en `app/tests/e2e-aprender.mjs`.
 Cada ejercicio es una carpeta con un proyecto `.jwsim` (ARCHITECTURE §8):
 
 ```text
-exercises/01-marcha-parada/
+JWPLC_Aprende/extras/retos/01-marcha-parada/
   01-marcha-parada.jwsim     proyecto: escena cableada y campo "exercise"
   ENUNCIADO.md               enunciado (Markdown)
   rubrica.json               casos y verificaciones (schema/jwsim-rubric-1.json)

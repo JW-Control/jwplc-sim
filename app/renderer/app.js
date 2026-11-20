@@ -1777,7 +1777,9 @@ function renderBrief(expanded) {
 
 async function reportDone(via, grade) {
   try {
-    return await api.learnComplete(state.exercise.id, via, grade);
+    const r = await api.learnComplete(state.exercise.id, via, grade);
+    window.dispatchEvent(new CustomEvent("jwsim:learnchange"));
+    return r;
   } catch {
     return null;
   }

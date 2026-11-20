@@ -22,7 +22,8 @@ import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
-import { levels, loadProgress, markDone, nextAfter, saveProgress } from "./lib/learning.mjs";
+import { levels, loadProgress, markDone, markLesson, nextAfter, saveProgress } from "./lib/learning.mjs";
+import { APRENDE, ARQUITECTURAS, imageOf, listAprendeExamples, listArquitecturas, listCurso, listRetos, RETOS } from "../cli/lib/aprende.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -193,7 +194,9 @@ function listExamples() {
     };
     walk(ex);
   }
-  return out;
+  // El curso vive en JWPLC_Aprende (primera en la lista); la copia que aún
+  // trae el package no se muestra para no duplicarlo.
+  return [...listAprendeExamples(), ...out.filter((e) => !(e.group === "JWPLC_GlobalPeripherals" && e.label.startsWith("Curso_JWPLC_Basic / ")))];
 }
 
 function forward(channel, payload) {
@@ -341,31 +344,30 @@ ipcMain.handle("api:catalog", () => {
 });
 
 // ---------------------------------------------------------------- ejercicios (G9)
-const EXERCISES = join(import.meta.dirname, "..", "exercises");
+// Retos, curso y arquitecturas viven en la librería JWPLC_Aprende (cli/lib/aprende.mjs).
+const EXERCISES = RETOS;
 
-function listExercises() {
-  if (!existsSync(EXERCISES)) return [];
-  const out = [];
-  for (const d of readdirSync(EXERCISES).sort()) {
-    const f = join(EXERCISES, d, `${d}.jwsim`);
-    if (!existsSync(f)) continue;
-    try {
-      const { project } = loadProject(f);
-      if (project.exercise) out.push({ id: d, title: project.name, level: project.exercise.level ?? 1, brief: project.exercise.brief ?? null });
-    } catch {
-      // un ejercicio roto no impide listar los demás
-    }
+// Miniaturas como data: URL (la página solo carga imágenes de su origen).
+const imgCache = new Map();
+function imageData(kind, id) {
+  const key = `${kind}-${id}`;
+  if (!imgCache.has(key)) {
+    const rel = imageOf(kind, id);
+    imgCache.set(key, rel ? `data:image/jpeg;base64,${readFileSync(join(APRENDE, rel)).toString("base64")}` : null);
   }
-  return out;
+  return imgCache.get(key);
 }
+const listExercises = () => listRetos();
 ipcMain.handle("exercises:list", () => listExercises());
 
 // ---- Centro de aprendizaje: progreso del alumno en el perfil.
 const progressFile = () => join(app.getPath("userData"), "aprendizaje.json");
 const unlockOpts = (p) => ({ unlockAll: p.unlockAll || process.env.JWSIM_UNLOCK_ALL === "1" });
+// Estado de la ruta con la miniatura de cada reto.
+const withImages = (r) => ({ ...r, levels: r.levels.map((l) => ({ ...l, items: l.items.map((x) => ({ ...x, img: imageData("reto", x.id) })) })) });
 ipcMain.handle("learn:state", () => {
   const p = loadProgress(progressFile());
-  return levels(listExercises(), p, unlockOpts(p));
+  return withImages(levels(listExercises(), p, unlockOpts(p)));
 });
 ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   const p = loadProgress(progressFile());
@@ -374,11 +376,25 @@ ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   const ex = listExercises();
   return { changed, done: !!p.done[id], next: nextAfter(ex, p, String(id), unlockOpts(p)), teaches: ex.find((e) => e.id === id)?.brief?.teaches ?? "" };
 });
+// Curso JWPLC Basic (librería JWPLC_Aprende) y lecciones ya abiertas.
+ipcMain.handle("course:list", () => {
+  try {
+    return listCurso();
+  } catch {
+    return [];
+  }
+});
+ipcMain.handle("learn:lessons", () => loadProgress(progressFile()).lessons ?? {});
+ipcMain.handle("learn:lessonSeen", (_e, id) => {
+  const p = loadProgress(progressFile());
+  if (markLesson(p, String(id))) saveProgress(progressFile(), p);
+  return p.lessons;
+});
 ipcMain.handle("learn:unlockAll", (_e, on) => {
   const p = loadProgress(progressFile());
   p.unlockAll = !!on;
   saveProgress(progressFile(), p);
-  return levels(listExercises(), p, unlockOpts(p));
+  return withImages(levels(listExercises(), p, unlockOpts(p)));
 });
 
 // Abre una copia del ejercicio en la carpeta de trabajo (sin la solución):
@@ -392,24 +408,12 @@ ipcMain.handle("exercises:open", (_e, id) => {
 });
 
 // ---------------------------------------------------------------- arquitecturas
-// Casos de la vitrina (arquitecturas/<id>): proyecto completo con su programa,
-// escena y una ficha VITRINA.md con el recorrido y las fallas para mostrar.
-// Se abren como copia en la carpeta de trabajo (Arquitecturas/<id>).
-const ARCHS = join(import.meta.dirname, "..", "arquitecturas");
-function listArchs() {
-  if (!existsSync(ARCHS)) return [];
-  const out = [];
-  for (const d of readdirSync(ARCHS).sort()) {
-    const f = join(ARCHS, d, `${d}.jwsim`);
-    if (!existsSync(f)) continue;
-    try {
-      out.push({ id: d, title: loadProject(f).project.name });
-    } catch {
-      // una arquitectura rota no impide listar las demás
-    }
-  }
-  return out;
-}
+// Casos de la vitrina (JWPLC_Aprende/extras/arquitecturas/<id>): proyecto
+// completo con su programa, escena y una ficha VITRINA.md con el recorrido y
+// las fallas para mostrar. Se abren como copia en la carpeta de trabajo
+// (Arquitecturas/<id>).
+const ARCHS = ARQUITECTURAS;
+const listArchs = () => listArquitecturas().map((a) => ({ ...a, img: imageData("arq", a.id) }));
 ipcMain.handle("archs:list", () => listArchs());
 ipcMain.handle("archs:open", (_e, id) => {
   if (!/^[\w.-]+$/.test(id)) throw new Error(`arquitectura inválida: ${id}`);
@@ -1374,7 +1378,7 @@ function openRealDevice() {
 }
 
 const EXAMPLE_SECTIONS = [
-  ["JWPLC_GlobalPeripherals"],
+  ["JWPLC_Aprende", "JWPLC_GlobalPeripherals"],
   ["JWPLC_Display", "JWPLC_UI_Widgets", "JWPLC_Runtime", "JWPLC_WebScreen"],
   ["JWPLC_Ethernet", "JWPLC_RS485", "JWPLC_ModbusRTU", "JWPLC_ModbusTCP", "JWPLC_Expansion"],
   ["JW_DWIN", "JW_FRAM", "JW_MatrixButtons", "JW_ModbusRTU", "JW_RS485", "JW_RTC", "JW_SD"],
@@ -1436,8 +1440,8 @@ function buildMenu() {
       {
         label: "Archivo",
         submenu: [
-          { label: "Proyectos (inicio)…", click: send("startScreen") },
-          { label: "Centro de aprendizaje…", click: send("learnCenter") },
+          { label: "Inicio…", click: send("startScreen") },
+          { label: "Ruta de aprendizaje…", click: send("learnCenter") },
           { label: "Nuevo proyecto…", accelerator: "CmdOrCtrl+Alt+N", click: send("newProject") },
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },

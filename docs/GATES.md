@@ -207,7 +207,7 @@ JWSIM_G10_*=PENDING
 
 | Gate | Criterios | Verificación |
 |---|---|---|
-| `JWSIM_G9_EXERCISES` | Ejercicios objetivo de la propuesta (Start/Stop, inversión de giro, semáforo, bomba por niveles, puerta, estrella-triángulo, cinta, alarmas) con enunciado y escena. | Revisión + `node scripts/gate-g9-exercises.mjs` (E1–E3: los ocho en `exercises/`, proyectos y escenas válidos, plantilla con nota ≤ 2 y solución con 20/20). |
+| `JWSIM_G9_EXERCISES` | Ejercicios objetivo de la propuesta (Start/Stop, inversión de giro, semáforo, bomba por niveles, puerta, estrella-triángulo, cinta, alarmas) con enunciado y escena. | Revisión + `node scripts/gate-g9-exercises.mjs` (E1–E3: los ocho en `JWPLC_Aprende/extras/retos/`, proyectos y escenas válidos, plantilla con nota ≤ 2 y solución con 20/20). |
 | `JWSIM_G9_AUTOGRADING` | Calificación automática por rúbrica (tablas de verdad temporizadas sobre la traza); misma nota en 100 corridas. | `node scripts/gate-g9-exercises.mjs` (A1: 100 corridas, misma nota y hash por caso; A2: errores típicos de `tests/grading` con nota parcial; A3: E2E `app/tests/e2e-g9.mjs`). |
 | `JWSIM_G9_FAULT_INJECTION` | Fallas configurables: sensor pegado, cable cortado, relé soldado, tarjeta SD ausente, RTC sin batería, bus RS-485 con ruido. | Casos por falla: `node scripts/gate-g9-faults.mjs` (motor de escena, modelo del RTC, `tests/faults/` con el firmware real, determinismo del ruido y criterio `SCENE_FAULTS` de la E2E). ARCHITECTURE §4.2. |
 

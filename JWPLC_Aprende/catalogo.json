@@ -1,0 +1,774 @@
+{
+  "libreria": "JWPLC_Aprende",
+  "version": "0.1.0",
+  "curso": [
+    {
+      "unidad": 1,
+      "nombre": "Primeros pasos",
+      "lecciones": [
+        {
+          "id": "curso-01",
+          "numero": 1,
+          "titulo": "Hola, JWPLC",
+          "ruta": "examples/Curso_JWPLC_Basic/1.Primeros_pasos/01.Hola_JWPLC",
+          "aprende": [
+            "Las dos partes de todo programa de Arduino: setup() y loop().",
+            "A enviar mensajes a la PC por el cable USB-C con el Monitor Serie.",
+            "Qué es una variable: una caja con nombre donde el programa guarda un dato."
+          ],
+          "necesita": [
+            "El JWPLC Basic alimentado con 24 V DC.",
+            "Un cable USB-C con datos entre el JWPLC y la PC."
+          ],
+          "secciones": [],
+          "pasos": [
+            "Elige la placa JWPLC Basic y su puerto en el menú Herramientas.",
+            "Pulsa Subir (el botón con la flecha).",
+            "Abre Herramientas → Monitor Serie y elige 115200 baudios.",
+            "Verás el saludo una sola vez y, debajo, un número que sube cada segundo."
+          ],
+          "practica": [
+            "Cambia el texto del saludo y vuelve a subir el programa.",
+            "Haz que el número suba cada medio segundo (500 milisegundos)."
+          ]
+        },
+        {
+          "id": "curso-02",
+          "numero": 2,
+          "titulo": "Encender un relé",
+          "ruta": "examples/Curso_JWPLC_Basic/1.Primeros_pasos/02.Encender_un_rele",
+          "aprende": [
+            "A encender y apagar una salida con digitalWrite().",
+            "Qué significan HIGH (encendido) y LOW (apagado).",
+            "A hacer una intermitencia: encender, esperar, apagar, esperar."
+          ],
+          "necesita": [
+            "Nada más que el equipo: el indicador de Q0.0 en el frente y el \"clic\" del relé muestran que funciona.",
+            "Opcional: una lámpara de 220 V AC con la fase pasando por COM y NO de Q0.0. Hazlo con el tablero desenergizado."
+          ],
+          "secciones": [
+            {
+              "titulo": "Cómo es una salida del JWPLC Basic",
+              "items": [
+                "Cada salida Q0.0 a Q0.7 es un relé: un interruptor que el programa abre y cierra. Tiene dos bornes, COM y NO (normalmente abierto).",
+                "Con la salida en HIGH el relé cierra y une COM con NO; con LOW los separa.",
+                "Es un contacto seco: el relé no entrega voltaje, solo deja pasar el de tu circuito. Admite hasta 5 A con 250 V AC o 30 V DC.",
+                "En el programa la salida Q0.0 se escribe Q0_0 (con guion bajo)."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa.",
+            "El relé Q0.0 se enciende 1 segundo y se apaga 1 segundo, sin parar."
+          ],
+          "practica": [
+            "Haz que esté encendido 2 segundos y apagado medio segundo.",
+            "Agrega Q0_1 para que se encienda justo cuando Q0_0 se apaga."
+          ]
+        },
+        {
+          "id": "curso-03",
+          "numero": 3,
+          "titulo": "Leer una entrada",
+          "ruta": "examples/Curso_JWPLC_Basic/1.Primeros_pasos/03.Leer_una_entrada",
+          "aprende": [
+            "A leer una entrada con digitalRead().",
+            "Que una entrada solo tiene dos estados: HIGH (activa) o LOW (inactiva).",
+            "A usar lo que se lee para mandar una salida."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo es una entrada del JWPLC Basic",
+              "items": [
+                "Las entradas I0.0 a I0.7 trabajan con 24 V DC y son sinking, para sensores PNP: la entrada se activa cuando le llegan +24 V.",
+                "El borne 1M es el común de las entradas y se une a 0 V de la fuente.",
+                "En el programa la entrada I0.0 se escribe I0_0."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V de la fuente de 24 V.",
+                "Un pulsador entre +24 V y la entrada I0.0. Sirve también un sensor PNP: marrón a +24 V, azul a 0 V y negro (la señal) a I0.0."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Mientras mantengas el pulsador apretado, el relé Q0.0 estará cerrado y el Monitor Serie dirá \"I0.0 activa\"."
+          ],
+          "practica": [
+            "Haz lo contrario: que Q0.0 esté cerrado mientras el pulsador NO esté apretado (pista: el operador ! invierte un valor, lo verás en la lección 04).",
+            "Conecta un segundo pulsador a I0.1 y haz que mande el relé Q0.1."
+          ]
+        },
+        {
+          "id": "curso-04",
+          "numero": 4,
+          "titulo": "Variables y decisiones",
+          "ruta": "examples/Curso_JWPLC_Basic/1.Primeros_pasos/04.Variables_y_decisiones",
+          "aprende": [
+            "El tipo bool: una variable que solo vale true (verdadero) o false (falso).",
+            "A decidir con if / else.",
+            "Las tres operaciones lógicas de todo PLC: Y  (&&): se cumple solo si las dos condiciones se cumplen. O  (||): se cumple si al menos una se cumple. NO (!) : invierte: lo verdadero pasa a falso y al revés."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V. Un pulsador entre +24 V e I0.0 y otro entre +24 V e I0.1."
+              ]
+            },
+            {
+              "titulo": "Qué hace cada relé",
+              "items": [
+                "Q0.0 = I0.0 Y I0.1   Prensa a dos manos: arranca solo con los dos apretados.",
+                "Q0.1 = I0.0 O I0.1   Timbre con dos pulsadores: suena con cualquiera.",
+                "Q0.2 = NO I0.0       Luz de \"listo\": encendida mientras I0.0 esté suelto.",
+                "Q0.3 = I0.0 distinto de I0.1   Luz de escalera con dos interruptores: cambiar cualquiera de los dos la enciende o la apaga."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa. Al inicio solo Q0.2 está cerrado.",
+            "Prueba las cuatro combinaciones de los pulsadores y mira los relés."
+          ],
+          "practica": [
+            "Agrega un tercer pulsador en I0.2 y haz una prensa a TRES manos.",
+            "Q0.4: que se encienda con I0.0 apretado pero I0.1 suelto."
+          ]
+        },
+        {
+          "id": "curso-05",
+          "numero": 5,
+          "titulo": "Las 8 entradas y las 8 salidas",
+          "ruta": "examples/Curso_JWPLC_Basic/1.Primeros_pasos/05.Las_8_entradas_y_salidas",
+          "aprende": [
+            "Qué es un arreglo: una lista de datos con un solo nombre.",
+            "A leer las 8 entradas y escribir los 8 relés en una sola instrucción, con digitalReadBlock() y digitalWriteBlock().",
+            "Qué es un byte: 8 bits, uno por cada entrada o salida.",
+            "A recorrer los bits con el bucle for para mostrarlos en una sola línea."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Las listas que ya trae el JWPLC",
+              "items": [
+                "I0_X[0] es I0_0, I0_X[1] es I0_1 ... I0_X[7] es I0_7.",
+                "Q0_X[0] es Q0_0 ... Q0_X[7] es Q0_7.",
+                "I0_COUNT y Q0_COUNT valen 8: cuántas entradas y salidas hay.",
+                "Las posiciones de una lista se cuentan desde 0, no desde 1."
+              ]
+            },
+            {
+              "titulo": "Las funciones de bloque",
+              "items": [
+                "digitalReadBlock(I0_X) lee las 8 entradas a la vez y devuelve un byte: el bit 0 es I0.0, el bit 1 es I0.1 ... el bit 7 es I0.7.",
+                "digitalWriteBlock(Q0_X, valor) escribe los 8 relés a la vez: el bit 0 manda Q0.0 ... el bit 7 manda Q0.7."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V y pulsadores o sensores en las entradas que quieras usar."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cada entrada activa cierra el relé de su mismo número.",
+            "Cada medio segundo verás una línea como \"Entradas: 1 0 0 1 0 0 0 0\"."
+          ],
+          "practica": [
+            "Cruza las salidas: I0.0 manda Q0.7, I0.1 manda Q0.6 ... (pista: un for con digitalWrite(Q0_X[7 - i], ...)).",
+            "Cuenta cuántas entradas están activas y muestra el total."
+          ]
+        }
+      ]
+    },
+    {
+      "unidad": 2,
+      "nombre": "El tiempo y la lógica",
+      "lecciones": [
+        {
+          "id": "curso-06",
+          "numero": 6,
+          "titulo": "Esperar sin detener el programa",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/06.Tiempo_sin_delay",
+          "aprende": [
+            "Por qué delay() es un problema en una máquina: mientras espera, el programa no lee entradas ni atiende nada más.",
+            "A usar millis(), el reloj interno que cuenta los milisegundos desde que el equipo arrancó, para hacer varias cosas \"a la vez\"."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "La idea",
+              "items": [
+                "En lugar de \"esperar 500 ms\", el programa pregunta en cada vuelta: \"¿ya pasaron 500 ms desde la última vez que cambié la luz?\"",
+                "Si pasaron, actúa y anota la hora. Si no, sigue con lo demás.",
+                "loop() da miles de vueltas por segundo, así que nada queda esperando."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V y un pulsador entre +24 V e I0.0."
+              ]
+            },
+            {
+              "titulo": "Qué hace",
+              "items": [
+                "Q0.0 parpadea cada medio segundo, sin parar.",
+                "Q0.1 sigue al pulsador de I0.0 al instante, aunque Q0.0 esté parpadeando."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y mira el parpadeo de Q0.0.",
+            "Aprieta y suelta el pulsador: Q0.1 responde en el momento.",
+            "Compáralo con la lección 05, donde la salida tardaba en responder."
+          ],
+          "practica": [
+            "Haz que Q0.2 parpadee a otro ritmo (cada 2 segundos) con su propia variable de tiempo: verás dos intermitencias independientes."
+          ]
+        },
+        {
+          "id": "curso-07",
+          "numero": 7,
+          "titulo": "Flancos: encender y apagar con un pulsador",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/07.Flancos_un_pulsador",
+          "aprende": [
+            "La diferencia entre \"el pulsador ESTÁ apretado\" (un estado, dura) y \"el pulsador SE APRETÓ\" (un flanco, ocurre una sola vez).",
+            "A detectar flancos comparando la lectura de ahora con la de la vuelta anterior de loop().",
+            "A hacer un telerruptor: una pulsación enciende, la siguiente apaga."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Los dos flancos",
+              "items": [
+                "Flanco de subida: antes estaba inactivo y ahora está activo (se apretó).",
+                "Flanco de bajada: antes estaba activo y ahora está inactivo (se soltó)."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V y un pulsador entre +24 V e I0.0."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cada vez que aprietes el pulsador, Q0.0 cambia: se enciende o se apaga.",
+            "El Monitor Serie avisa solo cuando algo cambia, sin repetir mensajes."
+          ],
+          "practica": [
+            "Muestra cuántas veces se apretó el pulsador desde el arranque.",
+            "Haz que Q0.1 cambie al SOLTAR el pulsador, en lugar de al apretarlo."
+          ]
+        },
+        {
+          "id": "curso-08",
+          "numero": 8,
+          "titulo": "Marcha y parada de un motor",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/08.Marcha_y_parada",
+          "aprende": [
+            "El circuito más usado en la industria: arrancar un motor con un pulsador y que siga en marcha al soltarlo (enclavamiento o \"sello\").",
+            "Por qué la parada y el relé térmico se cablean normalmente cerrados (NC)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA, normalmente abierto (NO), desde +24 V.",
+                "I0.1: pulsador de PARADA, normalmente cerrado (NC), desde +24 V.",
+                "I0.2: contacto auxiliar NC del relé térmico (bornes 95-96), desde +24 V.",
+                "Q0.0: bobina del contactor del motor. El relé del JWPLC maneja la bobina, nunca el motor directo: la corriente del motor pasa por el contactor.",
+                "Q0.1: lámpara de falla."
+              ]
+            },
+            {
+              "titulo": "Por qué normalmente cerrado",
+              "items": [
+                "Con la parada NC la entrada I0.1 recibe 24 V mientras NADIE la aprieta.",
+                "Si alguien aprieta la parada, o si un cable se corta, la entrada se apaga y el motor se detiene. Una falla del cableado deja la máquina detenida, nunca en marcha. Por eso el programa pide \"parada activa\" para dejar funcionar el motor."
+              ]
+            },
+            {
+              "titulo": "motor = (marcha O motor) Y parada Y térmico",
+              "items": [
+                "\"O motor\" es el sello: si el motor ya está en marcha, se mantiene aunque se suelte el pulsador de marcha."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sin parada ni térmico conectados, el motor no arranca: es lo correcto.",
+            "Con todo conectado, un toque a MARCHA cierra Q0.0 y se queda cerrado.",
+            "Un toque a PARADA lo abre. Si el térmico se dispara, se abre y Q0.1 enciende la lámpara de falla."
+          ],
+          "practica": [
+            "Agrega una lámpara de marcha en Q0.2.",
+            "Haz que con el térmico disparado no se pueda arrancar hasta que se apriete PARADA (un \"reconocimiento\" de la falla)."
+          ]
+        },
+        {
+          "id": "curso-09",
+          "numero": 9,
+          "titulo": "Temporizadores",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/09.Temporizadores",
+          "aprende": [
+            "Los dos temporizadores más usados en un PLC: Retardo a la conexión (TON): la salida se activa cuando la entrada lleva cierto tiempo activa. Si la entrada se suelta antes, no pasa nada. Retardo a la desconexión (TOF): la salida se activa con la entrada y se queda activa cierto tiempo después de que la entrada se apaga.",
+            "A agrupar datos y funciones con struct: cada temporizador guarda su estado y sabe \"ejecutarse\" con temporizador.ejecutar(...).",
+            "Son los mismos TON y TOF de la Plantilla de proyecto (K_Utilidades.h)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador. Hay que mantenerlo apretado 3 segundos para arrancar (evita arranques por un toque accidental).",
+                "I0.1: sensor de presencia de un pasillo."
+              ]
+            },
+            {
+              "titulo": "Qué hace",
+              "items": [
+                "Q0.0 se cierra cuando I0.0 lleva 3 segundos apretado (TON).",
+                "Q0.1, la luz del pasillo, se enciende con la presencia y se apaga 10 segundos después de la última detección (TOF)."
+              ]
+            }
+          ],
+          "pasos": [
+            "Toca I0.0 un segundo: no pasa nada. Mantenlo 3 segundos: cierra Q0.0.",
+            "Activa I0.1 y suéltalo: la luz sigue 10 segundos y se apaga. Si lo activas otra vez antes, los 10 segundos empiezan de nuevo."
+          ],
+          "practica": [
+            "Cambia los tiempos.",
+            "Agrega un tercer temporizador: una bocina en Q0.2 que suene si la presencia de I0.1 dura más de 30 segundos."
+          ]
+        },
+        {
+          "id": "curso-10",
+          "numero": 10,
+          "titulo": "Contadores",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/10.Contadores",
+          "aprende": [
+            "A contar eventos: cada pieza que pasa por un sensor suma 1.",
+            "A comparar la cuenta con una meta y actuar al llegar.",
+            "A juntar lo aprendido: flancos (lección 07), struct con su función (lección 09) y una regla de marcha (lección 08)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: llenar cajas en una cinta",
+              "items": [
+                "La cinta avanza y cada pieza que cae en la caja pasa frente a un sensor.",
+                "Al llegar a 10 piezas la cinta se detiene y se enciende la lámpara \"caja llena\". El operador cambia la caja y aprieta RESET."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: sensor PNP de piezas (o un pulsador para simularlo).",
+                "I0.1: pulsador RESET.",
+                "Q0.0: contactor del motor de la cinta.",
+                "Q0.1: lámpara \"caja llena\"."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Q0.0 está cerrado: la cinta avanza.",
+            "Activa I0.0 diez veces: verás la cuenta y, en la décima, la cinta se detiene y Q0.1 se enciende.",
+            "Aprieta RESET: la cuenta vuelve a 0 y la cinta arranca otra vez."
+          ],
+          "practica": [
+            "Cambia la meta a 24 piezas.",
+            "Cuenta también las cajas llenas y muéstralas en el Monitor Serie."
+          ]
+        },
+        {
+          "id": "curso-11",
+          "numero": 11,
+          "titulo": "Máquina de estados: un semáforo",
+          "ruta": "examples/Curso_JWPLC_Basic/2.Tiempo_y_logica/11.Maquina_de_estados",
+          "aprende": [
+            "A pensar una máquina como una serie de ESTADOS (pasos) y las condiciones que la hacen pasar de un estado al siguiente.",
+            "enum: una lista de nombres para los estados.",
+            "switch: hacer una cosa distinta según el estado actual."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: semáforo de un cruce peatonal",
+              "items": [
+                "VERDE para los autos, como mínimo 10 segundos. Si un peatón aprieta el botón, al cumplirse esos 10 segundos pasa a AMARILLO. Sin peatones, sigue en verde hasta 30 segundos.",
+                "AMARILLO durante 3 segundos.",
+                "ROJO para los autos durante 8 segundos, con el verde peatonal encendido.",
+                "Y vuelve a VERDE."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: botón del peatón.",
+                "Q0.0 rojo, Q0.1 amarillo, Q0.2 verde de los autos.",
+                "Q0.3 verde de los peatones."
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Sin tocar nada, el semáforo cambia cada 30 segundos.",
+            "Aprieta el botón: después de los 10 segundos mínimos de verde, cambia."
+          ],
+          "practica": [
+            "Agrega un estado \"ROJO PARPADEANDO\" para los peatones en los últimos 3 segundos de su verde.",
+            "Que una entrada I0.1 ponga el semáforo en amarillo intermitente (modo noche) mientras esté activa."
+          ]
+        }
+      ]
+    }
+  ],
+  "retos": [
+    {
+      "id": "01-marcha-parada",
+      "titulo": "Marcha y parada con enclavamiento",
+      "nivel": 1,
+      "ruta": "extras/retos/01-marcha-parada",
+      "imagen": "extras/imagenes/reto-01-marcha-parada.jpg",
+      "introduccion": "El circuito básico de cualquier tablero: un motor que arranca con un pulsador y se detiene con otro.",
+      "objetivo": "Un motor que arranca con S1, sigue en marcha al soltarlo y se detiene con S0.",
+      "ensena": "Autorretención, prioridad de la parada y por qué la parada es NC (falla segura).",
+      "pasos": [
+        "Lea las entradas S1 (marcha) y S0 (parada, NC).",
+        "Enclave KM1 al pulsar S1 (autorretención).",
+        "Abra KM1 con S0; si se pulsan los dos, gana la parada.",
+        "Encienda H1 mientras el motor gira.",
+        "Ejecute y pruébelo con los pulsadores de la escena."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA verde: Marcha",
+        "I0_1 · S0, pulsador NC rojo: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Motor M1 (230 VAC)",
+        "Q0_1 · H1, piloto verde: Motor en marcha"
+      ],
+      "objetivos_en_vivo": [
+        {
+          "id": "arranca",
+          "text": "Pulse S1: el motor arranca y sigue en marcha al soltarlo",
+          "extra": false
+        },
+        {
+          "id": "piloto",
+          "text": "El piloto H1 se enciende con el motor en marcha",
+          "extra": false
+        },
+        {
+          "id": "para",
+          "text": "Pulse S0: el motor se detiene y queda detenido",
+          "extra": false
+        },
+        {
+          "id": "rearranca",
+          "text": "Vuelve a arrancar con S1 después de la parada",
+          "extra": true
+        }
+      ]
+    },
+    {
+      "id": "02-inversion-giro",
+      "titulo": "Inversión de giro con enclavamiento",
+      "nivel": 1,
+      "ruta": "extras/retos/02-inversion-giro",
+      "imagen": "extras/imagenes/reto-02-inversion-giro.jpg",
+      "introduccion": "Un motor de 24 VDC que gira en los dos sentidos: KM1 lo alimenta con una polaridad y KM2 con la invertida. Si los dos contactores cierran a la vez, la fuente queda en cortocircuito.",
+      "objetivo": "Un motor que gira a la izquierda con S1 o a la derecha con S2, sin que KM1 y KM2 cierren juntos.",
+      "ensena": "Enclavamiento entre contactores y paso obligado por parada.",
+      "pasos": [
+        "Enclave KM1 con S1 y KM2 con S2.",
+        "Para cambiar de sentido hay que pasar por parada (S0).",
+        "Enclavamiento: nunca KM1 y KM2 a la vez; con S1 y S2 juntos, ninguno.",
+        "H1 encendido mientras el motor gira."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA: Giro a la izquierda",
+        "I0_1 · S2, pulsador NA: Giro a la derecha",
+        "I0_2 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Motor a la izquierda",
+        "Q0_1 · KM2, contactor: Motor a la derecha",
+        "Q0_2 · H1, piloto amarillo: Motor en marcha"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "03-semaforo",
+      "titulo": "Semáforo",
+      "nivel": 1,
+      "ruta": "extras/retos/03-semaforo",
+      "imagen": "extras/imagenes/reto-03-semaforo.jpg",
+      "introduccion": "Un semáforo de una vía con tres pilotos. Es el primer ejercicio con tiempos: use `millis()`, no `delay()`, para que el programa siga atendiendo los pulsadores.",
+      "objetivo": "Un semáforo que repite verde 4 s, ámbar 1 s y rojo 4 s mientras está en marcha.",
+      "ensena": "Tiempos con millis() sin bloquear el programa.",
+      "pasos": [
+        "Arranque el ciclo con S1, empezando en verde.",
+        "Cambie de luz con temporizadores sin bloquear el programa (millis()).",
+        "Nunca dos luces a la vez.",
+        "S0 apaga todo; marcha vuelve a empezar en verde."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA: Marcha",
+        "I0_1 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · H1, piloto rojo: Luz roja",
+        "Q0_1 · H2, piloto amarillo: Luz ámbar",
+        "Q0_2 · H3, piloto verde: Luz verde"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "04-bomba-niveles",
+      "titulo": "Llenado de tanque por niveles",
+      "nivel": 2,
+      "ruta": "extras/retos/04-bomba-niveles",
+      "imagen": "extras/imagenes/reto-04-bomba-niveles.jpg",
+      "introduccion": "Una bomba llena un tanque entre dos niveles. Los interruptores de nivel se accionan a mano desde la escena (en la realidad son flotadores).",
+      "objetivo": "Mantener un tanque entre dos niveles: la bomba arranca bajo B1 y para en B2.",
+      "ensena": "Histéresis entre dos sensores.",
+      "pasos": [
+        "Arranque la bomba cuando el agua baje de B1.",
+        "Manténgala hasta llegar a B2 (histéresis).",
+        "Con el tanque lleno vaciándose, no arranque hasta bajar de B1.",
+        "H1 encendido con el agua bajo B1."
+      ],
+      "en_la_mesa": [
+        "I0_0 · B1, interruptor de nivel bajo: Cerrado: hay agua a la altura de B1",
+        "I0_1 · B2, interruptor de nivel alto: Cerrado: tanque lleno",
+        "Q0_0 · KM1, contactor: Bomba M1 (230 VAC)",
+        "Q0_1 · H1, piloto rojo: Tanque bajo"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "05-puerta",
+      "titulo": "Portón automático",
+      "nivel": 2,
+      "ruta": "extras/retos/05-puerta",
+      "imagen": "extras/imagenes/reto-05-puerta.jpg",
+      "introduccion": "Un portón con motor de 24 VDC que abre y cierra invirtiendo la polaridad (como el ejercicio 2), dos finales de carrera y una barrera fotoeléctrica de seguridad. Los finales y el obstáculo se accionan desde la escena.",
+      "objetivo": "Un portón que abre y cierra hasta sus finales de carrera y vuelve a abrir si detecta un obstáculo.",
+      "ensena": "Máquina de estados, finales de carrera y sensor de seguridad.",
+      "pasos": [
+        "S1 abre hasta B1; S2 cierra hasta B2; cada final detiene el motor.",
+        "S0 detiene el portón donde esté.",
+        "Si B3 detecta un obstáculo al cerrar, pare y vuelva a abrir.",
+        "Nunca KM1 y KM2 a la vez; baliza H1 mientras se mueve."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA: Abrir",
+        "I0_1 · S2, pulsador NA: Cerrar",
+        "I0_2 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "I0_3 · B1, final de carrera NA: Portón abierto",
+        "I0_4 · B2, final de carrera NA: Portón cerrado",
+        "I0_5 · B3, sensor fotoeléctrico: Obstáculo en el paso",
+        "Q0_0 · KM1, contactor: Motor: abrir",
+        "Q0_1 · KM2, contactor: Motor: cerrar",
+        "Q0_2 · H1, piloto amarillo: Baliza de movimiento"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "06-estrella-triangulo",
+      "titulo": "Arranque estrella-triángulo",
+      "nivel": 2,
+      "ruta": "extras/retos/06-estrella-triangulo",
+      "imagen": "extras/imagenes/reto-06-estrella-triangulo.jpg",
+      "introduccion": "El arranque estrella-triángulo reduce la corriente de arranque de un motor trifásico. En la escena el circuito de potencia está simplificado (el motor gira con KM1); lo que se califica es la secuencia de los tres contactores.",
+      "objetivo": "Arrancar un motor en estrella y pasar a triángulo a los 3 s, con la pausa obligatoria entre ambos.",
+      "ensena": "Secuencia temporizada con pausa obligatoria entre contactores.",
+      "pasos": [
+        "Con S1 cierre KM1 (línea) y KM2 (estrella).",
+        "A los 3 s abra KM2, espere 100 ms y cierre KM3 (triángulo).",
+        "KM2 y KM3 nunca juntos, ni un instante.",
+        "S0 abre los tres; H1 encendido en marcha."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA: Marcha",
+        "I0_1 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Línea",
+        "Q0_1 · KM2, contactor: Estrella",
+        "Q0_2 · KM3, contactor: Triángulo",
+        "Q0_3 · H1, piloto verde: En marcha"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "07-cinta-contador",
+      "titulo": "Cinta transportadora con contador de lote",
+      "nivel": 2,
+      "ruta": "extras/retos/07-cinta-contador",
+      "imagen": "extras/imagenes/reto-07-cinta-contador.jpg",
+      "introduccion": "Una cinta lleva piezas metálicas hasta un sensor inductivo al final. Las piezas se simulan desde la escena (arrastrando la pieza frente al sensor).",
+      "objetivo": "Una cinta que se detiene al completar un lote de 3 piezas.",
+      "ensena": "Detección de flanco y contador.",
+      "pasos": [
+        "S1 arranca la cinta (enclavada); S0 la detiene.",
+        "Cuente cada pieza en B1 una sola vez (flanco de subida).",
+        "Con 3 piezas pare la cinta y encienda H1.",
+        "Con el lote completo, S1 empieza un lote nuevo desde cero."
+      ],
+      "en_la_mesa": [
+        "I0_0 · S1, pulsador NA: Marcha / nuevo lote",
+        "I0_1 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "I0_2 · B1, sensor inductivo: Pieza al final de la cinta",
+        "Q0_0 · KM1, contactor: Motor de la cinta",
+        "Q0_1 · H1, piloto azul: Lote completo"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "08-alarma",
+      "titulo": "Alarma con reconocimiento",
+      "nivel": 3,
+      "ruta": "extras/retos/08-alarma",
+      "imagen": "extras/imagenes/reto-08-alarma.jpg",
+      "introduccion": "Una alarma de proceso con la secuencia típica de reconocimiento. El presostato se acciona desde la escena.",
+      "objetivo": "Una alarma con bocina y piloto intermitente que el operador debe reconocer.",
+      "ensena": "Secuencia de alarma: bocina, parpadeo, reconocimiento y memoria.",
+      "pasos": [
+        "Con B1 cerrado suene HA1 y haga parpadear H1 (0,5 s / 0,5 s).",
+        "S1 (reconocer) calla la bocina; con la alarma presente, H1 queda fijo.",
+        "Si la alarma desaparece después de reconocerla, H1 se apaga.",
+        "Si desaparece sin reconocerla, todo sigue hasta que se reconozca."
+      ],
+      "en_la_mesa": [
+        "I0_0 · B1, presostato (interruptor NA): Cerrado: presión alta (alarma)",
+        "I0_1 · S1, pulsador NA: Reconocer",
+        "Q0_0 · HA1, zumbador: Bocina",
+        "Q0_1 · H1, piloto rojo: Alarma"
+      ],
+      "objetivos_en_vivo": []
+    },
+    {
+      "id": "09-tolva-nivel",
+      "titulo": "Nivel de una tolva con descarga por gravedad",
+      "nivel": 3,
+      "ruta": "extras/retos/09-tolva-nivel",
+      "imagen": "extras/imagenes/reto-09-tolva-nivel.jpg",
+      "introduccion": "Una tolva cónica de 10 L entrega agua al proceso por gravedad y una bomba la vuelve a llenar. Dos sensores capacitivos detectan el agua a través de la pared de la tolva.",
+      "objetivo": "Mantener una tolva con descarga por gravedad entre B1 (30 %) y B2 (80 %) mientras el proceso está habilitado.",
+      "ensena": "Histéresis con un proceso continuo (tanque discretizado) y habilitación por selector.",
+      "pasos": [
+        "Con S1 en 0 todo detenido; con S1 en I abra la descarga Y1.",
+        "Arranque la bomba bajo B1 y párela al llegar a B2 (histéresis).",
+        "Si S1 vuelve a 0, pare la bomba y cierre Y1.",
+        "H1 encendido con el agua bajo B1."
+      ],
+      "en_la_mesa": [
+        "I0_0 · B1, sensor capacitivo al 30 % de la altura: Detecta: hay agua a la altura de B1",
+        "I0_1 · B2, sensor capacitivo al 80 % de la altura: Detecta: tolva llena",
+        "I0_2 · S1, selector «Habilitar»: En I: el proceso está habilitado",
+        "Q0_0 · KM1, contactor: Bomba M1 (230 VAC)",
+        "Q0_1 · Y1, electroválvula de descarga: Abierta: la tolva entrega agua al proceso",
+        "Q0_2 · H1, piloto rojo: Nivel bajo"
+      ],
+      "objetivos_en_vivo": [
+        {
+          "id": "habilita",
+          "text": "Ponga S1 en I: se abre la descarga Y1",
+          "extra": false
+        },
+        {
+          "id": "piloto",
+          "text": "H1 encendido mientras el agua está bajo B1 (30 %)",
+          "extra": false
+        },
+        {
+          "id": "llena",
+          "text": "Con el agua bajo B1, la bomba arranca",
+          "extra": false
+        },
+        {
+          "id": "histeresis",
+          "text": "Sigue bombeando entre B1 y B2 (histéresis)",
+          "extra": false
+        },
+        {
+          "id": "para",
+          "text": "Para al llegar a B2 (80 %)",
+          "extra": false
+        },
+        {
+          "id": "sin_rebalse",
+          "text": "La tolva queda llena sin rebalsar durante 5 s",
+          "extra": true
+        }
+      ]
+    },
+    {
+      "id": "10-secuencia-neumatica",
+      "titulo": "Secuencia electroneumática de 4 cilindros",
+      "nivel": 3,
+      "ruta": "extras/retos/10-secuencia-neumatica",
+      "imagen": "extras/imagenes/reto-10-secuencia-neumatica.jpg",
+      "introduccion": "Una estación de montaje mueve cuatro cilindros neumáticos de doble efecto (A, B, C y D), cada uno con una electroválvula 5/2 monoestable (Y1 a Y4: con bobina sale, sin bobina vuelve). Cada cilindro tiene dos finales de carrera de rodillo que acciona la cabeza del vástago: «0» marca el vástago adentro y «1» afuera (contacto NA 13-14). Los ocho finales ocupan las ocho entradas del JWPLC Basic, así que el mando va en los botones del frente de la placa.",
+      "objetivo": "Cuatro cilindros neumáticos que siguen la secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo, vigilada por sus finales de carrera de rodillo.",
+      "ensena": "Secuencias electroneumáticas con finales de carrera, vigilancia por tiempo, pausa y reset.",
+      "pasos": [
+        "OK arranca el ciclo continuo si los cuatro cilindros están en reposo.",
+        "Cada paso espera su final de carrera; si no llega en 3 s, la máquina queda en falla con el código en ERR.",
+        "ESC pausa en el paso actual y OK continúa.",
+        "LEFT (Reset) retrae todos los cilindros y deja la máquina lista."
+      ],
+      "en_la_mesa": [
+        "I0_0 · A0, final de carrera de rodillo: cilindro A retraído",
+        "I0_1 · A1, final de carrera de rodillo: cilindro A extendido",
+        "I0_2 · B0, final de carrera de rodillo: cilindro B retraído",
+        "I0_3 · B1, final de carrera de rodillo: cilindro B extendido",
+        "I0_4 · C0, final de carrera de rodillo: cilindro C retraído",
+        "I0_5 · C1, final de carrera de rodillo: cilindro C extendido",
+        "I0_6 · D0, final de carrera de rodillo: cilindro D retraído",
+        "I0_7 · D1, final de carrera de rodillo: cilindro D extendido",
+        "Q0_0 · Y1, electroválvula 5/2: cilindro A",
+        "Q0_1 · Y2, electroválvula 5/2: cilindro B",
+        "Q0_2 · Y3, electroválvula 5/2: cilindro C",
+        "Q0_3 · Y4, electroválvula 5/2: cilindro D",
+        "Q0_4 · H1, piloto verde: en marcha",
+        "Q0_5 · H2, piloto amarillo: pausa",
+        "Q0_6 · H3, piloto rojo: falla",
+        "Botones del frente: OK Arranque, ESC Pausa, LEFT Reset"
+      ],
+      "objetivos_en_vivo": []
+    }
+  ],
+  "arquitecturas": [
+    {
+      "id": "01-bombeo-edificio",
+      "titulo": "Bombeo de edificio a presión constante",
+      "ruta": "extras/arquitecturas/01-bombeo-edificio",
+      "imagen": "extras/imagenes/arq-01-bombeo-edificio.jpg",
+      "resumen": "Dos bombas con variador de frecuencia (Modbus RTU, dir. 1 y 2) y un transmisor de presión RS-485 (dir. 3) mantienen la red del edificio a 4,0 bar. El JWPLC Basic hace el PI, alterna las bombas y protege la cisterna."
+    },
+    {
+      "id": "02-montacargas",
+      "titulo": "Montacargas de 3 paradas",
+      "ruta": "extras/arquitecturas/02-montacargas",
+      "imagen": "extras/imagenes/arq-02-montacargas.jpg",
+      "resumen": "Motor trifásico con inversión (KM1 sube, KM2 baja, enclavados), relé térmico, finales de piso SQ0-SQ2, puertas de piso con contacto (cadena SP) y celda de carga. Sobrerrecorrido (SQS/SQI) y parada de emergencia cableados en serie con las bobinas. El JWPLC Basic atiende las llamadas y para en el piso pedido."
+    },
+    {
+      "id": "03-tratamiento-agua",
+      "titulo": "Planta de tratamiento de agua",
+      "ruta": "extras/arquitecturas/03-tratamiento-agua",
+      "imagen": "extras/imagenes/arq-03-tratamiento-agua.jpg",
+      "resumen": "Bomba de captación (KM1) → filtro de arena F1 → reservorio T2 por la válvula de servicio Y1; retrolavado por Y2 al desagüe cuando el presostato diferencial PDS marca el filtro colmatado. La dosificadora CL1 inyecta cloro en línea y el analizador AT1 (RS-485, dir. 4) da el residual: el JWPLC Basic lo regula a 1,0 mg/L."
+    }
+  ]
+}
