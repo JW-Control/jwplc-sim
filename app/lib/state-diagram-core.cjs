@@ -6,10 +6,11 @@
 "use strict";
 
 (function (root, factory) {
-  const api = factory();
+  const cs = typeof module === "object" && module.exports ? require("./cylinder-sensors.cjs") : root.JwsimCylinderSensors;
+  const api = factory(cs);
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.JwsimStateDiagCore = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (CS) {
   const VALVES = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
   const MIN_BAR = 1.5;
   const TRACKED_KEYS = ["position", "energized", "coilPlus", "coilMinus", "actuated", "detecting", "pressure"];
@@ -49,10 +50,10 @@
     for (const v of valves) {
       const bi = v.type === "jwsim/solenoid-valve-2";
       const sens = sensorsOf(devices, v.id);
-      const letter = sens.map((s) => /^([A-Z])\d$/.exec(s.id)?.[1]).find(Boolean);
-      const customLbl = String(v.params?.label ?? "").trim();
-      const shortCyl = customLbl || letter || v.id;
-      const cylTitle = customLbl ? `${customLbl} (${v.id})` : letter ? `Cilindro ${letter}` : `Cilindro ${v.id}`;
+      // Mismo nombre que en el esquema y en Propiedades (cylinder-sensors.cjs).
+      const nm = CS.cylinderName(devices, v.id);
+      const shortCyl = nm.name;
+      const cylTitle = nm.custom ? `${nm.custom} · ${v.id}` : nm.letter ? `Cilindro ${nm.letter} · ${v.id}` : `Cilindro ${v.id}`;
 
       const groupChannels = [];
       const pushCh = (ch) => {
@@ -65,7 +66,7 @@
         groupId: v.id,
         kind: "cyl",
         cylIndex: cylIdx,
-        label: `${cylTitle} (${v.id})`,
+        label: cylTitle,
         shortLabel: shortCyl,
         deviceId: v.id,
         key: "position",

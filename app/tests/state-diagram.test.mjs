@@ -24,7 +24,7 @@ test("extractChannels agrupa cilindros, bobinas, sensores y presión de la escen
   assert.equal(res.groups.length, 3); // Cilindro A, Cilindro B, Aire comprimido
 
   const gA = res.groups[0];
-  assert.equal(gA.label, "Cilindro A");
+  assert.equal(gA.label, "Cilindro A · Y1");
   assert.deepEqual(
     gA.channels.map((c) => [c.kind, c.shortLabel, c.deviceId, c.key]),
     [
@@ -36,7 +36,7 @@ test("extractChannels agrupa cilindros, bobinas, sensores y presión de la escen
   );
 
   const gB = res.groups[1];
-  assert.equal(gB.label, "Cilindro B");
+  assert.equal(gB.label, "Cilindro B · Y2");
   assert.deepEqual(
     gB.channels.map((c) => [c.kind, c.shortLabel, c.deviceId, c.key]),
     [

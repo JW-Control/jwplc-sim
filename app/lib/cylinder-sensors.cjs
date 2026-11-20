@@ -73,6 +73,22 @@
     return "A";
   }
 
+  /**
+   * Nombre único del cilindro, el mismo en esquema, Propiedades, plano
+   * neumático y diagrama de estados: la etiqueta propia si la hay; si no, la
+   * letra de sus finales de carrera (A0/A1 → A); si no, el ID de la
+   * electroválvula. `tag` lo acompaña siempre del ID (p. ej. «A · Y1»).
+   */
+  function cylinderName(devices, valveId) {
+    const v = (devices ?? []).find((d) => d.id === valveId);
+    const custom = String(v?.params?.label ?? "").trim();
+    const letter = sensorsForValve(devices, valveId).map((s) => /^([A-Z])\d+$/.exec(s.id)?.[1]).find(Boolean) ?? "";
+    const name = custom || letter || String(valveId);
+    const source = custom ? "label" : letter ? "sensors" : "id";
+    const tag = name === String(valveId) ? name : `${name} · ${valveId}`;
+    return { id: String(valveId), name, letter, custom, source, tag };
+  }
+
   /** Próximo identificador libre para una marca en la posición dada (A0, A1, A2...). */
   function nextMarkId(devices, letter, pos) {
     const taken = new Set((devices ?? []).map((d) => d.id));
@@ -304,6 +320,7 @@
     sensorHome,
     groupedSensorsForValve,
     nextCylinderLetter,
+    cylinderName,
     nextMarkId,
     sensorPlacement,
     buildSensorDevice,
