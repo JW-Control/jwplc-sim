@@ -49,12 +49,18 @@ const probe = () =>
     const grid = getComputedStyle(document.getElementById("scene-grid"));
     const mon = getComputedStyle(document.querySelector(".monaco-editor"));
     const mtab = getComputedStyle(document.querySelector(".mtab.active"));
+    const selBg = getComputedStyle(document.getElementById("sel-example")).backgroundColor;
+    const opt = document.querySelector("#sel-example option");
+    const optCs = opt ? getComputedStyle(opt) : null;
     return {
       meta: document.querySelector('meta[name="color-scheme"]')?.content,
       bg: cs.backgroundColor,
       fg: cs.color,
       monacoBg: mon.backgroundColor,
       mtabColor: mtab.color,
+      selBg,
+      optBg: optCs?.backgroundColor,
+      optColor: optCs?.color,
       gridFilter: grid.filter,
       state: window.jwsimTest.getTheme(),
     };
@@ -67,7 +73,7 @@ try {
   const light = await probe();
   await win.screenshot({ path: join(OUT, "01-programa-claro.png") });
   criteria.TOGGLE_LIGHT = {
-    ok: light.meta === "light" && light.state.dark === false && light.bg === "rgb(245, 247, 250)" && light.monacoBg === "rgb(245, 247, 250)" && light.gridFilter === "invert(1)" && light.mtabColor !== "rgb(255, 255, 255)",
+    ok: light.meta === "light" && light.state.dark === false && light.bg === "rgb(245, 247, 250)" && light.monacoBg === "rgb(245, 247, 250)" && light.selBg !== "rgba(0, 0, 0, 0)" && light.optBg === "rgb(255, 255, 255)" && light.gridFilter === "invert(1)" && light.mtabColor !== "rgb(255, 255, 255)",
     light,
   };
   log(`TOGGLE_LIGHT ${JSON.stringify(criteria.TOGGLE_LIGHT)}`);
@@ -103,7 +109,7 @@ try {
   await win.waitForTimeout(150);
   const dark = await probe();
   criteria.TOGGLE_DARK = {
-    ok: dark.state.dark === true && dark.bg === "rgb(20, 23, 27)" && dark.monacoBg === "rgb(20, 23, 27)",
+    ok: dark.state.dark === true && dark.bg === "rgb(20, 23, 27)" && dark.monacoBg === "rgb(20, 23, 27)" && dark.selBg === "rgb(27, 31, 36)" && dark.optBg === "rgb(27, 31, 36)",
     dark,
   };
   log(`TOGGLE_DARK ${JSON.stringify(criteria.TOGGLE_DARK)}`);
