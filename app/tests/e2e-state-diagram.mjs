@@ -69,46 +69,73 @@ try {
   };
   log(`TOGGLE_BOTH_VIEWS ${JSON.stringify(criteria.TOGGLE_BOTH_VIEWS)}`);
 
-  // 2. Ambos divisores redimensionan y persisten en localStorage.
+  // 2. Ambos divisores redimensionan EN VIVO durante el arrastre y persisten en localStorage.
   const lBox = await win.$eval("#scene-left-splitter", (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await win.mouse.move(lBox.x, lBox.y);
   await win.mouse.down();
   await win.mouse.move(lBox.x + 80, lBox.y, { steps: 6 });
+  const liveLeftW = await t(() => Math.round(document.getElementById("scene-left").getBoundingClientRect().width));
   await win.mouse.up();
   await sleep(200);
   const rBox = await win.$eval("#scene-side-splitter", (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await win.mouse.move(rBox.x, rBox.y);
   await win.mouse.down();
   await win.mouse.move(rBox.x - 60, rBox.y, { steps: 6 });
+  const liveRightW = await t(() => Math.round(document.getElementById("scene-side").getBoundingClientRect().width));
   await win.mouse.up();
   await sleep(200);
-  const resized = await t(() => ({
-    leftW: Math.round(document.getElementById("scene-left").getBoundingClientRect().width),
-    rightW: Math.round(document.getElementById("scene-side").getBoundingClientRect().width),
-    storedLeft: Number(localStorage.getItem("jwsim.sceneLeftW")),
-    storedRight: Number(localStorage.getItem("jwsim.sceneSideW")),
-    stageW: Math.round(document.querySelector(".scene-stage").getBoundingClientRect().width),
-  }));
+  const resized = await t(() => {
+    const fl = document.querySelector(".scene-float").getBoundingClientRect();
+    const st = document.querySelector(".scene-stage").getBoundingClientRect();
+    return {
+      liveLeftW: undefined,
+      leftW: Math.round(document.getElementById("scene-left").getBoundingClientRect().width),
+      rightW: Math.round(document.getElementById("scene-side").getBoundingClientRect().width),
+      storedLeft: Number(localStorage.getItem("jwsim.sceneLeftW")),
+      storedRight: Number(localStorage.getItem("jwsim.sceneSideW")),
+      stageW: Math.round(st.width),
+      floatInsideStage: fl.left >= st.left - 1 && fl.right <= st.right + 1,
+    };
+  });
   criteria.RESIZE_BOTH_SIDES = {
-    ok: resized.leftW > inColor.leftW + 50 && resized.storedLeft === resized.leftW &&
-      resized.rightW >= 380 && resized.storedRight === resized.rightW && resized.stageW >= 260,
-    resized,
+    ok: liveLeftW > inColor.leftW + 50 && liveRightW >= 380 &&
+      resized.leftW > inColor.leftW + 50 && resized.storedLeft === resized.leftW &&
+      resized.rightW >= 380 && resized.storedRight === resized.rightW &&
+      resized.stageW >= 260 && resized.floatInsideStage,
+    liveLeftW, liveRightW, resized,
   };
   log(`RESIZE_BOTH_SIDES ${JSON.stringify(criteria.RESIZE_BOTH_SIDES)}`);
 
-  // Restablecer anchos con doble clic para dejar un encuadre cómodo.
+  // Restablecer anchos con doble clic y comprobar límite de .scene-stage >= 260 px en ventana estrecha.
   await win.dblclick("#scene-left-splitter");
   await win.dblclick("#scene-side-splitter");
+  await sleep(200);
+  await win.setViewportSize({ width: 960, height: 700 });
   await sleep(250);
+  const narrowStageW = await t(() => Math.round(document.querySelector(".scene-stage").getBoundingClientRect().width));
+  await win.setViewportSize({ width: 1280, height: 720 });
+  await sleep(250);
+  criteria.NARROW_CLAMP = { ok: narrowStageW >= 260, narrowStageW };
+  log(`NARROW_CLAMP ${JSON.stringify(criteria.NARROW_CLAMP)}`);
 
-  // 3. Simulación en vivo: traza datos de los 4 cilindros y conserva al detener.
+  // 3. Muestreo en segundo plano con el panel cerrado y desde Programa, luego abrir y verificar.
+  await win.click("#scene-tab-states"); // cerrar izquierda
+  await sleep(200);
+  await t(() => window.JwsimTabs.select("program"));
+  await sleep(200);
   await win.click("#btn-run");
   await win.waitForFunction(() => /Ejecutando/.test(document.body.innerText), null, { timeout: 120000 });
   await sleep(1800);
   await t(() => pressKey("BTN_OK", true));
   await sleep(200);
   await t(() => pressKey("BTN_OK", false));
-  await sleep(2500);
+  await sleep(2200);
+  await t(() => window.JwsimTabs.select("schematic"));
+  await sleep(300);
+  await win.click("#scene-tab-states"); // reabrir izquierda para ver historial acumulado
+  await sleep(300);
+  await win.click("#schem-pneu");
+  await sleep(300);
   const runningState = await t(() => ({
     dbg: window.JwsimStateDiag.debug(),
     readout: document.getElementById("sd-readout").textContent,
@@ -182,7 +209,7 @@ try {
   await app.close();
 }
 
-const ok = ["TOGGLE_BOTH_VIEWS", "RESIZE_BOTH_SIDES", "LIVE_AND_KEEP_ON_STOP", "CONTROLS", "NON_PNEUMATIC_PRESERVES_PREF"]
+const ok = ["TOGGLE_BOTH_VIEWS", "RESIZE_BOTH_SIDES", "NARROW_CLAMP", "LIVE_AND_KEEP_ON_STOP", "CONTROLS", "NON_PNEUMATIC_PRESERVES_PREF"]
   .every((k) => criteria[k]?.ok);
 mkdirSync(join(ROOT, "build", "gates"), { recursive: true });
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_STATE_DIAGRAM_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));

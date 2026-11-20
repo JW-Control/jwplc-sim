@@ -1942,8 +1942,10 @@ const SCENE_LEFT_MAX = 680;
 const SCENE_SIDE_MIN = 240;
 const SCENE_SIDE_MAX = 560;
 let leftAvail = false;
+const liveSideW = { left: null, right: null };
 
 function scenePaneWidth(side, fallback) {
+  if (liveSideW[side] != null) return liveSideW[side];
   const raw = Number(storeGet(side === "left" ? LEFT_W_KEY : SIDE_W_KEY));
   return raw > 0 ? raw : fallback;
 }
@@ -1961,27 +1963,33 @@ function clampSideWidths() {
   let rw = sideOpen ? Math.max(SCENE_SIDE_MIN, Math.min(SCENE_SIDE_MAX, scenePaneWidth("right", sideDef))) : 0;
 
   if (total > 0 && lw + rw > avail) {
-    const excess = lw + rw - avail;
     if (leftOpen && sideOpen) {
-      const dl = Math.min(Math.max(0, lw - SCENE_LEFT_MIN), Math.round(excess * 0.6));
+      const minL = Math.min(SCENE_LEFT_MIN, Math.floor(avail / 2));
+      const minR = Math.min(SCENE_SIDE_MIN, Math.floor(avail / 2));
+      const excess = lw + rw - avail;
+      const dl = Math.min(Math.max(0, lw - minL), Math.round(excess * 0.6));
       lw -= dl;
-      rw = Math.max(SCENE_SIDE_MIN, rw - (excess - dl));
-      if (lw + rw > avail) lw = Math.max(180, avail - rw);
+      rw = Math.max(minR, rw - (excess - dl));
+      if (lw + rw > avail) lw = Math.max(0, avail - rw);
     } else if (leftOpen) {
-      lw = Math.max(180, avail);
+      lw = avail;
     } else if (sideOpen) {
-      rw = Math.max(180, avail);
+      rw = avail;
     }
   }
   if (leftOpen) main.style.setProperty("--scene-left-w", `${Math.round(lw)}px`);
   else main.style.removeProperty("--scene-left-w");
-  if (sideOpen && storeGet(SIDE_W_KEY)) main.style.setProperty("--scene-side-w", `${Math.round(rw)}px`);
-  else if (sideOpen && total > 0 && rw < sideDef) main.style.setProperty("--scene-side-w", `${Math.round(rw)}px`);
-  else main.style.removeProperty("--scene-side-w");
+  if (sideOpen && (liveSideW.right != null || storeGet(SIDE_W_KEY) || (total > 0 && rw < sideDef))) {
+    main.style.setProperty("--scene-side-w", `${Math.round(rw)}px`);
+  } else {
+    main.style.removeProperty("--scene-side-w");
+  }
+  return { lw: Math.round(lw), rw: Math.round(rw) };
 }
 function setSideWidth(side, px, save = true) {
   const key = side === "left" ? LEFT_W_KEY : SIDE_W_KEY;
   if (px === null) {
+    liveSideW[side] = null;
     try {
       localStorage.removeItem(key);
     } catch {}
@@ -1991,11 +1999,13 @@ function setSideWidth(side, px, save = true) {
   }
   const min = side === "left" ? SCENE_LEFT_MIN : SCENE_SIDE_MIN;
   const max = side === "left" ? SCENE_LEFT_MAX : SCENE_SIDE_MAX;
-  const w = Math.round(Math.max(min, Math.min(max, px)));
-  if (save) storeSet(key, String(w));
-  const main = document.querySelector(".scene-main");
-  main?.style.setProperty(side === "left" ? "--scene-left-w" : "--scene-side-w", `${w}px`);
-  clampSideWidths();
+  liveSideW[side] = Math.round(Math.max(min, Math.min(max, px)));
+  const clamped = clampSideWidths();
+  const applied = side === "left" ? clamped?.lw : clamped?.rw;
+  if (save) {
+    liveSideW[side] = null;
+    if (applied != null) storeSet(key, String(applied));
+  }
   window.JwsimStateDiag?.resize?.();
 }
 function wireSceneSplitter(id, side) {
@@ -2013,17 +2023,25 @@ function wireSceneSplitter(id, side) {
       return side === "left" ? ev.clientX - r.left - 36 : r.right - 36 - ev.clientX;
     };
     const move = (ev) => setSideWidth(side, widthAt(ev), false);
-    const up = (ev) => {
+    const finish = (ev, commit) => {
       bar.removeEventListener("pointermove", move);
-      bar.removeEventListener("pointerup", up);
-      bar.removeEventListener("pointercancel", up);
+      bar.removeEventListener("pointerup", onUp);
+      bar.removeEventListener("pointercancel", onCancel);
       bar.classList.remove("dragging");
       document.body.classList.remove("resizing");
-      setSideWidth(side, widthAt(ev), true);
+      if (commit) {
+        setSideWidth(side, widthAt(ev), true);
+      } else {
+        liveSideW[side] = null;
+        clampSideWidths();
+        window.JwsimStateDiag?.resize?.();
+      }
     };
+    const onUp = (ev) => finish(ev, true);
+    const onCancel = (ev) => finish(ev, false);
     bar.addEventListener("pointermove", move);
-    bar.addEventListener("pointerup", up);
-    bar.addEventListener("pointercancel", up);
+    bar.addEventListener("pointerup", onUp);
+    bar.addEventListener("pointercancel", onCancel);
   });
   bar.addEventListener("dblclick", () => setSideWidth(side, null));
   bar.addEventListener("keydown", (e) => {
@@ -2082,6 +2100,8 @@ function wireSceneSide() {
   setLeftAvailability(false);
   wireSceneSplitter("scene-left-splitter", "left");
   wireSceneSplitter("scene-side-splitter", "right");
+  const mainEl = document.querySelector(".scene-main");
+  if (mainEl) new ResizeObserver(() => clampSideWidths()).observe(mainEl);
   window.addEventListener("resize", () => {
     clampSideWidths();
     window.JwsimStateDiag?.resize?.();

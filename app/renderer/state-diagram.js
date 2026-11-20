@@ -132,13 +132,24 @@
       const r = canvas.getBoundingClientRect();
       const x = e.clientX - r.left;
       if (S.drag) {
-        const plotW = Math.max(40, r.width - LABEL_W - PAD_R);
-        const span = activeBounds().t1 - activeBounds().t0;
         const dx = e.clientX - S.drag.x;
+        if (!S.drag.active) {
+          if (Math.abs(dx) < 4) return;
+          S.drag.active = true;
+          if (S.windowMs <= 0) S.windowMs = Math.max(2000, activeBounds().t1 - activeBounds().t0);
+          if (!S.frozen) {
+            S.frozen = true;
+            S.panEndMs = Math.max(0, recorder?.lastTimeMs() ?? 0);
+            syncControls();
+          }
+          S.drag.endMs = S.panEndMs ?? Math.max(0, recorder?.lastTimeMs() ?? 0);
+        }
+        const plotW = Math.max(40, r.width - LABEL_W - PAD_R);
+        const span = S.windowMs > 0 ? S.windowMs : activeBounds().t1 - activeBounds().t0;
         const shift = (dx / plotW) * span;
         const total = Math.max(0, recorder?.lastTimeMs() ?? 0);
-        const w = S.windowMs > 0 ? S.windowMs : span;
-        S.panEndMs = Math.max(w, Math.min(total, S.drag.endMs - shift));
+        const minEnd = Math.min(total, S.windowMs > 0 ? S.windowMs : span);
+        S.panEndMs = Math.max(minEnd, Math.min(total, S.drag.endMs - shift));
         scheduleDraw();
         return;
       }
@@ -155,13 +166,7 @@
       if (e.button !== 0 || !(recorder?.samples().length > 1)) return;
       const r = canvas.getBoundingClientRect();
       if (e.clientX - r.left < LABEL_W) return;
-      if (S.windowMs <= 0) S.windowMs = Math.max(2000, activeBounds().t1 - activeBounds().t0);
-      if (!S.frozen) {
-        S.frozen = true;
-        S.panEndMs = Math.max(S.windowMs, recorder.lastTimeMs());
-        syncControls();
-      }
-      S.drag = { x: e.clientX, endMs: S.panEndMs ?? Math.max(S.windowMs, recorder.lastTimeMs()) };
+      S.drag = { x: e.clientX, active: false, endMs: S.panEndMs ?? Math.max(0, recorder.lastTimeMs()) };
       canvas.setPointerCapture(e.pointerId);
     });
     const endDrag = () => (S.drag = null);
@@ -206,8 +211,7 @@
   function toggleFreeze(force) {
     S.frozen = typeof force === "boolean" ? force : !S.frozen;
     if (S.frozen) {
-      const total = Math.max(0, recorder?.lastTimeMs() ?? 0);
-      S.panEndMs = S.windowMs > 0 ? Math.max(S.windowMs, total) : total;
+      S.panEndMs = Math.max(0, recorder?.lastTimeMs() ?? 0);
     } else {
       S.panEndMs = null;
     }
@@ -389,8 +393,9 @@
     ctx.lineTo(LABEL_W + 0.5, axisY);
     ctx.stroke();
 
-    // Instante inspeccionado por el cursor (o el último punto).
-    const totalT = samples.length ? samples[samples.length - 1].t : 0;
+    // Instante inspeccionado por el cursor (o el último punto visible).
+    const rawTotalT = samples.length ? samples[samples.length - 1].t : 0;
+    const totalT = S.frozen && S.panEndMs != null ? Math.min(rawTotalT, S.panEndMs) : rawTotalT;
     const hoverT = S.hoverX != null && samples.length ? t0 + ((S.hoverX - LABEL_W) / plotW) * span : null;
     const hoverInData = hoverT != null && samples.length && hoverT >= samples[0].t && hoverT <= totalT;
     const readT = hoverInData ? hoverT : samples.length ? totalT : null;
@@ -525,7 +530,9 @@
 
     // Banda superior de lectura exacta.
     if (readout) {
-      if (!samples.length || readT == null) {
+      if (!channels.length) {
+        readout.textContent = "Sin señales visibles";
+      } else if (!samples.length || readT == null) {
         readout.textContent = "Sin datos aún";
       } else {
         const parts = channels.slice(0, 6).map((ch) => `${ch.shortLabel}: ${formatVal(ch, Core.valueAt(samples, ch, readT))}`);

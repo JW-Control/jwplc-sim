@@ -119,4 +119,7 @@ test("windowBounds calcula el rango temporal en modo en vivo, todo y congelado",
   assert.deepEqual(core.windowBounds(4000, 10000, null, false), { t0: 0, t1: 10000 });
   assert.deepEqual(core.windowBounds(12500, 0, null, false), { t0: 0, t1: 12500 });
   assert.deepEqual(core.windowBounds(12500, 5000, 8000, true), { t0: 3000, t1: 8000 });
+  // Congelado en modo "Todo" (windowMs=0) y tras congelar temprano (3s) y hacer zoom (2s):
+  assert.deepEqual(core.windowBounds(12500, 0, 5000, true), { t0: 0, t1: 5000 });
+  assert.deepEqual(core.windowBounds(8000, 2000, 3000, true), { t0: 1000, t1: 3000 });
 });

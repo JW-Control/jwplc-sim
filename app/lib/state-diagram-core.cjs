@@ -261,12 +261,12 @@
 
   /** Calcula el rango [t0, t1] visible según ventana (0 = todo) y congelado. */
   function windowBounds(totalEndMs, windowMs, panEndMs, frozen) {
-    const end = Math.max(0, Number(totalEndMs) || 0);
+    const rawEnd = Math.max(0, Number(totalEndMs) || 0);
+    const end = frozen && panEndMs != null ? Math.min(rawEnd, Math.max(0, panEndMs)) : rawEnd;
     if (!windowMs || windowMs <= 0) {
       return { t0: 0, t1: end };
     }
-    const base = frozen && panEndMs != null ? Math.min(end, panEndMs) : end;
-    const t1 = Math.max(windowMs, base);
+    const t1 = frozen && panEndMs != null ? end : Math.max(windowMs, end);
     const t0 = Math.max(0, t1 - windowMs);
     return { t0, t1 };
   }
