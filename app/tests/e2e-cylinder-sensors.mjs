@@ -118,11 +118,25 @@ try {
   };
   log(`BISTABLE_TERMS_ALIGNED ${JSON.stringify(criteria.BISTABLE_TERMS_ALIGNED)}`);
 
+  // Editar etiqueta personalizada en Y1 y verificar visibilidad sin scroll e insignia en ambos lienzos.
+  await win.fill('#scene-inspector [data-param="label"]', "Prensa");
+  await win.dispatchEvent('#scene-inspector [data-param="label"]', "change");
+  await sleep(250);
+  const labelAndFit = await t(() => {
+    const insp = document.getElementById("scene-inspector");
+    return {
+      cylTag: document.querySelector('#scene-devices > g[data-id="Y1"] .dev-cyl-tag')?.textContent,
+      noScroll: insp.scrollHeight <= insp.clientHeight,
+      scrollH: insp.scrollHeight,
+      clientH: insp.clientHeight,
+    };
+  });
+
   await win.click("#scene-fit");
   await sleep(250);
   await win.screenshot({ path: join(OUT, "colores-marcas.png") });
 
-  // 3. Ver en Neumático que S0, S2 y A1 aparecen sobre el vástago en sus posiciones.
+  // 3. Ver en Neumático que S0, S2 y A1 aparecen sobre el vástago y que el cilindro muestra su etiqueta.
   await win.click("#schem-pneu");
   await sleep(400);
   const inPneu = await t(() => {
@@ -130,11 +144,16 @@ try {
       label: g.querySelector("text")?.textContent,
       x: Number(g.querySelector("circle")?.getAttribute("cx")),
     }));
-    return items.sort((a, b) => a.x - b.x);
+    const names = [...document.querySelectorAll("#pn-root .pn-name")].map((n) => n.textContent);
+    return { items: items.sort((a, b) => a.x - b.x), names };
   });
   criteria.SHOWN_IN_PNEUMATIC = {
-    ok: inPneu.map((i) => i.label).join(",") === "S0,S2,A1" &&
-      inPneu[0].x < inPneu[1].x && inPneu[1].x < inPneu[2].x,
+    ok: labelAndFit.noScroll &&
+      labelAndFit.cylTag === "Y1 · Prensa" &&
+      inPneu.names[0] === "Prensa (Y1)" &&
+      inPneu.items.map((i) => i.label).join(",") === "S0,S2,A1" &&
+      inPneu.items[0].x < inPneu.items[1].x && inPneu.items[1].x < inPneu.items[2].x,
+    labelAndFit,
     inPneu,
   };
   log(`SHOWN_IN_PNEUMATIC ${JSON.stringify(criteria.SHOWN_IN_PNEUMATIC)}`);
