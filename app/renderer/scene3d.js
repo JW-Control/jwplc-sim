@@ -321,7 +321,7 @@ function buildConveyorPhysics(p) {
   };
 }
 
-function buildTank(p) {
+function buildTank(p, spec) {
   const R = 0.6;
   const H = 1.6;
   const g = new THREE.Group();
@@ -352,8 +352,12 @@ function buildTank(p) {
   rim.rotation.x = Math.PI / 2;
   rim.position.y = H + 0.2;
   // Bomba al costado con su caño al tanque.
-  // Electrobomba al costado (la misma de la sala de bombas) con su descarga al tanque.
-  const ep = electroPump(String(p?.bomba ?? "").split(".")[0] || "P", 0.36);
+  // Electrobomba al costado (la misma de la sala de bombas) con su descarga al
+  // tanque, si lo llena un motor; si lo llena otro equipo (un filtro), solo la entrada.
+  const pumpId = String(p?.bomba ?? "").split(".")[0];
+  const motorFed = !spec || (spec.devices ?? []).some((q) => q.id === pumpId && FIELD.motor.has(q.type));
+  const ep = electroPump(pumpId || "P", 0.36);
+  ep.group.visible = motorFed;
   const px = R + 0.5;
   const pz = 0.12;
   ep.group.position.set(px, 0, pz);
@@ -372,6 +376,7 @@ function buildTank(p) {
   const pipe = run([[px, ep.dischargeY * 0.85, zd], [px, H + 0.35, zd], [R * 0.55, H + 0.35, zd], [R * 0.55, H + 0.15, zd]], 0.035, pipeM);
   const pipeTop = checkValve(0.035);
   pipeTop.position.set(px, 0.75, zd);
+  holder.visible = pipe.visible = pipeTop.visible = motorFed;
   g.add(shell, water, base, rim, ep.group, holder, pipe, pipeTop);
   return { group: g, water, impeller, H, R, cone, size: [2 * R + 0.8, 2 * R] };
 }
@@ -652,6 +657,73 @@ function resize() {
   if (!V.userMoved) fitView();
 }
 
+/**
+ * Tuberías de proceso del filtro de arena: bomba → entrada del filtro; salida
+ * → válvula de servicio → tanque; válvula de retrolavado → desagüe; y la
+ * manguera del clorador inyectando en la línea al tanque.
+ */
+function processPipes(plant) {
+  const fieldOf = (ref) => V.field.find((f) => f.id === String(ref ?? "").split(".")[0])?.m;
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  for (const d of plant.filter((q) => q.type === "jwsim/sand-filter")) {
+    const F = V.objects.get(d.id).model.group.position;
+    const pm = fieldOf(d.params?.bomba);
+    if (pm?.discharge) {
+      const p0 = pm.group.position;
+      const a = [p0.x + pm.discharge[0], pm.discharge[1], p0.z + pm.discharge[2]];
+      V.root.add(run([a, [a[0], 2.05, a[2]], [F.x - 0.3, 2.05, a[2]], [F.x - 0.3, 2.05, 0], [F.x - 0.3, 1.85, 0]], 0.035, pipeM));
+      // Succión desde el pozo de agua cruda (atrás), con su tapa de registro.
+      V.root.add(run([[p0.x, 0.36, p0.z - 0.31], [p0.x, 0.36, -0.95], [p0.x, 0.05, -0.95]], 0.035, mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 })));
+      const well = box(0.5, 0.06, 0.5, mat(0x8e959d, { roughness: 0.95 }));
+      well.position.set(p0.x, 0.03, -0.95);
+      const lid = box(0.3, 0.012, 0.3, mat(0x3a4048, { metalness: 0.4 }));
+      lid.position.set(p0.x + 0.08, 0.066, -0.95);
+      const tagW = label("Agua cruda");
+      tagW.scale.set(0.5, 0.125, 1);
+      tagW.position.set(p0.x, 0.3, -1.2);
+      V.root.add(well, lid, tagW);
+    }
+    const y1 = fieldOf(d.params?.servicio);
+    const tank = plant.find((q) => q.type === "jwsim/tank" && String(q.params?.bomba ?? "").startsWith(`${d.id}.`));
+    let feed = null;
+    if (y1) {
+      const v = y1.group.position;
+      const vz = v.z + 0.05;
+      V.root.add(run([[F.x + 1.55, 0.3, 0], [F.x + 1.65, 0.3, 0], [F.x + 1.65, 0.45, 0], [F.x + 1.65, 0.45, vz], [v.x - 0.25, 0.45, vz]], 0.03, pipeM));
+      if (tank) {
+        const T = V.objects.get(tank.id).model.group.position;
+        const up = v.x + 0.45;
+        V.root.add(run([[v.x + 0.25, 0.45, vz], [up, 0.45, vz], [up, 2.0, vz], [T.x - 0.3, 2.0, vz], [T.x - 0.3, 2.0, 0], [T.x - 0.3, 1.85, 0]], 0.03, pipeM));
+        feed = [up, 1.2, vz];
+      }
+    }
+    const y2 = fieldOf(d.params?.retrolavado);
+    if (y2) {
+      const v = y2.group.position;
+      const vz = v.z + 0.05;
+      V.root.add(run([[F.x + 0.6, 0.12, 0], [F.x + 0.6, 0.12, vz - 0.25], [v.x - 0.35, 0.12, vz - 0.25], [v.x - 0.35, 0.45, vz - 0.25], [v.x - 0.35, 0.45, vz], [v.x - 0.25, 0.45, vz]], 0.03, pipeM));
+      V.root.add(run([[v.x + 0.25, 0.45, vz], [v.x + 0.35, 0.45, vz], [v.x + 0.35, 0.05, vz]], 0.03, pipeM));
+      const drain = box(0.22, 0.02, 0.22, mat(0x3a4048));
+      drain.position.set(v.x + 0.35, 0.01, vz);
+      V.root.add(drain);
+    }
+    const cl = plant.find((q) => q.type === "jwsim/chlorinator");
+    if (cl && feed) {
+      const C = V.objects.get(cl.id).model.group.position;
+      V.root.add(run([[C.x + 0.43, 0.64, 0], [C.x + 0.6, 0.64, 0], [C.x + 0.6, 2.25, 0], [feed[0], 2.25, 0], [feed[0], 2.25, feed[2]], [feed[0], 2.03, feed[2]]], 0.008, mat(0xf2f4f7)));
+    }
+  }
+}
+
+/** Piso que nombra un pulsador de llamada («Llamar PB», «Llamar P2», «Piso 1»), o null. */
+function callFloor(d) {
+  if (d.type !== "jwsim/pushbutton-no") return null;
+  const t = String(d.params?.label ?? "");
+  if (!/llam|piso|^P\d|^PB/i.test(t)) return null;
+  if (/\bPB\b|baja/i.test(t)) return 0;
+  const m = t.match(/P(?:iso)?\s*(\d)/i);
+  return m ? Number(m[1]) : null;
+}
 /** Arma la planta a partir de la escena (equipos de planta en el orden de su x en 2D). */
 function rebuild(spec) {
   V.root.clear();
@@ -695,6 +767,17 @@ function rebuild(spec) {
     };
     const model = (BUILD[d.type] ?? buildCylinder)(p, spec);
     if (model.panel) V.panel = model.panel;
+    // Montacargas: los pulsadores de llamada van en la botonera de su piso.
+    if (model.station) {
+      model.calls = [];
+      for (const q of spec.devices) {
+        const f = callFloor(q);
+        if (f == null || f >= model.n) continue;
+        const c = model.station(f, q.id);
+        model.calls.push({ id: q.id, btn: c.btn });
+        V.hits.push({ mesh: c.btn, id: q.id });
+      }
+    }
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
@@ -742,7 +825,10 @@ function rebuild(spec) {
         beacons.push({ id: s.id, b });
         continue;
       }
-      const b = beacon();
+      // Un final de carrera se ve como tal (palanca con rodillo); el resto, baliza.
+      const sw = s.type === "jwsim/limit-switch" && !CONVEYORS.has(d.type);
+      const b = sw ? rollerSwitch() : beacon();
+      if (sw) b.scale.setScalar(2.2);
       if (CONVEYORS.has(d.type)) b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
       else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
       else if (d.type === "jwsim/lift") {
@@ -750,9 +836,18 @@ function rebuild(spec) {
         b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
       } else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
       else b.position.set(min > 0.5 ? 1.4 : 0.9, 0, 0.35);
+      if (sw) b.position.y += 0.25;
+      // En el montacargas, el final de carrera va con su ménsula al perfil del pozo.
+      if (sw && d.type === "jwsim/lift") {
+        const px = b.position.x < 0.55 ? 0 : 1.1;
+        const len = Math.abs(b.position.x - px);
+        const br = box(len, 0.03, 0.03, mat(0x5b6470, { metalness: 0.4 }));
+        br.position.set((b.position.x + px) / 2, b.position.y - 0.13, b.position.z);
+        model.group.add(br);
+      }
       const t = label(s.id);
-      t.scale.set(1, 0.25, 1);
-      t.position.y = 0.8;
+      t.scale.set(sw ? 0.25 : 1, sw ? 0.0625 : 0.25, 1);
+      t.position.y = sw ? 0.1 : 0.8;
       b.add(t);
       model.group.add(b);
       beacons.push({ id: s.id, b });
@@ -775,7 +870,7 @@ function rebuild(spec) {
   const drawn = new Set();
   for (const d of plant) {
     const pp = d.params ?? {};
-    const keys = d.type === "jwsim/building-water" ? ["bombas"] : d.type === "jwsim/tank" ? ["bomba"] : ["motor"];
+    const keys = d.type === "jwsim/building-water" ? ["bombas"] : d.type === "jwsim/tank" && spec.devices.some((q) => q.id === String(pp.bomba ?? "").split(".")[0] && FIELD.motor.has(q.type)) ? ["bomba"] : ["motor"];
     for (const k of keys) for (const id of String(pp[k] ?? "").split(/[\s,;]+/)) if (id) drawn.add(id.split(".")[0]);
   }
   const building = plant.some((d) => d.type === "jwsim/building-water");
@@ -789,7 +884,8 @@ function rebuild(spec) {
   const traffic = !plant.length && ["rojo", "amarillo", "verde"].every(lampsBy);
   const items = [];
   if (traffic) items.push({ id: "semaforo", label: "Semáforo", model: buildTrafficLight(["rojo", "amarillo", "verde"].map((c) => ({ id: lampsBy(c).id, hex: LAMP_HEX[c] }))), w: 0.7 });
-  for (const d of field) items.push({ id: d.id, label: d.id, model: buildField(d), w: d.type === "jwsim/sensor-photoelectric" ? 1.3 : FIELD.motor.has(d.type) ? 0.8 : 0.6 });
+  const pumpIds = new Set(plant.filter((q) => q.type === "jwsim/sand-filter").map((q) => String(q.params?.bomba ?? "").split(".")[0]));
+  for (const d of field) items.push({ id: d.id, label: d.id, model: buildField(d, pumpIds.has(d.id) ? "pump" : null), w: d.type === "jwsim/sensor-photoelectric" ? 1.3 : FIELD.motor.has(d.type) ? 0.8 : 0.6 });
   // Cada equipo de campo va junto a la planta con la que trabaja (la que lo
   // nombra en sus parámetros o a la que mide); el resto, en la fila de campo.
   const refs = (d) => Object.values(d.params ?? {}).filter((v) => typeof v === "string").map((v) => v.split(".")[0]);
@@ -844,6 +940,7 @@ function rebuild(spec) {
     x = Math.max(x, fx + 0.9);
     V.zFront = side ? 0.3 : free.length ? fz : 1.05;
   }
+  processPipes(plant);
   for (const h of V.panel?.hits ?? []) V.hits.push(h);
   V.extent = Math.max(2, x - 1.2);
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
@@ -1636,7 +1733,27 @@ function fieldFloat() {
     },
   };
 }
-function buildField(d) {
+/** Electrobomba de campo (la de la sala de bombas) para un motor que mueve agua. */
+function fieldPump(d) {
+  const ep = electroPump(d.id, 0.36);
+  const rotor = new THREE.Group();
+  const hub = cyl(0.045, 0.06, PUMP.black, 16);
+  hub.rotation.x = Math.PI / 2;
+  const key = box(0.11, 0.018, 0.07, mat(0xffb020));
+  rotor.add(hub, key);
+  rotor.position.set(0, 0.36, -0.02);
+  ep.group.add(rotor);
+  return {
+    group: ep.group,
+    anchor: ep.gland,
+    discharge: [0, ep.dischargeY, -0.16],
+    update(o) {
+      rotor.rotation.z += valOf(o.speed) * 0.6;
+    },
+  };
+}
+function buildField(d, role) {
+  if (role === "pump") return fieldPump(d);
   const t = d.type;
   if (FIELD.motor.has(t)) return fieldMotor(d);
   if (t === "jwsim/limit-switch") return fieldLimit(d);
@@ -1762,7 +1879,8 @@ function buildPanel(spec) {
   const devs = spec.devices ?? [];
   const of = (...types) => devs.filter((d) => types.includes(base(d.type)));
   const mounted = new Set(devs.filter((d) => d.mount).map((d) => d.mount));
-  const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop");
+  const lift = devs.some((d) => d.type === "jwsim/lift");
+  const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop").filter((d) => !(lift && callFloor(d) != null));
   // Modelos por fila (arriba: entrada y control; abajo: potencia).
   const vfds = [];
   const plcs = [];
@@ -2535,9 +2653,11 @@ function buildLift(p) {
   // Máquina: motor y tambor sobre el pozo.
   const deck = box(1.3, 0.06, 1.3, mat(0x3a4048));
   deck.position.set(0.55, tall, 0);
-  const mot = cyl(0.12, 0.34, mat(0x2f6fb5, { metalness: 0.35 }), 20);
-  mot.rotation.z = Math.PI / 2;
-  mot.position.set(0.3, tall + 0.16, 0);
+  // Motor con aletas y su volante (el mismo del campo), acoplado al tambor.
+  const fm = fieldMotor({ id: String(p.motor ?? "M").split(".")[0], type: "jwsim/motor-3ph" });
+  const mot = fm.group;
+  mot.scale.setScalar(0.75);
+  mot.position.set(0.12, tall + 0.03 - 0.06, 0);
   const drum = new THREE.Group();
   const dr = cyl(0.11, 0.3, mat(0x9aa3ad, { metalness: 0.5 }), 20);
   dr.rotation.z = Math.PI / 2;
@@ -2559,6 +2679,25 @@ function buildLift(p) {
     g.add(slab, door, tag);
     doors.push(door);
   }
+  // Botonera de llamada en cada piso, junto a la puerta: un pulsador por
+  // piso que se acciona con clic (el que nombra ese piso en su rótulo).
+  const station = (i, id) => {
+    const st = new THREE.Group();
+    const plateB = box(0.02, 0.2, 0.12, mat(0xc9cfd6, { metalness: 0.5, roughness: 0.3 }));
+    const btn = cyl(0.03, 0.025, mat(0x2f8be0, { roughness: 0.4 }), 18);
+    btn.rotation.z = Math.PI / 2;
+    btn.position.x = 0.015;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.006, 6, 20), mat(0xb8c0c8, { metalness: 0.7 }));
+    ring.rotation.y = Math.PI / 2;
+    ring.position.x = 0.012;
+    const t = label(id);
+    t.scale.set(0.36, 0.09, 1);
+    t.position.set(0.05, 0.17, 0);
+    st.add(plateB, btn, ring, t);
+    st.position.set(1.22, i * H + 0.55, 0.6);
+    g.add(st);
+    return { btn };
+  };
   // Cabina con la carga.
   const cab = new THREE.Group();
   const floor = box(0.95, 0.05, 0.95, mat(0x3a4048));
@@ -2581,7 +2720,7 @@ function buildLift(p) {
   const rope = cyl(0.01, 1, mat(0x23272d), 6);
   rope.position.set(0.55, 0, 0);
   g.add(cab, rope);
-  return { group: g, cab, rope, drum, doors, extra, tall, height: tall + 0.6, size: [2.7, 1.4] };
+  return { group: g, cab, rope, drum, doors, extra, tall, station, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
 /** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
@@ -2685,7 +2824,10 @@ function frame(now) {
       m.cab.position.y = y;
       m.rope.scale.y = Math.max(0.01, m.tall - y - 1.0);
       m.rope.position.y = (m.tall + y + 1.0) / 2;
-      m.drum.rotation.x += out.movimiento ? (Number(outOf(String(o.motor ?? "")).speed ?? 0) || 0) * 0.3 : 0;
+      const sp = valOf(outOf(String(o.motor ?? "")).speed);
+      m.drum.rotation.x += sp * 0.3;
+      m.motorRotor?.update({ speed: sp });
+      for (const c of m.calls ?? []) c.btn.position.x = window.JwsimScene?.actionState?.(c.id, "press") ? 0.004 : 0.015;
       m.doors.forEach((dd, i) => {
         dd.position.z = out[`puerta${i}`] ? 0.8 : 0;
       });
