@@ -83,7 +83,7 @@
     if (typeof scheduleDraw === "function") scheduleDraw();
   });
 
-  const LABEL_W = 98;
+  const LABEL_W = 116;
   const PAD_R = 12;
   const PAD_T = 8;
   const AXIS_H = 22;
@@ -146,7 +146,11 @@
   };
 
   function trackTitle(ch) {
-    if (ch.kind === "cyl") return /^Cil/i.test(ch.shortLabel) ? ch.shortLabel : `Cil. ${ch.shortLabel}`;
+    if (ch.kind === "cyl") {
+      // Nombre del cilindro y, si difiere, el ID de su electroválvula (como en el esquema: «A · Y1»).
+      const id = ch.shortLabel !== ch.deviceId ? ` · ${ch.deviceId}` : "";
+      return /^Cil/i.test(ch.shortLabel) ? `${ch.shortLabel}${id}` : `Cil. ${ch.shortLabel}${id}`;
+    }
     if (ch.kind === "coil") return `Bob. ${ch.shortLabel}`;
     if (ch.kind === "sensor") return `FC ${ch.shortLabel}`;
     return ch.shortLabel;

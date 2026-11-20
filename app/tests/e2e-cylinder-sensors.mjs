@@ -149,8 +149,8 @@ try {
   });
   criteria.SHOWN_IN_PNEUMATIC = {
     ok: labelAndFit.noScroll &&
-      labelAndFit.cylTag === "Y1 · Prensa" &&
-      inPneu.names[0] === "Prensa (Y1)" &&
+      labelAndFit.cylTag === "Prensa · Y1" &&
+      inPneu.names[0] === "Prensa · Y1" &&
       inPneu.items.map((i) => i.label).join(",") === "S0,S2,A1" &&
       inPneu.items[0].x < inPneu.items[1].x && inPneu.items[1].x < inPneu.items[2].x,
     labelAndFit,

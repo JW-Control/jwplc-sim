@@ -193,10 +193,10 @@ try {
   await win.click('#sd-chips [data-kind-chip="coil"]');
   await sleep(150);
 
-  // Clic en el botón × de la primera pista (Y1.position) en la columna izquierda (x=83, y=20).
+  // Clic en el botón × de la primera pista (Y1.position) en la columna izquierda (x=101 = LABEL_W 116 − 15, y=20).
   const cRect = await win.$eval("#sd-canvas", (c) => { const r = c.getBoundingClientRect(); return { x: r.left, y: r.top }; });
-  await win.mouse.move(cRect.x + 83, cRect.y + 20);
-  await win.mouse.click(cRect.x + 83, cRect.y + 20);
+  await win.mouse.move(cRect.x + 101, cRect.y + 20);
+  await win.mouse.click(cRect.x + 101, cRect.y + 20);
   await sleep(150);
   const afterCloseX = await t(() => window.JwsimStateDiag.debug().visibleIds);
 

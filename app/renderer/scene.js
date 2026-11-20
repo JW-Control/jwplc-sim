@@ -1104,10 +1104,7 @@
     const CS = window.JwsimCylinderSensors;
     let cylTag = "";
     if (CS?.isValve(dev)) {
-      const linkedSens = CS.sensorsForValve(S.spec.devices, dev.id);
-      const letter = linkedSens.map((s) => /^([A-Z])\d+$/.exec(s.id)?.[1]).find(Boolean);
-      const custom = String(pp.label ?? "").trim();
-      cylTag = custom ? `${dev.id} · ${custom}` : letter ? `${letter} · ${dev.id}` : dev.id;
+      cylTag = CS.cylinderName(S.spec.devices, dev.id).tag;
     }
     const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired, mounted, hosting, dev.mount, cylTag]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
@@ -1146,6 +1143,8 @@
       const invertLimit = baseType(dev.type) === "limit-switch" && p.orientacion === "abajo";
       const labelX = invertLimit ? 28 : sym.w / 2;
       const labelY = invertLimit ? sym.h - 14 : sym.h + 16;
+      // Marcas de un cilindro (finales de carrera y sensores magnéticos): rótulo más grande.
+      const isCylMark = !!window.JwsimCylinderSensors?.linkedValveOf(S.spec.devices, dev);
       setSvgHtml(
         g,
         // Zona de clic de todo el equipo, debajo del dibujo: el interior de
@@ -1153,11 +1152,11 @@
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-2" y="-2" width="${sym.w + 4}" height="${sym.h + 4}" rx="3"/>` +
-        (cylTag ? `<text class="dev-cyl-tag" x="14" y="12">${esc(cylTag)}</text>` : "") +
+        (cylTag ? `<text class="dev-cyl-tag" x="4" y="-8">${esc(cylTag)}</text>` : "") +
         // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
         (hosting
           ? ""
-          : `<text class="dev-id" x="${labelX}" y="${labelY}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
+          : `<text class="dev-id${isCylMark ? " dev-id-mark" : ""}" x="${labelX}" y="${labelY}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
@@ -1335,12 +1334,17 @@
         }
         const CS = window.JwsimCylinderSensors;
         const isCyl = !!CS?.isValve(dev);
+        // Sin etiqueta propia el cilindro toma la letra de sus marcas (A0/A1 → A).
+        const cylNamePlaceholder = (id) => {
+          const nm = CS.cylinderName(S.spec.devices, id);
+          return nm.source === "sensors" ? `${nm.letter} (por ${nm.letter}0/${nm.letter}1)` : "p. ej. A, Prensa";
+        };
         let group = null;
         if (isCyl) {
           body +=
             `<div class="cyl-insp-grid">` +
             `<div class="insp-field"><div class="insp-lbl"><span>ID</span></div><input type="text" data-dev-rename="${esc(dev.id)}" value="${esc(dev.id)}" ${dis} title="Identificador en bornes y programa"/></div>` +
-            `<div class="insp-field"><div class="insp-lbl"><span>Etiqueta</span></div><input type="text" data-param="label" value="${esc(dev.params?.label ?? "")}" placeholder="p. ej. A, Prensa" ${dis}/></div>` +
+            `<div class="insp-field"><div class="insp-lbl"><span>Etiqueta</span></div><input type="text" data-param="label" value="${esc(dev.params?.label ?? "")}" placeholder="${esc(cylNamePlaceholder(dev.id))}" title="Nombre del cilindro en el esquema, el plano neumático y el diagrama de estados" ${dis}/></div>` +
             def.parameters.filter((x) => !isSim(x)).map(paramRow).join("") +
             `</div>` +
             `<p id="cyl-id-err" class="cyl-fc-err" hidden></p>`;
