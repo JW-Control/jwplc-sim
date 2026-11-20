@@ -823,7 +823,7 @@ function screen(w, h, { bg = "#0b0d10", fg = "#ff3b30", font = "bold 72px monosp
     g2.font = font;
     g2.textAlign = "center";
     g2.textBaseline = "middle";
-    g2.fillText(text, c.width / 2, c.height / 2 + 2);
+    g2.fillText(text, c.width / 2, c.height / 2 + 2, c.width * 0.92);
     tex.needsUpdate = true;
   };
   return { plane, paint };
@@ -831,165 +831,606 @@ function screen(w, h, { bg = "#0b0d10", fg = "#ff3b30", font = "bold 72px monosp
 
 const LAMP_HEX = { verde: 0x2fd05a, rojo: 0xff3b30, amarillo: 0xffcc00, azul: 0x2f8cff, blanco: 0xf5f7fa };
 
+// Modelos de equipos de tablero (escala ×2 del real, para que se lean desde la
+// cámara de la planta): frente hacia +z, origen en el centro del equipo sobre el riel.
+const PM = {
+  white: mat(0xeef0f2, { roughness: 0.55 }),
+  grey: mat(0xc9ced4, { roughness: 0.55 }),
+  dark: mat(0x2b2f35, { roughness: 0.6 }),
+  black: mat(0x16191d, { roughness: 0.5 }),
+  screw: mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }),
+  green: mat(0x2fae4f, { roughness: 0.5 }),
+  termGreen: mat(0x3fa35a, { roughness: 0.6 }),
+  orange: mat(0xf08a24, { roughness: 0.5 }),
+  red: mat(0xd8282d, { roughness: 0.5 }),
+  blueBtn: mat(0x2f8be0, { roughness: 0.5 }),
+};
+const WIRE_HEX = { negro: 0x23272d, azul: 0x2f62d6, rojo: 0xe0392b, "marrón": 0x8a5a2b, celeste: 0x55aef0, gris: 0x8b929b };
+/** Fila de tornillos en el frente de un equipo. */
+function screwRow(g, xs, y, z, r = 0.006) {
+  for (const x of xs) {
+    const s = cyl(r, 0.006, PM.screw, 12);
+    s.rotation.x = Math.PI / 2;
+    s.position.set(x, y, z);
+    const slot = box(r * 1.4, r * 0.35, 0.002, PM.dark);
+    slot.position.set(x, y, z + 0.004);
+    g.add(s, slot);
+  }
+}
+/** Placa con texto (plano con textura de lienzo). */
+function plate(w, h, text, opts) {
+  const sc = screen(w, h, opts);
+  sc.paint(text);
+  return sc.plane;
+}
+/** Termomagnético o interruptor de entrada: un módulo de 0,036 por polo. */
+function dinBreaker(poles, label) {
+  const g = new THREE.Group();
+  const w = 0.036 * poles;
+  const body = box(w, 0.18, 0.06, PM.white);
+  body.position.z = 0.03;
+  const front = box(w - 0.004, 0.09, 0.016, PM.white);
+  front.position.set(0, 0, 0.068);
+  g.add(body, front);
+  for (let i = 0; i < poles; i++) {
+    const x = -w / 2 + 0.018 + i * 0.036;
+    const lever = box(0.014, 0.03, 0.022, PM.black);
+    lever.position.set(x, 0.008, 0.085);
+    const win = box(0.012, 0.008, 0.002, PM.green);
+    win.position.set(x, 0.034, 0.077);
+    g.add(lever, win);
+    if (i) {
+      const sep = box(0.001, 0.18, 0.062, PM.grey);
+      sep.position.set(-w / 2 + i * 0.036, 0, 0.031);
+      g.add(sep);
+    }
+  }
+  if (poles > 1) {
+    const bar = box(w - 0.02, 0.006, 0.012, PM.black);
+    bar.position.set(0, 0.008, 0.098);
+    g.add(bar);
+  }
+  const xs = Array.from({ length: poles }, (_, i) => -w / 2 + 0.018 + i * 0.036);
+  screwRow(g, xs, 0.075, 0.061);
+  screwRow(g, xs, -0.075, 0.061);
+  const lb = plate(Math.min(w - 0.006, 0.06), 0.014, label, { bg: "#eef0f2", fg: "#1e2226", font: "bold 64px sans-serif" });
+  lb.position.set(0, -0.032, 0.0765);
+  g.add(lb);
+  return { group: g, w, h: 0.18, top: xs, bottom: xs };
+}
+function dinContactor(overload) {
+  const g = new THREE.Group();
+  const w = 0.09;
+  const body = box(w, 0.16, 0.08, PM.grey);
+  body.position.z = 0.04;
+  const face = box(w - 0.012, 0.07, 0.02, PM.white);
+  face.position.set(0, 0, 0.09);
+  const win = box(0.03, 0.016, 0.004, PM.green);
+  win.position.set(0, 0.012, 0.101);
+  const coil = plate(0.04, 0.012, "24VDC", { bg: "#ffffff", fg: "#1e2226", font: "bold 60px sans-serif" });
+  coil.position.set(0, -0.016, 0.1005);
+  g.add(body, face, win, coil);
+  const xs = [-0.03, 0, 0.03];
+  screwRow(g, xs, 0.066, 0.081);
+  screwRow(g, xs, -0.066, 0.081);
+  let h = 0.16;
+  if (overload) {
+    const ob = box(w, 0.1, 0.075, PM.grey);
+    ob.position.set(0, -0.13, 0.0375);
+    const dial = cyl(0.012, 0.006, PM.blueBtn, 16);
+    dial.rotation.x = Math.PI / 2;
+    dial.position.set(-0.025, -0.12, 0.078);
+    const stop = box(0.014, 0.014, 0.006, PM.red);
+    stop.position.set(0.01, -0.12, 0.078);
+    const rst = cyl(0.007, 0.006, PM.blueBtn, 12);
+    rst.rotation.x = Math.PI / 2;
+    rst.position.set(0.03, -0.12, 0.078);
+    g.add(ob, dial, stop, rst);
+    screwRow(g, xs, -0.165, 0.076);
+    h = 0.26;
+  }
+  // Con térmico, el contactor sigue sobre el riel y el térmico cuelga debajo.
+  return { group: g, w, h, top: xs, bottom: xs, up: 0.08, down: overload ? 0.18 : 0.08 };
+}
+function dinPsu() {
+  const g = new THREE.Group();
+  const w = 0.08;
+  const body = box(w, 0.18, 0.1, mat(0xd8dce0, { metalness: 0.3, roughness: 0.4 }));
+  body.position.z = 0.05;
+  g.add(body);
+  for (let i = 0; i < 7; i++) {
+    const v = box(w - 0.02, 0.003, 0.002, PM.dark);
+    v.position.set(0, -0.05 + i * 0.012, 0.101);
+    g.add(v);
+  }
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.004, 8, 6), mat(0x22d33a, { emissive: 0x1f8a46 }));
+  led.position.set(-0.025, 0.045, 0.102);
+  const lb = plate(0.05, 0.016, "24 V", { bg: "#d8dce0", fg: "#1e2226", font: "bold 72px sans-serif" });
+  lb.position.set(0.008, 0.045, 0.1015);
+  g.add(led, lb);
+  const xs = [-0.027, -0.009, 0.009, 0.027];
+  screwRow(g, xs, 0.08, 0.101, 0.005);
+  screwRow(g, xs.slice(1), -0.08, 0.101, 0.005);
+  return { group: g, w, h: 0.18, top: xs, bottom: xs.slice(1) };
+}
+/** JWPLC Basic: cuerpo negro, borneras verdes arriba y abajo, pantalla y teclado. */
+function plcBasic() {
+  const g = new THREE.Group();
+  const w = 0.3;
+  const h = 0.2;
+  const body = box(w, h, 0.07, PM.black);
+  body.position.z = 0.035;
+  g.add(body);
+  for (const y of [h / 2 - 0.014, -h / 2 + 0.014]) {
+    const strip = box(w - 0.03, 0.022, 0.02, PM.termGreen);
+    strip.position.set(0, y, 0.075);
+    g.add(strip);
+    for (let i = 0; i < 14; i++) {
+      const hole = box(0.008, 0.008, 0.002, PM.dark);
+      hole.position.set(-w / 2 + 0.03 + i * 0.0185, y, 0.0855);
+      g.add(hole);
+    }
+  }
+  const sc = screen(0.1, 0.055, { bg: "#0b1a10", fg: "#7dff9a", font: "bold 64px monospace" });
+  sc.plane.position.set(-0.06, 0.01, 0.0705);
+  const logo = plate(0.06, 0.03, "JW", { bg: "#16191d", fg: "#ffffff", font: "bold 150px sans-serif" });
+  logo.position.set(-0.06, -0.045, 0.0705);
+  g.add(sc.plane, logo);
+  // cruz de flechas, X roja y OK verde
+  for (const [dx, dy] of [[0, 0.022], [0, -0.022], [-0.022, 0], [0.022, 0]]) {
+    const k = box(0.016, 0.016, 0.006, mat(0x3a4048));
+    k.position.set(0.07 + dx, 0.005 + dy, 0.073);
+    g.add(k);
+  }
+  const x = box(0.016, 0.016, 0.006, PM.red);
+  x.position.set(0.035, -0.035, 0.073);
+  const ok = box(0.016, 0.016, 0.006, PM.green);
+  ok.position.set(0.105, -0.035, 0.073);
+  g.add(x, ok);
+  const xs = Array.from({ length: 6 }, (_, i) => -0.1 + i * 0.04);
+  return { group: g, w, h, top: xs, bottom: xs, screen: sc };
+}
+/** Variador: cuerpo gris oscuro, rejilla arriba, teclado con pantalla roja y tapa de bornes. */
+function vfdModel() {
+  const g = new THREE.Group();
+  const w = 0.15;
+  const h = 0.3;
+  const body = box(w, h, 0.13, mat(0x4b4e52, { roughness: 0.55 }));
+  body.position.z = 0.065;
+  g.add(body);
+  for (let i = 0; i < 6; i++) {
+    const v = box(0.014, 0.006, 0.002, PM.dark);
+    v.position.set(-0.05 + i * 0.02, h / 2 - 0.02, 0.131);
+    g.add(v);
+  }
+  const pad = box(0.12, 0.1, 0.006, mat(0x23262a));
+  pad.position.set(0, 0.04, 0.133);
+  const sc = screen(0.07, 0.022, { bg: "#140303", fg: "#ff3b30", font: "bold 80px monospace" });
+  sc.plane.position.set(-0.012, 0.068, 0.1365);
+  const knob = cyl(0.012, 0.01, mat(0x3a4048), 16);
+  knob.rotation.x = Math.PI / 2;
+  knob.position.set(0.04, 0.068, 0.138);
+  const run = box(0.022, 0.012, 0.005, PM.green);
+  run.position.set(-0.03, 0.03, 0.137);
+  const stop = box(0.022, 0.012, 0.005, PM.red);
+  stop.position.set(-0.03, 0.012, 0.137);
+  const ent = box(0.022, 0.012, 0.005, PM.blueBtn);
+  ent.position.set(0.035, 0.012, 0.137);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.004, 8, 6), mat(COL.off, { emissive: 0x000000 }));
+  led.position.set(-0.052, 0.068, 0.137);
+  const cover = box(0.13, 0.09, 0.008, mat(0x5b5f64));
+  cover.position.set(0, -0.09, 0.134);
+  const lb = plate(0.07, 0.016, "JW variador", { bg: "#4b4e52", fg: "#ffffff", font: "bold 52px sans-serif" });
+  lb.position.set(0, -0.03, 0.1315);
+  g.add(pad, sc.plane, knob, run, stop, ent, led, cover, lb);
+  const xs = [-0.045, -0.015, 0.015, 0.045];
+  return { group: g, w, h, top: xs.slice(0, 3), bottom: xs, screen: sc, led };
+}
+function dinRelay() {
+  const g = new THREE.Group();
+  const w = 0.036;
+  const body = box(w, 0.18, 0.07, PM.white);
+  body.position.z = 0.035;
+  const dial = cyl(0.01, 0.006, mat(0xfbfbfc), 16);
+  dial.rotation.x = Math.PI / 2;
+  dial.position.set(0, 0, 0.073);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), mat(0xffae00));
+  led.position.set(0, 0.04, 0.071);
+  g.add(body, dial, led);
+  const xs = [-0.01, 0.01];
+  screwRow(g, xs, 0.075, 0.071, 0.005);
+  screwRow(g, xs, -0.075, 0.071, 0.005);
+  return { group: g, w, h: 0.18, top: xs, bottom: xs };
+}
+
 /**
  * Tablero eléctrico con la puerta abierta: en la placa de montaje los equipos
- * de la escena (interruptor, fuente, PLC, variadores, contactores...) sobre
- * riel DIN, canaletas y borneras; en la puerta, los pilotos, selectores y
- * pulsadores. Frente hacia +z, origen en el centro de la base.
+ * de la escena sobre dos rieles DIN, canaletas ranuradas con tapa, cables de
+ * cada equipo a la canaleta y borneras al pie; en la puerta (con bisagras,
+ * burlete y manija) los pilotos, selectores y pulsadores. Frente hacia +z,
+ * origen en el centro de la base del soporte.
  */
 function buildPanel(spec) {
   const g = new THREE.Group();
   const base = (t) => t.split("/").pop();
   const devs = spec.devices ?? [];
   const of = (...types) => devs.filter((d) => types.includes(base(d.type)));
-  const row1 = [...of("power-230vac", "power-3ph", "breaker", "motor-protector"), ...of("power-24vdc"), ...of("jwplc-basic")];
-  const row2 = [...of("vfd-el"), ...of("contactor", "relay", "timer-relay", "ssr")];
+  const mounted = new Set(devs.filter((d) => d.mount).map((d) => d.mount));
   const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop");
-  const W = Math.max(0.8, Math.min(1.6, 0.2 + 0.17 * Math.max(row1.length + 1, row2.length * 1.3)));
-  const H = 1.0;
-  const D = 0.3;
-  const legH = 0.45;
-  const steel = mat(0xd5d9de, { roughness: 0.5, metalness: 0.2 });
-  // Gabinete: fondo, costados, techo y piso (abierto al frente) sobre su soporte.
+  // Modelos por fila (arriba: entrada y control; abajo: potencia).
+  const vfds = [];
+  const plcs = [];
+  const make = (d) => {
+    const t = base(d.type);
+    if (t === "power-3ph" || t === "breaker" || t === "power-230vac" || t === "motor-protector") {
+      const poles = t === "power-230vac" ? 2 : t === "breaker" ? Number(String(d.params?.poles ?? "1").replace(/\D/g, "") || 1) : 3;
+      return dinBreaker(poles, t === "power-3ph" ? "3×380" : t === "power-230vac" ? "230 V" : t === "motor-protector" ? "QM" : "C16");
+    }
+    if (t === "power-24vdc") return dinPsu();
+    if (t === "jwplc-basic") {
+      const m = plcBasic();
+      plcs.push({ id: d.id, paint: m.screen.paint });
+      return m;
+    }
+    if (t === "vfd-el") {
+      const m = vfdModel();
+      vfds.push({ id: d.id, paint: m.screen.paint, led: m.led });
+      return m;
+    }
+    if (t === "contactor") return dinContactor(mounted.has(d.id));
+    return dinRelay();
+  };
+  const row1 = [...of("power-230vac", "power-3ph", "breaker", "motor-protector"), ...of("power-24vdc"), ...of("jwplc-basic")].map(make);
+  const row2 = [...of("vfd-el"), ...of("contactor"), ...of("relay", "timer-relay", "ssr", "level-relay")].map(make);
+  const gap = 0.025;
+  const rowW = (r) => r.reduce((a, m) => a + m.w + gap, -gap);
+  const W = Math.max(0.6, Math.min(1.6, Math.max(rowW(row1), rowW(row2)) + 0.16));
+  const H = 1.15;
+  const D = 0.32;
+  const legH = 0.4;
   const y0 = legH;
-  const parts = [
+  const body = mat(0xd5d9de, { roughness: 0.45, metalness: 0.25 });
+  // Gabinete con su visera contra la lluvia (va a la intemperie en la azotea).
+  for (const [w, h, d, x, y, z] of [
     [W, H, 0.02, 0, y0 + H / 2, -D / 2],
     [0.02, H, D, -W / 2, y0 + H / 2, 0],
     [0.02, H, D, W / 2, y0 + H / 2, 0],
     [W, 0.02, D, 0, y0 + H, 0],
     [W, 0.02, D, 0, y0, 0],
-  ];
-  for (const [w, h, d, x, y, z] of parts) {
-    const b = box(w, h, d, steel);
+  ]) {
+    const b = box(w, h, d, body);
     b.position.set(x, y, z);
     g.add(b);
   }
-  for (const x of [-W / 2 + 0.06, W / 2 - 0.06]) {
-    const leg = box(0.05, legH, 0.05, mat(0x5b6470));
-    leg.position.set(x, legH / 2, -D / 2 + 0.06);
-    g.add(leg);
-  }
-  // Placa de montaje (naranja claro, como la galvanizada pintada) con canaletas y rieles.
-  const plate = box(W - 0.08, H - 0.08, 0.01, mat(0xe9e3d6, { roughness: 0.8 }));
-  plate.position.set(0, y0 + H / 2, -D / 2 + 0.02);
-  g.add(plate);
-  const zf = -D / 2 + 0.03;
-  const duct = mat(0x9aa1a9, { roughness: 0.7 });
-  for (const y of [y0 + H - 0.1, y0 + H * 0.52, y0 + 0.1]) {
-    const dd = box(W - 0.12, 0.06, 0.05, duct);
-    dd.position.set(0, y, zf + 0.025);
-    g.add(dd);
-  }
-  const rows = [
-    { list: row1, y: y0 + H * 0.74 },
-    { list: row2, y: y0 + H * 0.3 },
-  ];
-  const vfds = [];
-  const plcs = [];
-  for (const { list, y } of rows) {
-    const rail = box(W - 0.14, 0.035, 0.012, mat(0xb8c0c8, { metalness: 0.6 }));
-    rail.position.set(0, y, zf + 0.006);
+  const visor = box(W + 0.08, 0.02, D + 0.1, body);
+  visor.position.set(0, y0 + H + 0.05, 0.03);
+  visor.rotation.x = 0.12;
+  g.add(visor);
+  for (const x of [-W / 2 + 0.05, W / 2 - 0.05])
+    for (const z of [-D / 2 + 0.05, D / 2 - 0.05]) {
+      const leg = box(0.04, legH, 0.04, mat(0x5b6470));
+      leg.position.set(x, legH / 2, z);
+      g.add(leg);
+    }
+  // Placa de montaje.
+  const zf = -D / 2 + 0.025;
+  const plateM = box(W - 0.06, H - 0.06, 0.008, mat(0xe8dcc4, { roughness: 0.8 }));
+  plateM.position.set(0, y0 + H / 2, zf - 0.004);
+  g.add(plateM);
+  // Canaletas ranuradas con tapa (la ranura se pinta como bandas).
+  const slots = (() => {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 32;
+    const x = c.getContext("2d");
+    x.fillStyle = "#a7adb4";
+    x.fillRect(0, 0, 256, 32);
+    x.fillStyle = "#6c737b";
+    for (let i = 0; i < 256; i += 12) x.fillRect(i, 0, 5, 32);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const duct = (y, w) => {
+    const d = box(w, 0.06, 0.06, new THREE.MeshStandardMaterial({ map: slots, roughness: 0.7 }));
+    d.material.map = slots.clone();
+    d.material.map.repeat.set(w * 8, 1);
+    d.material.map.needsUpdate = true;
+    d.position.set(0, y, zf + 0.03);
+    const lid = box(w, 0.064, 0.006, mat(0xb9bfc6));
+    lid.position.set(0, y, zf + 0.063);
+    g.add(d, lid);
+  };
+  const yTop = y0 + H - 0.08;
+  const yR1 = y0 + H - 0.27;
+  const yMid = y0 + H - 0.46;
+  const yR2 = y0 + H - 0.67;
+  const yLow = y0 + 0.26;
+  const yTb = y0 + 0.13;
+  for (const y of [yTop, yMid, yLow]) duct(y, W - 0.1);
+  const wireTo = (x, ya, yb, hex) => g.add(segment([x, ya, zf + 0.05], [x, yb, zf + 0.05], 0.0035, mat(hex)));
+  const place = (row, y, upY, downY, hexes) => {
+    let x = -rowW(row) / 2;
+    for (const m of row) {
+      const cx = x + m.w / 2;
+      const yy = y + (m.dy ?? 0);
+      m.group.position.set(cx, yy, zf);
+      g.add(m.group);
+      // Rieles DIN bajo cada equipo.
+      m.top.forEach((tx, i) => wireTo(cx + tx, yy + (m.up ?? m.h / 2) - 0.005, upY - 0.03, hexes[i % hexes.length]));
+      m.bottom.forEach((tx, i) => wireTo(cx + tx, yy - (m.down ?? m.h / 2) + 0.005, downY + 0.03, hexes[(i + 1) % hexes.length]));
+      x += m.w + gap;
+    }
+    const rail = box(W - 0.12, 0.035, 0.008, mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }));
+    rail.position.set(0, y, zf + 0.004);
     g.add(rail);
-    const sizes = list.map((d) => ({ "vfd-el": [0.15, 0.3], "jwplc-basic": [0.26, 0.2], "power-24vdc": [0.1, 0.16], contactor: [0.09, 0.16] })[base(d.type)] ?? [0.07, 0.15]);
-    const total = sizes.reduce((a, [w]) => a + w + 0.03, -0.03);
-    let x = -total / 2;
-    list.forEach((d, i) => {
-      const [w, h] = sizes[i];
-      const t = base(d.type);
-      const color = t === "jwplc-basic" ? 0x23272d : t === "vfd-el" ? 0x4b4e52 : t === "power-24vdc" ? 0xb8bec5 : 0xf1f3f5;
-      const body = box(w, h, 0.09, mat(color, { roughness: 0.55 }));
-      body.position.set(x + w / 2, y, zf + 0.06);
-      g.add(body);
-      const front = zf + 0.106;
-      if (t === "vfd-el") {
-        const sc = screen(0.08, 0.03);
-        sc.plane.position.set(x + w / 2, y + 0.06, front);
-        const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), mat(COL.off, { emissive: 0x000000 }));
-        led.position.set(x + w / 2 + 0.055, y + 0.06, front);
-        const pad = box(0.1, 0.06, 0.004, mat(0x2a2e33));
-        pad.position.set(x + w / 2, y - 0.01, front - 0.002);
-        g.add(sc.plane, led, pad);
-        vfds.push({ id: d.id, paint: sc.paint, led });
-      } else if (t === "jwplc-basic") {
-        const sc = screen(0.12, 0.06, { bg: "#0c2a16", fg: "#7dff9a", font: "bold 40px monospace" });
-        sc.plane.position.set(x + w / 2 - 0.04, y + 0.03, front);
-        const logo = screen(0.08, 0.025, { bg: "#23272d", fg: "#e7ebef", font: "bold 64px sans-serif" });
-        logo.paint("JW");
-        logo.plane.position.set(x + w / 2 + 0.08, y + 0.06, front);
-        g.add(sc.plane, logo.plane);
-        plcs.push({ id: d.id, paint: sc.paint });
-      } else if (t === "contactor" || t === "relay") {
-        const win = box(0.04, 0.03, 0.004, mat(0x37d67a));
-        win.position.set(x + w / 2, y, front);
-        g.add(win);
-      } else {
-        const lever = box(w * 0.5, 0.035, 0.03, mat(0x2a2e33));
-        lever.position.set(x + w / 2, y + 0.01, front + 0.01);
-        g.add(lever);
-      }
-      x += w + 0.03;
-    });
-  }
-  // Borneras al pie.
-  for (let i = 0; i < Math.floor((W - 0.2) / 0.025); i++) {
-    const tb = box(0.02, 0.05, 0.05, mat(i % 6 === 5 ? 0x3fae49 : 0x9aa3ad));
-    tb.position.set(-W / 2 + 0.12 + i * 0.025, y0 + 0.1, zf + 0.06);
+  };
+  place(row1, yR1, yTop, yMid, [WIRE_HEX["marrón"], WIRE_HEX.negro, WIRE_HEX.gris, WIRE_HEX.azul]);
+  place(row2, yR2, yMid, yLow, [WIRE_HEX.negro, WIRE_HEX["marrón"], WIRE_HEX.gris, WIRE_HEX.azul]);
+  // Borneras de salida al pie, con su cable bajando de la canaleta.
+  const nTb = Math.floor((W - 0.16) / 0.014);
+  for (let i = 0; i < nTb; i++) {
+    const pe = i % 8 === 7;
+    const tb = box(0.012, 0.07, 0.06, mat(pe ? 0x3fae49 : 0x9aa3ad));
+    tb.position.set(-W / 2 + 0.09 + i * 0.014, yTb, zf + 0.03);
     g.add(tb);
+    if (pe) {
+      const stripe = box(0.0122, 0.015, 0.0605, mat(0xf2cf1d));
+      stripe.position.copy(tb.position);
+      g.add(stripe);
+    }
+    if (i % 2 === 0) wireTo(tb.position.x, yTb + 0.035, yLow - 0.03, [WIRE_HEX.negro, WIRE_HEX.azul, WIRE_HEX["marrón"]][i % 3]);
   }
-  // Puerta abierta (bisagra a la izquierda) con los mandos de la escena.
+  // Puerta con bisagras, burlete, manija y bolsillo de planos; mandos en su cara exterior.
   const hinge = new THREE.Group();
   hinge.position.set(-W / 2, y0, D / 2);
-  const leaf = box(W, H, 0.02, steel);
+  const leaf = box(W, H, 0.022, body);
   leaf.position.set(W / 2, H / 2, 0);
-  hinge.add(leaf);
+  // Burlete: un marco negro alrededor de la cara interior (no toda la cara).
+  for (const [gw, gh, gx, gy] of [[W - 0.04, 0.016, W / 2, 0.028], [W - 0.04, 0.016, W / 2, H - 0.028], [0.016, H - 0.04, 0.028, H / 2], [0.016, H - 0.04, W - 0.028, H / 2]]) {
+    const gs = box(gw, gh, 0.006, PM.black);
+    gs.position.set(gx, gy, -0.014);
+    hinge.add(gs);
+  }
+  // Bolsillo de planos con los planos asomando.
+  const pocket = box(W * 0.5, 0.2, 0.016, mat(0x9aa1a9));
+  pocket.position.set(W / 2, 0.26, -0.02);
+  const docs = box(W * 0.44, 0.06, 0.008, mat(0xf4f1e6));
+  docs.position.set(W / 2, 0.37, -0.018);
+  hinge.add(leaf, pocket, docs);
+  for (const y of [0.15, H - 0.15]) {
+    const hg = cyl(0.012, 0.08, PM.screw, 12);
+    hg.position.set(0, y, 0);
+    hinge.add(hg);
+  }
+  const handle = box(0.025, 0.12, 0.03, PM.black);
+  handle.position.set(W - 0.06, H / 2, 0.025);
+  hinge.add(handle);
   const lamps = [];
   door.forEach((d, i) => {
     const cols = Math.max(1, Math.min(4, door.length));
     const cx = ((i % cols) + 0.5) * (W / cols);
-    const cy = H * 0.7 - Math.floor(i / cols) * 0.2;
+    const cy = H * 0.72 - Math.floor(i / cols) * 0.22;
     const t = base(d.type);
-    const ring = cyl(0.034, 0.02, mat(0x8b929b, { metalness: 0.5 }), 20);
+    const ring = cyl(0.036, 0.02, mat(0x8b929b, { metalness: 0.6, roughness: 0.3 }), 24);
     ring.rotation.x = Math.PI / 2;
     ring.position.set(cx, cy, 0.02);
     hinge.add(ring);
     if (t === "lamp" || t === "pushbutton-lit") {
       const hex = LAMP_HEX[d.params?.color] ?? LAMP_HEX.verde;
-      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.026, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(hex, { emissive: 0x000000, transparent: true, opacity: 0.9 }));
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.027, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(hex, { emissive: 0x000000, transparent: true, opacity: 0.9 }));
       lens.rotation.x = Math.PI / 2;
       lens.position.set(cx, cy, 0.03);
       hinge.add(lens);
       lamps.push({ id: d.id, lens, hex });
     } else if (t === "emergency-stop") {
-      const mush = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xd8282d));
+      const yb = box(0.09, 0.09, 0.004, mat(0xf2cf1d));
+      yb.position.set(cx, cy, 0.013);
+      const mush = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), PM.red);
       mush.rotation.x = Math.PI / 2;
-      mush.position.set(cx, cy, 0.03);
-      hinge.add(mush);
+      mush.position.set(cx, cy, 0.035);
+      hinge.add(yb, mush);
     } else if (t.startsWith("selector")) {
-      const knob = box(0.012, 0.05, 0.02, mat(0x23272d));
-      knob.position.set(cx, cy, 0.04);
-      knob.rotation.z = -0.6;
-      hinge.add(knob);
+      const knob = cyl(0.026, 0.02, PM.black, 20);
+      knob.rotation.x = Math.PI / 2;
+      knob.position.set(cx, cy, 0.035);
+      const bar = box(0.012, 0.045, 0.02, PM.black);
+      bar.position.set(cx, cy, 0.05);
+      bar.rotation.z = -0.6;
+      hinge.add(knob, bar);
     } else {
-      const btn = cyl(0.024, 0.02, mat(t === "pushbutton-nc" ? 0xd8282d : 0x2fae4f), 16);
+      const btn = cyl(0.024, 0.02, t === "pushbutton-nc" ? PM.red : PM.green, 16);
       btn.rotation.x = Math.PI / 2;
       btn.position.set(cx, cy, 0.035);
       hinge.add(btn);
     }
-    const tag = screen(0.09, 0.022, { bg: "#f2f3f4", fg: "#1a1d21", font: "bold 44px sans-serif" });
-    tag.paint(d.params?.label ? `${d.id} ${d.params.label}` : d.id);
-    tag.plane.position.set(cx, cy - 0.055, 0.012);
-    hinge.add(tag.plane);
+    // Por dentro de la puerta: los bloques de contacto del mando, con sus cables.
+    const blk = box(0.05, 0.05, 0.04, PM.white);
+    blk.position.set(cx, cy, -0.035);
+    const blkScr = box(0.04, 0.008, 0.004, PM.screw);
+    blkScr.position.set(cx, cy + 0.02, -0.056);
+    hinge.add(blk, blkScr);
+    const tag = plate(0.1, 0.024, d.params?.label ? `${d.id} ${d.params.label}` : d.id, { bg: "#f2f3f4", fg: "#1a1d21", font: "bold 44px sans-serif" });
+    tag.position.set(cx, cy - 0.06, 0.012);
+    hinge.add(tag);
   });
-  // Placa de la marca en la puerta.
-  const brand = screen(0.22, 0.045, { bg: "#23272d", fg: "#ffffff", font: "bold 60px sans-serif" });
-  brand.paint("JW CONTROL");
-  brand.plane.position.set(W / 2, H - 0.07, 0.012);
-  hinge.add(brand.plane);
+  const brand = plate(0.24, 0.05, "JW CONTROL", { bg: "#23272d", fg: "#ffffff", font: "bold 60px sans-serif" });
+  brand.position.set(W / 2, H - 0.08, 0.012);
+  hinge.add(brand);
   hinge.rotation.y = -1.7;
   g.add(hinge);
-  // Entrada de cables (prensaestopas) bajo el gabinete.
   const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
   return { group: g, W, D, H, legH, vfds, plcs, lamps, glandX, bottom: y0 };
+}
+
+// Electrobomba y válvulas de la sala de bombas. Eje de la bomba a lo largo de z
+// (motor hacia +z, voluta hacia −z); origen en el centro de la base, sobre la losa.
+const PUMP = {
+  blue: mat(0x2f6fb5, { metalness: 0.35, roughness: 0.45 }),
+  blueDk: mat(0x24578f, { metalness: 0.35, roughness: 0.5 }),
+  iron: mat(0x6f7882, { metalness: 0.5, roughness: 0.45 }),
+  steel: mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 }),
+  base: mat(0x3a4048, { metalness: 0.4, roughness: 0.55 }),
+  black: mat(0x1d2126, { roughness: 0.5 }),
+  guard: mat(0xffb020, { roughness: 0.5, transparent: true, opacity: 0.45 }),
+  wheel: mat(0xc0282d, { roughness: 0.45 }),
+  brass: mat(0xb08d3a, { metalness: 0.6, roughness: 0.35 }),
+};
+/** Brida: disco con pernos, perpendicular a y. */
+function flange(r, t = 0.018) {
+  const g = new THREE.Group();
+  g.add(cyl(r, t, PUMP.iron, 24));
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2 + Math.PI / 4;
+    const b = cyl(0.008, t + 0.016, PUMP.steel, 8);
+    b.position.set(Math.cos(a) * r * 0.78, 0, Math.sin(a) * r * 0.78);
+    g.add(b);
+  }
+  return g;
+}
+/** Volante de válvula (con rayos), perpendicular a y. */
+function handwheel(r) {
+  const g = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.12, 8, 24), PUMP.wheel);
+  rim.rotation.x = Math.PI / 2;
+  g.add(rim);
+  for (let k = 0; k < 3; k++) {
+    const s = box(r * 2, r * 0.12, r * 0.12, PUMP.wheel);
+    s.rotation.y = (k * Math.PI) / 3;
+    g.add(s);
+  }
+  return g;
+}
+/** Válvula de compuerta bridada en una tubería a lo largo de y; bonete y volante hacia +z. */
+function gateValve(r) {
+  const g = new THREE.Group();
+  const body = cyl(r * 1.25, r * 2.6, PUMP.iron, 20);
+  g.add(body);
+  for (const y of [-r * 1.4, r * 1.4]) {
+    const f = flange(r * 1.7);
+    f.position.y = y;
+    g.add(f);
+  }
+  const bonnet = cyl(r * 0.8, r * 2.2, PUMP.iron, 16);
+  bonnet.rotation.x = Math.PI / 2;
+  bonnet.position.z = r * 1.6;
+  const stem = cyl(r * 0.18, r * 1.4, PUMP.brass, 8);
+  stem.rotation.x = Math.PI / 2;
+  stem.position.z = r * 3.2;
+  const hw = handwheel(r * 1.4);
+  hw.rotation.x = Math.PI / 2;
+  hw.position.z = r * 3.8;
+  g.add(bonnet, stem, hw);
+  return g;
+}
+/** Válvula de retención bridada a lo largo de y, con su tapa hacia +z. */
+function checkValve(r) {
+  const g = new THREE.Group();
+  g.add(cyl(r * 1.35, r * 2.8, PUMP.iron, 20));
+  for (const y of [-r * 1.5, r * 1.5]) {
+    const f = flange(r * 1.7);
+    f.position.y = y;
+    g.add(f);
+  }
+  const cover = cyl(r * 0.95, r * 0.5, PUMP.iron, 16);
+  cover.rotation.x = Math.PI / 2;
+  cover.position.z = r * 1.35;
+  const arrow = box(r * 0.25, r * 1.6, 0.004, PUMP.steel);
+  arrow.position.set(0, 0, r * 1.36);
+  g.add(cover, arrow);
+  return g;
+}
+/** Electrobomba monoblock sobre su bancada: motor con aletas, caja de bornes, ventilador, acople y voluta. */
+function electroPump(id, ay) {
+  const g = new THREE.Group();
+  const bed = box(0.38, 0.06, 0.86, PUMP.base);
+  bed.position.set(0, 0.15, 0);
+  g.add(bed);
+  for (const x of [-0.17, 0.17])
+    for (const z of [-0.36, 0.36]) {
+      const bolt = cyl(0.012, 0.03, PUMP.steel, 8);
+      bolt.position.set(x, 0.19, z);
+      g.add(bolt);
+    }
+  // Motor: carcasa con aletas longitudinales, tapas, patas y ventilador con rejilla.
+  const mz = 0.2;
+  const R = 0.13;
+  const body = cyl(R, 0.32, PUMP.blue, 32);
+  body.rotation.x = Math.PI / 2;
+  body.position.set(0, ay, mz);
+  g.add(body);
+  for (let k = 0; k < 18; k++) {
+    const a = (k / 18) * Math.PI * 2;
+    if (Math.abs(a - Math.PI * 1.5) < 0.5) continue; // libre sobre las patas
+    const fin = box(0.008, 0.026, 0.28, PUMP.blue);
+    fin.position.set(Math.cos(a) * (R + 0.01), ay + Math.sin(a) * (R + 0.01), mz);
+    fin.rotation.z = a - Math.PI / 2;
+    g.add(fin);
+  }
+  for (const z of [mz - 0.17, mz + 0.17]) {
+    const bell = cyl(R + 0.012, 0.03, PUMP.blueDk, 32);
+    bell.rotation.x = Math.PI / 2;
+    bell.position.set(0, ay, z);
+    g.add(bell);
+  }
+  for (const z of [mz - 0.1, mz + 0.1]) {
+    const foot = box(0.3, 0.05, 0.06, PUMP.blueDk);
+    foot.position.set(0, ay - R - 0.005, z);
+    const leg = box(0.12, ay - R - 0.17, 0.06, PUMP.blueDk);
+    leg.position.set(0, (ay - R + 0.18) / 2, z);
+    g.add(foot, leg);
+  }
+  const fan = cyl(R + 0.005, 0.11, PUMP.black, 32);
+  fan.rotation.x = Math.PI / 2;
+  fan.position.set(0, ay, mz + 0.24);
+  g.add(fan);
+  for (const r of [0.04, 0.075, 0.11]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.005, 6, 28), PUMP.iron);
+    ring.position.set(0, ay, mz + 0.296);
+    g.add(ring);
+  }
+  // Caja de bornes con prensaestopa hacia el tablero, y placa de datos al costado.
+  const tb = box(0.13, 0.08, 0.13, PUMP.blueDk);
+  tb.position.set(0, ay + R + 0.04, mz);
+  const lid = box(0.14, 0.012, 0.14, PUMP.blue);
+  lid.position.set(0, ay + R + 0.086, mz);
+  const gland = cyl(0.018, 0.04, PUMP.black, 12);
+  gland.rotation.z = Math.PI / 2;
+  gland.position.set(0.085, ay + R + 0.04, mz);
+  g.add(tb, lid, gland);
+  const np = plate(0.1, 0.05, `${id} 3~ 2,2 kW`, { bg: "#d9dde2", fg: "#1a1d21", font: "bold 38px sans-serif" });
+  np.rotation.y = Math.PI / 2;
+  np.position.set(R + 0.032, ay + 0.02, mz + 0.02);
+  g.add(np);
+  // Linterna con el acople a la vista y su guarda; voluta con bocas bridadas.
+  const lantern = cyl(0.07, 0.12, PUMP.iron, 20);
+  lantern.rotation.x = Math.PI / 2;
+  lantern.position.set(0, ay, -0.02);
+  const guard = box(0.17, 0.15, 0.1, PUMP.guard);
+  guard.position.set(0, ay, -0.02);
+  g.add(lantern, guard);
+  const volute = cyl(0.17, 0.12, PUMP.iron, 32);
+  volute.rotation.x = Math.PI / 2;
+  volute.position.set(0, ay + 0.015, -0.16);
+  const snail = cyl(0.1, 0.12, PUMP.iron, 20);
+  snail.rotation.x = Math.PI / 2;
+  snail.position.set(0.08, ay + 0.1, -0.16);
+  const pfoot = box(0.2, ay - 0.2, 0.08, PUMP.iron);
+  pfoot.position.set(0, (ay + 0.18) / 2 - 0.02, -0.16);
+  g.add(volute, snail, pfoot);
+  const out = cyl(0.045, 0.08, PUMP.iron, 16);
+  out.position.set(0, ay + 0.2, -0.16);
+  const outF = flange(0.075);
+  outF.position.set(0, ay + 0.24, -0.16);
+  const inl = cyl(0.05, 0.08, PUMP.iron, 16);
+  inl.rotation.x = Math.PI / 2;
+  inl.position.set(0, ay, -0.26);
+  const inF = flange(0.08);
+  inF.rotation.x = Math.PI / 2;
+  inF.position.set(0, ay, -0.3);
+  g.add(out, outF, inl, inF);
+  return { group: g, gland: [0.105, ay + R + 0.04, mz], dischargeY: ay + 0.25, suctionZ: -0.31 };
 }
 
 /** Tanque elevado de la azotea (polietileno, con tapa), para la cisterna del edificio. */
@@ -1110,46 +1551,42 @@ function buildBuilding(p, spec = { devices: [] }) {
   const ay = 0.36; // altura del eje
   const pumps = ids.map((id, i) => {
     const x = px0 + i * 0.9;
-    const base2 = box(0.36, 0.1, 0.8, mat(0x3a4048, { metalness: 0.4 }));
-    base2.position.set(x, 0.17, pz);
-    const motorB = cyl(0.14, 0.38, mat(0x2f6fb5, { metalness: 0.35 }), 24);
-    motorB.rotation.x = Math.PI / 2;
-    motorB.position.set(x, ay, pz + 0.2);
-    for (let k = 0; k < 6; k++) {
-      const fin = box(0.3, 0.012, 0.32, motorB.material);
-      fin.position.set(x, ay, pz + 0.2);
-      fin.rotation.z = (k * Math.PI) / 6;
-      top.add(fin);
-    }
-    const fanCover = cyl(0.15, 0.08, mat(0x23272d), 24);
-    fanCover.rotation.x = Math.PI / 2;
-    fanCover.position.set(x, ay, pz + 0.43);
-    const tbox = box(0.12, 0.08, 0.12, mat(0x2a5d9c));
-    tbox.position.set(x, ay + 0.18, pz + 0.18);
-    const guard = box(0.2, 0.16, 0.12, mat(0xffb020, { transparent: true, opacity: 0.35 }));
-    guard.position.set(x, ay, pz - 0.02);
+    const ep = electroPump(id, ay);
+    ep.group.position.set(x, 0, pz);
+    top.add(ep.group);
+    // Acople que gira con la velocidad: eje, cubos y chaveta.
     const rotor = new THREE.Group();
-    const shaft = cyl(0.03, 0.1, steel, 12);
+    const shaft = cyl(0.025, 0.12, steel, 12);
     shaft.rotation.x = Math.PI / 2;
-    const key = box(0.14, 0.02, 0.02, mat(0xffb020));
-    rotor.add(shaft, key);
+    const hubs = [-0.025, 0.025].map((z) => {
+      const h = cyl(0.045, 0.035, PUMP.black, 16);
+      h.rotation.x = Math.PI / 2;
+      h.position.z = z;
+      return h;
+    });
+    const key = box(0.11, 0.018, 0.07, mat(0xffb020));
+    rotor.add(shaft, ...hubs, key);
     rotor.position.set(x, ay, pz - 0.02);
-    const volute = cyl(0.17, 0.12, mat(0x9aa3ad, { metalness: 0.5 }), 28);
-    volute.rotation.x = Math.PI / 2;
-    volute.position.set(x, ay, pz - 0.16);
     const tag = label(id);
     tag.scale.set(0.44, 0.11, 1);
     tag.position.set(x, 0.05, pz + 0.65);
-    top.add(base2, motorB, fanCover, tbox, guard, rotor, volute, tag);
-    // Succión desde el colector (atrás) y descarga vertical con su válvula de retención.
-    top.add(run([[x, ay, pz - 0.22], [x, ay, -0.75]], 0.04, steel));
-    top.add(run([[x, ay + 0.17, pz - 0.16], [x, 1.05, pz - 0.16]], 0.04, pipeM));
-    const check = box(0.11, 0.12, 0.11, mat(0x8b929b, { metalness: 0.5 }));
-    check.position.set(x, 0.75, pz - 0.16);
-    const valve = cyl(0.05, 0.02, mat(0xd8282d), 16);
-    valve.position.set(x, 0.92, pz - 0.16);
-    top.add(check, valve);
-    return { id, rotor, x, box: [x, ay + 0.22, pz + 0.18] };
+    top.add(rotor, tag);
+    // Succión desde el colector con su válvula de compuerta.
+    const zs = pz + ep.suctionZ;
+    top.add(run([[x, ay, zs], [x, ay, -0.75]], 0.04, steel));
+    const sv = gateValve(0.04);
+    sv.rotation.x = -Math.PI / 2;
+    sv.position.set(x, ay, (zs - 0.75) / 2);
+    // Descarga vertical: retención y compuerta bridadas.
+    const zd = pz - 0.16;
+    top.add(run([[x, ep.dischargeY, zd], [x, 1.05, zd]], 0.04, pipeM));
+    const cv = checkValve(0.04);
+    cv.position.set(x, 0.6, zd);
+    const dv = gateValve(0.04);
+    dv.position.set(x, 0.86, zd);
+    top.add(sv, cv, dv);
+    const gl = ep.gland;
+    return { id, rotor, x, box: [x + gl[0] + 0.02, gl[1], pz + gl[2]] };
   });
   // Colector de succión desde el pie del tanque, de descarga hasta el hidroneumático y la bajada.
   const xEnd = px0 + (n - 1) * 0.9;
@@ -1427,6 +1864,26 @@ function frame(now) {
 }
 
 window.Jwsim3D = {
+  /** Para pruebas: coloca la cámara (posición y objetivo en metros). */
+  camera(pos, target) {
+    if (!V.ready) return;
+    V.camera.position.set(...pos);
+    V.controls.target.set(...target);
+    V.controls.update();
+  },
+  /** Para pruebas: posición del acople de cada electrobomba. */
+  pumpsAt() {
+    const v = new THREE.Vector3();
+    return [...V.objects.values()].flatMap((o) => o.model.pumps ?? []).map((pm) => (pm.rotor.getWorldPosition(v), [v.x, v.y, v.z]));
+  },
+  /** Para pruebas: posición del tablero en la escena (centro de su base). */
+  panelAt() {
+    const g = V.panel?.group;
+    if (!g) return null;
+    const v = new THREE.Vector3();
+    g.getWorldPosition(v);
+    return [v.x, v.y, v.z, V.panel.W, V.panel.H, V.panel.bottom ?? 0];
+  },
   show(visible) {
     if (visible && !V.ready && !V.failed) init();
     if (V.failed) return;
