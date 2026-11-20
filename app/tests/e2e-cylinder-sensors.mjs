@@ -58,12 +58,12 @@ try {
       afterPair.a0.params?.orientacion === "abajo" &&
       afterPair.a0.params?.source === "Y1.position" &&
       afterPair.a0.params?.min === 0 &&
-      afterPair.a0.x === afterPair.y1.x + 260 &&
-      afterPair.a0.y < afterPair.y1.y &&
+      afterPair.a0.x === afterPair.y1.x + 280 &&
+      afterPair.a0.y === afterPair.y1.y - 160 &&
       afterPair.tA0?.side === "t" &&
       afterPair.a1?.params?.min === 1 &&
-      afterPair.a1.x === afterPair.y1.x + 380 &&
-      afterPair.a1.y < afterPair.y1.y,
+      afterPair.a1.x === afterPair.y1.x + 420 &&
+      afterPair.a1.y === afterPair.y1.y - 160,
     afterPair,
   };
   log(`PAIR_CREATED_ABOVE_PISTON ${JSON.stringify(criteria.PAIR_CREATED_ABOVE_PISTON)}`);
@@ -110,10 +110,10 @@ try {
   }));
   criteria.BISTABLE_TERMS_ALIGNED = {
     ok: y2Terms.ap1 && y2Terms.ap2 && y2Terms.am1 && y2Terms.am2 &&
-      Math.abs(y2Terms.ap1.fx - 80 / 440) < 0.01 &&
-      Math.abs(y2Terms.ap2.fx - 120 / 440) < 0.01 &&
-      Math.abs(y2Terms.am1.fx - 260 / 440) < 0.01 &&
-      Math.abs(y2Terms.am2.fx - 300 / 440) < 0.01,
+      Math.abs(y2Terms.ap1.fx - 80 / 520) < 0.01 &&
+      Math.abs(y2Terms.ap2.fx - 120 / 520) < 0.01 &&
+      Math.abs(y2Terms.am1.fx - 260 / 520) < 0.01 &&
+      Math.abs(y2Terms.am2.fx - 300 / 520) < 0.01,
     y2Terms,
   };
   log(`BISTABLE_TERMS_ALIGNED ${JSON.stringify(criteria.BISTABLE_TERMS_ALIGNED)}`);
@@ -146,15 +146,66 @@ try {
   await win.selectOption('[data-cyl-kind="A1"]', "magnetic");
   await sleep(250);
   const mag = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "A1"));
+  const y1Now = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "Y1"));
   await win.click("#scene-undo");
   await sleep(250);
   const undone = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "A1"));
   criteria.CONVERT_AND_UNDO = {
     ok: mag?.type === "jwsim/sensor-cylinder" && mag.params?.end === "extendido" &&
+      mag.x <= y1Now.x + 160 &&
       undone?.type === "jwsim/limit-switch",
     mag, undone,
   };
   log(`CONVERT_AND_UNDO ${JSON.stringify(criteria.CONVERT_AND_UNDO)}`);
+
+  // 5. Verificar arrastre en grupo con el cilindro, retorno elastico (<=100px) y desacople (>100px).
+  const dragWorld = async (id, wdx, wdy) => {
+    const pt = await t((devId) => {
+      const hit = document.querySelector(`#scene-devices > g[data-id="${devId}"] .dev-hit`);
+      const r = hit.getBoundingClientRect();
+      const ww = Number(hit.getAttribute("width"));
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, scale: r.width / ww };
+    }, id);
+    await win.mouse.move(pt.x, pt.y);
+    await win.mouse.down();
+    await win.mouse.move(pt.x + wdx * pt.scale, pt.y + wdy * pt.scale, { steps: 6 });
+    await win.mouse.up();
+    await sleep(200);
+  };
+  const posOf = async (id) =>
+    t((devId) => {
+      const d = window.jwsimTest.scene.spec().devices.find((x) => x.id === devId);
+      return d ? { x: d.x, y: d.y } : null;
+    }, id);
+
+  const before = { y1: await posOf("Y1"), s0: await posOf("S0"), a1: await posOf("A1") };
+  await dragWorld("Y1", 80, 0);
+  const afterCyl = { y1: await posOf("Y1"), s0: await posOf("S0"), a1: await posOf("A1") };
+  const cylDelta = afterCyl.y1.x - before.y1.x;
+
+  // Arrastre corto de S0 (+40 px): regresa a su sitio al soltar.
+  await dragWorld("S0", 40, 0);
+  const afterShort = await posOf("S0");
+
+  // Arrastre largo de S0 (-200 px arriba): se suelta y ya no sigue a Y1.
+  await dragWorld("S0", 0, -200);
+  const afterDetach = await posOf("S0");
+  await dragWorld("Y1", -60, 0);
+  const afterCyl2 = { y1: await posOf("Y1"), s0: await posOf("S0"), a1: await posOf("A1") };
+
+  criteria.GROUP_DRAG_SNAP_AND_DETACH = {
+    ok: cylDelta >= 60 &&
+      afterCyl.s0.x - before.s0.x === cylDelta &&
+      afterCyl.a1.x - before.a1.x === cylDelta &&
+      afterShort.x === afterCyl.s0.x &&
+      afterShort.y === afterCyl.s0.y &&
+      afterDetach.y < afterCyl.s0.y - 100 &&
+      afterCyl2.a1.x - afterCyl.a1.x === afterCyl2.y1.x - afterCyl.y1.x &&
+      afterCyl2.s0.x === afterDetach.x &&
+      afterCyl2.s0.y === afterDetach.y,
+    before, afterCyl, afterShort, afterDetach, afterCyl2,
+  };
+  log(`GROUP_DRAG_SNAP_AND_DETACH ${JSON.stringify(criteria.GROUP_DRAG_SNAP_AND_DETACH)}`);
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
   log(`ERROR ${e}`);
@@ -162,8 +213,14 @@ try {
   await app.close();
 }
 
-const ok = ["PAIR_CREATED_ABOVE_PISTON", "RENAME_AND_INTERMEDIATE_MARK", "BISTABLE_TERMS_ALIGNED", "SHOWN_IN_PNEUMATIC", "CONVERT_AND_UNDO"]
-  .every((k) => criteria[k]?.ok);
+const ok = [
+  "PAIR_CREATED_ABOVE_PISTON",
+  "RENAME_AND_INTERMEDIATE_MARK",
+  "BISTABLE_TERMS_ALIGNED",
+  "SHOWN_IN_PNEUMATIC",
+  "CONVERT_AND_UNDO",
+  "GROUP_DRAG_SNAP_AND_DETACH",
+].every((k) => criteria[k]?.ok);
 mkdirSync(join(ROOT, "build", "gates"), { recursive: true });
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_CYLINDER_SENSORS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_CYLINDER_SENSORS_E2E=${ok ? "PASS" : "FAIL"}`);
