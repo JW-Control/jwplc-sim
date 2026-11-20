@@ -2098,6 +2098,14 @@ button.io.on {
 .dev .dev-id {
   font-weight: 700;
   font-size: 12px;
+  /* La regla general de arriba no alcanza a estos textos (están dentro del
+     <svg> de la escena): sin color propio salían negros en el tema oscuro. */
+  fill: var(--text);
+}
+/* Rótulo de finales de carrera (A0, A1…): más grande y legible junto al émbolo. */
+.dev .dev-id.dev-id-mark {
+  font-size: 14px;
+  fill: light-dark(#1f2328, #ffffff);
 }
 .dev .dev-label {
   font-size: 10px;

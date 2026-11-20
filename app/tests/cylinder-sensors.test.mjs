@@ -153,3 +153,21 @@ test("applyKindToValve convierte todos los sensores ya colocados al nuevo tipo s
   assert.equal(spec.devices.find((d) => d.id === "A0").x, 620);
   assert.equal(spec.devices.find((d) => d.id === "A1").x, 760);
 });
+
+test("cylinderName: etiqueta propia > letra de sus marcas > ID, siempre con el ID en tag", () => {
+  const devices = [
+    { id: "Y1", type: "jwsim/solenoid-valve-2", params: {} },
+    { id: "A0", type: "jwsim/limit-switch", params: { source: "Y1.position", min: 0, max: 0 } },
+    { id: "A1", type: "jwsim/limit-switch", params: { source: "Y1.position", min: 1, max: 1 } },
+    { id: "Y2", type: "jwsim/solenoid-valve", params: { label: "Prensa" } },
+    { id: "Y3", type: "jwsim/solenoid-valve", params: {} },
+  ];
+  assert.deepEqual(
+    ["Y1", "Y2", "Y3"].map((id) => cs.cylinderName(devices, id)).map((n) => [n.name, n.source, n.tag]),
+    [
+      ["A", "sensors", "A · Y1"],
+      ["Prensa", "label", "Prensa · Y2"],
+      ["Y3", "id", "Y3"],
+    ],
+  );
+});
