@@ -47,6 +47,31 @@ rpm=dtext(146,246,'out.rpm:d0:rpm','',11,'#5aa9ff',w=800)
 motor('motor-1ph',[('U1',140),('U2',180),('PE',220)],'1~',cap=True,extra=rpm+tag(146,150,'ZUMBA: NO ARRANCA',RED,show='out.bloqueado'))
 motor('motor-1ph__4cables',[('U1',120),('U2',160),('Z1',200),('Z2',240),('PE',280)],'1~',cap=True,extra=rpm+tag(146,150,'ZUMBA: NO ARRANCA',RED,show='out.bloqueado'))
 
+# Motor genérico (220 x 200): carcasa metálica gris acero compacta (230 VAC / 24 VDC),
+# visualmente distinto de los WEG azules (motor-1ph / motor-3ph).
+def motor_generic():
+    b=band(56,4,108,52,4)
+    for t,x in [('U1',80),('U2',140)]: b+=term(x,22,t,lab='none')+lbl(x,46,t,9)
+    b+=rect(86,56,48,12,'#6b7581',0,LINE,2)
+    b+=rect(46,68,126,90,STEEL,10,LINE,2.2)
+    b+=path('M64 68 H56 q-10 0 -10 10 V148 q0 10 10 10 H64 Z',fill=STEEL2,stroke=LINE,sw=2.2)
+    b+=path('M172 76 h18 q8 0 8 8 v58 q0 8 -8 8 h-18 Z',fill='#7d868f',stroke=LINE,sw=2.2)
+    for i in range(4): b+=path(f'M178 {90+i*15} h14',stroke='#262b33',sw=3,stroke_linecap='round')
+    b+=rect(40,97,6,32,'#5b6570',2,LINE,1.8)
+    b+=rect(14,104,26,18,'#dde1e6',3,LINE,2.2)+rect(19,109,13,6,'#6b7581',1,'none',0)
+    b+=path('M66 158 l-8 20 h34 l-8 -20 Z M136 158 l-8 20 h34 l-8 -20 Z',fill='#6b7581',stroke=LINE,sw=2.2)
+    b+=circ(144,113,21,'#f4f6f8',LINE,2.2)
+    fan=''.join(path(f'M144 113 L{144+15*math.sin(math.radians(k*120)):.1f} {113-15*math.cos(math.radians(k*120)):.1f}',stroke='#262b33',sw=4.5,stroke_linecap='round') for k in range(3))
+    b+=g(fan+circ(144,113,4.5,'#5b6570','none',0)+circ(144,100,2.2,'#2f8cff','none',0),data_spin='out.speed:144:113:3')
+    b+=text(93,109,'M',18,'#1f2328',900)
+    b+=g(text(93,126,'230 V~',9.5,'#2b3138',800),data_show='param.rating=230VAC')
+    b+=g(text(93,126,'24 V=',9.5,'#1f6fd1',800),data_show='param.rating=24VDC')
+    b+=g(text(110,193,'↻ adelante',9.5,'#1f7a3a',800),data_show='out.speed>0.01')
+    b+=g(text(110,193,'↺ reversa',9.5,'#1f6fd1',800),data_show='out.speed&lt;-0.01')
+    b+=soot(116,113,60,40)
+    svg('motor',220,200,b,DEFS)
+motor_generic()
+
 # ------------------------------------------------ electroválvula 5/2 + cilindro
 PRESS=AIR; EXH='#9cc8f5'
 def cylinder(stroke=80):
