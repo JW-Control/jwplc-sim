@@ -26,7 +26,8 @@
     "test:e2e:aprender": "node tests/e2e-aprender.mjs",
     "audit:grilla": "node tests/audit-grilla.mjs",
     "test:e2e:dispositivos": "node tests/e2e-dispositivos.mjs",
-    "test:e2e:nuevo-dispositivo": "node tests/e2e-nuevo-dispositivo.mjs"
+    "test:e2e:nuevo-dispositivo": "node tests/e2e-nuevo-dispositivo.mjs",
+    "test:e2e:theme": "node tests/e2e-theme.mjs"
   },
   "dependencies": {
     "@wasm-fmt/clang-format": "23.1.1",
