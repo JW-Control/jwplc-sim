@@ -1,14 +1,19 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Prueba E2E del centro de aprendizaje y la ficha del reto (etapa 2 de
-// docs/integration/PROPUESTA_EVALUACIONES.md):
-//   LEARN_CARD    la pantalla Proyectos muestra el progreso (0 de 9) y el siguiente
-//   LEARN_LEVELS  3 niveles: el 1 abierto con «A continuación», el resto con candado
-//   BRIEF         al abrir un reto aparece su ficha; Empezar la pliega y se vuelve a ver
+// Prueba E2E de la pantalla Inicio, la ruta de aprendizaje y la ficha del
+// reto (etapa 2 de docs/integration/PROPUESTA_EVALUACIONES.md):
+//   LEARN_CARD    Inicio muestra «Empieza aquí», el progreso (0 / 21: 11 lecciones
+//                 del curso y 10 retos) y la vitrina con las 3 arquitecturas
+//   LEARN_LEVELS  la ruta: 2 unidades del curso y 3 niveles de retos; el nivel 1
+//                 abierto con «A continuación», el 2 y el 3 con candado (7 retos)
+//   LESSON        una lección del curso abre su ejemplo y queda vista (1 / 21)
+//   BRIEF         «Empezar reto» abre el reto con su ficha; Empezar la pliega y se vuelve a ver
 //   COMPLETE      con los objetivos cumplidos: «Qué enseña» y «Siguiente reto →»
-//   PROGRESS      el reto queda hecho (1 de 9) y el siguiente pasa a «A continuación»
-//   NEXT          «Siguiente reto →» abre el 02 con su ficha
+//   PROGRESS      el reto queda hecho y el siguiente pasa a «A continuación»
 //   UNLOCK        el docente desbloquea todos los niveles
+//   NEXT          «Siguiente reto →» abre el 02 con su ficha
+//   ARCH          la vitrina abre una arquitectura
+//   EXAMPLES      la vista Ejemplos lista las librerías y abre un ejemplo
 // Informe en build/gates/JWSIM_APRENDER_E2E.json.
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -44,44 +49,78 @@ const until = async (fn, timeout = 5000) => {
   }
   return null;
 };
-const items = () => win.$$eval("#start .learn-item", (l) => l.map((b) => `${b.dataset.id}:${[...b.classList].find((c) => ["done", "next", "open", "locked"].includes(c))}${b.disabled ? "!" : ""}`));
+const items = () => win.$$eval("#start .learn-item.reto", (l) => l.map((b) => `${b.dataset.id}:${[...b.classList].find((c) => ["done", "next", "open", "locked"].includes(c))}${b.getAttribute("aria-disabled") === "true" ? "!" : ""}`));
+const allRetos = async () => {
+  const out = [];
+  for (const k of ["n1", "n2", "n3"]) {
+    await win.click(`#start [data-act="tier"][data-k="${k}"]`);
+    out.push(...(await items()));
+  }
+  return out;
+};
 const press = async (id) => {
   await t((d) => window.jwsimTest.scene.act(d, "press", true), id);
   await win.waitForTimeout(300);
   await t((d) => window.jwsimTest.scene.act(d, "press", false), id);
 };
+const progress = () => win.$eval("#start .ini-progress .ini-num", (e) => e.textContent.replace(/\s/g, "")).catch(() => null);
 
 try {
   // ---- LEARN_CARD
-  const card = await until(() => win.$eval("#start .learn-card", (e) => e.textContent), 10000);
+  const hero = await until(() => win.$eval("#start .ini-hero", (e) => e.textContent), 10000);
+  await until(() => win.$$eval("#start .ini-thumb", (l) => l.length === 3), 10000);
+  const prog = await until(async () => ((await progress()) === "0/21" ? "0/21" : null), 10000);
+  const thumbs = await win.$$eval("#start .ini-thumb", (l) => l.length);
   await win.screenshot({ path: join(OUT, "01-inicio.png") });
-  criteria.LEARN_CARD = { ok: /0 de 9 retos/.test(card ?? "") && /A continuación: Marcha y parada/.test(card ?? ""), card };
+  criteria.LEARN_CARD = { ok: /Empieza aquí/i.test(hero ?? "") && /Hola, JWPLC/.test(hero ?? "") && prog === "0/21" && thumbs === 3, prog, thumbs };
   log(`LEARN_CARD ${JSON.stringify(criteria.LEARN_CARD)}`);
 
   // ---- LEARN_LEVELS
-  await win.click("#start .learn-card");
-  await win.waitForSelector("#start .learn-level");
-  const lv = await win.$$eval("#start .learn-level", (l) => l.map((x) => `${x.querySelector("b").textContent}${x.classList.contains("locked") ? " 🔒" : ""}`));
-  const it = await items();
-  await win.screenshot({ path: join(OUT, "02-niveles.png") });
+  await win.click('#start [data-act="route"]');
+  await win.waitForSelector("#start .ini-tiers .learn-level");
+  const lv = await win.$$eval("#start .ini-tiers .learn-level", (l) => l.map((x) => `${x.querySelector("b").textContent}${x.classList.contains("locked") ? " 🔒" : ""}`));
+  const it = await allRetos();
+  await win.click('#start [data-act="tier"][data-k="n1"]');
+  await win.screenshot({ path: join(OUT, "02-ruta.png") });
   criteria.LEARN_LEVELS = {
-    ok: lv.length === 3 && !lv[0].includes("🔒") && lv[1].includes("🔒") && it[0] === "01-marcha-parada:next" && it.filter((x) => x.endsWith("locked!")).length === 6,
+    ok: lv.length === 5 && /^Unidad 1/.test(lv[0]) && /^Nivel 1/.test(lv[2]) && !lv[2].includes("🔒") && lv[3].includes("🔒") && it[0] === "01-marcha-parada:next" && it.length === 10 && it.filter((x) => x.endsWith("locked!")).length === 7,
     levels: lv,
     items: it,
   };
   log(`LEARN_LEVELS ${JSON.stringify(criteria.LEARN_LEVELS)}`);
 
+  // ---- LESSON
+  await win.click('#start [data-act="tier"][data-k="u1"]');
+  await win.click('#start .learn-item[data-id="curso-02"]');
+  const lessonBrief = await win.$eval("#ini-brief", (e) => e.textContent);
+  await win.screenshot({ path: join(OUT, "03-leccion.png") });
+  await win.click('#ini-brief [data-act="lesson"]');
+  await win.waitForSelector("#start", { state: "hidden", timeout: 10000 });
+  const lessonDir = await until(() => t(() => window.jwsimTest.sketchDir()).then((d) => (/Encender_un_rele/.test(d ?? "") ? d : null)), 10000);
+  await win.click("#btn-projects");
+  const prog2 = await until(async () => ((await progress()) === "1/21" ? "1/21" : null), 5000);
+  criteria.LESSON = { ok: /Qué vas a aprender/i.test(lessonBrief) && /Cómo probarlo/i.test(lessonBrief) && !!lessonDir && prog2 === "1/21", dir: lessonDir, prog: prog2 };
+  log(`LESSON ${JSON.stringify(criteria.LESSON)}`);
+
   // ---- BRIEF
+  await win.click('#start [data-act="tier"][data-k="n1"]');
   await win.click('#start .learn-item[data-id="01-marcha-parada"]');
+  const card = await win.$eval("#ini-brief", (e) => e.textContent);
+  await win.screenshot({ path: join(OUT, "04-ficha-inicio.png") });
+  await win.click('#ini-brief [data-act="ex"][data-id="01-marcha-parada"]');
   const brief = await until(() => win.$eval("#ex-brief", (e) => !e.hidden && !e.classList.contains("collapsed") && e.textContent), 10000);
   const uses = await win.$$eval("#ex-brief .brief-uses li", (l) => l.length);
-  await win.screenshot({ path: join(OUT, "03-ficha.png") });
   await win.click('#ex-brief [data-brief="start"]');
   const collapsed = await win.$eval("#ex-brief", (e) => e.classList.contains("collapsed"));
   await win.click('#ex-brief [data-brief="show"]');
   const again = await win.$eval("#ex-brief", (e) => !e.classList.contains("collapsed"));
   await win.click('#ex-brief [data-brief="start"]');
-  criteria.BRIEF = { ok: /El objetivo/i.test(brief || "") && /Pasos/i.test(brief || "") && uses === 4 && collapsed && again, uses, collapsed, again };
+  criteria.BRIEF = {
+    ok: /Objetivos en vivo/i.test(card) && /En la mesa/i.test(card) && /El objetivo/i.test(brief || "") && /Pasos/i.test(brief || "") && uses === 4 && collapsed && again,
+    uses,
+    collapsed,
+    again,
+  };
   log(`BRIEF ${JSON.stringify(criteria.BRIEF)}`);
 
   // ---- COMPLETE
@@ -97,7 +136,7 @@ try {
   const next = await win.$eval("#ex-goals [data-next]", (b) => b.dataset.next).catch(() => null);
   await win.$eval("#ex-goals", (e) => e.scrollIntoView());
   await win.waitForTimeout(500);
-  await (await win.$("#scene-side")).screenshot({ path: join(OUT, "04-completado.png") });
+  await (await win.$("#scene-side")).screenshot({ path: join(OUT, "05-completado.png") });
   criteria.COMPLETE = { ok: /Qué enseña: Autorretención/.test(after || "") && next === "02-inversion-giro", next };
   log(`COMPLETE ${JSON.stringify(criteria.COMPLETE)}`);
 
@@ -105,19 +144,19 @@ try {
   await win.click("#btn-stop");
   await until(() => t(() => window.jwsimTest.status() !== "running"), 10000);
   await win.click("#btn-projects");
-  const card2 = await until(() => win.$eval("#start .learn-card", (e) => /1 de 9/.test(e.textContent) && e.textContent), 5000);
-  await win.click("#start .learn-card");
-  await win.waitForSelector("#start .learn-level");
+  const prog3 = await until(async () => ((await progress()) === "2/21" ? "2/21" : null), 5000);
+  await win.click('#start [data-act="route"]');
+  await win.click('#start [data-act="tier"][data-k="n1"]');
   const it2 = await items();
-  criteria.PROGRESS = { ok: /Inversión de giro/.test(card2 || "") && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", card: card2, items: it2.slice(0, 3) };
+  criteria.PROGRESS = { ok: prog3 === "2/21" && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", prog: prog3, items: it2 };
   log(`PROGRESS ${JSON.stringify(criteria.PROGRESS)}`);
 
   // ---- UNLOCK
   await win.click("#learn-unlock");
   await win.waitForTimeout(300);
-  const it3 = await items();
-  await win.screenshot({ path: join(OUT, "05-desbloqueado.png") });
-  criteria.UNLOCK = { ok: it3.length === 9 && !it3.some((x) => x.endsWith("!")), items: it3 };
+  const it3 = await allRetos();
+  await win.screenshot({ path: join(OUT, "06-desbloqueado.png") });
+  criteria.UNLOCK = { ok: it3.length === 10 && !it3.some((x) => x.endsWith("!")), items: it3 };
   log(`UNLOCK ${JSON.stringify(criteria.UNLOCK)}`);
   await win.click("#learn-unlock");
   await win.click('#start [data-act="close"]');
@@ -128,8 +167,32 @@ try {
   const dir2 = await t(() => window.jwsimTest.sketchDir());
   criteria.NEXT = { ok: /KM1 y KM2/.test(brief2 || "") && /02-inversion-giro/.test(dir2 ?? ""), dir: dir2 };
   log(`NEXT ${JSON.stringify(criteria.NEXT)}`);
+
+  // ---- ARCH
+  await win.click("#btn-projects");
+  await win.click('#start [data-act="archSel"][data-i="1"]');
+  const archTitle = await win.$eval("#start .ini-show-title", (e) => e.textContent);
+  await win.click('#start [data-act="arch"]');
+  await win.waitForSelector("#start", { state: "hidden", timeout: 10000 });
+  const dir3 = await until(() => t(() => window.jwsimTest.sketchDir()).then((d) => (/02-montacargas/.test(d ?? "") ? d : null)), 10000);
+  criteria.ARCH = { ok: /Montacargas/i.test(archTitle) && !!dir3, title: archTitle, dir: dir3 };
+  log(`ARCH ${JSON.stringify(criteria.ARCH)}`);
+
+  // ---- EXAMPLES
+  await win.click("#btn-projects");
+  await win.click('#start [data-act="examples"]');
+  const libs = await until(() => win.$$eval("#start .ini-libs button", (l) => (l.length ? l.map((b) => b.dataset.g) : null)), 15000);
+  await win.fill("#ini-exq", "buzzer");
+  await win.waitForTimeout(200);
+  const found = await win.$$eval('#start [data-act="example"]', (l) => l.map((b) => b.textContent));
+  await win.screenshot({ path: join(OUT, "07-ejemplos.png") });
+  await win.click('#start [data-act="example"]');
+  await win.waitForSelector("#start", { state: "hidden", timeout: 10000 });
+  const dir4 = await until(() => t(() => window.jwsimTest.sketchDir()).then((d) => (/Buzzer/i.test(d ?? "") ? d : null)), 10000);
+  criteria.EXAMPLES = { ok: libs?.includes("JWPLC_GlobalPeripherals") && found.length > 0 && !!dir4, libs: libs?.length, found, dir: dir4 };
+  log(`EXAMPLES ${JSON.stringify(criteria.EXAMPLES)}`);
 } finally {
-  const ok = Object.values(criteria).length === 7 && Object.values(criteria).every((c) => c.ok);
+  const ok = Object.values(criteria).length === 10 && Object.values(criteria).every((c) => c.ok);
   writeFileSync(join(ROOT, "build", "gates", "JWSIM_APRENDER_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
   console.log(`JWSIM_APRENDER_E2E=${ok ? "PASS" : "FAIL"}`);
   await app.close();
