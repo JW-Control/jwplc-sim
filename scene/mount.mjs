@@ -14,7 +14,7 @@
  */
 export const MOUNTS = {
   // Los puentes de cobre 1-3-5 del térmico entran por abajo en 2/T1, 4/T2 y 6/T3:
-  // el térmico queda pegado al borde inferior del contactor (se dibuja detrás).
+  // el térmico va detrás del contactor, con su borde superior bajo la bornera.
   "overload-relay": { hosts: ["contactor"], dx: 0, dy: 280, links: [["1", "2"], ["3", "4"], ["5", "6"]] },
 };
 

@@ -196,15 +196,15 @@
   /** ¿El equipo está acoplado (o a punto de acoplarse mientras se arrastra)? */
   const isMounted = (dev) => (S.drag?.kind === "device" && S.drag.dev === dev ? !!S.drag.mountTo : !!dev.mount && canMount(dev, devById(dev.mount)));
   /**
-   * El acoplado se dibuja delante del anfitrión: su cuerpo tapa el borde
-   * inferior del contactor y sus puentes suben hasta los bornes 2-4-6.
+   * El acoplado se dibuja detrás del anfitrión: la bornera 2-4-6 del
+   * contactor tapa sus puentes y solo asoman los bloques de contacto.
    */
   function raiseGuest(g) {
     const box = $("scene-devices");
     const el = box.querySelector(`[data-id="${CSS.escape(g.id)}"]`);
     const host = g.mount ?? S.drag?.mountTo;
     const hel = host && box.querySelector(`[data-id="${CSS.escape(host)}"]`);
-    if (el && hel && hel.nextSibling !== el) hel.after(el);
+    if (el && hel && hel.previousSibling !== el) hel.before(el);
   }
   /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
   function settleMounts() {
@@ -956,6 +956,10 @@
         const tipEnd = p.sy - dir * 7;
         const tipStart = tipEnd - dir * 5;
         const sleeveStart = (dir > 0 ? Math.max : Math.min)(p.y, tipStart - dir * 11);
+        // Borne de abajo de un anfitrión tapado por el acoplado (el contactor
+        // con el térmico debajo): el cable entra por detrás, sin tramo visible.
+        const covered = !p.up && guestsOf(devOf(t)).some(isMounted);
+        if (covered) continue;
         for (const i of list) {
           const w = S.spec.wiring[i];
           const x = p.x + offset(t, i);

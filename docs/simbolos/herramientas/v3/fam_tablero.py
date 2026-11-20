@@ -92,18 +92,20 @@ contactor('contactor','13','14','NO')
 contactor('contactor__01','21','22','NC')
 
 # ---------------- relé térmico 200 x 280 (va bajo el contactor)
-# Suelto: los puentes de cobre 1-3-5 asoman arriba. Acoplado (mounted): el
-# cuerpo queda pegado bajo el contactor y los puentes suben hasta entrar en
-# sus bornes 2/T1-4/T2-6/T3 (14 px por encima del símbolo, bajo el tornillo), con su collar negro.
+# Arriba, los bloques de contacto de los polos 1-3-5. Suelto: los puentes de
+# cobre asoman sobre ellos. Acoplado (mounted): el térmico va detrás del
+# contactor, con su borde superior bajo la bornera 2/T1-4/T2-6/T3: los puentes
+# quedan ocultos y solo asoman los bloques, como en el equipo real.
 b=rect(4,14,192,264,BODY,4,OL,3)
-loose=''; plug=''
+loose=''
 for t,x in [('1',40),('3',80),('5',120)]:
     loose+=rect(x-8,0,16,24,'#c98a4b',2,OL,2)+rect(x-8,0,5,24,'#e0a56b',0,'none',0)
-    plug+=rect(x-7,-14,14,28,'#c98a4b',2,OL,2)+rect(x-7,-14,4,28,'#e0a56b',0,'none',0)+rect(x-11,2,22,12,'#2a2e33',2,OL,1.6)
-b+=g(loose,data_show='!mounted')+g(plug,data_show='mounted')
+b+=g(loose,data_show='!mounted')
+for t,x in [('1',40),('3',80),('5',120)]:
+    b+=rect(x-15,6,30,18,'#23272d',2,OL,1.6)+rect(x-11,14,7,6,'#e9edf1',1,'none',0)+rect(x+4,14,7,6,'#e9edf1',1,'none',0)
 for t,x in [('1',40),('3',80),('5',120)]:
     b+=hit(t,x,10,9)
-b+=brand(4,22,192,'térmico')
+b+=brand(4,38,192,'térmico')
 b+=circ(46,106,26,BLUE,OL,2.4)
 for i in range(7):
     ang=-150+50*i; x1=46+29*math.sin(math.radians(ang)); y1=106-29*math.cos(math.radians(ang)); x2=46+34*math.sin(math.radians(ang)); y2=106-34*math.cos(math.radians(ang))
