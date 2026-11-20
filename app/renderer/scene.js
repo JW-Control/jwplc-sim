@@ -1356,7 +1356,9 @@
           const letter = CS.nextCylinderLetter(S.spec.devices, dev.id);
           const has0 = linkedSens.some((s) => s.pos <= 0.05);
           const has1 = linkedSens.some((s) => s.pos >= 0.95);
-          const defKind = S.cylSensorKind ?? "compacto";
+          const kindsPresent = new Set(linkedSens.map((s) => s.kind));
+          const defKind = kindsPresent.size === 1 ? [...kindsPresent][0] : (S.cylSensorKind ?? "compacto");
+          const canApplyPair = !(has0 && has1) || linkedSens.some((s) => s.kind !== defKind);
           const kindOpts = [
             ["compacto", "Rodillo compacto"],
             ["XCKJ", "Rodillo XCKJ"],
@@ -1366,7 +1368,7 @@
           let fcHtml =
             `<div class="cyl-fc-bar">` +
             `<select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select>` +
-            `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || (has0 && has1) ? "disabled" : ""} title="Colocar ${esc(letter)}0 (0) y ${esc(letter)}1 (1) encima del émbolo">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
+            `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || !canApplyPair ? "disabled" : ""} title="Colocar o convertir ${esc(letter)}0 (0) y ${esc(letter)}1 (1)">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
             `<button type="button" class="small" data-cyl-add="${esc(dev.id)}" ${dis} title="Agregar otra marca en cualquier posición 0..1">+ Marca</button>` +
             `</div>` +
             `<p id="cyl-fc-err" class="cyl-fc-err" hidden></p>`;
@@ -1383,7 +1385,7 @@
             }
             fcHtml += `</tbody></table>`;
           }
-          fcHtml += `<p class="insp-desc muted">Se colocan sobre el émbolo listos para cablear sus bornes al PLC.</p>`;
+          fcHtml += `<p class="insp-desc muted">Rodillos sobre el vástago y magnéticos sobre la camisa, listos para cablear al PLC.</p>`;
           html += sec("__fc", "Finales de carrera / Sensores", fcHtml, isOpen("__fc", true), `${linkedSens.length} ${linkedSens.length === 1 ? "marca" : "marcas"}`);
         }
         // Cómo funciona con los ajustes actuales, en dos líneas; el resto, a pedido.
@@ -2495,6 +2497,21 @@
       el.textContent = msg || "";
       el.hidden = !msg;
     };
+    const runCylMutation = (fn) => {
+      pushHistory();
+      const res = fn();
+      if (res && res.ok === false) {
+        S.undoStack.pop();
+        updateUndoRedoButtons();
+        showCylErr(res.error);
+        return false;
+      }
+      syncSensorVersions();
+      S.keepPane = true;
+      S.routeKey = null;
+      changed();
+      return true;
+    };
     $("scene-inspector").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-cyl-pair],[data-cyl-add],[data-cyl-del]");
       const CS = window.JwsimCylinderSensors;
@@ -2503,21 +2520,28 @@
       if (!dev) return;
       const kind = $("cyl-fc-default-kind")?.value || S.cylSensorKind || "compacto";
       S.cylSensorKind = kind;
-      pushHistory();
-      if (btn.dataset.cylPair) CS.addStandardPair(S.spec, btn.dataset.cylPair, kind);
-      else if (btn.dataset.cylAdd) CS.addMark(S.spec, btn.dataset.cylAdd, { kind });
-      else if (btn.dataset.cylDel) CS.removeSensor(S.spec, btn.dataset.cylDel);
-      syncSensorVersions();
-      S.keepPane = true;
-      S.routeKey = null;
-      changed();
+      runCylMutation(() => {
+        if (btn.dataset.cylPair) {
+          CS.addStandardPair(S.spec, btn.dataset.cylPair, kind);
+          return CS.applyKindToValve(S.spec, btn.dataset.cylPair, kind);
+        }
+        if (btn.dataset.cylAdd) CS.addMark(S.spec, btn.dataset.cylAdd, { kind });
+        else if (btn.dataset.cylDel) CS.removeSensor(S.spec, btn.dataset.cylDel);
+        return { ok: true };
+      });
     });
     $("scene-inspector").addEventListener("change", (e) => {
+      const CS = window.JwsimCylinderSensors;
       if (e.target.id === "cyl-fc-default-kind") {
-        S.cylSensorKind = e.target.value;
+        const kind = e.target.value;
+        S.cylSensorKind = kind;
+        const dev = S.sel?.kind === "device" ? devById(S.sel.id) : null;
+        if (CS && !S.running && dev && CS.isValve(dev)) {
+          const linked = CS.sensorsForValve(S.spec.devices, dev.id);
+          if (linked.some((s) => s.kind !== kind)) runCylMutation(() => CS.applyKindToValve(S.spec, dev.id, kind));
+        }
         return;
       }
-      const CS = window.JwsimCylinderSensors;
       if (!CS || S.running || S.sel?.kind !== "device") return;
       const dev = devById(S.sel.id);
       if (!dev || !CS.isValve(dev)) return;
@@ -2540,19 +2564,9 @@
         patch = { kind: t.value };
       }
       if (!sensorId || !patch) return;
-      pushHistory();
-      const res = CS.updateSensorConfig(S.spec, dev.id, sensorId, patch);
-      if (!res.ok) {
-        S.undoStack.pop();
-        updateUndoRedoButtons();
-        showCylErr(res.error);
-        if (t.dataset.cylRename) t.value = sensorId;
-        return;
+      if (!runCylMutation(() => CS.updateSensorConfig(S.spec, dev.id, sensorId, patch)) && t.dataset.cylRename) {
+        t.value = sensorId;
       }
-      syncSensorVersions();
-      S.keepPane = true;
-      S.routeKey = null;
-      changed();
     });
     // Fallas (G9): en marcha el inspector se redibuja con cada instantánea;
     // con pointerdown el botón responde aunque se reemplace antes de soltar.
