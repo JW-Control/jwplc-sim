@@ -62,94 +62,102 @@ mcb('breaker__3p',3,['1','3','5'],['2','4','6'])
 mcb('power-230vac',2,None,['L','N'],'230 V')
 mcb('power-3ph',3,None,['L1','L2','L3'],'3×380 V')
 
-# ---------------- contactor 200 x 320 (45 mm de ancho, bornes de fuerza alineados con el térmico)
+# ---------------- regla de tablero (20/11): el cuerpo llena su caja (bordes sobre la malla de 20 px),
+# todo lo de riel DIN mide 360 de alto, un polo de fuerza ocupa 80 px (bornes en x = 40, 120, 200) y
+# las borneras de fuerza quedan a la misma altura en todos (tornillos en y = 32 y y = 328).
+
+# ---------------- contactor 240 x 360: fuerza arriba y abajo, auxiliar y bobina en filas interiores
 def contactor(name,aux_t,aux_b,auxlbl):
-    b=rect(6,26,188,268,BODY,4,OL,3)
-    b+=rect(6,44,188,54,HOOD,0,OL,2)+rect(6,222,188,54,HOOD,0,OL,2)
-    for t,x,l in [('1',40,'1/L1'),('3',80,'3/L2'),('5',120,'5/L3'),(aux_t,160,aux_t+' '+auxlbl)]:
-        b+=T(t,x,66)+lab(x,93,l,12.5)
-    for t,x,l in [('2',40,'2/T1'),('4',80,'4/T2'),('6',120,'6/T3'),(aux_b,160,aux_b+' '+auxlbl)]:
-        b+=T(t,x,254,side='b')+lab(x,237,l,12.5)
-    # orejas de bobina
-    b+=rect(2,1.5,36,46,HOOD,3,OL,2.4)+T('A1',20,16,11)+lab(20,42,'A1',12.5)
-    b+=rect(162,1.5,36,46,HOOD,3,OL,2.4)+T('A2',180,16,11)+lab(180,42,'A2',12.5)  # A2 arriba: el térmico se engrapa abajo
-    b+=brand(6,100,188,'9 A')
+    W,H=240,360
+    b=rect(1.5,1.5,W-3,H-3,BODY,3,OL,3)
+    b+=rect(1.5,1.5,W-3,86,HOOD,3,OL,2)+rect(1.5,272,W-3,86.5,HOOD,3,OL,2)
+    for t,x,l in [('1',40,'1/L1'),('3',120,'3/L2'),('5',200,'5/L3')]:
+        b+=T(t,x,32)+lab(x,72,l,16)
+    for t,x,l in [('2',40,'2/T1'),('4',120,'4/T2'),('6',200,'6/T3')]:
+        b+=T(t,x,328,side='b')+lab(x,298,l,16)
+    b+=brand(1.5,88,W-3,'9 A')
+    # fila interior de arriba: auxiliar y A1; de abajo: auxiliar y A2 (como en el equipo real)
+    # entre los polos (x = 80 y 160): sus cables pasan entre los tornillos de fuerza
+    b+=T(aux_t,80,132,10)+lab(64,137,aux_t+' '+auxlbl,11,anchor='end')+T('A1',160,132,10)+lab(176,137,'A1',11,anchor='start')
+    b+=T(aux_b,80,248,10,side='b')+lab(64,253,aux_b+' '+auxlbl,11,anchor='end')+T('A2',160,248,10,side='b')+lab(176,253,'A2',11,anchor='start')
     # símbolo impreso de los contactos
     sym=''
     for i in range(3):
-        x=22+12*i; sym+=f'M{x} 134 V148 L{x-7} 160 M{x} 164 V180 '
-    b+=path(sym,stroke='#4b525a',sw=1.8,stroke_linecap='round')+path('M15 154 H44',stroke='#4b525a',sw=1.4,stroke_dasharray='3 2')
+        x=22+12*i; sym+=f'M{x} 160 V172 L{x-7} 184 M{x} 188 V204 '
+    b+=path(sym,stroke='#4b525a',sw=1.8,stroke_linecap='round')+path('M15 178 H44',stroke='#4b525a',sw=1.4,stroke_dasharray='3 2')
     # ventana del indicador del portacontactos
-    b+=rect(58,130,76,58,'#1b1f24',4,OL,2)
-    b+=g(rect(68,136,56,22,OFF,3,'none',0)+text(96,152,'O',15,'#fff',900),data_show='!out.closed')
-    b+=g(rect(68,160,56,22,ON,3,'none',0)+text(96,176,'I',15,'#fff',900),data_show='out.closed')
+    b+=rect(62,154,100,58,'#1b1f24',4,OL,2)
+    b+=g(rect(72,160,80,22,OFF,3,'none',0)+text(112,176,'O',15,'#fff',900),data_show='!out.closed')
+    b+=g(rect(72,184,80,22,ON,3,'none',0)+text(112,200,'I',15,'#fff',900),data_show='out.closed')
     # placa de bobina: el único dato
-    b+=rect(142,130,46,58,'#ffffff',3,OL,1.6)+text(165,148,'bobina',9,MUT,700)
-    b+=f'<text x="165" y="172" font-size="11" font-weight="900" fill="{INK}" text-anchor="middle" data-text="param.coil">24VDC</text>'
-    b+=soot(100,160,70,40)
-    svg(name,200,320,b)
+    b+=rect(174,154,56,58,'#ffffff',3,OL,1.6)+text(202,172,'bobina',9,MUT,700)
+    b+=f'<text x="202" y="196" font-size="11" font-weight="900" fill="{INK}" text-anchor="middle" data-text="param.coil">24VDC</text>'
+    b+=soot(120,184,80,40)
+    svg(name,W,H,b)
 contactor('contactor','13','14','NO')
 contactor('contactor__01','21','22','NC')
 
-# ---------------- relé térmico 200 x 280 (va bajo el contactor)
+# ---------------- relé térmico 240 x 300 (va bajo el contactor)
 # Arriba, los bloques de contacto de los polos 1-3-5. Suelto: los puentes de
 # cobre asoman sobre ellos. Acoplado (mounted): el térmico va detrás del
 # contactor, con su borde superior bajo la bornera 2/T1-4/T2-6/T3: los puentes
 # quedan ocultos y solo asoman los bloques, como en el equipo real.
-b=rect(4,14,192,264,BODY,4,OL,3)
+W=240
+b=rect(1.5,20,W-3,278.5,BODY,3,OL,3)
 loose=''
-for t,x in [('1',40),('3',80),('5',120)]:
+for t,x in [('1',40),('3',120),('5',200)]:
     loose+=rect(x-8,0,16,24,'#c98a4b',2,OL,2)+rect(x-8,0,5,24,'#e0a56b',0,'none',0)
 b+=g(loose,data_show='!mounted')
-for t,x in [('1',40),('3',80),('5',120)]:
-    b+=rect(x-15,6,30,18,'#23272d',2,OL,1.6)+rect(x-11,14,7,6,'#e9edf1',1,'none',0)+rect(x+4,14,7,6,'#e9edf1',1,'none',0)
-for t,x in [('1',40),('3',80),('5',120)]:
+for t,x in [('1',40),('3',120),('5',200)]:
+    b+=rect(x-16,8,32,20,'#23272d',2,OL,1.6)+rect(x-12,17,8,6,'#e9edf1',1,'none',0)+rect(x+4,17,8,6,'#e9edf1',1,'none',0)
+for t,x in [('1',40),('3',120),('5',200)]:
     b+=hit(t,x,10,9)
-b+=brand(4,38,192,'térmico')
-b+=circ(46,106,26,BLUE,OL,2.4)
+b+=brand(1.5,32,W-3,'térmico')
+b+=circ(50,98,24,BLUE,OL,2.4)
 for i in range(7):
-    ang=-150+50*i; x1=46+29*math.sin(math.radians(ang)); y1=106-29*math.cos(math.radians(ang)); x2=46+34*math.sin(math.radians(ang)); y2=106-34*math.cos(math.radians(ang))
+    ang=-150+50*i; x1=50+27*math.sin(math.radians(ang)); y1=98-27*math.cos(math.radians(ang)); x2=50+32*math.sin(math.radians(ang)); y2=98-32*math.cos(math.radians(ang))
     b+=path(f'M{x1:.1f} {y1:.1f} L{x2:.1f} {y2:.1f}',stroke=INK,sw=1.8)
-b+=g(rect(43,84,6,26,'#ffffff',2,'none',0)+circ(46,106,7,'#164f96','none',0),data_rotate='out.ajusteRel:0:1:-150:150:46:106')
-b+=f'<text x="134" y="88" font-size="13" font-weight="900" fill="{INK}" text-anchor="middle" data-show="!out.tripped" data-text="out.ajusteTxt">3,2 A (2,5-4)</text>'
-b+=tag(134,83,'DISPARÓ',ON,show='out.tripped',size=11)
-b+=g(rect(88,96,92,20,'#ff9d00',3,OL,1.4)+text(134,110,'FALTA DE FASE',10,'#2b1a00',900),data_show='out.faltaFase')
-b+=g(rect(16,140,34,20,'#f7f8f9',3,OL,1.8)+rect(19,143,12,14,'#2a2e33',2,'none',0)+rect(33,143,14,14,'#ffb000',2,'none',0,data_show='out.test')+text(33,174,'TEST',10,INK,800),
+b+=g(rect(47,77,6,24,'#ffffff',2,'none',0)+circ(50,98,7,'#164f96','none',0),data_rotate='out.ajusteRel:0:1:-150:150:50:98')
+b+=f'<text x="160" y="82" font-size="13" font-weight="900" fill="{INK}" text-anchor="middle" data-show="!out.tripped" data-text="out.ajusteTxt">3,2 A (2,5-4)</text>'
+b+=tag(160,77,'DISPARÓ',ON,show='out.tripped',size=11)
+b+=g(rect(114,90,92,20,'#ff9d00',3,OL,1.4)+text(160,104,'FALTA DE FASE',10,'#2b1a00',900),data_show='out.faltaFase')
+b+=g(rect(16,134,34,20,'#f7f8f9',3,OL,1.8)+rect(19,137,12,14,'#2a2e33',2,'none',0)+rect(33,137,14,14,'#ffb000',2,'none',0,data_show='out.test')+text(33,168,'TEST',10,INK,800),
      data_action='test',data_kind='momentary',style='cursor:pointer')
-b+=g(rect(86,136,28,28,'#e3262b',3,OL,2)+rect(86,136,28,28,'#000','none',0,opacity='.3',data_show='out.stop')+text(100,178,'STOP',10,INK,800),data_action='stop',data_kind='momentary',style='cursor:pointer')
-rs=circ(156,150,14,BLUE,OL,2)+g(rect(154,139,4,22,'#fff',1,'none',0),data_show='param.rearme=manual (H)',transform='rotate(-30 156 150)')+g(rect(154,139,4,22,'#fff',1,'none',0),data_show='param.rearme=automático (A)',transform='rotate(30 156 150)')
-rs+=circ(156,150,18,'none','#ffb000',3.5,data_show='out.tripped')+text(156,178,'RESET',10,INK,800)+text(134,134,'H',10,MUT,800)+text(178,134,'A',10,MUT,800)
+b+=g(rect(106,130,28,28,'#e3262b',3,OL,2)+rect(106,130,28,28,'#000','none',0,opacity='.3',data_show='out.stop')+text(120,172,'STOP',10,INK,800),data_action='stop',data_kind='momentary',style='cursor:pointer')
+rs=circ(196,144,14,BLUE,OL,2)+g(rect(194,133,4,22,'#fff',1,'none',0),data_show='param.rearme=manual (H)',transform='rotate(-30 196 144)')+g(rect(194,133,4,22,'#fff',1,'none',0),data_show='param.rearme=automático (A)',transform='rotate(30 196 144)')
+rs+=circ(196,144,18,'none','#ffb000',3.5,data_show='out.tripped')+text(196,172,'RESET',10,INK,800)+text(174,128,'H',10,MUT,800)+text(218,128,'A',10,MUT,800)
 b+=g(rs,data_action='reset',data_kind='momentary',style='cursor:pointer')
-b+=rect(4,182,192,96,HOOD,0,OL,2)
-for t,x in [('98',20),('97',80),('96',120),('95',180)]:
-    b+=T(t,x,194,10,side='b')+lab(x,220,t,12)
-b+=text(50,198,'NO',9,MUT,800)+text(150,198,'NC',9,MUT,800)
-for t,x,l in [('2',40,'2/T1'),('4',100,'4/T2'),('6',160,'6/T3')]:
-    b+=T(t,x,240,side='b')+lab(x,272,l,13)
-svg('overload-relay',200,280,b)
+b+=rect(1.5,180,W-3,118.5,HOOD,0,OL,2)
+# auxiliares entre los polos: sus cables pasan entre los tornillos de fuerza
+for t,x in [('97',60),('98',100),('95',140),('96',180)]:
+    b+=lab(x,198,t,11)+T(t,x,214,10,side='b')
+b+=text(80,218,'NO',9,MUT,800)+text(160,218,'NC',9,MUT,800)
+for t,x,l in [('2',40,'2/T1'),('4',120,'4/T2'),('6',200,'6/T3')]:
+    b+=lab(x,248,l,16)+T(t,x,272,side='b')
+svg('overload-relay',W,300,b)
 
-# ---------------- guardamotor 240 x 360 (45 mm + bloque auxiliar lateral)
-b=rect(2,2,176,356,BODY,4,OL,3)+rect(182,30,56,300,BODY,4,OL,3)
-b+=rect(2,2,176,64,HOOD,4,OL,2)+rect(2,294,176,64,HOOD,4,OL,2)
-for t,x,l in [('1',40,'1/L1'),('3',80,'3/L2'),('5',120,'5/L3')]: b+=T(t,x,28)+lab(x,58,l,13)
-for t,x,l in [('2',40,'2/T1'),('4',80,'4/T2'),('6',120,'6/T3')]: b+=T(t,x,330,side='b')+lab(x,310,l,13)
-b+=rect(182,30,56,62,HOOD,4,OL,2)+rect(182,268,56,62,HOOD,4,OL,2)
-for t,x in [('13',200),('21',220)]: b+=T(t,x,52,8.5)+lab(x,82,t,10)
-for t,x in [('14',200),('22',220)]: b+=T(t,x,308,8.5,side='b')+lab(x,284,t,10)
-b+=text(210,170,'NO',10,MUT,800)+text(210,184,'NC',10,MUT,800)
-b+=brand(2,70,176,'guardamotor')
-b+=circ(132,126,24,BLUE,OL,2.4)
+# ---------------- guardamotor 320 x 360 (tres polos de 80 px + bloque auxiliar lateral de 80 px)
+b=rect(1.5,1.5,237,357,BODY,3,OL,3)+rect(241.5,1.5,77,357,BODY,3,OL,3)
+b+=rect(1.5,1.5,237,86,HOOD,3,OL,2)+rect(1.5,272,237,86.5,HOOD,3,OL,2)
+for t,x,l in [('1',40,'1/L1'),('3',120,'3/L2'),('5',200,'5/L3')]: b+=T(t,x,32)+lab(x,72,l,16)
+for t,x,l in [('2',40,'2/T1'),('4',120,'4/T2'),('6',200,'6/T3')]: b+=T(t,x,328,side='b')+lab(x,298,l,16)
+b+=rect(241.5,1.5,77,86,HOOD,3,OL,2)+rect(241.5,272,77,86.5,HOOD,3,OL,2)
+for t,x in [('13',260),('21',300)]: b+=T(t,x,32,8.5)+lab(x,64,t,11)
+for t,x in [('14',260),('22',300)]: b+=T(t,x,328,8.5,side='b')+lab(x,300,t,11)
+b+=text(280,170,'NO',10,MUT,800)+text(280,186,'NC',10,MUT,800)
+b+=brand(1.5,88,237,'guardamotor')
+b+=circ(196,146,24,BLUE,OL,2.4)
 for i in range(7):
-    ang=-120+40*i; x1=132+27*math.sin(math.radians(ang)); y1=126-27*math.cos(math.radians(ang)); x2=132+32*math.sin(math.radians(ang)); y2=126-32*math.cos(math.radians(ang))
+    ang=-120+40*i; x1=196+27*math.sin(math.radians(ang)); y1=146-27*math.cos(math.radians(ang)); x2=196+32*math.sin(math.radians(ang)); y2=146-32*math.cos(math.radians(ang))
     b+=path(f'M{x1:.1f} {y1:.1f} L{x2:.1f} {y2:.1f}',stroke=INK,sw=1.8)
-b+=g(rect(129,104,6,24,'#fff',2,'none',0)+circ(132,126,7,'#164f96','none',0),data_rotate='out.ajusteRel:0:1:-120:120:132:126')
-b+=f'<text x="132" y="172" font-size="12" font-weight="900" fill="{INK}" text-anchor="middle" data-text="out.ajusteTxt">3,2 A (2,5-4)</text>'
-b+=g(rect(18,112,46,26,'#f7f8f9',3,OL,1.8)+text(41,130,'TEST',11,INK,900),data_action='test',data_kind='momentary',style='cursor:pointer')
-b+=text(40,214,'O',16,INK,900)+text(90,194,'TRIP',11,'#d97a00',900)+text(140,214,'I',16,INK,900)
-b+=circ(90,246,40,'#2b3036',OL,2.4)
-b+=g(g(rect(80,198,20,96,BLK,6,OL,2)+rect(86,204,8,30,'#ffffff',2,'none',0),data_rotate='out.knob:0:1:-60:60:90:246'),data_action='knob',data_kind='toggle',style='cursor:pointer')
-b+=tag(132,282,'DISPARADO',ON,show='out.tripped',size=11)
-svg('motor-protector',240,360,b)
+b+=g(rect(193,124,6,24,'#fff',2,'none',0)+circ(196,146,7,'#164f96','none',0),data_rotate='out.ajusteRel:0:1:-120:120:196:146')
+b+=f'<text x="196" y="192" font-size="12" font-weight="900" fill="{INK}" text-anchor="middle" data-text="out.ajusteTxt">3,2 A (2,5-4)</text>'
+b+=g(rect(16,124,46,26,'#f7f8f9',3,OL,1.8)+text(39,142,'TEST',11,INK,900),data_action='test',data_kind='momentary',style='cursor:pointer')
+b+=text(66,212,'O',16,INK,900)+text(110,174,'TRIP',11,'#d97a00',900)+text(154,212,'I',16,INK,900)
+b+=circ(110,228,36,'#2b3036',OL,2.4)
+b+=g(g(rect(100,186,20,86,BLK,6,OL,2)+rect(106,192,8,28,'#ffffff',2,'none',0),data_rotate='out.knob:0:1:-60:60:110:228'),data_action='knob',data_kind='toggle',style='cursor:pointer')
+b+=tag(196,240,'DISPARADO',ON,show='out.tripped',size=11)
+svg('motor-protector',320,360,b)
 
 # ---------------- utilidades del resto del tablero
 LED_OFF='#3d434b'; GREEN='#22d33a'; AMB='#ffae00'; LCD='#0c1a10'; LCDT='#7dff5a'
@@ -186,103 +194,102 @@ def psu(name,W,H,top,bot,bot_y,watts,kind):
         while y<y1: b+=rect(22,y,W-44,6,'#9aa2ab',3,'none',0); y+=14
     b+=tag(W/2,166,'SOBRECARGA',ON,show='tripped',size=11)
     svg(name,W,H,b)
-psu('power-24vdc__mdr60',180,360,[('+V1',40),('+V2',60),('-V1',80),('-V2',100),('DCOK1',120),('DCOK2',140)],[('PE',60),('N',80),('L',100)],340,'60 W','mdr')
-psu('power-24vdc__hdr60',220,360,[('-V1',80),('-V2',100),('+V1',120),('+V2',140)],[('N',100),('L',120)],338,'60 W','hdr')
-psu('power-24vdc__ndr120',160,500,[('-V1',40),('-V2',60),('+V1',80),('+V2',100)],[('PE',60),('N',80),('L',100)],477,'120 W','ndr')
+psu('power-24vdc__mdr60',160,360,[('+V1',40),('+V2',60),('-V1',80),('-V2',100),('DCOK1',120),('DCOK2',140)],[('PE',60),('N',80),('L',100)],340,'60 W','mdr')
+psu('power-24vdc__hdr60',200,360,[('-V1',80),('-V2',100),('+V1',120),('+V2',140)],[('N',100),('L',120)],338,'60 W','hdr')
+psu('power-24vdc__ndr120',160,360,[('-V1',40),('-V2',60),('+V1',80),('+V2',100)],[('PE',60),('N',80),('L',100)],338,'120 W','ndr')
 
-# ---------------- relés modulares 120 x 380 (temporizador y nivel)
+# ---------------- relés modulares 120 x 360 (temporizador y nivel)
 def relay_base(top,bot,datum):
-    b=rect(1.5,1.5,117,377,BODY,3,OL,3)+hood(1.5,1.5,117,56)+hood(1.5,322,117,56.5)
+    b=rect(1.5,1.5,117,357,BODY,3,OL,3)+hood(1.5,1.5,117,56)+hood(1.5,302,117,56.5)
     for t,x in top: b+=T(t,x,22,8.5)+lab(x,50,t,10.5)
-    for t,x in bot: b+=T(t,x,358,8.5,side='b')+lab(x,338,t,10.5)
+    for t,x in bot: b+=T(t,x,338,8.5,side='b')+lab(x,318,t,10.5)
     b+=brand(1.5,60,117,datum)
     b+=led(22,98,'out.energized')+text(32,102.5,'U',12,INK,900,'start')
     b+=led(72,98,'out.closed',AMB)+text(82,102.5,'R',12,INK,900,'start')
     return b
 b=relay_base([('A1',20),('15',60),('25',100)],[('A2',20),('16',40),('18',60),('26',80),('28',100)],'tempor.')
 b+=dtext(60,126,'param.mode','retardo a la conexión',9.5,INK,800)
-b+=circ(60,196,44,'#fbfbfc',OL,2.4)
+b+=circ(60,186,44,'#fbfbfc',OL,2.4)
 for i in range(11):
     ang=-135+27*i; r2=40 if i%5 else 36
-    x1=60+30*math.sin(math.radians(ang)); y1=196-30*math.cos(math.radians(ang)); x2=60+r2*math.sin(math.radians(ang))*1.1; y2=196-r2*math.cos(math.radians(ang))*1.1
+    x1=60+30*math.sin(math.radians(ang)); y1=186-30*math.cos(math.radians(ang)); x2=60+r2*math.sin(math.radians(ang))*1.1; y2=186-r2*math.cos(math.radians(ang))*1.1
     b+=path(f'M{x1:.1f} {y1:.1f} L{x2:.1f} {y2:.1f}',stroke=INK,sw=2 if i%5==0 else 1.4)
-b+=g(path('M60 196 L60 162',stroke='#3f9a4c',sw=4,stroke_linecap='round')+circ(60,196,7,'#2a2e33',OL,1.6),data_rotate='out.progress:0:1:-135:135:60:196')
-b+=dtext(60,266,'out.timeTxt','5 s',18)
-b+=dtext(60,286,'param.coil','24VDC',11,MUT,800)
-b+=text(60,310,'15-18 · 25-28 NA',9,MUT,800)
-svg('timer-relay',120,380,b)
+b+=g(path('M60 186 L60 152',stroke='#3f9a4c',sw=4,stroke_linecap='round')+circ(60,186,7,'#2a2e33',OL,1.6),data_rotate='out.progress:0:1:-135:135:60:186')
+b+=dtext(60,252,'out.timeTxt','5 s',18)
+b+=dtext(60,270,'param.coil','24VDC',11,MUT,800)
+b+=text(60,290,'15-18 · 25-28 NA',9,MUT,800)
+svg('timer-relay',120,360,b)
 
 b=relay_base([('A1',20),('E1',60),('E2',100)],[('A2',20),('E3',40),('11',60),('12',80),('14',100)],'nivel')
 b+=dtext(60,128,'param.modo','llenado',12,INK,900)
-b+=rect(22,140,76,112,'#fbfbfc',3,OL,2.4)+text(60,266,'E1 · E2 · E3',10,MUT,800)
-b+=g(rect(24,158,72,92,'#2f8ee0',0,'none',0),data_show='out.nivel=alto')
-b+=g(rect(24,198,72,52,'#2f8ee0',0,'none',0),data_show='out.nivel=medio')
-b+=g(rect(24,232,72,18,'#2f8ee0',0,'none',0),data_show='out.nivel=bajo')
-for x,y2,l in [(40,176,'E1'),(60,212,'E2'),(80,242,'E3')]:
+b+=rect(22,140,76,96,'#fbfbfc',3,OL,2.4)+text(60,250,'E1 · E2 · E3',10,MUT,800)
+b+=g(rect(24,154,72,80,'#2f8ee0',0,'none',0),data_show='out.nivel=alto')
+b+=g(rect(24,188,72,46,'#2f8ee0',0,'none',0),data_show='out.nivel=medio')
+b+=g(rect(24,218,72,16,'#2f8ee0',0,'none',0),data_show='out.nivel=bajo')
+for x,y2,l in [(40,168,'E1'),(60,200,'E2'),(80,226,'E3')]:
     b+=path(f'M{x} 136 V{y2}',stroke=INK,sw=3)
-b+=dtext(60,282,'param.coil','24VDC',11,MUT,800)
-b+=text(60,306,'11-14 NA · 11-12 NC',9,MUT,800)
-svg('level-relay',120,380,b)
+b+=dtext(60,268,'param.coil','24VDC',11,MUT,800)
+b+=text(60,288,'11-14 NA · 11-12 NC',9,MUT,800)
+svg('level-relay',120,360,b)
 
-# ---------------- relé de estado sólido 180 x 260 (cuerpo negro, placa blanca)
-b=rect(8,4,164,252,'#2b2f35',4,OL,3)
-b+=hood(8,4,164,60,'#41474f')+hood(8,196,164,60,'#41474f')
+# ---------------- relé de estado sólido 160 x 240 (cuerpo negro, placa blanca)
+b=rect(1.5,1.5,157,237,'#2b2f35',3,OL,3)
+b+=hood(1.5,1.5,157,60,'#41474f')+hood(1.5,178,157,60.5,'#41474f')
 WT='#f1f3f5'
-b+=T('1',40,30)+text(40,58,'1 ~',12,WT,900)+T('2',140,30)+text(140,58,'2 ~',12,WT,900)
-b+=T('3',40,230,side='b')+text(40,210,'3 +',12,WT,900)+T('4',140,230,side='b')+text(140,210,'4 −',12,WT,900)
-b+=brand(8,66,164,'40 A')
-b+=rect(30,96,120,72,'#f4f5f7',3,OL,2)+text(90,114,'CARGA 24-380 VAC',10,INK,900)
-b+=path('M62 138 H80 M80 128 V148 M80 138 L96 128 V148 Z M96 138 H118',stroke=INK,sw=2,stroke_linejoin='round')
-b+=text(90,162,'opto · cruce por cero',8.5,MUT,800)
-b+=led(64,182,'out.input','#ff3b30')+text(76,186.5,'IN 3-32 VDC',10,WT,800,'start')
-svg('ssr',180,260,b)
+b+=T('1',40,28)+text(40,54,'1 ~',12,WT,900)+T('2',120,28)+text(120,54,'2 ~',12,WT,900)
+b+=T('3',40,212,side='b')+text(40,192,'3 +',12,WT,900)+T('4',120,212,side='b')+text(120,192,'4 −',12,WT,900)
+b+=brand(1.5,64,157,'40 A')
+b+=rect(20,92,120,66,'#f4f5f7',3,OL,2)+text(80,108,'CARGA 24-380 VAC',9.5,INK,900)
+b+=path('M52 130 H70 M70 120 V140 M70 130 L86 120 V140 Z M86 130 H108',stroke=INK,sw=2,stroke_linejoin='round')
+b+=text(80,152,'opto · cruce por cero',8.5,MUT,800)
+b+=led(48,168,'out.input','#ff3b30')+text(60,172.5,'IN 3-32 VDC',10,WT,800,'start')
+svg('ssr',160,240,b)
 
-# ---------------- E/S remotas 8DI/8DO (280 x 300)
-b=rect(1.5,1.5,277,297,BODY,3,OL,3)+hood(1.5,1.5,277,52)+hood(1.5,246,277,52.5)
+# ---------------- E/S remotas 8DI/8DO (280 x 360)
+b=rect(1.5,1.5,277,357,BODY,3,OL,3)+hood(1.5,1.5,277,52)+hood(1.5,306,277,52.5)
 for t,x in [('+',20),('-',40),('A',60),('B',80),('DC',100)]+[(f'DI{i}',100+20*i) for i in range(1,9)]:
     b+=T(t,x,20,8.5)+lab(x,46,t.replace('DI','') if t.startswith('DI') else {'-':'−'}.get(t,t),10)
 for t,x in [('C1',40)]+[(f'DO{i}',40+20*i) for i in range(1,5)]+[('C2',140)]+[(f'DO{i}',80+20*i) for i in range(5,9)]:
-    b+=T(t,x,280,8.5,side='b')+lab(x,260,t.replace('DO','') if t.startswith('DO') else t,10)
+    b+=T(t,x,340,8.5,side='b')+lab(x,320,t.replace('DO','') if t.startswith('DO') else t,10)
 b+=brand(1.5,56,277,'E/S 8DI · 8DO')
 b+=led(24,96,'out.powered')+text(36,100.5,'PWR',11,INK,900,'start')
 b+=text(198,100.5,'dir.',11,MUT,800,'end')+rect(204,84,50,24,LCD,3,OL,2)+mono(229,102,'3',15,LCDT,expr='param.address',w=800)
-b+=rect(14,116,252,124,'#f7f8f9',3,OL,2)
+b+=rect(14,120,252,170,'#f7f8f9',3,OL,2)
 for i in range(1,9):
     x=30+(i-1)*30
-    b+=led(x,138,f'out.di{i}')+text(x,158,f'I{i}',10,INK,900)
-    b+=led(x,184,f'out.do{i}',AMB)+text(x,204,f'Q{i}',10,INK,900)
-b+=text(140,228,'RS-485 · Modbus RTU',10,MUT,800)
-svg('remote-io',280,300,b)
+    b+=led(x,146,f'out.di{i}')+text(x,168,f'I{i}',10,INK,900)
+    b+=led(x,212,f'out.do{i}',AMB)+text(x,234,f'Q{i}',10,INK,900)
+b+=text(140,272,'RS-485 · Modbus RTU',10,MUT,800)
+svg('remote-io',280,360,b)
 
-# ---------------- medidor de energía con TC (240 x 260)
-b=rect(1.5,30,237,228.5,BODY,3,OL,3)+hood(1.5,198,237,60.5)
-b+=T('CT1',40,14,8)+T('CT2',200,14,8)
-b+=path('M40 22 V44 Q40 52 48 52 H96 M200 22 V44 Q200 52 192 52 H144',stroke='#2a2e33',sw=4)
-b+=circ(120,52,24,'#2b3036',OL,2.4)+circ(120,52,12,BODY,OL,2)+text(120,92-12,'',1)
-b+=lab(64,40,'CT1',10)+lab(176,40,'CT2',10)
-b+=brand(1.5,82,237,'medidor RS-485')
-b+=rect(18,112,204,66,LCD,4,OL,2.4)
-b+=g(circ(208,122,3.5,LCDT,'none',0),data_show='out.powered')
-b+=mono(120,138,'sin tensión',13,LCDT,expr='out.lectura')
-b+=mono(120,166,'0,000 kWh',18,LCDT,expr='out.kwh:d3:kWh',w=800)
-b+=text(120,192,'fase por el TC',10,MUT,800)
-for t,x in [('L',40),('N',80),('A',160),('B',200)]: b+=T(t,x,234,12,side='b')+lab(x,214,t,12)
-svg('energy-meter',240,260,b)
+# ---------------- medidor de energía con TC (240 x 360)
+b=rect(1.5,1.5,237,357,BODY,3,OL,3)+hood(1.5,1.5,237,86)+hood(1.5,272,237,86.5)
+b+=T('CT1',40,32,10)+T('CT2',200,32,10)+lab(40,72,'CT1',12)+lab(200,72,'CT2',12)
+b+=path('M60 32 Q96 32 96 50 M180 32 Q144 32 144 50',stroke='#2a2e33',sw=4)
+b+=circ(120,48,22,'#2b3036',OL,2.4)+circ(120,48,11,BODY,OL,2)
+b+=brand(1.5,88,237,'medidor RS-485')
+b+=rect(18,128,204,80,LCD,4,OL,2.4)
+b+=g(circ(208,138,3.5,LCDT,'none',0),data_show='out.powered')
+b+=mono(120,158,'sin tensión',13,LCDT,expr='out.lectura')
+b+=mono(120,192,'0,000 kWh',18,LCDT,expr='out.kwh:d3:kWh',w=800)
+b+=text(120,236,'fase por el TC',10,MUT,800)
+for t,x in [('L',40),('N',80),('A',160),('B',200)]: b+=T(t,x,328,12,side='b')+lab(x,298,t,14)
+svg('energy-meter',240,360,b)
 
-# ---------------- conversor USB a RS-485 (120 x 340)
-b=rect(10,4,100,322,'#2563b0',8,OL,3)
-b+=rect(16,8,88,36,'#2f9a4c',3,OL,2)
-for t,x,l in [('A',40,'A+'),('B',60,'B−'),('GND',80,'GND')]: b+=T(t,x,24,8)+text(x,60,l,10,'#ffffff',900)
-b+=brand(10,66,100,'')
-b+=rect(22,96,76,34,'#1b4a87',3,OL,1.6)+text(60,118,'RS-485',13,'#ffffff',900)
-b+=circ(36,148,4.5,LED_OFF,OL,1.4)+text(46,152,'TX',10,'#e6eefa',900,'start')+circ(76,148,4.5,LED_OFF,OL,1.4)+text(86,152,'RX',10,'#e6eefa',900,'start')
-b+=tag(60,172,'ECO',AMB,show='param.eco',fg='#2b1a00',size=10)
-b+=tag(60,190,'A ⇄ B',ON,show='param.abInvertidos',size=10)
-b+=tag(60,208,'sin 120 Ω',AMB,show='param.sinTerminacion',fg='#2b1a00',size=10)
-b+=rect(22,226,76,40,'#fbfbfc',3,OL,1.6)+text(60,240,'puerto',9,MUT,800)
-b+=dtext(60,258,'param.com','COM20',14)
-b+=rect(34,322,52,18,'#b9c0c8',2,OL,2)+rect(42,327,36,7,'#6f7882',1,'none',0)
-svg('usb-rs485',120,340,b)
+# ---------------- conversor USB a RS-485 (120 x 360)
+b=rect(1.5,1.5,117,357,'#2563b0',6,OL,3)
+b+=rect(8,8,104,40,'#2f9a4c',3,OL,2)
+for t,x,l in [('A',40,'A+'),('B',60,'B−'),('GND',80,'GND')]: b+=T(t,x,28,8)+text(x,64,l,10,'#ffffff',900)
+b+=brand(1.5,72,117,'')
+b+=rect(22,106,76,34,'#1b4a87',3,OL,1.6)+text(60,128,'RS-485',13,'#ffffff',900)
+b+=circ(36,160,4.5,LED_OFF,OL,1.4)+text(46,164,'TX',10,'#e6eefa',900,'start')+circ(76,160,4.5,LED_OFF,OL,1.4)+text(86,164,'RX',10,'#e6eefa',900,'start')
+b+=tag(60,186,'ECO',AMB,show='param.eco',fg='#2b1a00',size=10)
+b+=tag(60,206,'A ⇄ B',ON,show='param.abInvertidos',size=10)
+b+=tag(60,226,'sin 120 Ω',AMB,show='param.sinTerminacion',fg='#2b1a00',size=10)
+b+=rect(22,250,76,44,'#fbfbfc',3,OL,1.6)+text(60,266,'puerto',9,MUT,800)
+b+=dtext(60,286,'param.com','COM20',14)
+b+=rect(34,330,52,22,'#b9c0c8',2,OL,2)+rect(42,336,36,8,'#6f7882',1,'none',0)
+svg('usb-rs485',120,360,b)
 
 # ---------------- controlador de temperatura 48 × 48 (200 x 300)
 b=rect(1.5,1.5,197,297,'#2b2f35',3,OL,3)+hood(1.5,1.5,197,52,'#41474f')+hood(1.5,248,197,50.5,'#41474f')

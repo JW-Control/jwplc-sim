@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E del acople térmico–contactor en el esquema (Electron + Playwright):
 //   SNAP        arrastrar el térmico cerca de su lugar bajo el contactor lo
-//               imanta: queda en (x, y + 280) con mount = contactor
+//               imanta: queda en (x, y + 340) con mount = contactor
 //   FOLLOW      al mover el contactor, el térmico acoplado va con él
 //   RUN         motor por contactor y térmico acoplado, sin cables entre
 //               ellos: al pulsar, el motor arranca y el térmico mide
@@ -85,16 +85,16 @@ await win.screenshot({ path: join(OUT, "01-suelto.png") });
 // SNAP: el térmico se suelta a 12 px de su lugar (100, 40): el imán lo acopla.
 let f = await dev("F");
 let km0 = await dev("KM");
-await drag("F", 150, 42, km0.x - f.x + 12, km0.y + 280 - f.y - 8);
+await drag("F", 150, 42, km0.x - f.x + 12, km0.y + 340 - f.y - 8);
 f = await dev("F");
-criteria.SNAP = { pass: f.mount === "KM" && f.x === km0.x && f.y === km0.y + 280, F: f };
+criteria.SNAP = { pass: f.mount === "KM" && f.x === km0.x && f.y === km0.y + 340, F: f };
 await win.screenshot({ path: join(OUT, "02-acoplado.png") });
 
 // FOLLOW: el contactor se mueve 120 px a la izquierda y el térmico va con él.
 await drag("KM", 100, 160, -120, 0);
 const km = await dev("KM");
 f = await dev("F");
-criteria.FOLLOW = { pass: f.mount === "KM" && f.x === km.x && f.y === km.y + 280, KM: km, F: f };
+criteria.FOLLOW = { pass: f.mount === "KM" && f.x === km.x && f.y === km.y + 340, KM: km, F: f };
 
 // RUN: sin cables entre contactor y térmico, el motor arranca.
 const err = await sc(async () => {

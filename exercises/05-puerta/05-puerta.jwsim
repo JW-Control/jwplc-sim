@@ -68,7 +68,7 @@
           "label": "Abrir",
           "color": "verde"
         },
-        "x": 760,
+        "x": 820,
         "y": 0
       },
       {
@@ -78,7 +78,7 @@
           "label": "Cerrar",
           "color": "verde"
         },
-        "x": 920,
+        "x": 980,
         "y": 0
       },
       {
@@ -88,37 +88,37 @@
           "label": "Parada",
           "color": "rojo"
         },
-        "x": 1100,
+        "x": 1160,
         "y": 0
       },
       {
         "id": "B1",
         "type": "jwsim/limit-switch",
-        "x": 1260,
+        "x": 1320,
         "y": 0
       },
       {
         "id": "B2",
         "type": "jwsim/limit-switch",
-        "x": 1460,
+        "x": 1520,
         "y": 0
       },
       {
         "id": "B3",
         "type": "jwsim/sensor-photoelectric",
-        "x": 1660,
+        "x": 1720,
         "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 1880,
+        "x": 1940,
         "y": 0
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 2100,
+        "x": 2200,
         "y": 0
       },
       {
@@ -128,7 +128,7 @@
           "color": "amarillo",
           "label": "Baliza"
         },
-        "x": 2340,
+        "x": 2440,
         "y": 0
       },
       {

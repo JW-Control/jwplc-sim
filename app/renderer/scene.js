@@ -169,7 +169,7 @@
   // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
   // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
   // hide: bornes del acoplado que quedan dentro del anfitrión (sin cable posible).
-  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 280, hide: ["1", "3", "5"] } };
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 340, hide: ["1", "3", "5"] } };
   const MOUNT_SNAP = 40;
   const baseType = (t) => String(t ?? "").split("/").pop();
   const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;

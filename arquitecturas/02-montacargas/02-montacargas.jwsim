@@ -221,7 +221,7 @@
         "id": "F1",
         "type": "jwsim/overload-relay",
         "x": 640,
-        "y": 840,
+        "y": 900,
         "mount": "KM1"
       },
       {
