@@ -180,6 +180,11 @@ try {
   await win.click('#sd-popover [data-preset="cyl"]');
   await sleep(150);
   const onlyCyl = await t(() => window.JwsimStateDiag.debug());
+  const distinctColors = new Set(onlyCyl.trackColors.map((x) => x.color)).size;
+
+  await win.selectOption("#sd-width", "3.2");
+  await sleep(100);
+  const thickWidth = await t(() => window.JwsimStateDiag.debug().lineWidth);
 
   // Chip directo "Bobinas": un clic activa las 4 bobinas (total 8 pistas), otro clic las oculta (vuelve a 4).
   await win.click('#sd-chips [data-kind-chip="coil"]');
@@ -218,10 +223,15 @@ try {
   const dropTargetActive = await t(() => document.getElementById("state-diag-pane").classList.contains("sd-drop-target"));
   await win.mouse.up();
   await sleep(200);
+  const stylePopOpenOnDrop = await t(() => !document.getElementById("sd-style-pop").hidden);
+  await win.click('#sd-style-pop [data-sw-color="#e11d48"]');
+  await sleep(100);
   const afterDrop = await t(() => {
     const y1Dev = window.jwsimTest.scene.spec().devices.find((d) => d.id === "Y1");
+    const dbg = window.JwsimStateDiag.debug();
     return {
-      visibleIds: window.JwsimStateDiag.debug().visibleIds,
+      visibleIds: dbg.visibleIds,
+      y1Color: dbg.trackColors.find((x) => x.id === "Y1.position")?.color,
       y1X: y1Dev.x,
       y1Y: y1Dev.y,
     };
@@ -235,13 +245,17 @@ try {
   const cleared = await t(() => window.JwsimStateDiag.debug());
   criteria.CONTROLS = {
     ok: onlyCyl.visibleIds.length === 4 &&
+      distinctColors === 4 &&
+      thickWidth === 3.2 &&
       withCoils === 8 &&
       afterCloseX.length === 3 && !afterCloseX.includes("Y1.position") &&
       dropTargetActive &&
+      stylePopOpenOnDrop &&
       afterDrop.visibleIds.includes("Y1.position") &&
+      afterDrop.y1Color === "#e11d48" &&
       afterDrop.y1X === dragPts.x0 && afterDrop.y1Y === dragPts.y0 &&
       frozen === true && cleared.samples === 0 && cleared.frozen === false,
-    onlyCyl: onlyCyl.visibleIds, withCoils, afterCloseX, dropTargetActive, afterDrop, frozen, cleared,
+    onlyCyl: onlyCyl.visibleIds, distinctColors, thickWidth, withCoils, afterCloseX, dropTargetActive, stylePopOpenOnDrop, afterDrop, frozen, cleared,
   };
   log(`CONTROLS ${JSON.stringify(criteria.CONTROLS)}`);
 
