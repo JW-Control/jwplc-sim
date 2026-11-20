@@ -39,6 +39,8 @@ test("detecta colisión 2D, coordenadas fuera de grilla y enlace 3D roto sin lan
         { id: "H1", type: "lamp", x: 10, y: 0 },
         { id: "H2", type: "lamp", x: 20, y: 0 },
         { id: "B1", type: "limit-switch", params: { source: "M99.speed" }, x: 300, y: 0 },
+        { id: "M1", type: "motor", x: 600, y: 0 },
+        { id: "CV1", type: "conveyor", params: { motor: "M1" }, x: 900, y: 0 },
       ],
       wiring: [],
     },
@@ -50,6 +52,7 @@ test("detecta colisión 2D, coordenadas fuera de grilla y enlace 3D roto sin lan
   assert.ok(r.errors.some((e) => e.path.includes("/scene/devices/0") && /20/.test(e.message)));
   assert.ok(r.errors.some((e) => /colis|solap/i.test(e.message)));
   assert.ok(r.errors.some((e) => /M99/.test(e.message)));
+  assert.ok(r.errors.some((e) => e.message.includes('enlace "M1"') && (e.suggestion ?? "").includes("M1.speed")));
 });
 
 test("detecta cortocircuito en t=0 y promueve warnings con --strict", () => {

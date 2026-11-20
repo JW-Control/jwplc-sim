@@ -307,6 +307,18 @@ export function validateSceneProject(project, { fast = false, strict = false, re
         );
         continue;
       }
+      if (dot <= 0 || !outName) {
+        sceneCanRun = false;
+        const targetDef = defById.get(targetId);
+        const outs = targetDef ? outputsOf(targetDef.type) : [];
+        const prefOut = (l.param === "motor" && outs.includes("speed")) ? "speed" : outs[0];
+        err(
+          `/scene/devices/${idx}/params`,
+          `${d.id}: enlace "${src}" debe tener formato "<dispositivo>.<salida>"`,
+          prefOut ? `usa p. ej. "${targetId}.${prefOut}" (salidas: ${outs.join(", ")})` : undefined,
+        );
+        continue;
+      }
       if (outName) {
         const targetDef = defById.get(targetId);
         const outs = targetDef ? outputsOf(targetDef.type) : [];
