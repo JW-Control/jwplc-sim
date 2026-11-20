@@ -238,6 +238,7 @@
       sx: x0 + sym.screws[id][0],
       sy: y0 + sym.screws[id][1],
       up: sym.sides[id] === "t",
+      board: !!sym.board,
       box: { x1: x0, y1: y0, x2: x0 + sym.w, y2: y0 + sym.h },
     };
   }
@@ -370,7 +371,7 @@
   // Geometría de un cable: extremos de cada hilo (lado A y lado B), sus
   // salidas y el tronco (A* sobre la grilla, como un cable más).
   function cableGeometry(c, ctx) {
-    const idx = cableMembers(c.id);
+    const idx = c.idx ?? cableMembers(c.id);
     if (idx.length < 2) return null;
     const ws = idx.map((i) => S.spec.wiring[i]);
     const devA = devOf(ws[0].from);
@@ -524,6 +525,7 @@
 
   function route(w, ctx) {
     if (!plainWire(w)) return null; // en un cable multipolar o como referencia
+    if (S.busWires?.has(w)) return null; // va trenzado con su par (busPairs)
     const a = termPos(w.from);
     const b = termPos(w.to);
     if (!a || !b) return null;
@@ -633,6 +635,75 @@
     return (S.snap?.poles?.[w.from] ?? []).some((m) => m.endsWith("+"));
   }
 
+  // ------------------------------------------------------------ pares de bus (RS-485)
+  // Los hilos A y B de un bus entre los mismos dos equipos se dibujan como un
+  // par trenzado (amarillo y azul, como el del variador): así no se confunden
+  // con L y N. Es solo dibujo; un hilo con puntos de doblez propios queda suelto.
+  const BUS_POL = (t) => (/^(RS485_)?A$|^SG\+$|^D\+$|^485\+$|^TX\+$/.test(t) ? "+" : /^(RS485_)?B$|^SG-$|^D-$|^485-$|^TX-$/.test(t) ? "-" : null);
+  const termOf = (end) => end.slice(end.indexOf(".") + 1);
+  const BUS_COLORS = { "+": "#f2cf1d", "-": "#2f8be0" };
+  function busPairs() {
+    const pos = new Map();
+    const neg = new Map();
+    S.spec.wiring.forEach((w, i) => {
+      if (!plainWire(w) || w.points?.length || devOf(w.from) === devOf(w.to)) return;
+      const pa = BUS_POL(termOf(w.from));
+      const pb = BUS_POL(termOf(w.to));
+      if (!pa || pa !== pb) return;
+      const key = pairOf(w);
+      const m = pa === "+" ? pos : neg;
+      if (!m.has(key)) m.set(key, []);
+      m.get(key).push(i);
+    });
+    const out = [];
+    for (const [key, list] of pos) {
+      const other = neg.get(key) ?? [];
+      list.forEach((i, k) => other[k] !== undefined && out.push({ id: `bus:${i}:${other[k]}`, idx: [i, other[k]] }));
+    }
+    return out;
+  }
+  // Color de un hilo del par: el propio, si el usuario lo eligió.
+  const busColor = (w) => (w.color ? WIRE_COLORS[w.color] : null) ?? BUS_COLORS[BUS_POL(termOf(w.from))] ?? WIRE_COLORS.negro;
+
+  // Recorrido con esquinas redondeadas como lista de puntos cada ~2 px, con
+  // su distancia acumulada y la normal (para trenzar los dos hilos).
+  function sampleTrunk(pts, r = 14, step = 2) {
+    const raw = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [p, q, n] = [pts[i - 1], pts[i], pts[i + 1]];
+      const l1 = Math.hypot(q.x - p.x, q.y - p.y);
+      const l2 = Math.hypot(n.x - q.x, n.y - q.y);
+      const k = Math.min(r, l1 / 2, l2 / 2);
+      const a = { x: q.x - ((q.x - p.x) / l1) * k, y: q.y - ((q.y - p.y) / l1) * k };
+      const b = { x: q.x + ((n.x - q.x) / l2) * k, y: q.y + ((n.y - q.y) / l2) * k };
+      raw.push(a);
+      for (let t = 0.2; t < 1; t += 0.2) raw.push({ x: (1 - t) ** 2 * a.x + 2 * t * (1 - t) * q.x + t * t * b.x, y: (1 - t) ** 2 * a.y + 2 * t * (1 - t) * q.y + t * t * b.y });
+      raw.push(b);
+    }
+    raw.push(pts.at(-1));
+    const out = [];
+    let s = 0;
+    for (let i = 1; i < raw.length; i++) {
+      const [p, q] = [raw[i - 1], raw[i]];
+      const l = Math.hypot(q.x - p.x, q.y - p.y);
+      if (!l) continue;
+      const nx = -(q.y - p.y) / l;
+      const ny = (q.x - p.x) / l;
+      for (let d = out.length ? step - ((s % step) || step) : 0; d < l; d += step) out.push({ x: p.x + ((q.x - p.x) * d) / l, y: p.y + ((q.y - p.y) * d) / l, s: s + d, nx, ny });
+      s += l;
+    }
+    const e = raw.at(-1);
+    const last = out.at(-1) ?? { nx: 0, ny: 0 };
+    out.push({ x: e.x, y: e.y, s, nx: last.nx, ny: last.ny });
+    return out;
+  }
+
+  // Tramo de un borne hasta su tornillo cuando el tornillo queda dentro del
+  // equipo (p. ej. U, V, W del variador): el cable entra hasta la bornera,
+  // como en el equipo real, en vez de quedarse en el borde.
+  const LEAD_MIN = 20;
+  const needsLead = (p) => !!p && !p.board && Math.abs(p.sy - p.y) > LEAD_MIN;
+
   function renderWires() {
     const g = $("scene-wires");
     // Los recorridos se recalculan solo si cambió la geometría (no con cada
@@ -646,6 +717,8 @@
       cablesOf().map((c) => [c.id, c.ref]),
     ]);
     if (S.routeKey !== layout) {
+      S.bus = busPairs();
+      S.busWires = new Set(S.bus.flatMap((b) => b.idx.map((i) => S.spec.wiring[i])));
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
       const affected = (w, i) =>
@@ -656,9 +729,11 @@
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
         ctx.limit = 40000;
         S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
+        S.busGeo = S.bus.map((b) => cableGeometry(b, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w, i) => (affected(w, i) ? route(w, ctx) : S.routes[i]));
       } else {
         S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
+        S.busGeo = S.bus.map((b) => cableGeometry(b, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w) => route(w, ctx));
       }
       S.routeKey = layout;
@@ -804,15 +879,108 @@
       }
       html += `<title>Cable ${esc(geo.id)}: ${n} hilos (${esc(geo.devA)} — ${esc(geo.devB)})${cable.ref ? ", como referencia" : ""}</title></g>`;
     }
+    // Pares de bus: cada hilo sale de su borne en abanico hasta el par, y el
+    // par va trenzado (dos hélices que se cruzan; la de arriba cambia en cada
+    // medio paso, como en el par del variador).
+    const TW_AMP = 3.2;
+    const TW_PER = 22;
+    for (const geo of S.busGeo ?? []) {
+      if (!geo.trunk) continue;
+      const samp = sampleTrunk(geo.trunk);
+      const strands = geo.idx.map((i, k) => {
+        const w = S.spec.wiring[i];
+        const c = busColor(w);
+        const cut = wireCut(w);
+        const live = wireLive(w) && !cut;
+        const sel = S.sel?.kind === "wire" && S.sel.id === i;
+        const sign = k ? -1 : 1;
+        const pts = samp.map((q) => {
+          const o = sign * TW_AMP * Math.sin((2 * Math.PI * q.s) / TW_PER);
+          return { x: q.x + q.nx * o, y: q.y + q.ny * o, s: q.s };
+        });
+        return { i, w, c, cut, live, sel, k, pts };
+      });
+      const attrs = (st, extra = "") =>
+        `class="wire twist${extra}${st.sel ? " selected" : ""}${st.live ? " live" : ""}${st.cut ? " cut" : ""}" data-wire="${st.i}" data-color="${esc(st.w.color ?? (st.k ? "azul" : "amarillo"))}"`;
+      // Abanicos (con el color de su hilo) desde cada borne hasta el par.
+      for (const st of strands) {
+        const [ea, eb] = geo.ends[st.k];
+        const lane = (st.k - 0.5) * 2;
+        const d = roundedPath(fanPath(geo.A[st.k], geo.ba, lane, offset(ea, st.i)), 6) + " " + roundedPath(fanPath(geo.B[st.k], geo.bb, lane, offset(eb, st.i)), 6);
+        html += `<g ${attrs(st)}>${wireBody(d, st.c, st.live)}<title>${esc(st.w.from)} — ${esc(st.w.to)} (par RS-485)</title></g>`;
+      }
+      // Tramos de medio paso: primero los de abajo, después los de arriba.
+      const pieces = (st, over) => {
+        let d = "";
+        let cur = [];
+        const flush = () => {
+          if (cur.length > 1) d += "M" + cur.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(" L") + " ";
+          cur = [];
+        };
+        for (const q of st.pts) {
+          const half = Math.floor(q.s / (TW_PER / 2)) % 2 === st.k;
+          if (half === over) cur.push(q);
+          else if (cur.length) {
+            cur.push(q);
+            flush();
+          }
+        }
+        flush();
+        return d;
+      };
+      for (const over of [false, true])
+        for (const st of strands) {
+          const d = pieces(st, over);
+          if (!d) continue;
+          html +=
+            `<g ${attrs(st, over ? " over" : "")}>` +
+            (over ? "" : `<path class="wire-hit" d="${d}"/>`) +
+            (st.live ? `<path class="wire-glow" d="${d}"/>` : "") +
+            `<path class="wire-outline" d="${d}" stroke="${shade(st.c, 0.45)}"/>` +
+            `<path class="wire-core" d="${d}" stroke="${st.c}"/>` +
+            `<title>${esc(st.w.from)} — ${esc(st.w.to)} (par RS-485)</title></g>`;
+        }
+      // Termocontraíble en cada salida del par.
+      for (const b of [geo.ba, geo.bb]) html += `<rect class="twist-sleeve" x="${b.x - 6}" y="${b.y - 4}" width="12" height="8" rx="2"/>`;
+    }
     // Casquillos: la parte plástica del terminal asoma de la entrada de la
-    // bornera (uno por borne; más ancho si es un puente).
+    // bornera (uno por borne; más ancho si es un puente). Si el tornillo
+    // queda dentro del equipo, el cable sigue hasta él (capa sobre los
+    // equipos) y el casquillo va junto al tornillo.
+    let leads = "";
     for (const [t, list] of byTerm) {
       const p = termPos(t);
       if (!p) continue;
+      if (needsLead(p)) {
+        const dir = p.up ? 1 : -1; // hacia el tornillo
+        const tipEnd = p.sy - dir * 7;
+        const tipStart = tipEnd - dir * 5;
+        const sleeveStart = (dir > 0 ? Math.max : Math.min)(p.y, tipStart - dir * 11);
+        for (const i of list) {
+          const w = S.spec.wiring[i];
+          const x = p.x + offset(t, i);
+          const bus = S.busWires?.has(w);
+          const c = bus ? busColor(w) : WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
+          const cut = wireCut(w);
+          const live = wireLive(w) && !cut;
+          const sel = S.sel?.kind === "wire" && S.sel.id === i;
+          const d = `M${x} ${p.y} L${x} ${sleeveStart}`;
+          const y0 = Math.min(sleeveStart, tipStart);
+          const wd = 9;
+          leads +=
+            `<g class="wire lead${sel ? " selected" : ""}${live ? " live" : ""}${cut ? " cut" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+            (sleeveStart !== p.y ? wireBody(d, c, live) : "") +
+            `<rect class="ferrule" x="${x - wd / 2}" y="${y0}" width="${wd}" height="${Math.abs(tipStart - sleeveStart)}" rx="2" fill="${shade(c, 0.8)}"/>` +
+            `<rect class="ferrule-tip" x="${x - 2}" y="${Math.min(tipStart, tipEnd)}" width="4" height="5" fill="#c9ced5" stroke="#6d737b" stroke-width=".6"/>` +
+            `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`;
+        }
+        continue;
+      }
       const wd = 6 + 5 * list.length;
       const len = 11;
       const y = p.up ? p.y - len : p.y;
-      const c = WIRE_COLORS[wireColorName(S.spec.wiring[list[0]])] ?? WIRE_COLORS.negro;
+      const w0 = S.spec.wiring[list[0]];
+      const c = S.busWires?.has(w0) ? busColor(w0) : WIRE_COLORS[wireColorName(w0)] ?? WIRE_COLORS.negro;
       html += `<rect class="ferrule" x="${p.x - wd / 2}" y="${y}" width="${wd}" height="${len}" rx="2" fill="${shade(c, 0.8)}"/>`;
       html += `<rect class="ferrule-tip" x="${p.x - wd / 2 + 1}" y="${p.up ? p.y - 3 : p.y}" width="${wd - 2}" height="3" fill="#c9ced5"/>`;
     }
@@ -833,6 +1001,10 @@
     if (S.wiresHtml !== html || !g.firstChild) {
       S.wiresHtml = html;
       g.innerHTML = html;
+    }
+    if (S.leadsHtml !== leads) {
+      S.leadsHtml = leads;
+      $("scene-leads").innerHTML = leads;
     }
     if (S.handlesHtml !== handles) {
       S.handlesHtml = handles;
@@ -2622,6 +2794,12 @@
       wire: (a, b) => addWire(a, b),
       act: (id, action, value) => act(id, action, value),
       view3d: () => window.Jwsim3D?.objects() ?? [],
+      // Encuadre: zoom y punto de la escena que queda arriba a la izquierda.
+      camera: (zoom, x, y) => {
+        S.zoom = zoom;
+        S.pan = { x: -x * zoom, y: -y * zoom };
+        commitView();
+      },
       fps3d: () => window.Jwsim3D?.fps() ?? 0,
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
