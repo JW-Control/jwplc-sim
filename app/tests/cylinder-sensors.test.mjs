@@ -17,30 +17,34 @@ test("nextCylinderLetter asigna A, B, C evitando letras ya usadas", () => {
   assert.equal(cs.nextCylinderLetter(spec.devices, "Y2"), "B");
 });
 
-test("buildSensorDevice coloca rodillos invertidos sobre contraccion y extension del embolo", () => {
+test("buildSensorDevice coloca rodillos mas cerca del embolo largo y magneticos sobre la camisa", () => {
   const valve = { id: "Y1", type: "jwsim/solenoid-valve", x: 760, y: 440 };
   const s0 = cs.buildSensorDevice(valve, { id: "A0", kind: "compacto", pos: 0 }, [valve]);
   assert.equal(s0.type, "jwsim/limit-switch");
   assert.deepEqual(s0.params, { model: "compacto", orientacion: "abajo", source: "Y1.position", min: 0, max: 0 });
-  assert.equal(s0.x, 1020);
-  assert.equal(s0.y, 220);
+  assert.equal(s0.x, 1040);
+  assert.equal(s0.y, 280);
 
   const s1 = cs.buildSensorDevice(valve, { id: "A1", kind: "compacto", pos: 1 }, [valve, s0]);
-  assert.equal(s1.x, 1140);
-  assert.equal(s1.y, 220);
+  assert.equal(s1.x, 1180);
+  assert.equal(s1.y, 280);
 
   // Marca intermedia 0.5 se apila arriba para no chocar con A0/A1 de 120 px de ancho.
   const sMid = cs.buildSensorDevice(valve, { id: "A2", kind: "XCKJ", pos: 0.5 }, [valve, s0, s1]);
   assert.equal(sMid.type, "jwsim/limit-switch");
   assert.deepEqual(sMid.params, { model: "XCKJ", orientacion: "abajo", source: "Y1.position", min: 0.47, max: 0.53 });
-  assert.equal(sMid.x, 1080);
-  assert.equal(sMid.y, -40);
+  assert.equal(sMid.x, 1120);
+  assert.equal(sMid.y, 20);
 
-  const sMag = cs.buildSensorDevice(valve, { id: "A3", kind: "magnetic", pos: 1 }, [valve, s0]);
-  assert.equal(sMag.type, "jwsim/sensor-cylinder");
-  assert.deepEqual(sMag.params, { cylinder: "Y1", end: "extendido" });
-  assert.equal(sMag.x, 920);
-  assert.equal(sMag.y, 320);
+  // Sensor magnético siempre sobre la camisa del cilindro (x <= bx + 160), nunca encima del émbolo.
+  const sMag0 = cs.buildSensorDevice(valve, { id: "A3", kind: "magnetic", pos: 0 }, [valve, s0]);
+  assert.equal(sMag0.x, 780);
+  assert.equal(sMag0.y, 320);
+  const sMag1 = cs.buildSensorDevice(valve, { id: "A4", kind: "magnetic", pos: 1 }, [valve, s0]);
+  assert.equal(sMag1.type, "jwsim/sensor-cylinder");
+  assert.deepEqual(sMag1.params, { cylinder: "Y1", end: "extendido" });
+  assert.equal(sMag1.x, 920);
+  assert.equal(sMag1.y, 320);
 });
 
 test("sensorsForValve lista ordenados los sensores de la valvula y addStandardPair agrega los extremos faltantes", () => {
@@ -88,7 +92,7 @@ test("updateSensorConfig renombra actualizando cables, cambia posicion y convier
   const s0 = spec.devices.find((d) => d.id === "S0");
   assert.equal(s0.params.min, 0.47);
   assert.equal(s0.params.max, 0.53);
-  assert.equal(s0.x, 1080);
+  assert.equal(s0.x, 1120);
 
   // Cambiar tipo de rodillo (13/14) a magnético (BN/BU/BK) cambia tipo, reubica y limpia cable incompatible.
   const r3 = cs.updateSensorConfig(spec, "Y1", "S0", { kind: "magnetic" });
@@ -96,4 +100,25 @@ test("updateSensorConfig renombra actualizando cables, cambia posicion y convier
   assert.equal(s0.type, "jwsim/sensor-cylinder");
   assert.deepEqual(s0.params, { cylinder: "Y1", end: "extendido" });
   assert.equal(spec.wiring.length, 0);
+});
+
+test("groupedSensorsForValve y linkedValveOf gestionan agrupacion elastica y desacople", () => {
+  assert.equal(cs.GROUP_SNAP_RADIUS, 100);
+  const valve = { id: "Y1", type: "jwsim/solenoid-valve", x: 760, y: 440, params: {} };
+  const s0 = cs.buildSensorDevice(valve, { id: "A0", kind: "compacto", pos: 0 }, [valve]);
+  const s1 = cs.buildSensorDevice(valve, { id: "A1", kind: "compacto", pos: 1 }, [valve, s0]);
+  const detached = cs.buildSensorDevice(valve, { id: "A2", kind: "magnetic", pos: 0 }, [valve, s0, s1]);
+  detached.x += 180;
+  const unrelated = { id: "K1", type: "jwsim/relay", x: 200, y: 200, params: {} };
+  const devices = [valve, s0, s1, detached, unrelated];
+
+  assert.equal(cs.linkedValveOf(devices, s0)?.id, "Y1");
+  assert.equal(cs.linkedValveOf(devices, detached)?.id, "Y1");
+  assert.equal(cs.linkedValveOf(devices, valve), null);
+  assert.equal(cs.linkedValveOf(devices, unrelated), null);
+
+  assert.deepEqual(
+    cs.groupedSensorsForValve(devices, "Y1").map((d) => d.id),
+    ["A0", "A1"],
+  );
 });
