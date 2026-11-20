@@ -164,3 +164,18 @@ test("channelsForDevice resuelve las señales al arrastrar un equipo del esquema
   assert.deepEqual(core.channelsForDevice(meta, "A0", active), ["A0.actuated"]);
   assert.deepEqual(core.channelsForDevice(meta, "FR1", active), ["FR1.pressure"]);
 });
+
+test("extractChannels asigna cylIndex por cilindro y respeta params.label en shortLabel", () => {
+  const res = core.extractChannels({
+    devices: [
+      { id: "Y1", type: "jwsim/solenoid-valve", params: {} },
+      { id: "Y2", type: "jwsim/solenoid-valve-2", params: { label: "Prensa" } },
+    ],
+  });
+  const cyls = res.channels.filter((c) => c.kind === "cyl");
+  assert.equal(cyls.length, 2);
+  assert.equal(cyls[0].cylIndex, 0);
+  assert.equal(cyls[0].shortLabel, "Y1");
+  assert.equal(cyls[1].cylIndex, 1);
+  assert.equal(cyls[1].shortLabel, "Prensa");
+});
