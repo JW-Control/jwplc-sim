@@ -4167,10 +4167,84 @@ body.dock-collapsed #btn-dock-toggle {
   border-radius: 2px;
   flex: none;
 }
+.sd-dot-btn {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  flex: none;
+  cursor: pointer;
+}
+.sd-dot-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--text);
+}
 .sd-dot.cyl { background: var(--accent); }
 .sd-dot.coil { background: var(--warn); }
 .sd-dot.sensor { background: var(--ok); }
 .sd-dot.pressure { background: #55aef0; }
+.sd-style-pop {
+  position: absolute;
+  left: 102px;
+  top: 12px;
+  z-index: 25;
+  width: 220px;
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px var(--shadow);
+  font-size: 11.5px;
+}
+.sd-style-pop[hidden] {
+  display: none;
+}
+.sd-style-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.sd-style-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.sd-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sd-sw {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+}
+.sd-sw.on {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--panel-2) inset;
+}
+.sd-sw-pick {
+  width: 22px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+.sd-style-widths button {
+  padding: 2px 5px;
+  font-size: 11px;
+}
 .sd-pop-empty {
   color: var(--muted);
   font-size: 12px;
@@ -4285,31 +4359,52 @@ body.dock-collapsed #btn-dock-toggle {
   font-size: 11px;
 }
 
-/* ---------------- configurador de finales de carrera en cilindro (scene.js) */
+/* ---------------- configurador compacto y sin scroll en cilindro (scene.js) */
+.cyl-insp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 8px;
+  margin-bottom: 4px;
+}
+.cyl-insp-grid .insp-field {
+  margin: 0;
+}
+.cyl-insp-grid .insp-lbl {
+  margin-bottom: 2px;
+  font-size: 10.5px;
+}
+.cyl-insp-grid input,
+.cyl-insp-grid select {
+  width: 100%;
+  min-width: 0;
+  padding: 3px 5px;
+  font-size: 11.5px;
+}
 .cyl-fc-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin: 6px 0 10px;
+  margin: 4px 0 6px;
 }
 .cyl-fc-actions button {
   justify-content: center;
   text-align: center;
+  padding: 3px 6px;
 }
 .cyl-fc-table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  margin: 4px 0 8px;
+  margin: 2px 0;
   font-size: 11.5px;
 }
 .cyl-fc-table th:nth-child(1),
 .cyl-fc-table td:nth-child(1) {
-  width: 48px;
+  width: 46px;
 }
 .cyl-fc-table th:nth-child(2),
 .cyl-fc-table td:nth-child(2) {
-  width: 54px;
+  width: 50px;
 }
 .cyl-fc-table th:nth-child(4),
 .cyl-fc-table td:nth-child(4) {
@@ -4321,21 +4416,21 @@ body.dock-collapsed #btn-dock-toggle {
   color: var(--muted);
   font-weight: 600;
   font-size: 10.5px;
-  padding: 3px 4px 5px;
+  padding: 2px 3px 3px;
   border-bottom: 1px solid var(--border);
 }
 .cyl-fc-table tbody tr + tr td {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 .cyl-fc-table td {
-  padding: 5px 3px;
+  padding: 3px 2px;
   vertical-align: middle;
 }
 .cyl-fc-table input,
 .cyl-fc-table select {
   width: 100%;
   min-width: 0;
-  padding: 3px 5px;
+  padding: 2px 4px;
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
@@ -4351,10 +4446,19 @@ body.dock-collapsed #btn-dock-toggle {
   text-align: center;
 }
 .cyl-fc-err {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   color: var(--err);
   font-size: 11px;
 }
 .cyl-fc-err[hidden] {
   display: none;
+}
+.dev-cyl-tag {
+  font: 700 11px/1 "Cascadia Code", Consolas, monospace;
+  fill: var(--accent);
+  paint-order: stroke;
+  stroke: var(--surface-scene);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
