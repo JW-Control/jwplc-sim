@@ -122,3 +122,34 @@ test("groupedSensorsForValve y linkedValveOf gestionan agrupacion elastica y des
     ["A0", "A1"],
   );
 });
+
+test("applyKindToValve convierte todos los sensores ya colocados al nuevo tipo sin borrarlos", () => {
+  const spec = {
+    devices: [{ id: "Y1", type: "jwsim/solenoid-valve", x: 600, y: 440, params: {} }],
+    wiring: [],
+  };
+  cs.addStandardPair(spec, "Y1", "compacto");
+  assert.deepEqual(
+    cs.sensorsForValve(spec.devices, "Y1").map((s) => s.kind),
+    ["compacto", "compacto"],
+  );
+
+  // Cambiar todo el cilindro a XCKJ conserva IDs/posiciones y reubica a altura XCKJ.
+  const rXckj = cs.applyKindToValve(spec, "Y1", "XCKJ");
+  assert.equal(rXckj.ok, true);
+  assert.deepEqual(
+    cs.sensorsForValve(spec.devices, "Y1").map((s) => [s.id, s.kind, s.pos]),
+    [["A0", "XCKJ", 0], ["A1", "XCKJ", 1]],
+  );
+  assert.equal(spec.devices.find((d) => d.id === "A0").y, 240);
+
+  // Cambiar a magnético convierte ambos a sensor-cylinder sobre la camisa.
+  const rMag = cs.applyKindToValve(spec, "Y1", "magnetic");
+  assert.equal(rMag.ok, true);
+  assert.deepEqual(
+    cs.sensorsForValve(spec.devices, "Y1").map((s) => [s.id, s.kind, s.pos]),
+    [["A0", "magnetic", 0], ["A1", "magnetic", 1]],
+  );
+  assert.equal(spec.devices.find((d) => d.id === "A0").x, 620);
+  assert.equal(spec.devices.find((d) => d.id === "A1").x, 760);
+});
