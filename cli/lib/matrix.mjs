@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
+import { APRENDE, APRENDE_NAME } from "./aprende.mjs";
 import { ROOT } from "./build.mjs";
 import { loadTest, runTest } from "./test.mjs";
 
@@ -24,20 +25,26 @@ function sketchesIn(dir) {
   return out;
 }
 
-// Ejemplos del package: { lib, name, dir, rel (respecto del repo del package) }.
+// Ejemplos del package y de la librería JWPLC_Aprende (el curso):
+// { lib, name, dir, rel (respecto del repo del package o de jwplc-sim), spec (campo sketch de su prueba) }.
 export function packageExamples(pkg) {
   const libs = join(pkg.root, pkg.lock.JWPLC_PACKAGE_TREE, "libraries");
-  return readdirSync(libs)
+  const fromPackage = readdirSync(libs)
     .filter((l) => /^JW/.test(l))
     .sort()
     .flatMap((lib) =>
-      sketchesIn(join(libs, lib, "examples")).map((dir) => ({
-        lib,
-        name: relative(join(libs, lib, "examples"), dir).split(sep).join("/"),
-        dir,
-        rel: relative(pkg.root, dir).split(sep).join("/"),
-      })),
-    );
+      sketchesIn(join(libs, lib, "examples")).map((dir) => {
+        const name = relative(join(libs, lib, "examples"), dir).split(sep).join("/");
+        return { lib, name, dir, rel: relative(pkg.root, dir).split(sep).join("/"), spec: `package:libraries/${lib}/examples/${name}` };
+      }),
+    )
+    // copia vieja del curso (package hasta alpha.17): la prueba es la de JWPLC_Aprende
+    .filter((e) => !e.name.startsWith("Curso_JWPLC_Basic/"));
+  const aprende = sketchesIn(join(APRENDE, "examples")).map((dir) => {
+    const name = relative(join(APRENDE, "examples"), dir).split(sep).join("/");
+    return { lib: APRENDE_NAME, name, dir, rel: relative(ROOT, dir).split(sep).join("/"), spec: `../../../${APRENDE_NAME}/examples/${name}` };
+  });
+  return [...fromPackage, ...aprende];
 }
 
 export const testFileFor = (ex) => join(EXAMPLE_TESTS, ex.lib, `${ex.name.replaceAll("/", "__")}.jwtest.json`);
