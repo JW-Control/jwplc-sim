@@ -45,12 +45,14 @@
     const groups = [];
     const channels = [];
 
+    let cylIdx = 0;
     for (const v of valves) {
       const bi = v.type === "jwsim/solenoid-valve-2";
       const sens = sensorsOf(devices, v.id);
       const letter = sens.map((s) => /^([A-Z])\d$/.exec(s.id)?.[1]).find(Boolean);
-      const shortCyl = letter || (v.params?.label ? String(v.params.label) : v.id);
-      const cylTitle = letter ? `Cilindro ${letter}` : v.params?.label ? String(v.params.label) : `Cilindro ${v.id}`;
+      const customLbl = String(v.params?.label ?? "").trim();
+      const shortCyl = customLbl || letter || v.id;
+      const cylTitle = customLbl ? `${customLbl} (${v.id})` : letter ? `Cilindro ${letter}` : `Cilindro ${v.id}`;
 
       const groupChannels = [];
       const pushCh = (ch) => {
@@ -62,6 +64,7 @@
         id: `${v.id}.position`,
         groupId: v.id,
         kind: "cyl",
+        cylIndex: cylIdx,
         label: `${cylTitle} (${v.id})`,
         shortLabel: shortCyl,
         deviceId: v.id,
@@ -126,7 +129,8 @@
         });
       }
 
-      groups.push({ id: v.id, label: cylTitle, valveType: v.type, channels: groupChannels });
+      groups.push({ id: v.id, label: cylTitle, cylIndex: cylIdx, valveType: v.type, channels: groupChannels });
+      cylIdx++;
     }
 
     const airDevs = devices.filter((d) => d.type === "jwsim/service-unit" || d.type === "jwsim/compressor");
