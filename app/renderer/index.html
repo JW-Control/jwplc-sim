@@ -18,17 +18,14 @@
     <header class="toolbar">
       <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
       <div class="group tb-files">
-        <button id="btn-new" title="Nuevo sketch (Ctrl+N)">Nuevo</button>
-        <button id="btn-open" title="Abrir sketch (Ctrl+O)">Abrir…</button>
-        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
         <button id="btn-projects" title="Proyectos: nuevo proyecto Arduino u OpenPLC, abrir, recientes">Proyectos</button>
+        <button id="btn-save" title="Guardar (Ctrl+S)">Guardar</button>
         <button id="btn-open-editor" title="Programar este proyecto IEC en el OpenPLC Editor" hidden>Abrir en OpenPLC Editor</button>
       </div>
       <span class="tb-sep" aria-hidden="true"></span>
       <div class="group tb-libs">
-        <select id="sel-example" title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">
-          <option value="">Ejemplos…</option>
-        </select>
+        <button id="btn-examples" class="ex-btn" aria-haspopup="menu" aria-expanded="false"
+          title="Abrir un ejemplo del package (se copia a la carpeta de trabajo)">Ejemplos ▾</button>
         <select id="sel-exercise" title="Abrir un ejercicio con su escena, enunciado y calificación (se copia a la carpeta de trabajo)">
           <option value="">Ejercicios…</option>
         </select>
@@ -36,13 +33,10 @@
           <option value="">Arquitecturas…</option>
         </select>
       </div>
-      <span class="tb-sep" aria-hidden="true"></span>
       <div class="group tb-run">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
-        <div class="group tb-run-sec">
-          <button id="btn-pause" class="seg" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
-          <button id="btn-stop" class="seg" title="Detener (Mayús+F5)" disabled>■ Detener</button>
-        </div>
+        <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
+        <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
         <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
           <option value="1">×1</option>
           <option value="10">×10</option>
@@ -390,6 +384,8 @@
         </div>
       </div>
     </section>
+
+    <div id="ex-menu" class="ex-menu" role="menu" aria-label="Ejemplos" hidden></div>
 
     <div id="com-panel" class="com-panel" role="dialog" aria-label="Puerto COM" hidden>
       <label for="com-port">Puerto de la PC</label>

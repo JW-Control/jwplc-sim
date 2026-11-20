@@ -316,7 +316,8 @@
     else if (act === "blank") close();
     else if (act === "open") {
       close();
-      $("btn-open").click();
+      const s = await api.openDialog();
+      if (s) window.loadSketch(s);
     } else if (act === "openJwsim") {
       close();
       window.openProject?.();

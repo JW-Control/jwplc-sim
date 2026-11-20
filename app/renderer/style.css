@@ -216,23 +216,111 @@ select:focus-visible {
 .tb-libs {
   gap: 5px;
 }
+.ex-btn,
 .tb-libs select {
-  padding: 4px 7px;
+  padding: 4px 8px;
   font-size: 12.5px;
   background: var(--panel);
 }
+.ex-btn:hover,
+.ex-btn[aria-expanded="true"],
 .tb-libs select:hover,
 .tb-libs select:focus-visible {
   background: var(--panel-2);
 }
-.tb-run {
-  gap: 6px;
+.ex-btn[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--text-strong);
 }
-.tb-run-sec {
-  gap: 0;
+.ex-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 215px;
+  max-width: 290px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ex-menu[hidden] {
+  display: none;
+}
+.ex-sec {
+  padding: 5px 8px 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  user-select: none;
+}
+.ex-sep {
+  height: 1px;
+  margin: 4px 4px;
+  background: var(--border);
+}
+.ex-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ex-item:hover,
+.ex-item.open,
+.ex-item:focus-visible {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--text-strong);
+}
+.ex-arrow {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ex-item:hover .ex-arrow,
+.ex-item.open .ex-arrow {
+  color: var(--text-strong);
+}
+.tb-run {
+  margin: 0 auto;
+  gap: 5px;
+}
+#btn-run,
+#btn-pause,
+#btn-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  transition: background-color 0.14s, border-color 0.14s, color 0.14s;
 }
 #btn-run {
-  transition: background-color 0.14s, border-color 0.14s, color 0.14s;
+  width: 120px;
+}
+#btn-pause {
+  width: 104px;
+}
+#btn-stop {
+  width: 92px;
+}
+#sel-speed {
+  padding: 4px 6px;
 }
 #btn-run.state-building {
   background: var(--warn-bg-2);
@@ -284,7 +372,7 @@ select:focus-visible {
   color: var(--err-text);
 }
 .tb-right {
-  margin-left: auto;
+  margin-left: 0;
   gap: 6px;
 }
 .theme-btn {
@@ -319,10 +407,9 @@ select:focus-visible {
   border-color: var(--accent);
   color: var(--text-strong);
 }
-#sel-example,
 #sel-exercise,
 #sel-arch {
-  max-width: 124px;
+  max-width: 126px;
 }
 /* Las vistas del panel inferior con display propio (el envío por UART) se
    ocultan igual que las demás. */
@@ -374,17 +461,31 @@ select:focus-visible {
     gap: 4px;
   }
   .tb-files button,
-  .tb-run button,
+  .ex-btn,
   .com-status,
   .theme-btn {
     padding: 4px 7px;
     font-size: 12px;
   }
-  #sel-example,
+  #btn-run,
+  #btn-pause,
+  #btn-stop {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  #btn-run {
+    width: 112px;
+  }
+  #btn-pause {
+    width: 96px;
+  }
+  #btn-stop {
+    width: 84px;
+  }
   #sel-exercise,
   #sel-arch {
-    width: 100px;
-    max-width: 100px;
+    width: 102px;
+    max-width: 102px;
     padding: 4px 5px;
     font-size: 12px;
   }
@@ -394,16 +495,6 @@ select:focus-visible {
   }
   .clock .label {
     display: none;
-  }
-  .workspace {
-    grid-template-columns: var(--code-w, minmax(250px, 1fr)) 6px minmax(280px, 0.95fr);
-  }
-  .workspace.code-w {
-    grid-template-columns: var(--code-w) 6px minmax(260px, 1fr);
-  }
-  .scene-main {
-    --left-col: var(--scene-left-w, 240px);
-    --side-col: var(--scene-side-w, 230px);
   }
 }
 
@@ -419,34 +510,44 @@ select:focus-visible {
     gap: 3px;
   }
   .tb-files button,
-  .tb-run button,
+  .ex-btn,
   .com-status,
   .theme-btn {
+    padding: 3px 6px;
+    font-size: 11.5px;
+  }
+  #btn-run,
+  #btn-pause,
+  #btn-stop {
     padding: 3px 5px;
     font-size: 11.5px;
   }
-  #sel-example,
+  #btn-run {
+    width: 104px;
+  }
+  #btn-pause {
+    width: 90px;
+  }
+  #btn-stop {
+    width: 78px;
+  }
   #sel-exercise,
   #sel-arch {
-    width: 72px;
-    max-width: 72px;
-    padding: 3px 3px;
-    font-size: 11px;
+    width: 80px;
+    max-width: 80px;
+    padding: 3px 4px;
+    font-size: 11.5px;
   }
   #sel-speed {
     padding: 3px 4px;
     font-size: 11.5px;
   }
   .clock {
-    font-size: 11px;
+    font-size: 11.5px;
     padding: 3px 5px;
   }
   .theme-btn .theme-lbl {
     display: none;
-  }
-  .scene-main {
-    --left-col: var(--scene-left-w, 210px);
-    --side-col: var(--scene-side-w, 210px);
   }
 }
 
@@ -1418,23 +1519,14 @@ button.io.on {
 .tabbar #view-note {
   white-space: nowrap;
 }
-/* Barra compacta: con los botones del depurador no entra todo a 1280 px. */
-@media (max-width: 1500px) {
-  .brand > span:last-child {
-    display: none;
+/* Columnas en media pantalla (~960 px): declaradas tras .workspace
+   para no quedar pisadas por las reglas base. */
+@media (max-width: 1320px) {
+  .workspace {
+    grid-template-columns: var(--code-w, minmax(250px, 1fr)) 6px minmax(280px, 0.95fr);
   }
-  #sel-example,
-  #sel-exercise,
-  #sel-arch {
-    max-width: 112px;
-  }
-  .toolbar {
-    gap: 6px;
-  }
-}
-@media (max-width: 1360px) {
-  .theme-btn .theme-lbl {
-    display: none;
+  .workspace.code-w {
+    grid-template-columns: var(--code-w) 6px minmax(260px, 1fr);
   }
 }
 .bus-tools {
@@ -1539,6 +1631,18 @@ button.io.on {
   --side-col: var(--scene-side-w, 340px);
   display: grid;
   grid-template-columns: 36px var(--left-col) var(--left-spl) minmax(0, 1fr) var(--side-spl) var(--side-col) 36px;
+}
+@media (max-width: 1320px) {
+  .scene-main {
+    --left-col: var(--scene-left-w, 250px);
+    --side-col: var(--scene-side-w, 240px);
+  }
+}
+@media (max-width: 1080px) {
+  .scene-main {
+    --left-col: var(--scene-left-w, 210px);
+    --side-col: var(--scene-side-w, 210px);
+  }
 }
 /* Panel lateral izquierdo plegado: queda solo la barra de pestañas izquierda. */
 .scene-main.left-collapsed {

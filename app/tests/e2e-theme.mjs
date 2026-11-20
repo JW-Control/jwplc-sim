@@ -49,11 +49,14 @@ const probe = () =>
     const grid = getComputedStyle(document.getElementById("scene-grid"));
     const mon = getComputedStyle(document.querySelector(".monaco-editor"));
     const mtab = getComputedStyle(document.querySelector(".mtab.active"));
-    const selBg = getComputedStyle(document.getElementById("sel-example")).backgroundColor;
-    const opt = document.querySelector("#sel-example option");
+    const selBg = getComputedStyle(document.getElementById("sel-exercise")).backgroundColor;
+    const opt = document.querySelector("#sel-exercise option");
     const optCs = opt ? getComputedStyle(opt) : null;
-    const btnNew = getComputedStyle(document.getElementById("btn-new"));
+    const btnProj = getComputedStyle(document.getElementById("btn-projects"));
     const statusBox = document.getElementById("status").getBoundingClientRect();
+    const runBox = document.getElementById("btn-run").getBoundingClientRect();
+    const pauseBox = document.getElementById("btn-pause").getBoundingClientRect();
+    const stopBox = document.getElementById("btn-stop").getBoundingClientRect();
     return {
       meta: document.querySelector('meta[name="color-scheme"]')?.content,
       bg: cs.backgroundColor,
@@ -63,10 +66,12 @@ const probe = () =>
       selBg,
       optBg: optCs?.backgroundColor,
       optColor: optCs?.color,
-      btnNewBg: btnNew.backgroundColor,
-      btnNewBorder: btnNew.borderTopColor,
+      btnProjBg: btnProj.backgroundColor,
+      btnNewMissing: !document.getElementById("btn-new") && !document.getElementById("btn-open"),
       statusWidth: statusBox.width,
       btnRunText: document.getElementById("btn-run").textContent,
+      runGap: Math.round(stopBox.left - pauseBox.right),
+      runW: Math.round(runBox.width),
       gridFilter: grid.filter,
       state: window.jwsimTest.getTheme(),
     };
@@ -78,6 +83,14 @@ try {
   await win.waitForTimeout(150);
   const light = await probe();
   await win.screenshot({ path: join(OUT, "01-programa-claro.png") });
+  await win.click("#btn-examples");
+  await win.waitForSelector("#ex-menu:not([hidden])", { timeout: 5000 });
+  await win.hover('#ex-menu [data-group="JWPLC_GlobalPeripherals"]');
+  await win.waitForSelector('.ex-submenu[data-depth="1"]', { timeout: 5000 });
+  await win.hover('.ex-submenu[data-depth="1"] .ex-item.has-sub');
+  await win.waitForSelector('.ex-submenu[data-depth="2"]', { timeout: 5000 });
+  await win.screenshot({ path: join(OUT, "05-ejemplos-desplegable.png") });
+  await win.keyboard.press("Escape");
   criteria.TOGGLE_LIGHT = {
     ok: light.meta === "light" && light.state.dark === false && light.bg === "rgb(245, 247, 250)" && light.monacoBg === "rgb(245, 247, 250)" && light.selBg !== "rgba(0, 0, 0, 0)" && light.optBg === "rgb(255, 255, 255)" && light.gridFilter === "invert(1)" && light.mtabColor !== "rgb(255, 255, 255)",
     light,
@@ -86,9 +99,10 @@ try {
 
   // 2. Esquema eléctrico y Planta 3D en modo claro con proyecto 3D
   await win.waitForSelector(".palette-item", { state: "attached", timeout: 15000 });
+  await win.click('.mtab[data-tab="schematic"]');
+  await win.waitForSelector("#scene-board .dev svg", { state: "attached", timeout: 15000 });
   await win.evaluate((f) => window.jwsimTest.openProjectFile(f), join(ROOT, "tests", "projects", "planta-3d", "planta-3d.jwsim"));
   await win.waitForSelector("#scene-root .dev", { timeout: 15000 });
-  await win.click('.mtab[data-tab="schematic"]');
   await win.waitForTimeout(250);
   const sceneBg = await win.$eval(".scene-main", (e) => getComputedStyle(e).backgroundColor);
   const plcLabelFill = await win.$eval("#scene-board .dev svg text", (e) => getComputedStyle(e).fill);
@@ -135,8 +149,11 @@ try {
       dark.monacoBg === "rgb(20, 23, 27)" &&
       dark.selBg === "rgb(27, 31, 36)" &&
       dark.optBg === "rgb(27, 31, 36)" &&
-      dark.btnNewBg !== "rgba(0, 0, 0, 0)" &&
+      dark.btnProjBg !== "rgba(0, 0, 0, 0)" &&
+      dark.btnNewMissing &&
+      dark.runGap >= 4 &&
       dark.statusWidth <= 1 &&
+      halfScreen.toolbarScrollW <= halfScreen.innerWidth &&
       halfScreen.themeRight <= halfScreen.innerWidth,
     dark,
     halfScreen,

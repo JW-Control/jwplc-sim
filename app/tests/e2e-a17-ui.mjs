@@ -45,12 +45,17 @@ await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForTimeout(1000);
 
 // ---- EXAMPLES_JWPLC
-const groups = await win.$$eval("#sel-example optgroup", (gs) => gs.map((g) => g.label));
-const opts = await win.$$eval("#sel-example option", (os) => os.map((o) => o.textContent));
+await win.click("#btn-examples");
+await win.waitForSelector("#ex-menu:not([hidden])", { timeout: 5000 });
+const groups = await win.$$eval('#ex-menu [data-group]', (gs) => gs.map((g) => g.dataset.group));
+await win.hover('#ex-menu [data-group="JWPLC_GlobalPeripherals"]');
+await win.waitForSelector('.ex-submenu[data-depth="1"]', { timeout: 5000 });
+const subOpts = await win.$$eval('.ex-submenu[data-depth="1"] .ex-item', (os) => os.map((o) => o.textContent.replace("▸", "").trim()));
+await win.keyboard.press("Escape");
 criteria.EXAMPLES_JWPLC = {
-  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && !opts.includes("01_empty"),
+  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && !subOpts.includes("01_empty") && subOpts.includes("Curso_JWPLC_Basic"),
   groups,
-  examples: opts.length - 1,
+  subOpts,
 };
 
 // ---- NO_PACKAGE_TEXT
