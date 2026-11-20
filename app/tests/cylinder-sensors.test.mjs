@@ -17,21 +17,26 @@ test("nextCylinderLetter asigna A, B, C evitando letras ya usadas", () => {
   assert.equal(cs.nextCylinderLetter(spec.devices, "Y2"), "B");
 });
 
-test("buildSensorDevice coloca rodillos e imanes encima del embolo con rangos validos", () => {
+test("buildSensorDevice coloca rodillos invertidos sobre contraccion y extension del embolo", () => {
   const valve = { id: "Y1", type: "jwsim/solenoid-valve", x: 760, y: 440 };
   const s0 = cs.buildSensorDevice(valve, { id: "A0", kind: "compacto", pos: 0 }, [valve]);
   assert.equal(s0.type, "jwsim/limit-switch");
-  assert.deepEqual(s0.params, { model: "compacto", source: "Y1.position", min: 0, max: 0 });
-  assert.equal(s0.x, 960);
+  assert.deepEqual(s0.params, { model: "compacto", orientacion: "abajo", source: "Y1.position", min: 0, max: 0 });
+  assert.equal(s0.x, 1020);
   assert.equal(s0.y, 220);
 
-  const sMid = cs.buildSensorDevice(valve, { id: "A2", kind: "XCKJ", pos: 0.5 }, [valve, s0]);
-  assert.equal(sMid.type, "jwsim/limit-switch");
-  assert.deepEqual(sMid.params, { model: "XCKJ", source: "Y1.position", min: 0.47, max: 0.53 });
-  assert.equal(sMid.x, 1080);
-  assert.equal(sMid.y, 180);
+  const s1 = cs.buildSensorDevice(valve, { id: "A1", kind: "compacto", pos: 1 }, [valve, s0]);
+  assert.equal(s1.x, 1140);
+  assert.equal(s1.y, 220);
 
-  const sMag = cs.buildSensorDevice(valve, { id: "A1", kind: "magnetic", pos: 1 }, [valve, s0]);
+  // Marca intermedia 0.5 se apila arriba para no chocar con A0/A1 de 120 px de ancho.
+  const sMid = cs.buildSensorDevice(valve, { id: "A2", kind: "XCKJ", pos: 0.5 }, [valve, s0, s1]);
+  assert.equal(sMid.type, "jwsim/limit-switch");
+  assert.deepEqual(sMid.params, { model: "XCKJ", orientacion: "abajo", source: "Y1.position", min: 0.47, max: 0.53 });
+  assert.equal(sMid.x, 1080);
+  assert.equal(sMid.y, -40);
+
+  const sMag = cs.buildSensorDevice(valve, { id: "A3", kind: "magnetic", pos: 1 }, [valve, s0]);
   assert.equal(sMag.type, "jwsim/sensor-cylinder");
   assert.deepEqual(sMag.params, { cylinder: "Y1", end: "extendido" });
   assert.equal(sMag.x, 920);
