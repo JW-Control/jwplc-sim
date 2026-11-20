@@ -3963,37 +3963,34 @@ body.dock-collapsed #btn-dock-toggle {
 }
 
 /* ---------------- configurador de finales de carrera en cilindro (scene.js) */
-.cyl-fc-bar {
-  display: flex;
-  flex-wrap: wrap;
+.cyl-fc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  align-items: center;
-  margin-bottom: 8px;
+  margin: 6px 0 10px;
 }
-.cyl-fc-bar select {
-  flex: 1 1 130px;
-  min-width: 0;
-  padding: 3px 6px;
-  font-size: 12px;
+.cyl-fc-actions button {
+  justify-content: center;
+  text-align: center;
 }
 .cyl-fc-table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  margin-bottom: 6px;
+  margin: 4px 0 8px;
   font-size: 11.5px;
 }
 .cyl-fc-table th:nth-child(1),
 .cyl-fc-table td:nth-child(1) {
-  width: 54px;
+  width: 48px;
 }
 .cyl-fc-table th:nth-child(2),
 .cyl-fc-table td:nth-child(2) {
-  width: 58px;
+  width: 54px;
 }
 .cyl-fc-table th:nth-child(4),
 .cyl-fc-table td:nth-child(4) {
-  width: 26px;
+  width: 24px;
   text-align: center;
 }
 .cyl-fc-table th {
@@ -4001,18 +3998,21 @@ body.dock-collapsed #btn-dock-toggle {
   color: var(--muted);
   font-weight: 600;
   font-size: 10.5px;
-  padding: 2px 3px 4px;
+  padding: 3px 4px 5px;
   border-bottom: 1px solid var(--border);
 }
+.cyl-fc-table tbody tr + tr td {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
 .cyl-fc-table td {
-  padding: 4px 3px;
+  padding: 5px 3px;
   vertical-align: middle;
 }
 .cyl-fc-table input,
 .cyl-fc-table select {
   width: 100%;
   min-width: 0;
-  padding: 2px 4px;
+  padding: 3px 5px;
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
@@ -4022,11 +4022,10 @@ body.dock-collapsed #btn-dock-toggle {
 .cyl-fc-id {
   font-family: var(--mono);
   font-weight: 600;
-  width: 54px;
 }
 .cyl-fc-pos {
   font-family: var(--mono);
-  width: 56px;
+  text-align: center;
 }
 .cyl-fc-err {
   margin: 0 0 6px;
