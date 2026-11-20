@@ -624,7 +624,7 @@ function setupPicking(canvas) {
 function fitView() {
   const w = V.extent ?? 4;
   const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
-  const fitW = (w / 2 + 0.8) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
+  const fitW = (w / 2 + 1.2) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
   // Alto: el del equipo más alto (el pozo del montacargas, el edificio).
   const tall = Math.max(2.2, V.height ?? 0);
   const fitH = (tall * 0.75) / Math.tan(halfFov);
