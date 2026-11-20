@@ -17,7 +17,7 @@ Rama creada desde `feature/alpha18-alias-openplc` con `feature/alpha17-parches` 
 ## Último bloque (sin commit al cerrar esta sesión)
 
 - **Tanque `jwsim/tank` 1.1** (`scene/devices/plant.mjs`): balance de volumen con RK4 a paso configurable (`pasoMs`), formas como modelos en la paleta (cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera), descarga por gravedad (Torricelli) por una válvula de la escena. Los proyectos anteriores dan el mismo resultado. Dibujo: la silueta de cada forma y el agua recortada a ella (`scene-symbols.js`). Pruebas contra soluciones analíticas en `scene/tests/tanque.test.mjs`.
-- **Ejercicio 9 · Nivel de una tolva con descarga por gravedad** (`exercises/09-tolva-nivel`): tolva cónica, dos capacitivos, bomba, electroválvula de descarga y selector. La solución saca 20/20; la variante sin histéresis (`tests/grading/e09_sin_histeresis`), 18/20.
+- **Ejercicio 9 · Nivel de una tolva con descarga por gravedad** (`JWPLC_Aprende/extras/retos/09-tolva-nivel`): tolva cónica, dos capacitivos, bomba, electroválvula de descarga y selector. La solución saca 20/20; la variante sin histéresis (`tests/grading/e09_sin_histeresis`), 18/20.
 - **Módulo de E/S remotas por programa**: `tests/plant/io-remotas.jwtest.json` corre el sketch `tests/sketches/io_remotas_modbus` (JWPLC_ModbusRTU: FC05, FC02, FC15, FC01) contra el módulo simulado; pasa.
 - `app/tests/e2e-g9.mjs` espera 9 ejercicios.
 

@@ -5295,3 +5295,8 @@ body.dock-collapsed #btn-dock-toggle {
   font-size: 11px;
   line-height: 1.2;
 }
+.ini-noimg {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-deep);
+}

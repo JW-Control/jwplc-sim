@@ -71,7 +71,7 @@ try {
 
   // ---- EX_GRADE
   const empty = await grade();
-  const sol = readFileSync(join(ROOT, "exercises", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
+  const sol = readFileSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
   await t((x) => window.jwsimTest.setSource(x), sol);
   const full = await grade();
   const checks = await win.$$eval("#grade-result li", (l) => l.length);

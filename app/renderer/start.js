@@ -89,9 +89,8 @@
   // Pantalla Inicio a toda la ventana: accesos (archivo, componentes,
   // aprender), «Empieza aquí» con la ruta de aprendizaje, el progreso, la
   // vitrina de arquitecturas y los recientes. La ruta junta el Curso JWPLC
-  // Basic (lecciones del package, app/lib/course.mjs) con los retos por nivel
+  // Basic (librería JWPLC_Aprende, cli/lib/aprende.mjs) con los retos por nivel
   // (app/lib/learning.mjs).
-  const IMG = "assets/inicio";
   const ICONS = {
     new: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/>',
     open: '<path d="M3 7h6l2 2h10v10H3z"/><path d="M3 11h18"/>',
@@ -203,7 +202,7 @@
     let html = `<div class="ini-home">`;
     // ---- Empieza aquí
     html +=
-      `<section class="ini-hero" style="--img:url('${IMG}/arq-01-bombeo-edificio.jpg')">` +
+      `<section class="ini-hero"${archs[0]?.img ? ` style="--img:url('${archs[0].img}')"` : ""}>` +
       `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}Ruta de aprendizaje</span>` +
       `<h1>Empieza aquí</h1><p class="ini-lead"><b>Aprende automatización</b> programando un PLC de verdad: tableros, motores, procesos y neumática.</p>` +
       `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar la ruta" : "Comenzar la ruta"}</button>` +
@@ -227,7 +226,7 @@
     } else html += `<p class="muted">Sin arquitecturas instaladas.</p>`;
     html +=
       `</div><div class="ini-thumbs"><button class="icon ini-arrow" data-act="archPrev" aria-label="Anterior">‹</button>` +
-      archs.map((x, i) => `<button class="ini-thumb ${x === a ? "on" : ""}" data-act="archSel" data-i="${i}" title="${esc(x.title)}"><img src="${IMG}/arq-${esc(x.id)}.jpg" alt=""/><span>${esc(x.title)}</span></button>`).join("") +
+      archs.map((x, i) => `<button class="ini-thumb ${x === a ? "on" : ""}" data-act="archSel" data-i="${i}" title="${esc(x.title)}">${x.img ? `<img src="${x.img}" alt=""/>` : `<i class="ini-noimg"></i>`}<span>${esc(x.title)}</span></button>`).join("") +
       `<button class="icon ini-arrow" data-act="archNext" aria-label="Siguiente">›</button></div></section>`;
     // ---- Recientes
     html +=
@@ -323,7 +322,7 @@
     const locked = x.state === "locked";
     return (
       `<small class="ini-eyebrow sm">${esc(tier.tag)} · Reto ${pos} de ${tier.total}</small><h2>${esc(x.title)}</h2>` +
-      `<div class="ini-brief-body"><img class="ini-brief-img" src="${IMG}/reto-${esc(x.id)}.jpg" alt=""/>` +
+      `<div class="ini-brief-body">${x.img ? `<img class="ini-brief-img" src="${x.img}" alt=""/>` : ""}` +
       (x.intro ? `<p>${esc(x.intro)}</p>` : "") +
       (b.goal ? `<h4>El objetivo</h4><p>${esc(b.goal)}</p>` : "") +
       (b.teaches ? `<h4>Qué enseña</h4><p>${esc(b.teaches)}</p>` : "") +

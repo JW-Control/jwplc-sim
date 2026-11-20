@@ -8,7 +8,7 @@
 //                                  en Linux arma la versión de Linux)
 //
 // La app usa en tiempo de ejecución el resto del repositorio (cli/, scene/,
-// sim/, sdk/, schema/, scripts/, exercises/), el package JWPLC fijado en
+// sim/, sdk/, schema/, scripts/, JWPLC_Aprende/), el package JWPLC fijado en
 // package.lock, las dependencias de terceros y el toolchain GCC: GCC lee esos
 // archivos, así que van sin empaquetar (asar: false) en resources/, con la
 // misma disposición que en el repositorio (resources/app es app/). Todo queda
@@ -99,7 +99,7 @@ const config = {
   // La app sin sus pruebas ni las dependencias de desarrollo.
   files: ["**/*", "!tests/**", "!build-res/**", "!installer/**"],
   extraResources: [
-    res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("exercises"), res("arquitecturas"), res("third_party"),
+    res("cli"), res("scene"), res("sim"), res("sdk"), res("schema"), res("scripts"), res("JWPLC_Aprende"), res("third_party"),
     res("package.lock"), res("editor.lock"), res("LICENSE"), res("LICENSES"),
     res(pkgDir),
     res(".jwsim/third_party"),

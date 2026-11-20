@@ -5,14 +5,14 @@ abren desde el menú **Arquitecturas…** de la barra (se copian a
 `Arquitecturas/<id>` en la carpeta de trabajo, como los ejercicios). A
 diferencia de un ejercicio, el sketch es la solución: se abre y se ejecuta.
 
-Cada arquitectura vive en `arquitecturas/<id>/`:
+Cada arquitectura vive en `JWPLC_Aprende/extras/arquitecturas/<id>/`:
 
 | Archivo | Para qué |
 |---|---|
 | `<id>.jwsim` | Proyecto: placa, programa y escena |
 | `sketch/<nombre>/` | Programa del JWPLC Basic |
 | `VITRINA.md` | Ficha que se escribe en la consola al abrirla: recorrido y fallas |
-| `*.jwtest.json` | Pruebas sin interfaz (`node cli/jwsim-cli.mjs test arquitecturas/<id>/`) |
+| `*.jwtest.json` | Pruebas sin interfaz (`node cli/jwsim-cli.mjs test JWPLC_Aprende/extras/arquitecturas/<id>/`) |
 
 ## 01 · Bombeo de edificio a presión constante
 

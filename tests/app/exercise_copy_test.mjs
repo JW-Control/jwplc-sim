@@ -10,7 +10,7 @@ import { test } from "node:test";
 
 import { MARK, syncExercise } from "../../app/lib/exercise-copy.mjs";
 
-const SRC = resolve(import.meta.dirname, "../../exercises/01-marcha-parada");
+const SRC = resolve(import.meta.dirname, "../../JWPLC_Aprende/extras/retos/01-marcha-parada");
 const INO = "sketch/marcha_parada/marcha_parada.ino";
 const OLD_IO_RE = /[ \t]*\/\/ Las entradas y salidas del JWPLC ya vienen configuradas: no hace falta pinMode\.\r?\n/;
 const OLD_IO = "    for (uint8_t i = 0; i < I0_COUNT; i++) pinMode(I0_X[i], INPUT);\n    for (uint8_t i = 0; i < Q0_COUNT; i++) pinMode(Q0_X[i], OUTPUT);\n";
