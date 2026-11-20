@@ -1,4 +1,9 @@
-# Generadores del estilo v3 «tablero JW» (19/11/2026)
+# Generadores de los símbolos (estilo «réplica JW», 19/11/2026)
+
+Estilo vigente: ver `../../LINEAMIENTOS.md`. `fam_tablero.py` dibuja a proporción real con
+sus propias utilidades (`scr`, `lab`, `T`, `brand`, `led`); `fam_campo.py` y `fam_proceso.py`
+llaman `kit.replica()` (contorno oscuro, tornillos grandes, bornera oscura). Lo que sigue es
+la historia del estilo v3 previo.
 
 Estilo aprobado por JW Control el 19/11/2026: cuerpo plano gris claro, contorno
 fino gris, tornillos Phillips iguales con su número de borne, franja JW con un
