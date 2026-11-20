@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E del menú «Arquitecturas» con la 01 (bombeo de edificio):
-//   ARCH_LIST     el menú lista las arquitecturas de arquitecturas/
+//   ARCH_LIST     el menú lista las arquitecturas de JWPLC_Aprende/extras/arquitecturas/
 //   ARCH_OPEN     abre la copia con su escena (13 equipos y la placa) y la ficha en la consola
 //   ARCH_RUN      compila y corre: con S1 en Auto la red sube a ~4 bar con el PI
 //   ARCH_3D       la Planta 3D muestra la cisterna y la sala de bombas con el edificio

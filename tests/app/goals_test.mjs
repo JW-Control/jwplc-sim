@@ -77,7 +77,7 @@ test("checkGoals rechaza lo mal formado y acepta los ejercicios del repositorio"
   assert.throws(() => checkGoals([{ id: "b", description: "x", when: { I0_0: 1 }, after: "a" }]), /objetivo anterior/);
   assert.throws(() => checkGoals([{ id: "a", description: "x", when: { I0_0: 1 }, extra: "oro" }]), /merit o distinction/);
   for (const ex of ["01-marcha-parada", "09-tolva-nivel"]) {
-    const r = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "exercises", ex, "rubrica.json"), "utf8"));
+    const r = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "JWPLC_Aprende", "extras", "retos", ex, "rubrica.json"), "utf8"));
     assert.ok(Array.isArray(r.goals) && r.goals.length, `${ex} trae objetivos en vivo`);
     checkGoals(r.goals, ex);
   }

@@ -61,7 +61,7 @@ await app.close();
 
 // Escenas incluidas: posición de cada equipo.
 const scenes = [];
-for (const base of ["exercises", "index/src", "tests/projects", "tests/plant"]) {
+for (const base of ["JWPLC_Aprende/extras/retos", "JWPLC_Aprende/extras/arquitecturas", "index/src", "tests/projects", "tests/plant"]) {
   const walk = (d) => {
     for (const f of readdirSync(d, { withFileTypes: true })) {
       const p = join(d, f.name);

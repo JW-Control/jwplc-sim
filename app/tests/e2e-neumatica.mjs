@@ -25,7 +25,7 @@ const workspace = mkdtempSync(join(tmpdir(), "jwsim-ws-"));
 const criteria = {};
 const log = (m) => console.log(`[e2e] ${m}`);
 const dir = join(workspace, "10-secuencia-neumatica");
-cpSync(join(ROOT, "exercises", "10-secuencia-neumatica"), dir, { recursive: true });
+cpSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "10-secuencia-neumatica"), dir, { recursive: true });
 cpSync(join(dir, "solucion", "secuencia_neumatica"), join(dir, "sketch", "secuencia_neumatica"), { recursive: true });
 
 createRequire(import.meta.url)("electron");

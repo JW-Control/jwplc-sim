@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../../schema/jwsim-test-1.json",
+  "$comment": "Tratamiento de agua: en Auto filtra al reservorio y regula el cloro cerca de 1 mg/L; al colmatar el filtro, el PDS dispara el retrolavado (25 s) y vuelve a filtrar; la celda seca da E13 y deja de dosificar.",
+  "sketch": "sketch/tratamiento_agua",
+  "scene": "03-tratamiento-agua.jwsim",
+  "until_ms": 180000,
+  "actions": [
+    {
+      "at_ms": 1000,
+      "device": "S1",
+      "action": "position",
+      "value": 1
+    },
+    {
+      "at_ms": 100000,
+      "device": "F1",
+      "action": "colmatar",
+      "value": true
+    },
+    {
+      "at_ms": 100500,
+      "device": "F1",
+      "action": "colmatar",
+      "value": false
+    },
+    {
+      "at_ms": 170000,
+      "device": "AT1",
+      "action": "falla",
+      "value": 1
+    }
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^Filtrando hacia el reservorio",
+        "count": 1
+      },
+      {
+        "match": "^Filtro colmatado: retrolavado",
+        "after_ms": 100000,
+        "before_ms": 110000
+      },
+      {
+        "match": "^Retrolavado terminado",
+        "after_ms": 125000,
+        "before_ms": 140000
+      },
+      {
+        "match": "^ALARMA E13",
+        "after_ms": 170000
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 90000,
+          "KM1.closed": true,
+          "Y1.open": true,
+          "Y2.open": false
+        },
+        {
+          "at_ms": 115000,
+          "Y1.open": false,
+          "Y2.open": true
+        },
+        {
+          "at_ms": 160000,
+          "Y1.open": true
+        },
+        {
+          "at_ms": 178000,
+          "CL1.marcha": false
+        }
+      ],
+      "faults": []
+    }
+  }
+}

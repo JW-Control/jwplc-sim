@@ -59,7 +59,7 @@ try {
   criteria.GOALS_SHOWN = { ok: ids.join() === "arranca,piloto,para,rearranca" && merit === "Mérito", ids, merit };
   log(`GOALS_SHOWN ${JSON.stringify(criteria.GOALS_SHOWN)}`);
 
-  const sol = readFileSync(join(ROOT, "exercises", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
+  const sol = readFileSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
   await t((x) => window.jwsimTest.setSource(x), sol);
   const running = await run();
   await win.waitForTimeout(800);

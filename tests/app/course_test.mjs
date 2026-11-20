@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Curso JWPLC Basic en Inicio (app/lib/course.mjs) y lecciones vistas
+// Curso JWPLC Basic en Inicio (cli/lib/aprende-curso.mjs) y lecciones vistas
 // (markLesson de app/lib/learning.mjs).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { buildCourse, parseLesson, unitOf } from "../../app/lib/course.mjs";
+import { buildCourse, parseLesson, unitOf } from "../../cli/lib/aprende-curso.mjs";
 import { emptyProgress, markLesson } from "../../app/lib/learning.mjs";
 
 const INO = `/*

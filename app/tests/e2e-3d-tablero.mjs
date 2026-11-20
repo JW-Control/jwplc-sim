@@ -66,7 +66,7 @@ const EXPECT = {
 try {
   const items = [
     ...["01-bombeo-edificio", "02-montacargas", "03-tratamiento-agua"].map((id) => ["arch", id]),
-    ...readdirSync(join(ROOT, "exercises")).map((id) => ["ex", id]),
+    ...readdirSync(join(ROOT, "JWPLC_Aprende", "extras", "retos")).map((id) => ["ex", id]),
   ];
   const fails = [];
   const fieldFails = [];

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Regenera las miniaturas de la pantalla Inicio (app/renderer/assets/inicio):
+// Regenera las miniaturas de la pantalla Inicio (JWPLC_Aprende/extras/imagenes):
 // abre cada reto y cada arquitectura en la app, pasa a «Planta 3D» y guarda
 // la vista como JPEG. Uso: node scripts/capturar-inicio.mjs (en Linux, con
 // xvfb-run -a).
@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const APP = join(ROOT, "app");
-const OUT = join(APP, "renderer", "assets", "inicio");
+const OUT = join(ROOT, "JWPLC_Aprende", "extras", "imagenes");
 mkdirSync(OUT, { recursive: true });
 const req = createRequire(join(APP, "package.json"));
 req("electron");
@@ -47,8 +47,8 @@ const shot = async (name, open) => {
   console.log(`[inicio] ${name}.jpg`);
 };
 
-const exercises = readdirSync(join(ROOT, "exercises")).filter((d) => /^\d\d-/.test(d)).sort();
-const archs = readdirSync(join(ROOT, "arquitecturas")).filter((d) => /^\d\d-/.test(d)).sort();
+const exercises = readdirSync(join(ROOT, "JWPLC_Aprende", "extras", "retos")).filter((d) => /^\d\d-/.test(d)).sort();
+const archs = readdirSync(join(ROOT, "JWPLC_Aprende", "extras", "arquitecturas")).filter((d) => /^\d\d-/.test(d)).sort();
 try {
   for (const id of exercises) await shot(`reto-${id}`, `window.jwsimTest.pickExercise(${JSON.stringify(id)})`);
   for (const id of archs) await shot(`arq-${id}`, `window.jwsimTest.pickArch(${JSON.stringify(id)})`);

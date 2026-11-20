@@ -154,7 +154,7 @@ node cli/jwsim-cli.mjs scene build <entrada.json> --out <dir> [--create-ino] [--
 ### 4.7 Documentación y Skill para agentes
 - `.claude/skills/crear-proyecto-jwsim/SKILL.md`: flujo corto de 5 pasos:
   1. Consultar `jwsim-cli scene describe` según los equipos necesarios.
-  2. Crear/editar el borrador JSON en forma corta + código `.ino` (o partir de `examples/` / `exercises/`).
+  2. Crear/editar el borrador JSON en forma corta + código `.ino` (o partir de `examples/` / `JWPLC_Aprende/extras/retos/`).
   3. Iterar `jwsim-cli scene normalize` + `jwsim-cli scene validate --json` hasta `0` errores y `0` avisos.
   4. Correr `jwsim-cli scene preview` y revisar visualmente las capturas PNG 2D y 3D.
   5. Verificar lógica con `jwsim-cli run --json` o `jwsim-cli test <prueba>.jwtest.json`.
