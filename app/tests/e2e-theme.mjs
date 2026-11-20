@@ -52,6 +52,8 @@ const probe = () =>
     const selBg = getComputedStyle(document.getElementById("sel-example")).backgroundColor;
     const opt = document.querySelector("#sel-example option");
     const optCs = opt ? getComputedStyle(opt) : null;
+    const btnNew = getComputedStyle(document.getElementById("btn-new"));
+    const statusBox = document.getElementById("status").getBoundingClientRect();
     return {
       meta: document.querySelector('meta[name="color-scheme"]')?.content,
       bg: cs.backgroundColor,
@@ -61,6 +63,10 @@ const probe = () =>
       selBg,
       optBg: optCs?.backgroundColor,
       optColor: optCs?.color,
+      btnNewBg: btnNew.backgroundColor,
+      btnNewBorder: btnNew.borderTopColor,
+      statusWidth: statusBox.width,
+      btnRunText: document.getElementById("btn-run").textContent,
       gridFilter: grid.filter,
       state: window.jwsimTest.getTheme(),
     };
@@ -104,13 +110,36 @@ try {
   };
   log(`VIEWS_LIGHT ${JSON.stringify(criteria.VIEWS_LIGHT)}`);
 
-  // 3. Volver a modo oscuro con el botón de la barra de estado
+  // 3. Volver a modo oscuro con el botón de la barra superior y probar ancho 50% (960 px)
   await win.click("#btn-theme");
   await win.waitForTimeout(150);
   const dark = await probe();
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(960, 900));
+  await win.setViewportSize?.({ width: 960, height: 900 }).catch(() => {});
+  await win.waitForTimeout(200);
+  const halfScreen = await win.evaluate(() => {
+    const tb = document.querySelector(".toolbar");
+    const themeRect = document.getElementById("btn-theme").getBoundingClientRect();
+    return {
+      innerWidth: window.innerWidth,
+      toolbarClientW: tb.clientWidth,
+      toolbarScrollW: tb.scrollWidth,
+      themeRight: Math.round(themeRect.right),
+    };
+  });
+  await win.screenshot({ path: join(OUT, "04-media-pantalla-960px.png") });
   criteria.TOGGLE_DARK = {
-    ok: dark.state.dark === true && dark.bg === "rgb(20, 23, 27)" && dark.monacoBg === "rgb(20, 23, 27)" && dark.selBg === "rgb(27, 31, 36)" && dark.optBg === "rgb(27, 31, 36)",
+    ok:
+      dark.state.dark === true &&
+      dark.bg === "rgb(20, 23, 27)" &&
+      dark.monacoBg === "rgb(20, 23, 27)" &&
+      dark.selBg === "rgb(27, 31, 36)" &&
+      dark.optBg === "rgb(27, 31, 36)" &&
+      dark.btnNewBg !== "rgba(0, 0, 0, 0)" &&
+      dark.statusWidth <= 1 &&
+      halfScreen.themeRight <= halfScreen.innerWidth,
     dark,
+    halfScreen,
   };
   log(`TOGGLE_DARK ${JSON.stringify(criteria.TOGGLE_DARK)}`);
 

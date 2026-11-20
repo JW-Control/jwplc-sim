@@ -157,10 +157,44 @@ function setStatus(kind, text) {
   el.className = `status ${kind}`;
   el.textContent = text;
   const live = kind === "running" || kind === "paused" || kind === "break";
-  $("btn-pause").disabled = !live || kind === "break";
-  $("btn-stop").disabled = !live;
-  $("btn-run").disabled = kind === "building";
-  $("btn-pause").textContent = kind === "paused" ? "▶ Continuar" : "❚❚ Pausa";
+  const btnRun = $("btn-run");
+  const btnPause = $("btn-pause");
+  const btnStop = $("btn-stop");
+  btnPause.disabled = !live || kind === "break";
+  btnStop.disabled = !live;
+  btnRun.disabled = kind === "building";
+  btnRun.dataset.state = kind;
+  btnPause.dataset.state = kind;
+  btnStop.dataset.state = kind;
+  btnRun.className = `primary state-${kind}`;
+  btnPause.className = `seg${kind === "paused" ? " is-paused" : kind === "break" ? " is-break" : ""}`;
+  btnStop.className = `seg${live ? " is-live" : ""}`;
+  if (kind === "building") {
+    btnRun.textContent = "⟳ Compilando…";
+    btnRun.title = "Compilando el programa…";
+  } else if (kind === "running") {
+    btnRun.textContent = text === "Reproduciendo" ? "● Reproduciendo" : "● Ejecutando";
+    btnRun.title = `${text} — clic para recompilar y reiniciar (F5)`;
+  } else if (kind === "paused") {
+    btnRun.textContent = "↻ Reiniciar";
+    btnRun.title = "Recompilar y reiniciar desde el principio (F5)";
+  } else if (kind === "break") {
+    btnRun.textContent = "● Depurando";
+    btnRun.title = `${text} — clic para recompilar y reiniciar (F5)`;
+  } else if (kind === "error") {
+    btnRun.textContent = "⚠ Error · Ejecutar";
+    btnRun.title = `${text} — clic para reintentar (F5)`;
+  } else {
+    btnRun.textContent = "▶ Ejecutar";
+    btnRun.title = "Compilar y ejecutar (F5)";
+  }
+  btnPause.textContent = kind === "paused" ? "▶ En pausa" : kind === "break" ? "⏸ Breakpoint" : "❚❚ Pausa";
+  btnPause.title =
+    kind === "paused"
+      ? `${text} — clic para continuar (F6)`
+      : kind === "break"
+        ? text
+        : "Pausar / continuar (F6)";
   $("led-pwr").classList.toggle("on", live);
   $("led-run").classList.toggle("on", kind === "running");
   $("led-err").classList.toggle("on", kind === "error");

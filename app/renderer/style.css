@@ -172,7 +172,7 @@ select:focus-visible {
   overflow-x: auto;
   scrollbar-width: thin;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -180,7 +180,7 @@ select:focus-visible {
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   font-weight: 600;
   letter-spacing: 0.2px;
   margin-right: 2px;
@@ -208,16 +208,10 @@ select:focus-visible {
   background: var(--border);
 }
 .tb-files {
-  gap: 2px;
+  gap: 5px;
 }
 .tb-files button {
-  background: transparent;
-  border-color: transparent;
-  padding: 4px 8px;
-}
-.tb-files button:hover:not(:disabled) {
-  background: var(--panel-2);
-  border-color: var(--border);
+  padding: 4px 9px;
 }
 .tb-libs {
   gap: 5px;
@@ -236,6 +230,58 @@ select:focus-visible {
 }
 .tb-run-sec {
   gap: 0;
+}
+#btn-run {
+  transition: background-color 0.14s, border-color 0.14s, color 0.14s;
+}
+#btn-run.state-building {
+  background: var(--warn-bg-2);
+  border-color: var(--warn);
+  color: var(--warn-text);
+  opacity: 1;
+}
+#btn-run.state-running {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--on-ok);
+}
+#btn-run.state-running:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+#btn-run.state-paused {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+#btn-run.state-paused:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+#btn-run.state-break {
+  background: var(--warn-bg-2);
+  border-color: var(--warn);
+  color: var(--warn-text);
+}
+#btn-run.state-error {
+  background: var(--err);
+  border-color: var(--err);
+  color: #fff;
+}
+#btn-pause.is-paused,
+#btn-pause.is-break {
+  background: var(--warn-bg-2);
+  border-color: var(--warn);
+  color: var(--warn-text);
+  font-weight: 600;
+  opacity: 1;
+}
+#btn-pause.is-paused:hover:not(:disabled) {
+  border-color: var(--warn);
+  filter: brightness(1.06);
+}
+#btn-stop.is-live:hover:not(:disabled) {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  color: var(--err-text);
 }
 .tb-right {
   margin-left: auto;
@@ -276,7 +322,7 @@ select:focus-visible {
 #sel-example,
 #sel-exercise,
 #sel-arch {
-  max-width: 132px;
+  max-width: 124px;
 }
 /* Las vistas del panel inferior con display propio (el envío por UART) se
    ocultan igual que las demás. */
@@ -285,7 +331,7 @@ select:focus-visible {
 }
 .clock {
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: 13px;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -293,36 +339,115 @@ select:focus-visible {
 }
 .clock .label {
   font-family: var(--ui);
-  margin-right: 8px;
+  margin-right: 6px;
 }
+/* El estado se refleja directamente en #btn-run / #btn-pause / #btn-stop;
+   #status se conserva como región accesible 1×1 px fuera del flujo visual. */
 .status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
-  min-width: 96px;
-  text-align: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid var(--border);
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
-.status.idle {
-  color: var(--muted);
+
+/* Modo de media pantalla (~960 px, 50 % de monitor Full HD): compacta
+   controles superiores y columnas para que todo encaje sin recorte. */
+@media (max-width: 1320px) {
+  .toolbar {
+    gap: 6px;
+    padding: 5px 8px;
+  }
+  .brand > span:last-child {
+    display: none;
+  }
+  .tb-files,
+  .tb-libs,
+  .tb-run,
+  .tb-right {
+    gap: 4px;
+  }
+  .tb-files button,
+  .tb-run button,
+  .com-status,
+  .theme-btn {
+    padding: 4px 7px;
+    font-size: 12px;
+  }
+  #sel-example,
+  #sel-exercise,
+  #sel-arch {
+    width: 100px;
+    max-width: 100px;
+    padding: 4px 5px;
+    font-size: 12px;
+  }
+  .clock {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+  .clock .label {
+    display: none;
+  }
+  .workspace {
+    grid-template-columns: var(--code-w, minmax(250px, 1fr)) 6px minmax(280px, 0.95fr);
+  }
+  .workspace.code-w {
+    grid-template-columns: var(--code-w) 6px minmax(260px, 1fr);
+  }
+  .scene-main {
+    --left-col: var(--scene-left-w, 240px);
+    --side-col: var(--scene-side-w, 230px);
+  }
 }
-.status.building {
-  color: var(--warn);
-  border-color: var(--warn-border);
-}
-.status.running {
-  color: var(--ok);
-  border-color: var(--ok-border);
-}
-.status.paused {
-  color: var(--warn);
-  border-color: var(--warn-border);
-}
-.status.error {
-  color: var(--err);
-  border-color: var(--err-border);
+
+@media (max-width: 1080px) {
+  .toolbar {
+    gap: 4px;
+    padding: 4px 6px;
+  }
+  .tb-files,
+  .tb-libs,
+  .tb-run,
+  .tb-right {
+    gap: 3px;
+  }
+  .tb-files button,
+  .tb-run button,
+  .com-status,
+  .theme-btn {
+    padding: 3px 5px;
+    font-size: 11.5px;
+  }
+  #sel-example,
+  #sel-exercise,
+  #sel-arch {
+    width: 72px;
+    max-width: 72px;
+    padding: 3px 3px;
+    font-size: 11px;
+  }
+  #sel-speed {
+    padding: 3px 4px;
+    font-size: 11.5px;
+  }
+  .clock {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+  .theme-btn .theme-lbl {
+    display: none;
+  }
+  .scene-main {
+    --left-col: var(--scene-left-w, 210px);
+    --side-col: var(--scene-side-w, 210px);
+  }
 }
 
 /* Editor | divisor arrastrable | simulación. --code-w lo fija el divisor
