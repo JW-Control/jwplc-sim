@@ -3975,14 +3975,16 @@ body.dock-collapsed #btn-dock-toggle {
 }
 .sd-empty {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  left: 102px;
+  right: 8px;
+  bottom: 26px;
+  padding: 5px 10px;
   text-align: center;
   color: var(--muted);
-  font-size: 12px;
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
   pointer-events: none;
 }
 .sd-empty[hidden] {
