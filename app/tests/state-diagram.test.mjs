@@ -123,3 +123,44 @@ test("windowBounds calcula el rango temporal en modo en vivo, todo y congelado",
   assert.deepEqual(core.windowBounds(12500, 0, 5000, true), { t0: 0, t1: 5000 });
   assert.deepEqual(core.windowBounds(8000, 2000, 3000, true), { t0: 1000, t1: 3000 });
 });
+
+test("createRecorder.reset en plena simulacion reinicia el origen temporal a t=0 sin hueco a la izquierda", () => {
+  const rec = core.createRecorder(100);
+  const snapAt = (t_ms, pos) => ({
+    t_ms,
+    devices: [{ id: "Y1", outputs: { position: pos, energized: pos > 0 } }],
+  });
+
+  rec.push(snapAt(19000, 0), true);
+  rec.push(snapAt(20500, 0.5), true);
+  assert.equal(rec.lastTimeMs(), 20500);
+
+  // El usuario pulsa Limpiar mientras la simulación sigue corriendo en t=20.5 s.
+  rec.reset();
+  assert.equal(rec.samples().length, 0);
+
+  // El siguiente tick llega en t_ms=20600: debe graficarse como t=0.
+  rec.push(snapAt(20600, 0.6), true);
+  rec.push(snapAt(21100, 1.0), true);
+  assert.deepEqual(
+    rec.samples().map((s) => s.t),
+    [0, 500],
+  );
+  assert.equal(rec.lastTimeMs(), 500);
+});
+
+test("channelsForDevice resuelve las señales al arrastrar un equipo del esquema al diagrama", () => {
+  const meta = core.extractChannels(sampleSpec);
+  const active = new Set();
+
+  // Arrastrar cilindro Y1 cuando no está activo agrega su carrera (Y1.position).
+  assert.deepEqual(core.channelsForDevice(meta, "Y1", active), ["Y1.position"]);
+
+  // Si la carrera Y1.position ya estaba activa y se vuelve a arrastrar Y1, agrega el resto del grupo (bobina + sensores).
+  active.add("Y1.position");
+  assert.deepEqual(core.channelsForDevice(meta, "Y1", active), ["Y1.energized", "A0.actuated", "A1.actuated"]);
+
+  // Arrastrar un final de carrera individual (A0) o unidad FR (FR1) agrega solo esa señal.
+  assert.deepEqual(core.channelsForDevice(meta, "A0", active), ["A0.actuated"]);
+  assert.deepEqual(core.channelsForDevice(meta, "FR1", active), ["FR1.pressure"]);
+});
