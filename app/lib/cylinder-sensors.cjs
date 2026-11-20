@@ -278,6 +278,18 @@
     return { ok: true, id: finalId };
   }
 
+  function applyKindToValve(spec, valveId, kind) {
+    const linked = sensorsForValve(spec?.devices, valveId);
+    const updated = [];
+    for (const s of linked) {
+      if (s.kind === kind) continue;
+      const res = updateSensorConfig(spec, valveId, s.id, { kind });
+      if (!res.ok) return res;
+      updated.push(res.id);
+    }
+    return { ok: true, updated };
+  }
+
   function removeSensor(spec, sensorId) {
     const prefix = `${sensorId}.`;
     spec.devices = (spec.devices ?? []).filter((d) => d.id !== sensorId);
@@ -298,6 +310,7 @@
     addStandardPair,
     addMark,
     updateSensorConfig,
+    applyKindToValve,
     removeSensor,
   };
 });
