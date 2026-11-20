@@ -157,6 +157,19 @@
     return { groups, channels, hasPneumatics: valves.length > 0 };
   }
 
+  /** Resuelve qué canales activar al arrastrar un dispositivo del esquema hacia el diagrama. */
+  function channelsForDevice(meta, devId, activeSet = new Set()) {
+    if (!meta || !devId) return [];
+    const grp = (meta.groups ?? []).find((g) => g.id === devId);
+    if (grp) {
+      const posCh = grp.channels.find((c) => c.kind === "cyl");
+      if (posCh && !activeSet.has(posCh.id)) return [posCh.id];
+      const missing = grp.channels.filter((c) => !activeSet.has(c.id)).map((c) => c.id);
+      return missing.length ? missing : grp.channels.map((c) => c.id);
+    }
+    return (meta.channels ?? []).filter((c) => c.deviceId === devId).map((c) => c.id);
+  }
+
   /** Compara dos mapas planos de señales con tolerancia numérica. */
   function sameValues(a, b) {
     const ka = Object.keys(a);
@@ -189,27 +202,44 @@
     let pts = [];
     let wasRunning = false;
     let lastT = -1;
+    let rawLastT = -1;
+    let tOffset = 0;
+    let pendingOffset = false;
 
     function reset() {
       pts = [];
       lastT = -1;
+      tOffset = 0;
+      pendingOffset = wasRunning;
     }
 
     function onProjectReset() {
       wasRunning = false;
+      rawLastT = -1;
       reset();
+      pendingOffset = false;
     }
 
     function push(snap, running) {
       if (!running || !snap) {
         wasRunning = false;
+        pendingOffset = false;
         return false;
       }
-      const t = Math.max(0, Number(snap.t_ms ?? 0));
-      if (!wasRunning || (lastT >= 0 && t < lastT - 1e-6)) {
-        reset();
+      const rawT = Math.max(0, Number(snap.t_ms ?? 0));
+      if (!wasRunning || (rawLastT >= 0 && rawT < rawLastT - 1e-6)) {
+        pts = [];
+        lastT = -1;
+        tOffset = 0;
+        pendingOffset = false;
+      }
+      if (pendingOffset) {
+        tOffset = rawT;
+        pendingOffset = false;
       }
       wasRunning = true;
+      rawLastT = rawT;
+      const t = Math.max(0, rawT - tOffset);
       if (t < lastT) return false;
 
       const v = flattenSnap(snap);
@@ -271,5 +301,5 @@
     return { t0, t1 };
   }
 
-  return { extractChannels, createRecorder, valueAt, windowBounds, MIN_BAR };
+  return { extractChannels, channelsForDevice, createRecorder, valueAt, windowBounds, MIN_BAR };
 });
