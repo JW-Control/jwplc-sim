@@ -528,6 +528,7 @@ function init() {
   V.scene.add(V.root);
   new ResizeObserver(resize).observe(canvas.parentElement);
   V.ready = true;
+  loadBoard();
   requestAnimationFrame(frame);
 }
 
@@ -954,7 +955,8 @@ function dinPsu() {
   return { group: g, w, h: 0.18, top: xs, bottom: xs.slice(1) };
 }
 /** JWPLC Basic: cuerpo negro, borneras verdes arriba y abajo, pantalla y teclado. */
-function plcBasic() {
+/** PLC genérico mientras carga el dibujo de la placa. */
+function plcPlaceholder() {
   const g = new THREE.Group();
   const w = 0.3;
   const h = 0.2;
@@ -1043,6 +1045,125 @@ function dinRelay() {
   return { group: g, w, h: 0.18, top: xs, bottom: xs };
 }
 
+// JWPLC Basic en 3D: el frente es el mismo dibujo de la pestaña Placa
+// (assets/jwplc-basic.svg) pintado como textura; encima van el cuerpo
+// escalonado, las borneras enchufables en relieve, la TFT en vivo (copia del
+// canvas de la app) y los LED de E/S.
+const BOARD = { ready: false, loading: false };
+function loadBoard() {
+  if (BOARD.ready || BOARD.loading || !window.jwsim?.sceneBoardSvg) return;
+  BOARD.loading = true;
+  window.jwsim
+    .sceneBoardSvg()
+    .then((text) => {
+      const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+      const svg = doc.documentElement;
+      const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+      const bornes = [...svg.querySelectorAll(".borne")].map((b) => {
+        const u = b.querySelector("use");
+        const sig = b.dataset.senal;
+        return {
+          id: /^Q0_/.test(sig) ? `${sig}.${b.dataset.pos}` : sig,
+          block: b.dataset.bloque,
+          x: Number(u.getAttribute("x")) - vx,
+          y: Number(u.getAttribute("y")) - vy,
+          entry: Number(b.dataset.entrada) - vy,
+        };
+      });
+      const leds = [...svg.querySelectorAll(".led-ancla")].map((c) => ({ sig: c.dataset.senal, x: Number(c.getAttribute("cx")) - vx, y: Number(c.getAttribute("cy")) - vy }));
+      const t = svg.querySelector("#tft");
+      const tft = { x: Number(t.getAttribute("x")) - vx, y: Number(t.getAttribute("y")) - vy, w: Number(t.getAttribute("width")), h: Number(t.getAttribute("height")) };
+      const img = new Image();
+      img.onload = () => {
+        const k = 1.5;
+        const c = document.createElement("canvas");
+        c.width = Math.round(vw * k);
+        c.height = Math.round(vh * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        Object.assign(BOARD, { ready: true, canvas: c, vw, vh, bornes, leds, tft });
+        // Si la vista ya está armada, se rearma con el PLC fiel.
+        if (V.visible) {
+          V.sig = null;
+          window.Jwsim3D.show(true);
+        }
+      };
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`;
+    })
+    .catch(() => (BOARD.loading = false));
+}
+/** Recorte [y1, y2] (px del dibujo) de la textura del frente, en un plano. */
+function boardSlice(S, y1, y2, z) {
+  const tex = new THREE.CanvasTexture(BOARD.canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tex.repeat.set(1, (y2 - y1) / BOARD.vh);
+  tex.offset.set(0, 1 - y2 / BOARD.vh);
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(BOARD.vw * S, (y2 - y1) * S), new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.5, roughness: 0.6 }));
+  pl.position.set(0, (BOARD.vh / 2 - (y1 + y2) / 2) * S, z);
+  return pl;
+}
+let TFT_TEX = null;
+function plcBasic() {
+  if (!BOARD.ready) return plcPlaceholder();
+  const g = new THREE.Group();
+  const w = 0.28;
+  const S = w / BOARD.vw;
+  const h = BOARD.vh * S;
+  const X = (px) => (px - BOARD.vw / 2) * S;
+  const Y = (py) => (BOARD.vh / 2 - py) * S;
+  const zU = 0.062; // frente del cuerpo alto (pantalla y teclas)
+  const zL = 0.044; // frente de la base (relés y RS-485)
+  // Cuerpo escalonado: base con los relés y cuerpo alto con la pantalla.
+  const upper = box((1690 - 449) * S, (1398 - 517) * S, zU, PM.dark);
+  upper.position.z = zU / 2;
+  upper.position.x = X((449 + 1690) / 2 - 421);
+  upper.position.y = Y((517 + 1398) / 2 - 403);
+  const lower = box((1690 - 449) * S, (1771 - 1380) * S, zL, mat(0x262a2f));
+  lower.position.set(X((449 + 1690) / 2 - 421), Y((1380 + 1771) / 2 - 403), zL / 2);
+  g.add(upper, lower);
+  // Borneras enchufables en relieve (una caja por bloque, detrás del dibujo).
+  const blocks = new Map();
+  for (const b of BOARD.bornes) {
+    if (b.id === "USB") continue;
+    const k = blocks.get(b.block) ?? { x1: Infinity, x2: -Infinity, y: b.y };
+    k.x1 = Math.min(k.x1, b.x);
+    k.x2 = Math.max(k.x2, b.x);
+    blocks.set(b.block, k);
+  }
+  for (const k of blocks.values()) {
+    const top = k.y < 990;
+    const zf = top ? zU : zL;
+    const tb = box((k.x2 - k.x1 + 58) * S, 112 * S, zf, PM.termGreen);
+    tb.position.set(X((k.x1 + k.x2) / 2), Y(k.y), zf / 2);
+    g.add(tb);
+  }
+  // Frente: el dibujo en dos planos, uno por escalón (con un borde que los separa).
+  g.add(boardSlice(S, 0, 990, zU + 0.0015), boardSlice(S, 990, BOARD.vh, zL + 0.0015));
+  // TFT en vivo: copia el canvas de la app.
+  const appTft = document.getElementById("tft");
+  if (appTft && !TFT_TEX) {
+    TFT_TEX = new THREE.CanvasTexture(appTft);
+    TFT_TEX.colorSpace = THREE.SRGBColorSpace;
+  }
+  if (TFT_TEX) {
+    const t = BOARD.tft;
+    const tp = new THREE.Mesh(new THREE.PlaneGeometry(t.w * S, t.h * S), new THREE.MeshBasicMaterial({ map: TFT_TEX }));
+    tp.position.set(X(t.x + t.w / 2), Y(t.y + t.h / 2), zU + 0.0025);
+    g.add(tp);
+  }
+  const leds = BOARD.leds.map((l) => {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(12 * S, 12), new THREE.MeshBasicMaterial({ color: 0x24272b }));
+    m.position.set(X(l.x), Y(l.y), (l.y < 990 ? zU : zL) + 0.0025);
+    g.add(m);
+    return { sig: l.sig, mesh: m };
+  });
+  // Bornes: el cable entra por el borde de la bornera (arriba, o abajo en relés y RS-485).
+  const terms = {};
+  // (el cable del RS-485 baja por delante de la base, como en la placa real).
+  for (const b of BOARD.bornes) terms[b.id] = [X(b.x), Y(b.entry < b.y ? b.y - 50 : b.y + 50), b.block === "med" ? zL + 0.012 : (b.y < 990 ? zU : zL) - 0.01, b.entry < b.y];
+  return { group: g, w, h, up: h / 2, down: h / 2, terms, leds, tft: !!TFT_TEX, top: [], bottom: [] };
+}
+
 /**
  * Tablero eléctrico con la puerta abierta: en la placa de montaje los equipos
  * de la escena sobre dos rieles DIN, canaletas ranuradas con tapa, cables de
@@ -1069,7 +1190,7 @@ function buildPanel(spec) {
     if (t === "power-24vdc") return dinPsu();
     if (t === "jwplc-basic") {
       const m = plcBasic();
-      plcs.push({ id: d.id, paint: m.screen.paint });
+      plcs.push({ id: d.id, paint: m.screen?.paint, leds: m.leds ?? [], tft: m.tft });
       return m;
     }
     if (t === "vfd-el") {
@@ -1080,12 +1201,13 @@ function buildPanel(spec) {
     if (t === "contactor") return dinContactor(mounted.has(d.id));
     return dinRelay();
   };
-  const row1 = [...of("power-230vac", "power-3ph", "breaker", "motor-protector"), ...of("power-24vdc"), ...of("jwplc-basic")].map(make);
-  const row2 = [...of("vfd-el"), ...of("contactor"), ...of("relay", "timer-relay", "ssr", "level-relay")].map(make);
+  const withId = (d) => Object.assign(make(d), { id: d.id });
+  const row1 = [...of("power-230vac", "power-3ph", "breaker", "motor-protector"), ...of("power-24vdc"), ...of("jwplc-basic")].map(withId);
+  const row2 = [...of("vfd-el"), ...of("contactor"), ...of("relay", "timer-relay", "ssr", "level-relay")].map(withId);
   const gap = 0.025;
   const rowW = (r) => r.reduce((a, m) => a + m.w + gap, -gap);
-  const W = Math.max(0.6, Math.min(1.6, Math.max(rowW(row1), rowW(row2)) + 0.16));
-  const H = 1.15;
+  const W = Math.max(0.6, Math.min(1.7, Math.max(rowW(row1), rowW(row2)) + 0.24));
+  const H = 1.25;
   const D = 0.32;
   const legH = 0.4;
   const y0 = legH;
@@ -1132,56 +1254,49 @@ function buildPanel(spec) {
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
   })();
-  const duct = (y, w) => {
+  const duct = (y, w, x = 0) => {
     const d = box(w, 0.06, 0.06, new THREE.MeshStandardMaterial({ map: slots, roughness: 0.7 }));
     d.material.map = slots.clone();
     d.material.map.repeat.set(w * 8, 1);
     d.material.map.needsUpdate = true;
-    d.position.set(0, y, zf + 0.03);
+    d.position.set(x, y, zf + 0.03);
     const lid = box(w, 0.064, 0.006, mat(0xb9bfc6));
-    lid.position.set(0, y, zf + 0.063);
+    lid.position.set(x, y, zf + 0.063);
     g.add(d, lid);
   };
   const yTop = y0 + H - 0.08;
-  const yR1 = y0 + H - 0.27;
-  const yMid = y0 + H - 0.46;
-  const yR2 = y0 + H - 0.67;
+  const yR1 = y0 + H - 0.3;
+  const yMid = y0 + H - 0.52;
+  const yR2 = y0 + H - 0.75;
   const yLow = y0 + 0.26;
   const yTb = y0 + 0.13;
-  for (const y of [yTop, yMid, yLow]) duct(y, W - 0.1);
-  const wireTo = (x, ya, yb, hex) => g.add(segment([x, ya, zf + 0.05], [x, yb, zf + 0.05], 0.0035, mat(hex)));
-  const place = (row, y, upY, downY, hexes) => {
-    let x = -rowW(row) / 2;
+  // Canaletas horizontales y una vertical a la izquierda (la que recibe el mazo de la puerta).
+  const hx1 = -W / 2 + 0.085;
+  const hx2 = W / 2 - 0.05;
+  for (const y of [yTop, yMid, yLow]) duct(y, hx2 - hx1, (hx1 + hx2) / 2);
+  const vdX = -W / 2 + 0.058;
+  const vd = box(0.045, yTop - yLow + 0.06, 0.06, mat(0xa7adb4, { roughness: 0.7 }));
+  vd.position.set(vdX, (yTop + yLow) / 2, zf + 0.03);
+  const vdl = box(0.049, yTop - yLow + 0.06, 0.006, mat(0xb9bfc6));
+  vdl.position.set(vdX, (yTop + yLow) / 2, zf + 0.063);
+  g.add(vd, vdl);
+  // Equipos sobre los rieles; se anota dónde quedó cada uno para cablear.
+  const at = new Map();
+  const place = (row, y, upY, downY) => {
+    let x = -rowW(row) / 2 + 0.035;
     for (const m of row) {
       const cx = x + m.w / 2;
-      const yy = y + (m.dy ?? 0);
-      m.group.position.set(cx, yy, zf);
+      m.group.position.set(cx, y, zf);
       g.add(m.group);
-      // Rieles DIN bajo cada equipo.
-      m.top.forEach((tx, i) => wireTo(cx + tx, yy + (m.up ?? m.h / 2) - 0.005, upY - 0.03, hexes[i % hexes.length]));
-      m.bottom.forEach((tx, i) => wireTo(cx + tx, yy - (m.down ?? m.h / 2) + 0.005, downY + 0.03, hexes[(i + 1) % hexes.length]));
+      at.set(m.id, { m, cx, y, upY, downY });
       x += m.w + gap;
     }
-    const rail = box(W - 0.12, 0.035, 0.008, mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }));
-    rail.position.set(0, y, zf + 0.004);
+    const rail = box(hx2 - hx1, 0.035, 0.008, mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }));
+    rail.position.set((hx1 + hx2) / 2, y, zf + 0.004);
     g.add(rail);
   };
-  place(row1, yR1, yTop, yMid, [WIRE_HEX["marrón"], WIRE_HEX.negro, WIRE_HEX.gris, WIRE_HEX.azul]);
-  place(row2, yR2, yMid, yLow, [WIRE_HEX.negro, WIRE_HEX["marrón"], WIRE_HEX.gris, WIRE_HEX.azul]);
-  // Borneras de salida al pie, con su cable bajando de la canaleta.
-  const nTb = Math.floor((W - 0.16) / 0.014);
-  for (let i = 0; i < nTb; i++) {
-    const pe = i % 8 === 7;
-    const tb = box(0.012, 0.07, 0.06, mat(pe ? 0x3fae49 : 0x9aa3ad));
-    tb.position.set(-W / 2 + 0.09 + i * 0.014, yTb, zf + 0.03);
-    g.add(tb);
-    if (pe) {
-      const stripe = box(0.0122, 0.015, 0.0605, mat(0xf2cf1d));
-      stripe.position.copy(tb.position);
-      g.add(stripe);
-    }
-    if (i % 2 === 0) wireTo(tb.position.x, yTb + 0.035, yLow - 0.03, [WIRE_HEX.negro, WIRE_HEX.azul, WIRE_HEX["marrón"]][i % 3]);
-  }
+  place(row1, yR1, yTop, yMid);
+  place(row2, yR2, yMid, yLow);
   // Puerta con bisagras, burlete, manija y bolsillo de planos; mandos en su cara exterior.
   const hinge = new THREE.Group();
   hinge.position.set(-W / 2, y0, D / 2);
@@ -1208,10 +1323,12 @@ function buildPanel(spec) {
   handle.position.set(W - 0.06, H / 2, 0.025);
   hinge.add(handle);
   const lamps = [];
+  const doorAt = new Map();
   door.forEach((d, i) => {
     const cols = Math.max(1, Math.min(4, door.length));
     const cx = ((i % cols) + 0.5) * (W / cols);
     const cy = H * 0.72 - Math.floor(i / cols) * 0.22;
+    doorAt.set(d.id, { cx, cy });
     const t = base(d.type);
     const ring = cyl(0.036, 0.02, mat(0x8b929b, { metalness: 0.6, roughness: 0.3 }), 24);
     ring.rotation.x = Math.PI / 2;
@@ -1260,6 +1377,160 @@ function buildPanel(spec) {
   hinge.add(brand);
   hinge.rotation.y = -1.7;
   g.add(hinge);
+  wirePanel();
+  /**
+   * Cableado real: cada cable del esquema se tiende de borne a borne. Dentro
+   * del tablero sale del borne a la canaleta más cercana (por dentro de las
+   * canaletas no se ve); lo que va al campo pasa por una bornera de salida
+   * al pie; los mandos de la puerta llegan por un mazo con espiral por la
+   * bisagra hasta la canaleta vertical.
+   */
+  function wirePanel() {
+    const API = window.JwsimScene;
+    const devOfId = new Map(devs.map((d) => [d.id, d]));
+    const split = (end) => [end.slice(0, end.indexOf(".")), end.slice(end.indexOf(".") + 1)];
+    const used = new Map(); // borne -> cables que ya llegan (para separarlos)
+    const nth = (key) => {
+      const n = used.get(key) ?? 0;
+      used.set(key, n + 1);
+      return n;
+    };
+    const wireM = new Map();
+    const wm = (hex) => {
+      if (!wireM.has(hex)) wireM.set(hex, mat(hex, { roughness: 0.5 }));
+      return wireM.get(hex);
+    };
+    const R = 0.0032;
+    const zIn = zf + 0.045; // los cables entran a la canaleta por su ranura
+    // Borne de un equipo del riel: punto, y canaleta hacia la que sale.
+    const railEnd = (end) => {
+      const [id, tid] = split(end);
+      const dev = devOfId.get(id);
+      let a = at.get(id);
+      const guest = !a && dev?.mount ? at.get(dev.mount) : null;
+      if (guest) a = guest;
+      if (!a) return null;
+      const m = a.m;
+      if (m.terms?.[tid]) {
+        const [lx, ly, lz, up] = m.terms[tid];
+        return { x: a.cx + lx, y: a.y + ly, z: zf + lz, toY: up ? a.upY - 0.03 : a.downY + 0.03 };
+      }
+      const t = API?.terminalOf?.(end);
+      if (!t) return null;
+      const x = a.cx - m.w / 2 + t.fx * m.w;
+      // Térmico acoplado: sus bornes de entrada van por dentro del contactor.
+      if (guest && t.side === "t") return { hidden: true };
+      const up = guest ? false : t.side === "t";
+      return { x, y: up ? a.y + (m.up ?? m.h / 2) : a.y - (m.down ?? m.h / 2), z: zf + 0.075, toY: up ? a.upY - 0.03 : a.downY + 0.03 };
+    };
+    const stub = (p, hex) => {
+      const k = nth(`${p.x.toFixed(3)},${p.y.toFixed(3)}`);
+      const x = p.x + k * 0.005;
+      g.add(run([[x, p.y, p.z], [x, p.y + Math.sign(p.toY - p.y) * 0.012, p.z], [x, p.toY, zIn]], R, wm(hex)));
+    };
+    // Bornera de salida: una borna por cada borne de campo.
+    const tbs = [];
+    const tbOf = new Map();
+    const tbIdx = (end) => {
+      if (!tbOf.has(end)) {
+        tbOf.set(end, tbs.length);
+        tbs.push({ end, hexes: [] });
+      }
+      return tbOf.get(end);
+    };
+    // Mandos de la puerta: el cable sale del bloque de contactos y baja por
+    // el borde de la bisagra hasta el mazo.
+    const loomY = H * 0.42;
+    let doorWires = 0;
+    const doorEnd = (end, hex) => {
+      const [id, tid] = split(end);
+      const p = doorAt.get(id);
+      const t = API?.terminalOf?.(end);
+      const fx = t ? t.fx : 0.5;
+      const up = t ? t.side === "t" : true;
+      const x = p.cx - 0.022 + fx * 0.044;
+      const y = p.cy + (up ? 0.026 : -0.026);
+      const k = doorWires++;
+      const y2 = y + (up ? 1 : -1) * (k % 4) * 0.004;
+      const xe = 0.03 + (k % 6) * 0.004;
+      const zb = -0.06 - (k % 3) * 0.003;
+      hinge.add(run([[x, y, -0.05], [x, y2, zb], [xe, y2, zb], [xe, loomY, zb]], R * 0.85, wm(hex)));
+      return id;
+    };
+    for (const w of spec.wiring ?? []) {
+      if (!w?.from || !w?.to) continue;
+      const hex = new THREE.Color(API?.wireHex?.(w) ?? "#2a2e35").getHex();
+      const ends = [w.from, w.to];
+      const kind = ends.map((e) => {
+        const id = split(e)[0];
+        if (at.has(id) || at.has(devOfId.get(id)?.mount)) return "rail";
+        if (doorAt.has(id)) return "door";
+        return "field";
+      });
+      if (kind[0] === "field" && kind[1] === "field") continue;
+      ends.forEach((e, i) => {
+        if (kind[i] === "rail") {
+          const p = railEnd(e);
+          if (p && !p.hidden) stub(p, hex);
+        } else if (kind[i] === "door") doorEnd(e, hex);
+        else tbs[tbIdx(e)].hexes.push(hex);
+      });
+    }
+    // Bornera de salida al pie: del lado de adentro sube a la canaleta, del
+    // lado del campo baja al prensaestopa.
+    const pitch = 0.0125;
+    tbs.forEach((tb, i) => {
+      const x = hx1 + 0.02 + i * pitch;
+      const pe = /\.(PE|GND|SH|SHIELD)$/.test(tb.end);
+      const b = box(pitch * 0.9, 0.07, 0.06, mat(pe ? 0x3fae49 : 0x9aa3ad));
+      b.position.set(x, yTb, zf + 0.03);
+      g.add(b);
+      if (pe) {
+        const st = box(pitch * 0.92, 0.015, 0.0605, mat(0xf2cf1d));
+        st.position.copy(b.position);
+        g.add(st);
+      }
+      const hex = tb.hexes[0];
+      g.add(run([[x, yTb + 0.035, zf + 0.05], [x, yLow - 0.03, zIn]], R, wm(hex)));
+      g.add(run([[x, yTb - 0.035, zf + 0.05], [x, y0 + 0.012, zf + 0.05]], R * 1.3, wm(hex)));
+    });
+    const endStop = box(0.006, 0.08, 0.065, mat(0x2b2f35));
+    endStop.position.set(hx1 + 0.02 - pitch, yTb, zf + 0.032);
+    const endStop2 = endStop.clone();
+    endStop2.position.x = hx1 + 0.02 + tbs.length * pitch;
+    const tbRail = box(Math.max(0.05, tbs.length * pitch + 0.04), 0.035, 0.008, mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }));
+    tbRail.position.set(hx1 + 0.02 + (tbs.length * pitch) / 2 - pitch / 2, yTb, zf + 0.004);
+    g.add(endStop, endStop2, tbRail);
+    // Mazo de la puerta: manguera en espiral desde el borde de la bisagra
+    // hasta la canaleta vertical.
+    if (doorWires) {
+      hinge.updateMatrix();
+      const a = new THREE.Vector3(0.04, loomY, -0.065).applyMatrix4(hinge.matrix);
+      const pts = [[a.x, a.y, a.z], [-W / 2 + 0.03, y0 + loomY, D / 2 - 0.04], [-W / 2 + 0.035, y0 + loomY, zf + 0.12], [vdX, y0 + loomY, zf + 0.07]];
+      const spiral = (() => {
+        const c = document.createElement("canvas");
+        c.width = 64;
+        c.height = 16;
+        const x = c.getContext("2d");
+        x.fillStyle = "#2b2f35";
+        x.fillRect(0, 0, 64, 16);
+        x.strokeStyle = "#596069";
+        x.lineWidth = 3;
+        for (let i = -16; i < 80; i += 8) {
+          x.beginPath();
+          x.moveTo(i, 0);
+          x.lineTo(i + 16, 16);
+          x.stroke();
+        }
+        const t = new THREE.CanvasTexture(c);
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(1, 20);
+        return t;
+      })();
+      const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.3);
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.011, 8), new THREE.MeshStandardMaterial({ map: spiral, roughness: 0.6 })));
+    }
+  }
   const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
   return { group: g, W, D, H, legH, vfds, plcs, lamps, glandX, bottom: y0 };
 }
@@ -1857,7 +2128,15 @@ function frame(now) {
       v.led.material.emissive.setHex(o.running ? 0x1f8a46 : 0x000000);
     }
     for (const l of V.panel.lamps) l.lens.material.emissive.setHex(outOf(l.id).lit ? l.hex : 0x000000);
-    for (const pl of V.panel.plcs) pl.paint(running ? "RUN" : "STOP");
+    for (const pl of V.panel.plcs) {
+      pl.paint?.(running ? "RUN" : "STOP");
+      const st = V.snap?.devices.find((d) => d.id === pl.id);
+      for (const l of pl.leds) {
+        const on = l.sig.startsWith("Q") ? !!st?.contacts?.[l.sig] : !!st?.outputs?.[l.sig];
+        l.mesh.material.color.setHex(on ? (l.sig.startsWith("Q") ? 0xff9a2e : 0x39e46a) : 0x24272b);
+      }
+      if (pl.tft && TFT_TEX && running) TFT_TEX.needsUpdate = true;
+    }
   }
   V.controls.update();
   V.renderer.render(V.scene, V.camera);
