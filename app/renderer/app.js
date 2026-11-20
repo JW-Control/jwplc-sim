@@ -120,6 +120,7 @@ const VIEW_NOTES = {
 };
 function setView(view) {
   state.view = view;
+  if (view === "console") $("tab-console").classList.remove("fresh");
   for (const b of document.querySelectorAll(".ptab")) {
     const on = b.dataset.view === view;
     b.classList.toggle("active", on);
@@ -188,6 +189,13 @@ let consoleChars = 0;
 let consoleQueued = 0;
 
 function consoleWrite(text, cls) {
+  // Plegado (o en otra vista): un punto en «Serie» avisa que llegó algo.
+  if (state.view !== "console" || document.body.classList.contains("dock-collapsed")) $("tab-console")?.classList.add("fresh");
+  // Error del firmware o de la escena: el panel se abre solo en Serie.
+  if (cls === "fatal") {
+    setView("console");
+    setDockCollapsed(false);
+  }
   const last = consoleQueue.at(-1);
   if (last && last.cls === cls) last.text += text;
   else consoleQueue.push({ text, cls });
@@ -1951,33 +1959,55 @@ function wireSceneSide() {
   window.JwsimScenePane = { showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false) };
 }
 
-// Panel inferior: alto ajustable con su divisor (se recuerda) y plegable.
-const DOCK_KEY = "jwsim.dockHeight";
-const DOCK_FOLD_KEY = "jwsim.dockCollapsed";
+// Panel inferior: alto ajustable con su divisor y plegable a una barra con
+// sus pestañas. Cada pestaña principal recuerda su estado: en Programa empieza
+// abierto; en Esquema, Planta 3D y Placa, plegado (el lienzo usa toda la
+// altura). Se abre solo con un error de compilación o del firmware.
+const DOCK_KEY = "jwsim.dock.";
 const DOCK_MIN = 120;
 const DOCK_MIN_TOP = 300; // editor y placa
+const mainTab = () => document.body.dataset.tab || "program";
+function dockState(tab = mainTab()) {
+  try {
+    const v = JSON.parse(storeGet(DOCK_KEY + tab) ?? "null");
+    if (v && typeof v === "object") return v;
+  } catch {}
+  return { collapsed: tab !== "program", h: 0 };
+}
+function saveDock(patch) {
+  storeSet(DOCK_KEY + mainTab(), JSON.stringify({ ...dockState(), ...patch }));
+}
 function setDockHeight(px, save = true) {
   if (px === null) {
     document.body.style.removeProperty("--dock-h");
-    if (save) storeSet(DOCK_KEY, null);
+    if (save) saveDock({ h: 0 });
     return;
   }
   const max = window.innerHeight - DOCK_MIN_TOP;
   const h = Math.round(Math.max(DOCK_MIN, Math.min(px, max)));
   document.body.style.setProperty("--dock-h", `${h}px`);
-  if (save) storeSet(DOCK_KEY, String(h));
+  if (save) saveDock({ h });
 }
-function setDockCollapsed(collapsed) {
+function setDockCollapsed(collapsed, save = true) {
+  if (save) saveDock({ collapsed });
   if (document.body.classList.contains("dock-collapsed") === collapsed) return;
   document.body.classList.toggle("dock-collapsed", collapsed);
-  $("btn-dock-toggle").setAttribute("aria-expanded", String(!collapsed));
-  storeSet(DOCK_FOLD_KEY, collapsed ? "1" : null);
+  const t = $("btn-dock-toggle");
+  t.setAttribute("aria-expanded", String(!collapsed));
+  t.textContent = collapsed ? "▴" : "▾";
+  t.title = collapsed ? "Abrir el panel inferior (Ctrl+J)" : "Plegar el panel inferior (Ctrl+J)";
+  window.dispatchEvent(new Event("resize"));
+}
+/** Aplica el estado guardado de la pestaña principal visible. */
+function applyDockForTab() {
+  const st = dockState();
+  setDockHeight(st.h > 0 ? st.h : null, false);
+  setDockCollapsed(!!st.collapsed, false);
 }
 function wireDock() {
   const bar = $("dock-splitter");
-  const saved = Number(storeGet(DOCK_KEY));
-  if (saved > 0) setDockHeight(saved, false);
-  if (storeGet(DOCK_FOLD_KEY) === "1") setDockCollapsed(true);
+  applyDockForTab();
+  new MutationObserver(applyDockForTab).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
   const toggle = () => setDockCollapsed(!document.body.classList.contains("dock-collapsed"));
   $("btn-dock-toggle").addEventListener("click", toggle);
   $("sb-dock").addEventListener("click", toggle);
