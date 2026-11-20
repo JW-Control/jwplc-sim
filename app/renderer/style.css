@@ -3528,7 +3528,7 @@ body[data-tab="plant"] .view3d-empty {
   position: relative;
   min-width: 0;
   min-height: 0;
-  background: #f7f8fa;
+  background: #ffffff;
   z-index: 1;
 }
 .pn-view[hidden] {
@@ -3545,8 +3545,8 @@ body[data-schem="pneu"] .scene-float {
   cursor: grab;
   touch-action: none;
   user-select: none;
-  color: #1b2a44;
-  font-family: system-ui, sans-serif;
+  color: #111827;
+  font-family: "Segoe UI", system-ui, sans-serif;
 }
 .pn-tools {
   position: absolute;
@@ -3555,30 +3555,31 @@ body[data-schem="pneu"] .scene-float {
   display: flex;
   gap: 10px;
   align-items: center;
-  color: #33404f;
+  color: #1f2937;
   font-size: 12px;
 }
 .pn-legend i {
   display: inline-block;
   width: 22px;
-  height: 4px;
+  height: 3px;
   margin: 0 4px 2px 8px;
   vertical-align: middle;
-  background: #9cc3ee;
+  background: #00d4ff;
 }
 .pn-legend i.on {
-  height: 5px;
-  background: #1f56c8;
+  height: 4px;
+  background: #00189c;
 }
 .pn-line {
   fill: none;
-  stroke: #9cc3ee;
-  stroke-width: 2;
+  stroke: #00d4ff;
+  stroke-width: 1.9;
   stroke-linejoin: round;
+  stroke-linecap: round;
 }
 .pn-line.on {
-  stroke: #1f56c8;
-  stroke-width: 3.2;
+  stroke: #00189c;
+  stroke-width: 2.8;
 }
 /* Aire que entra al cilindro (flow) y que sale por el escape (vent), solo
    mientras el vástago se mueve. */
@@ -3598,101 +3599,128 @@ body[data-schem="pneu"] .scene-float {
 .pn-box,
 .pn-cyl,
 .pn-gauge {
-  fill: #fff;
-  stroke: #1b2a44;
-  stroke-width: 1.6;
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.4;
 }
 .pn-frame {
   fill: none;
-  stroke: #1b2a44;
+  stroke: #111827;
   stroke-width: 1.2;
-  stroke-dasharray: 6 4;
+  stroke-dasharray: 4 3;
 }
-.pn-sym {
+.pn-sym,
+.pn-ruler {
   fill: none;
-  stroke: #1b2a44;
-  stroke-width: 1.6;
+  stroke: #111827;
+  stroke-width: 1.3;
 }
-.pn-fill {
-  fill: #1b2a44;
+.pn-fill,
+.pn-magnet {
+  fill: #111827;
+}
+.pn-junction {
+  fill: #111827;
+}
+.pn-port-ring {
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.1;
 }
 .pn-flow {
-  stroke: #1b2a44;
-  stroke-width: 1.5;
-  color: #1b2a44;
+  stroke: #111827;
+  stroke-width: 1.35;
+  color: #111827;
 }
 .pn-chamber {
-  fill: #e9f1fb;
+  fill: #f0f9ff;
 }
 .pn-chamber.on {
-  fill: #8db4ef;
+  fill: #dbeafe;
 }
 .pn-piston {
-  fill: #1b2a44;
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.35;
+}
+.pn-cush {
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.2;
 }
 .pn-rod {
-  fill: #c9d1db;
-  stroke: #1b2a44;
-  stroke-width: 1.4;
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.35;
 }
 .pn-spool {
   transition: transform 90ms linear;
 }
 .pn-sol rect,
 .pn-sol line {
-  fill: #fff;
-  stroke: #1b2a44;
-  stroke-width: 1.6;
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.35;
 }
 .pn-sol.on rect {
-  fill: #ffb020;
+  fill: #fde047;
 }
 .pn-label,
 .pn-port,
 .pn-ls text {
-  fill: #33404f;
-  font-size: 11px;
+  fill: #111827;
+  font-size: 12px;
+}
+.pn-pilot-lbl {
+  fill: #111827;
+  font-size: 13px;
+  font-weight: 500;
 }
 .pn-port {
-  font-size: 9px;
+  font-size: 11px;
 }
 .pn-name {
-  fill: #1b2a44;
-  font-size: 14px;
-  font-weight: 700;
+  fill: #374151;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 .pn-val {
-  fill: #1f56c8;
-  font-size: 12px;
-  font-weight: 700;
+  fill: #00189c;
+  font-size: 11px;
+  font-weight: 600;
 }
 .pn-warn {
-  fill: #d63031;
-  font-size: 12px;
+  fill: #dc2626;
+  font-size: 11.5px;
   font-weight: 700;
 }
 .pn-m {
-  fill: #1b2a44;
-  font-size: 13px;
+  fill: #111827;
+  font-size: 12px;
   font-weight: 700;
 }
 .pn-dev.run circle {
-  fill: #dff5e6;
+  fill: #dcfce7;
 }
 .pn-ls line {
-  stroke: #1b2a44;
-  stroke-width: 2;
+  stroke: #111827;
+  stroke-width: 1.3;
 }
 .pn-ls circle {
-  fill: #fff;
-  stroke: #1b2a44;
-  stroke-width: 1.5;
+  fill: #ffffff;
+  stroke: #111827;
+  stroke-width: 1.1;
+}
+.pn-ls.on text {
+  fill: #00189c;
+  font-weight: 700;
 }
 .pn-ls.on circle {
-  fill: #2fbf5b;
+  fill: #22c55e;
+  stroke: #15803d;
 }
 .pn-empty {
-  fill: #33404f;
+  fill: #374151;
   font-size: 14px;
 }
 /* El contorno del cilindro va encima de las cámaras: sin relleno. */
