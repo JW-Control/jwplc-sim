@@ -51,7 +51,7 @@ const run = async () => {
 };
 
 try {
-  await until(() => win.$$eval("#sel-exercise option", (o) => o.filter((x) => x.value).length), 10000);
+  await until(() => win.evaluate(() => window.jwsimTest.exercises().length), 10000);
   await t(() => window.jwsimTest.pickExercise("01-marcha-parada"));
   await until(() => win.$eval("#ex-goals", (e) => !e.hidden), 10000);
   const ids = await win.$$eval("#ex-goals .goal", (l) => l.map((x) => x.dataset.goal));

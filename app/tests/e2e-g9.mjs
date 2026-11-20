@@ -49,7 +49,7 @@ const grade = async () => {
 
 try {
   // ---- EX_LIST
-  const opts = await until(() => win.$$eval("#sel-exercise option", (o) => o.filter((x) => x.value).map((x) => x.value)), 10000);
+  const opts = await until(() => win.evaluate(() => window.jwsimTest.exercises().map((e) => e.id)), 10000);
   criteria.EX_LIST = { ok: opts?.length === 10, exercises: opts };
   log(`EX_LIST ${JSON.stringify(criteria.EX_LIST)}`);
 

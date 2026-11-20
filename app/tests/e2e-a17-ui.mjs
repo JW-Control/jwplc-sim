@@ -45,17 +45,17 @@ await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForTimeout(1000);
 
 // ---- EXAMPLES_JWPLC
-await win.click("#btn-examples");
-await win.waitForSelector("#ex-menu:not([hidden])", { timeout: 5000 });
-const groups = await win.$$eval('#ex-menu [data-group]', (gs) => gs.map((g) => g.dataset.group));
-await win.hover('#ex-menu [data-group="JWPLC_GlobalPeripherals"]');
-await win.waitForSelector('.ex-submenu[data-depth="1"]', { timeout: 5000 });
-const subOpts = await win.$$eval('.ex-submenu[data-depth="1"] .ex-item', (os) => os.map((o) => o.textContent.replace("▸", "").trim()));
-await win.keyboard.press("Escape");
+const list = await win.evaluate(() => window.jwsimTest.examples());
+const groups = [...new Set(list.map((e) => e.group))];
+const menuGroups = await app.evaluate(({ Menu }) => {
+  const file = Menu.getApplicationMenu()?.items.find((i) => i.label === "Archivo");
+  const ex = file?.submenu?.items.find((i) => i.label === "Ejemplos");
+  return ex?.submenu?.items.filter((i) => i.type !== "separator").map((i) => i.label) ?? [];
+});
 criteria.EXAMPLES_JWPLC = {
-  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && !subOpts.includes("01_empty") && subOpts.includes("Curso_JWPLC_Basic"),
+  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && menuGroups.length === groups.length && menuGroups[0] === "JWPLC_GlobalPeripherals" && !list.some((e) => e.name === "01_empty"),
   groups,
-  subOpts,
+  menuGroups,
 };
 
 // ---- NO_PACKAGE_TEXT

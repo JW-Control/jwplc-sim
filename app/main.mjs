@@ -1373,6 +1373,62 @@ function openRealDevice() {
   realWin.on("closed", () => (realWin = null));
 }
 
+const EXAMPLE_SECTIONS = [
+  ["JWPLC_GlobalPeripherals"],
+  ["JWPLC_Display", "JWPLC_UI_Widgets", "JWPLC_Runtime", "JWPLC_WebScreen"],
+  ["JWPLC_Ethernet", "JWPLC_RS485", "JWPLC_ModbusRTU", "JWPLC_ModbusTCP", "JWPLC_Expansion"],
+  ["JW_DWIN", "JW_FRAM", "JW_MatrixButtons", "JW_ModbusRTU", "JW_RS485", "JW_RTC", "JW_SD"],
+];
+
+function examplesSubmenu() {
+  let list;
+  try {
+    list = listExamples();
+  } catch {
+    return [{ label: "No disponibles", enabled: false }];
+  }
+  if (!list.length) return [{ label: "Sin ejemplos", enabled: false }];
+  const byLib = new Map();
+  for (const ex of list) {
+    if (!byLib.has(ex.group)) byLib.set(ex.group, []);
+    byLib.get(ex.group).push(ex);
+  }
+  const toMenuItems = (items) => {
+    const files = [];
+    const dirs = new Map();
+    for (const ex of items) {
+      const parts = String(ex.label ?? ex.name).split(" / ");
+      if (parts.length <= 1) {
+        files.push({ label: parts[0], click: () => forward("menu", `example:${ex.dir}`) });
+      } else {
+        const sub = parts[0];
+        if (!dirs.has(sub)) dirs.set(sub, []);
+        dirs.get(sub).push({ ...ex, label: parts.slice(1).join(" / ") });
+      }
+    }
+    const dirItems = [...dirs.entries()].map(([sub, subItems]) => ({ label: sub, submenu: toMenuItems(subItems) }));
+    return files.length && dirItems.length ? [...files, { type: "separator" }, ...dirItems] : [...files, ...dirItems];
+  };
+
+  const used = new Set();
+  const menu = [];
+  const pushSection = (libs) => {
+    const items = [];
+    for (const lib of libs) {
+      if (!byLib.has(lib)) continue;
+      used.add(lib);
+      items.push({ label: lib, submenu: toMenuItems(byLib.get(lib)) });
+    }
+    if (!items.length) return;
+    if (menu.length) menu.push({ type: "separator" });
+    menu.push(...items);
+  };
+  for (const sec of EXAMPLE_SECTIONS) pushSection(sec);
+  pushSection([...byLib.keys()].filter((g) => !used.has(g) && g.startsWith("JWPLC_")).sort());
+  pushSection([...byLib.keys()].filter((g) => !used.has(g) && !g.startsWith("JWPLC_")).sort());
+  return menu;
+}
+
 function buildMenu() {
   const send = (cmd) => () => forward("menu", cmd);
   Menu.setApplicationMenu(
@@ -1386,6 +1442,8 @@ function buildMenu() {
           { label: "Nuevo sketch", accelerator: "CmdOrCtrl+N", click: send("new") },
           { label: "Abrir…", accelerator: "CmdOrCtrl+O", click: send("open") },
           { label: "Guardar", accelerator: "CmdOrCtrl+S", click: send("save") },
+          { type: "separator" },
+          { label: "Ejemplos", submenu: examplesSubmenu() },
           { type: "separator" },
           { label: "Nuevo archivo en el sketch…", accelerator: "CmdOrCtrl+Shift+N", click: send("newFile") },
           { label: "Agregar archivos al sketch…", click: send("importFiles") },

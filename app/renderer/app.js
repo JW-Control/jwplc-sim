@@ -1800,6 +1800,16 @@ window.openExerciseById = async (id) => {
   }
 };
 
+window.openArchById = async (id) => {
+  try {
+    const res = await api.openArch(id);
+    applyProject(res);
+    if (res?.showcase) consoleWrite(`${res.showcase.trim()}\n`, "sys");
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+};
+
 document.addEventListener("click", (e) => {
   if (e.target.closest("#scene-devmgr")) return window.JwsimDevices?.open();
   if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
@@ -1849,236 +1859,18 @@ async function gradeExercise() {
 }
 
 async function populateExercises() {
-  const sel = $("sel-exercise");
-  for (const ex of await api.listExercises()) {
-    const o = document.createElement("option");
-    o.value = ex.id;
-    o.textContent = `${ex.id.slice(0, 2)} · ${ex.title} (nivel ${ex.level})`;
-    sel.appendChild(o);
-  }
+  state.exercises = (await api.listExercises()) ?? [];
+  return state.exercises;
 }
 
 async function populateArchs() {
-  const sel = $("sel-arch");
-  for (const a of (await api.listArchs?.()) ?? []) {
-    const o = document.createElement("option");
-    o.value = a.id;
-    o.textContent = `${a.id.slice(0, 2)} · ${a.title}`;
-    sel.appendChild(o);
-  }
+  state.archs = (await api.listArchs?.()) ?? [];
+  return state.archs;
 }
 
 // ------------------------------------------------------------- arranque
-// Orden temático de librerías para el menú desplegable jerárquico (como Arduino IDE).
-const EXAMPLE_SECTIONS = [
-  { title: "Placa y curso", libs: ["JWPLC_GlobalPeripherals"] },
-  { title: "HMI y Runtime", libs: ["JWPLC_Display", "JWPLC_UI_Widgets", "JWPLC_Runtime", "JWPLC_WebScreen"] },
-  { title: "Comunicación y expansión", libs: ["JWPLC_Ethernet", "JWPLC_RS485", "JWPLC_ModbusRTU", "JWPLC_ModbusTCP", "JWPLC_Expansion"] },
-  { title: "Drivers de periféricos", libs: ["JW_DWIN", "JW_FRAM", "JW_MatrixButtons", "JW_ModbusRTU", "JW_RS485", "JW_RTC", "JW_SD"] },
-];
-
-function buildExampleSections(list) {
-  const byLib = new Map();
-  for (const ex of list) {
-    if (!byLib.has(ex.group)) byLib.set(ex.group, []);
-    byLib.get(ex.group).push(ex);
-  }
-  const toNode = (items) => {
-    const files = [];
-    const dirs = new Map();
-    for (const ex of items) {
-      const parts = String(ex.label ?? ex.name).split(" / ");
-      if (parts.length <= 1) files.push({ name: parts[0], ex });
-      else {
-        const sub = parts[0];
-        if (!dirs.has(sub)) dirs.set(sub, []);
-        dirs.get(sub).push({ ...ex, label: parts.slice(1).join(" / ") });
-      }
-    }
-    const children = [];
-    for (const [sub, subItems] of dirs) children.push({ name: sub, sub: toNode(subItems) });
-    return { files, children };
-  };
-
-  const used = new Set();
-  const sections = [];
-  for (const sec of EXAMPLE_SECTIONS) {
-    const libs = [];
-    for (const lib of sec.libs) {
-      if (!byLib.has(lib)) continue;
-      used.add(lib);
-      libs.push({ group: lib, sub: toNode(byLib.get(lib)) });
-    }
-    if (libs.length) sections.push({ title: sec.title, libs });
-  }
-  const restJwp = [...byLib.keys()].filter((g) => !used.has(g) && g.startsWith("JWPLC_")).sort();
-  if (restJwp.length) {
-    sections.push({ title: "Otras JWPLC", libs: restJwp.map((g) => ({ group: g, sub: toNode(byLib.get(g)) })) });
-  }
-  const restJw = [...byLib.keys()].filter((g) => !used.has(g) && !g.startsWith("JWPLC_")).sort();
-  if (restJw.length) {
-    sections.push({ title: "Otros drivers JW", libs: restJw.map((g) => ({ group: g, sub: toNode(byLib.get(g)) })) });
-  }
-  return sections;
-}
-
-const exMenuState = { sections: [], panels: [], closeTimer: 0 };
-
-function closeExampleMenus() {
-  clearTimeout(exMenuState.closeTimer);
-  while (exMenuState.panels.length) {
-    const p = exMenuState.panels.pop();
-    if (p.id === "ex-menu") {
-      p.hidden = true;
-      p.replaceChildren();
-    } else {
-      p.remove();
-    }
-  }
-  $("btn-examples")?.setAttribute("aria-expanded", "false");
-}
-
-function truncateExPanels(depth) {
-  while (exMenuState.panels.length > depth) {
-    const p = exMenuState.panels.pop();
-    if (p.id === "ex-menu") {
-      p.hidden = true;
-      p.replaceChildren();
-    } else {
-      p.remove();
-    }
-  }
-  const parentPanel = exMenuState.panels[depth - 1];
-  if (parentPanel) {
-    for (const el of parentPanel.querySelectorAll(".ex-item.open")) el.classList.remove("open");
-  }
-}
-
-function placeExPanel(panel, anchorRect, isSubmenu) {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  panel.style.left = "0px";
-  panel.style.top = "0px";
-  panel.style.maxHeight = "";
-  const w = panel.offsetWidth || 230;
-  let left = isSubmenu ? anchorRect.right - 2 : anchorRect.left;
-  if (isSubmenu && left + w > vw - 8) left = Math.max(8, anchorRect.left - w + 2);
-  else if (!isSubmenu && left + w > vw - 8) left = Math.max(8, vw - w - 8);
-  let top = isSubmenu ? anchorRect.top - 4 : anchorRect.bottom + 4;
-  const maxTop = Math.max(8, vh - 140);
-  if (top > maxTop) top = maxTop;
-  const availH = Math.max(120, vh - top - 10);
-  panel.style.left = `${Math.round(left)}px`;
-  panel.style.top = `${Math.round(top)}px`;
-  panel.style.maxHeight = `${Math.round(availH)}px`;
-}
-
-function openExampleSubpanel(node, anchorBtn, depth) {
-  truncateExPanels(depth);
-  anchorBtn.classList.add("open");
-  const panel = document.createElement("div");
-  panel.className = "ex-menu ex-submenu";
-  panel.setAttribute("role", "menu");
-  panel.dataset.depth = String(depth);
-
-  const appendLeaf = (item) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ex-item";
-    btn.setAttribute("role", "menuitem");
-    btn.dataset.exampleDir = item.ex.dir;
-    btn.textContent = item.name;
-    btn.addEventListener("pointerenter", () => {
-      clearTimeout(exMenuState.closeTimer);
-      truncateExPanels(depth + 1);
-    });
-    btn.addEventListener("click", async () => {
-      closeExampleMenus();
-      loadSketch(await api.openExample(item.ex.dir));
-    });
-    panel.appendChild(btn);
-  };
-
-  for (const item of node.files) appendLeaf(item);
-  if (node.files.length && node.children.length) {
-    const sep = document.createElement("div");
-    sep.className = "ex-sep";
-    panel.appendChild(sep);
-  }
-  for (const dirNode of node.children) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ex-item has-sub";
-    btn.setAttribute("role", "menuitem");
-    btn.setAttribute("aria-haspopup", "menu");
-    btn.innerHTML = `<span>${dirNode.name}</span><span class="ex-arrow" aria-hidden="true">▸</span>`;
-    const showChild = () => openExampleSubpanel(dirNode.sub, btn, depth + 1);
-    btn.addEventListener("pointerenter", () => {
-      clearTimeout(exMenuState.closeTimer);
-      showChild();
-    });
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      showChild();
-    });
-    panel.appendChild(btn);
-  }
-
-  panel.addEventListener("pointerenter", () => clearTimeout(exMenuState.closeTimer));
-  document.body.appendChild(panel);
-  exMenuState.panels.push(panel);
-  placeExPanel(panel, anchorBtn.getBoundingClientRect(), true);
-}
-
-function toggleExampleMenu() {
-  const root = $("ex-menu");
-  if (!root) return;
-  if (!root.hidden) {
-    closeExampleMenus();
-    return;
-  }
-  root.replaceChildren();
-  for (let i = 0; i < exMenuState.sections.length; i++) {
-    const sec = exMenuState.sections[i];
-    if (i > 0) {
-      const sep = document.createElement("div");
-      sep.className = "ex-sep";
-      root.appendChild(sep);
-    }
-    const hdr = document.createElement("div");
-    hdr.className = "ex-sec";
-    hdr.textContent = sec.title;
-    root.appendChild(hdr);
-    for (const lib of sec.libs) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ex-item has-sub";
-      btn.setAttribute("role", "menuitem");
-      btn.setAttribute("aria-haspopup", "menu");
-      btn.dataset.group = lib.group;
-      btn.innerHTML = `<span>${lib.group}</span><span class="ex-arrow" aria-hidden="true">▸</span>`;
-      const showSub = () => openExampleSubpanel(lib.sub, btn, 1);
-      btn.addEventListener("pointerenter", () => {
-        clearTimeout(exMenuState.closeTimer);
-        showSub();
-      });
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showSub();
-      });
-      root.appendChild(btn);
-    }
-  }
-  root.hidden = false;
-  exMenuState.panels = [root];
-  $("btn-examples")?.setAttribute("aria-expanded", "true");
-  placeExPanel(root, $("btn-examples").getBoundingClientRect(), false);
-}
-
 async function populateExamples() {
-  const list = await api.listExamples();
-  exMenuState.sections = buildExampleSections(list);
-  return list;
+  return (await api.listExamples()) ?? [];
 }
 
 // ------------------------------------------------------------- autoformato
@@ -2485,40 +2277,7 @@ function wireUi() {
   wireDock();
   wireSceneSide();
   $("btn-save").addEventListener("click", saveSketch);
-  $("sel-exercise").addEventListener("change", async (e) => {
-    const id = e.target.value;
-    e.target.value = "";
-    if (!id) return;
-    try {
-      applyProject(await api.openExercise(id));
-    } catch (err) {
-      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
-    }
-  });
   $("btn-grade").addEventListener("click", gradeExercise);
-  $("sel-arch").addEventListener("change", async (e) => {
-    const id = e.target.value;
-    e.target.value = "";
-    if (!id) return;
-    try {
-      const res = await api.openArch(id);
-      applyProject(res);
-      if (res?.showcase) consoleWrite(`${res.showcase.trim()}\n`, "sys");
-    } catch (err) {
-      consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
-    }
-  });
-  $("btn-examples").addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleExampleMenu();
-  });
-  document.addEventListener("pointerdown", (e) => {
-    if (!$("ex-menu")?.hidden && !e.target.closest("#ex-menu, .ex-submenu, #btn-examples")) closeExampleMenus();
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("ex-menu")?.hidden) closeExampleMenus();
-  });
-  window.addEventListener("resize", () => !$("ex-menu")?.hidden && closeExampleMenus());
   $("btn-run").addEventListener("click", buildAndRun);
   $("btn-pause").addEventListener("click", togglePause);
   $("btn-stop").addEventListener("click", stopSim);
@@ -2635,11 +2394,13 @@ function wireUi() {
     }
   });
   api.onMenu(async (cmd) => {
+    if (typeof cmd !== "string") return;
     if (cmd === "new") loadSketch(await api.newSketch());
     else if (cmd === "open") {
       const s = await api.openDialog();
       if (s) loadSketch(s);
-    } else if (cmd === "save") saveSketch();
+    } else if (cmd.startsWith("example:")) loadSketch(await api.openExample(cmd.slice(8)));
+    else if (cmd === "save") saveSketch();
     else if (cmd === "newFile") promptNewFile();
     else if (cmd === "importFiles") importSketchFiles();
     else if (cmd === "format") autoFormat();
@@ -2929,16 +2690,11 @@ window.jwsimTest = {
   tftDataUrl: () => $("tft").toDataURL("image/png"),
   // Ejercicios (G9): abrir por la lista, reemplazar el código del .ino
   // principal y calificar con el botón.
-  pickArch: async (id) => {
-    const sel = $("sel-arch");
-    sel.value = id;
-    sel.dispatchEvent(new Event("change"));
-  },
-  pickExercise: async (id) => {
-    const sel = $("sel-exercise");
-    sel.value = id;
-    sel.dispatchEvent(new Event("change"));
-  },
+  examples: () => state.examples ?? [],
+  exercises: () => state.exercises ?? [],
+  archs: () => state.archs ?? [],
+  pickArch: (id) => window.openArchById(id),
+  pickExercise: (id) => window.openExerciseById(id),
   setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
   grade: () => gradeExercise(),
   sketchDir: () => state.sketch?.dir ?? null,

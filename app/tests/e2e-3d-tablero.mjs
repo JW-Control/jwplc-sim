@@ -38,7 +38,7 @@ const app = await electron.launch({ args, env: { ...process.env, JWSIM_WORKSPACE
 const win = await app.firstWindow();
 await win.setViewportSize?.({ width: 1500, height: 950 }).catch(() => {});
 await win.waitForSelector(".monaco-editor .view-lines", { timeout: 60000 });
-await win.waitForFunction(() => document.querySelectorAll("#sel-arch option").length > 1, null, { timeout: 20000 });
+await win.waitForFunction(() => window.jwsimTest.archs().length > 0, null, { timeout: 20000 });
 const t = (fn, ...a) => win.evaluate(fn, ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms) => {

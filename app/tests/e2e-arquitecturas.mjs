@@ -32,8 +32,8 @@ await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setS
 const t = (fn, ...a) => win.evaluate(fn, ...a);
 try {
   await win.waitForSelector(".monaco-editor .view-lines", { timeout: 60000 });
-  await win.waitForFunction(() => document.querySelectorAll("#sel-arch option").length > 1, null, { timeout: 20000 });
-  const ids = await win.$$eval("#sel-arch option", (o) => o.map((x) => x.value).filter(Boolean));
+  await win.waitForFunction(() => window.jwsimTest.archs().length > 0, null, { timeout: 20000 });
+  const ids = await t(() => window.jwsimTest.archs().map((a) => a.id));
   criteria.ARCH_LIST = { ok: ids.includes("01-bombeo-edificio"), ids };
   log(`ARCH_LIST ${JSON.stringify(criteria.ARCH_LIST)}`);
 

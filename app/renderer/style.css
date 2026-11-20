@@ -180,16 +180,15 @@ select:focus-visible {
 .tb-left {
   justify-self: start;
   min-width: 0;
-  gap: 8px;
+  gap: 10px;
 }
 .brand {
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-weight: 600;
   letter-spacing: 0.2px;
-  margin-right: 2px;
 }
 .brand-mark {
   display: inline-grid;
@@ -205,7 +204,7 @@ select:focus-visible {
 .group {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 .tb-sep {
   width: 1px;
@@ -214,126 +213,38 @@ select:focus-visible {
   background: var(--border);
 }
 .toolbar button:not([hidden]),
-.toolbar select:not([hidden]),
-.toolbar .clock {
+.toolbar select:not([hidden]) {
   height: 28px;
   display: inline-flex;
   align-items: center;
 }
 .tb-files {
-  gap: 4px;
+  gap: 6px;
 }
 .tb-files button {
-  padding: 0 9px;
+  padding: 0 10px;
   font-size: 12.5px;
-}
-.tb-libs {
-  gap: 4px;
-}
-.ex-btn,
-.tb-libs select {
-  padding: 0 8px;
-  font-size: 12.5px;
-  background: var(--panel);
-}
-.tb-libs select {
-  padding-right: 4px;
-}
-.ex-btn:hover,
-.ex-btn[aria-expanded="true"],
-.tb-libs select:hover,
-.tb-libs select:focus-visible {
-  background: var(--panel-2);
-}
-.ex-btn[aria-expanded="true"] {
-  border-color: var(--accent);
-  color: var(--text-strong);
-}
-.ex-menu {
-  position: fixed;
-  z-index: 60;
-  min-width: 215px;
-  max-width: 290px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  padding: 4px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 10px 28px var(--shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.ex-menu[hidden] {
-  display: none;
-}
-.ex-sec {
-  padding: 5px 8px 3px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--muted);
-  user-select: none;
-}
-.ex-sep {
-  height: 1px;
-  margin: 4px 4px;
-  background: var(--border);
-}
-.ex-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 5px 8px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text);
-  font-size: 12.5px;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ex-item:hover,
-.ex-item.open,
-.ex-item:focus-visible {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--text-strong);
-}
-.ex-arrow {
-  flex: none;
-  font-size: 11px;
-  color: var(--muted);
-}
-.ex-item:hover .ex-arrow,
-.ex-item.open .ex-arrow {
-  color: var(--text-strong);
 }
 .tb-run {
   justify-self: center;
-  gap: 5px;
+  gap: 6px;
 }
 #btn-run,
 #btn-pause,
 #btn-stop {
   justify-content: center;
-  padding: 0 8px;
-  font-size: 12.5px;
+  padding: 0 7px;
+  font-size: 12px;
   transition: background-color 0.14s, border-color 0.14s, color 0.14s;
 }
 #btn-run {
-  width: 112px;
+  width: 102px;
 }
 #btn-pause {
-  width: 96px;
+  width: 90px;
 }
 #btn-stop {
-  width: 86px;
+  width: 80px;
 }
 #sel-speed {
   padding: 0 6px;
@@ -390,7 +301,7 @@ select:focus-visible {
 }
 .tb-right {
   justify-self: end;
-  gap: 5px;
+  gap: 7px;
 }
 .theme-btn {
   gap: 5px;
@@ -422,28 +333,29 @@ select:focus-visible {
   border-color: var(--accent);
   color: var(--text-strong);
 }
-#sel-exercise {
-  width: 98px;
-}
-#sel-arch {
-  width: 112px;
-}
 /* Las vistas del panel inferior con display propio (el envío por UART) se
    ocultan igual que las demás. */
 .view[hidden] {
   display: none !important;
 }
 .clock {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
   font-family: var(--mono);
-  font-size: 12.5px;
-  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  padding: 0 11px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface-input);
 }
 .clock .label {
   font-family: var(--ui);
-  margin-right: 6px;
+  font-weight: 500;
+  margin-right: 7px;
 }
 /* El estado se refleja directamente en #btn-run / #btn-pause / #btn-stop;
    #status se conserva como región accesible 1×1 px fuera del flujo visual. */
@@ -461,136 +373,34 @@ select:focus-visible {
   pointer-events: none;
 }
 
-/* Modo compacto y media pantalla (~960 px, 50 % de monitor Full HD):
-   hasta 1360 px oculta el texto de marca para mantener los 3 botones en
-   el centro exacto; bajo 1220 px pasa a flex fluido sin recortes. */
-@media (max-width: 1380px) {
-  .brand > span:last-child {
-    display: none;
-  }
-}
-
-@media (max-width: 1240px) {
+/* Media pantalla (~960 px, 50 % de monitor Full HD): pasa a flex fluido
+   para conservar todo visible y espaciado sin saltos ni recortes. */
+@media (max-width: 1120px) {
   .toolbar {
     display: flex;
     justify-content: space-between;
-    gap: 6px;
+    gap: 8px;
     padding: 5px 8px;
   }
   .tb-left,
   .tb-files,
-  .tb-libs,
   .tb-run,
   .tb-right {
-    gap: 4px;
-  }
-  .toolbar button:not([hidden]),
-  .toolbar select:not([hidden]),
-  .toolbar .clock {
-    height: 26px;
-  }
-  .tb-files button,
-  .ex-btn,
-  .com-status,
-  .theme-btn {
-    padding: 0 7px;
-    font-size: 12px;
-  }
-  #btn-run,
-  #btn-pause,
-  #btn-stop {
-    padding: 0 6px;
-    font-size: 12px;
-  }
-  #btn-run {
-    width: 108px;
-  }
-  #btn-pause {
-    width: 92px;
-  }
-  #btn-stop {
-    width: 82px;
-  }
-  #sel-exercise {
-    width: 90px;
-    padding: 0 4px;
-    font-size: 12px;
-  }
-  #sel-arch {
-    width: 100px;
-    padding: 0 4px;
-    font-size: 12px;
+    gap: 5px;
   }
   .clock {
-    font-size: 12px;
-    padding: 0 6px;
+    font-size: 13.5px;
+    padding: 0 9px;
   }
   .clock .label {
     display: none;
   }
 }
 
-@media (max-width: 1080px) {
-  .toolbar {
-    gap: 4px;
-    padding: 4px 6px;
-  }
-  .tb-left,
-  .tb-files,
-  .tb-libs,
-  .tb-run,
-  .tb-right {
-    gap: 3px;
-  }
+@media (max-width: 920px) {
+  .brand > span:last-child,
+  .theme-btn .theme-lbl,
   .tb-sep {
-    display: none;
-  }
-  .toolbar button:not([hidden]),
-  .toolbar select:not([hidden]),
-  .toolbar .clock {
-    height: 25px;
-  }
-  .tb-files button,
-  .ex-btn,
-  .com-status,
-  .theme-btn {
-    padding: 0 6px;
-    font-size: 11.5px;
-  }
-  #btn-run,
-  #btn-pause,
-  #btn-stop {
-    padding: 0 5px;
-    font-size: 11.5px;
-  }
-  #btn-run {
-    width: 102px;
-  }
-  #btn-pause {
-    width: 88px;
-  }
-  #btn-stop {
-    width: 78px;
-  }
-  #sel-exercise {
-    width: 78px;
-    padding: 0 3px;
-    font-size: 11.5px;
-  }
-  #sel-arch {
-    width: 84px;
-    padding: 0 3px;
-    font-size: 11.5px;
-  }
-  #sel-speed {
-    padding: 0 4px;
-    font-size: 11.5px;
-  }
-  .clock {
-    font-size: 11.5px;
-    padding: 0 5px;
-  }
-  .theme-btn .theme-lbl {
     display: none;
   }
 }
