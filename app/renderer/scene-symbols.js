@@ -316,9 +316,13 @@
   // si no la del tipo. null: se dibuja en código.
   const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
   function templateKey(type, def, p) {
-    for (const prm of def?.parameters ?? []) {
-      if (prm.type !== "enum") continue;
-      const k = `${type}__${slug(p?.[prm.id] ?? prm.default)}`;
+    const enums = (def?.parameters ?? []).filter((prm) => prm.type === "enum").map((prm) => slug(p?.[prm.id] ?? prm.default));
+    if (enums.length > 1) {
+      const combo = `${type}__${enums.join("__")}`;
+      if (templates.has(combo)) return combo;
+    }
+    for (const s of enums) {
+      const k = `${type}__${s}`;
       if (templates.has(k)) return k;
     }
     return templates.has(type) ? type : null;
