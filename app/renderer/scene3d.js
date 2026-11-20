@@ -19,7 +19,7 @@ const CYLINDERS = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
 const AIR = new Set(["jwsim/compressor", "jwsim/service-unit"]);
 const CONVEYORS = new Set(["jwsim/conveyor", "jwsim/conveyor-physics"]);
 const PLANT = new Set([...CONVEYORS, "jwsim/tank", "jwsim/door", "jwsim/solenoid-valve", "jwsim/solenoid-valve-2", "jwsim/building-water", "jwsim/lift", "jwsim/sand-filter", "jwsim/chlorinator", ...AIR]);
-const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder"]);
+const SENSORS = new Set(["jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-cylinder", "jwsim/sensor-capacitive", "jwsim/float-switch"]);
 /** Equipo.salida que acciona un sensor (el magnético de cilindro lo arma con su cilindro). */
 const sourceOf = (s) => (s.type === "jwsim/sensor-cylinder" ? (s.params?.cylinder ? `${s.params.cylinder}.position` : "") : String(s.params?.source ?? ""));
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra });
@@ -325,30 +325,55 @@ function buildTank(p) {
   const R = 0.6;
   const H = 1.6;
   const g = new THREE.Group();
-  const shell = cyl(R, H, mat(COL.tank, { transparent: true, opacity: 0.28, roughness: 0.2, depthWrite: false }), 40);
+  // Tolva: cono hacia abajo sobre cuatro patas, con la salida al pie.
+  const cone = /cono|tolva/i.test(String(p?.forma ?? ""));
+  const rb = cone ? 0.14 : R;
+  const shellM = mat(COL.tank, { transparent: true, opacity: 0.28, roughness: 0.2, depthWrite: false });
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(R, rb, H, 40, 1, cone), shellM);
   shell.position.y = H / 2 + 0.2;
-  const water = cyl(R * 0.97, 1, mat(COL.water, { transparent: true, opacity: 0.85 }), 40);
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.97, rb * 0.97, 1, 40), mat(COL.water, { transparent: true, opacity: 0.85 }));
   water.position.y = 0.2;
-  const base = cyl(R + 0.05, 0.2, mat(COL.frame), 40);
+  const base = cone ? new THREE.Group() : cyl(R + 0.05, 0.2, mat(COL.frame), 40);
   base.position.y = 0.1;
+  if (cone) {
+    for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const leg = box(0.05, H * 0.75, 0.05, mat(COL.frame));
+      leg.position.set(lx * R * 0.72, H * 0.375 - 0.1, lz * R * 0.72);
+      g.add(leg);
+    }
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R * 0.98, 0.025, 8, 40), mat(COL.frame));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = H * 0.75 + 0.2;
+    const outlet = cyl(0.05, 0.25, mat(COL.roller), 14);
+    outlet.position.y = 0.08;
+    g.add(ring, outlet);
+  }
   const rim = new THREE.Mesh(new THREE.TorusGeometry(R, 0.02, 8, 48), mat(COL.frame));
   rim.rotation.x = Math.PI / 2;
   rim.position.y = H + 0.2;
   // Bomba al costado con su caño al tanque.
-  const pump = new THREE.Group();
-  const housing = cyl(0.18, 0.25, mat(COL.pump), 20);
-  housing.rotation.z = Math.PI / 2;
-  const impeller = box(0.3, 0.04, 0.04, mat(COL.rod));
-  impeller.rotation.z = Math.PI / 2;
-  pump.add(housing, impeller);
-  pump.position.set(R + 0.55, 0.25, 0);
-  const pipe = cyl(0.04, H + 0.1, mat(COL.roller), 12);
-  pipe.position.set(R + 0.3, (H + 0.3) / 2 + 0.1, 0);
-  const pipeTop = cyl(0.04, 0.35, mat(COL.roller), 12);
-  pipeTop.rotation.z = Math.PI / 2;
-  pipeTop.position.set(R + 0.13, H + 0.3, 0);
-  g.add(shell, water, base, rim, pump, pipe, pipeTop);
-  return { group: g, water, impeller, H, R, size: [2 * R + 0.8, 2 * R] };
+  // Electrobomba al costado (la misma de la sala de bombas) con su descarga al tanque.
+  const ep = electroPump(String(p?.bomba ?? "").split(".")[0] || "P", 0.36);
+  const px = R + 0.5;
+  const pz = 0.12;
+  ep.group.position.set(px, 0, pz);
+  ep.group.scale.setScalar(0.85);
+  const holder = new THREE.Group();
+  holder.rotation.y = Math.PI / 2;
+  holder.position.set(px, 0.36 * 0.85, pz - 0.02 * 0.85);
+  const impeller = new THREE.Group();
+  const hub = cyl(0.04, 0.05, PUMP.black, 16);
+  hub.rotation.z = Math.PI / 2;
+  const key = box(0.05, 0.09, 0.016, mat(0xffb020));
+  impeller.add(hub, key);
+  holder.add(impeller);
+  const zd = pz - 0.16 * 0.85;
+  const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
+  const pipe = run([[px, ep.dischargeY * 0.85, zd], [px, H + 0.35, zd], [R * 0.55, H + 0.35, zd], [R * 0.55, H + 0.15, zd]], 0.035, pipeM);
+  const pipeTop = checkValve(0.035);
+  pipeTop.position.set(px, 0.75, zd);
+  g.add(shell, water, base, rim, ep.group, holder, pipe, pipeTop);
+  return { group: g, water, impeller, H, R, cone, size: [2 * R + 0.8, 2 * R] };
 }
 
 function buildDoor(p) {
@@ -527,9 +552,67 @@ function init() {
   V.root = new THREE.Group();
   V.scene.add(V.root);
   new ResizeObserver(resize).observe(canvas.parentElement);
+  setupPicking(canvas);
   V.ready = true;
   loadBoard();
   requestAnimationFrame(frame);
+}
+
+/**
+ * Clic sobre un mando o un equipo de campo en 3D: lo acciona igual que en el
+ * esquema (pulsar mientras se mantiene, alternar, o pasar a la posición
+ * siguiente). Solo con la simulación en marcha; si no, el clic gira la vista.
+ */
+function setupPicking(canvas) {
+  const ray = new THREE.Raycaster();
+  const ptr = new THREE.Vector2();
+  const pick = (e) => {
+    if (!V.hits?.length) return null;
+    const r = canvas.getBoundingClientRect();
+    ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, V.camera);
+    const hit = ray.intersectObjects(V.hits.map((h) => h.mesh), false)[0];
+    return hit ? V.hits.find((h) => h.mesh === hit.object) : null;
+  };
+  canvas.addEventListener("pointermove", (e) => {
+    if (e.buttons) return;
+    canvas.style.cursor = window.JwsimScene?.running?.() && pick(e) ? "pointer" : "";
+  });
+  canvas.addEventListener(
+    "pointerdown",
+    (e) => {
+      const Sc = window.JwsimScene;
+      if (!Sc?.running?.() || e.button !== 0) return;
+      const h = pick(e);
+      if (!h) return;
+      const a = (Sc.actionsOf(h.id) ?? []).find((x) => x.kind !== "value");
+      if (!a) return;
+      e.stopImmediatePropagation();
+      V.controls.enabled = false;
+      const cur = Sc.actionState(h.id, a.id);
+      if (a.kind === "momentary") {
+        Sc.act(h.id, a.id, true);
+        const up = () => {
+          Sc.act(h.id, a.id, false);
+          V.controls.enabled = true;
+          window.removeEventListener("pointerup", up);
+        };
+        window.addEventListener("pointerup", up);
+        return;
+      }
+      if (a.kind === "toggle") Sc.act(h.id, a.id, !cur);
+      else if (a.options) {
+        const i = a.options.map(Number).indexOf(Number(cur ?? a.options[0]));
+        Sc.act(h.id, a.id, Number(a.options[(i + 1) % a.options.length]));
+      }
+      const up = () => {
+        V.controls.enabled = true;
+        window.removeEventListener("pointerup", up);
+      };
+      window.addEventListener("pointerup", up);
+    },
+    { capture: true },
+  );
 }
 
 /** Cámara que encuadra toda la planta (ancho V.extent) desde arriba y adelante. */
@@ -551,8 +634,10 @@ function fitView() {
   const d = Math.max(fitW, fitH, 4);
   const cx = w / 2;
   const cy = Math.max(0.8, tall * 0.4);
-  V.controls.target.set(cx, cy, 0);
-  V.camera.position.set(cx, cy + d * 0.45, d * 0.9);
+  // La fila de campo va adelante: se encuadra el medio entre ella y la planta.
+  const cz = (V.zFront ?? 0) / 2;
+  V.controls.target.set(cx, cy, cz);
+  V.camera.position.set(cx, cy + d * 0.45, cz + d * 0.9);
   V.controls.update();
 }
 
@@ -579,8 +664,11 @@ function rebuild(spec) {
   let x = 0;
   const huds = [];
   V.panel = null;
+  V.field = [];
+  V.hits = [];
+  V.zFront = 0;
   // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
-  if (plant.length && !plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
+  if (!plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
     const tag = label("Tablero");
@@ -631,7 +719,7 @@ function rebuild(spec) {
         beacons.push({ id: s.id, b });
         continue;
       }
-      const min = Number(s.params.min ?? 1);
+      const min = Number(s.params.min ?? (s.params.alto != null ? Number(s.params.alto) / 100 : 1));
       if (CYLINDERS.has(d.type) && s.type === "jwsim/limit-switch") {
         // Rodillo justo bajo la cabeza del vástago en ese extremo.
         const b = rollerSwitch();
@@ -681,13 +769,89 @@ function rebuild(spec) {
     huds.push(d.id);
     x += w + 1.2;
   }
+  // Campo: lo que no dibuja ninguna planta va en una fila adelante, con su
+  // canalización desde el tablero.
+  const plantIds = new Set(plant.map((d) => d.id));
+  const drawn = new Set();
+  for (const d of plant) {
+    const pp = d.params ?? {};
+    const keys = d.type === "jwsim/building-water" ? ["bombas"] : d.type === "jwsim/tank" ? ["bomba"] : ["motor"];
+    for (const k of keys) for (const id of String(pp[k] ?? "").split(/[\s,;]+/)) if (id) drawn.add(id.split(".")[0]);
+  }
+  const building = plant.some((d) => d.type === "jwsim/building-water");
+  const field = spec.devices.filter((d) => {
+    if (!FIELD.kinds.has(d.type) || drawn.has(d.id)) return false;
+    if (SENSORS.has(d.type) && plantIds.has(sourceOf(d).split(".")[0])) return false;
+    if (building && (d.type === "jwsim/pressure-rs485" || d.type === "jwsim/float-switch")) return false;
+    return true;
+  });
+  const lampsBy = (c) => spec.devices.find((d) => d.type === "jwsim/lamp" && d.params?.color === c);
+  const traffic = !plant.length && ["rojo", "amarillo", "verde"].every(lampsBy);
+  const items = [];
+  if (traffic) items.push({ id: "semaforo", label: "Semáforo", model: buildTrafficLight(["rojo", "amarillo", "verde"].map((c) => ({ id: lampsBy(c).id, hex: LAMP_HEX[c] }))), w: 0.7 });
+  for (const d of field) items.push({ id: d.id, label: d.id, model: buildField(d), w: d.type === "jwsim/sensor-photoelectric" ? 1.3 : FIELD.motor.has(d.type) ? 0.8 : 0.6 });
+  // Cada equipo de campo va junto a la planta con la que trabaja (la que lo
+  // nombra en sus parámetros o a la que mide); el resto, en la fila de campo.
+  const refs = (d) => Object.values(d.params ?? {}).filter((v) => typeof v === "string").map((v) => v.split(".")[0]);
+  const hostOf = (d) => {
+    const own = refs(d).find((id) => plantIds.has(id));
+    if (own) return own;
+    return plant.find((pd) => refs(pd).includes(d.id))?.id ?? null;
+  };
+  const centerOf = (id) => {
+    const o = V.objects.get(id);
+    const gx = o.model.group.position.x;
+    return o.type === "jwsim/tank" ? gx : gx + o.model.size[0] / 2;
+  };
+  const hosted = new Map();
+  for (const it of items) {
+    const d = spec.devices.find((q) => q.id === it.id);
+    const h = d && V.objects.has(hostOf(d) ?? "") ? hostOf(d) : null;
+    it.host = h;
+    if (h) hosted.set(h, [...(hosted.get(h) ?? []), it]);
+  }
+  for (const list of hosted.values()) list.forEach((it, j) => (it.slot = j - (list.length - 1) / 2));
+  if (items.length) {
+    const side = !plant.length && !!V.panel;
+    const free = items.filter((it) => !it.host);
+    const fz = side ? 0.2 : hosted.size ? 2.1 : V.panel ? 1.6 : 0;
+    let fx = side ? V.panel.W + 0.5 : 0.3;
+    const conduitM = mat(0x5f6670, { roughness: 0.6 });
+    items.forEach((it, k) => {
+      const m = it.model;
+      const px = it.host ? centerOf(it.host) + it.slot * 0.65 - 0.15 : fx;
+      const pz = it.host ? 1.05 : fz;
+      m.group.position.set(px + 0.15, 0, pz);
+      V.root.add(m.group);
+      const tag = label(it.label);
+      tag.scale.set(0.5, 0.125, 1);
+      tag.position.set(0, it.id === "semaforo" ? 2.5 : 1.05, 0);
+      m.group.add(tag);
+      for (const h of m.hit ?? []) V.hits.push({ mesh: h, id: it.id });
+      V.field.push({ id: it.id, m });
+      // Canalización: baja del tablero, va por el piso y sube al equipo.
+      if (V.panel && !building) {
+        const P = V.panel;
+        const gx = P.group.position.x + P.glandX(k, items.length);
+        const gz = P.D / 2 - 0.08;
+        const ax = px + 0.15 + m.anchor[0];
+        const az = pz + m.anchor[2];
+        const lane = side ? fz + 0.55 + k * 0.05 : pz - 0.4 - k * 0.04;
+        V.root.add(run([[gx, P.bottom, gz], [gx, 0.03, gz], [gx, 0.03, lane], [ax, 0.03, lane], [ax, 0.03, az], [ax, m.anchor[1], az]], 0.016, conduitM));
+      }
+      if (!it.host) fx += it.w + 0.3;
+    });
+    x = Math.max(x, fx + 0.9);
+    V.zFront = side ? 0.3 : free.length ? fz : 1.05;
+  }
+  for (const h of V.panel?.hits ?? []) V.hits.push(h);
   V.extent = Math.max(2, x - 1.2);
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
   V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   fitView();
   const empty = document.getElementById("view3d-empty");
-  if (empty) empty.hidden = plant.length > 0;
+  if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0;
 }
 
 /** Manómetro de frente: esfera blanca y aguja que gira con la presión. */
@@ -1145,9 +1309,10 @@ function plcBasic() {
     TFT_TEX = new THREE.CanvasTexture(appTft);
     TFT_TEX.colorSpace = THREE.SRGBColorSpace;
   }
+  let tftMesh = null;
   if (TFT_TEX) {
     const t = BOARD.tft;
-    const tp = new THREE.Mesh(new THREE.PlaneGeometry(t.w * S, t.h * S), new THREE.MeshBasicMaterial({ map: TFT_TEX }));
+    const tp = tftMesh = new THREE.Mesh(new THREE.PlaneGeometry(t.w * S, t.h * S), new THREE.MeshBasicMaterial({ map: TFT_TEX }));
     tp.position.set(X(t.x + t.w / 2), Y(t.y + t.h / 2), zU + 0.0025);
     g.add(tp);
   }
@@ -1161,7 +1326,427 @@ function plcBasic() {
   const terms = {};
   // (el cable del RS-485 baja por delante de la base, como en la placa real).
   for (const b of BOARD.bornes) terms[b.id] = [X(b.x), Y(b.entry < b.y ? b.y - 50 : b.y + 50), b.block === "med" ? zL + 0.012 : (b.y < 990 ? zU : zL) - 0.01, b.entry < b.y];
-  return { group: g, w, h, up: h / 2, down: h / 2, terms, leds, tft: !!TFT_TEX, top: [], bottom: [] };
+  return { group: g, w, h, up: h / 2, down: h / 2, terms, leds, tft: !!TFT_TEX, tftMesh, top: [], bottom: [] };
+}
+
+// ------------------------------------------------------------------ campo
+// Equipos de campo que no son parte de una planta: motores, finales de
+// carrera, sensores, sirena, válvulas, presostatos… Cada uno va sobre su
+// soporte en la fila de campo, con su canalización desde el tablero, y se
+// acciona con clic (como en el esquema) cuando la simulación corre.
+const FIELD = {
+  motor: new Set(["jwsim/motor", "jwsim/motor-1ph", "jwsim/motor-3ph"]),
+  kinds: new Set(["jwsim/motor", "jwsim/motor-1ph", "jwsim/motor-3ph", "jwsim/limit-switch", "jwsim/sensor-inductive", "jwsim/sensor-photoelectric", "jwsim/sensor-capacitive", "jwsim/buzzer", "jwsim/water-valve", "jwsim/pressure-switch", "jwsim/float-switch", "jwsim/chlorine-rs485", "jwsim/pressure-rs485", "jwsim/thermostat", "jwsim/level-electrodes"]),
+};
+const FM = {
+  post: mat(0x4b5563, { metalness: 0.4, roughness: 0.5 }),
+  galv: mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 }),
+  dark: mat(0x23272d, { roughness: 0.5 }),
+  red: mat(0xd8282d, { roughness: 0.45 }),
+  yellow: mat(0xf2cf1d, { roughness: 0.5 }),
+  brass: mat(0xc9a14a, { metalness: 0.6, roughness: 0.35 }),
+  grey: mat(0x9aa3ad, { roughness: 0.5 }),
+  concrete: mat(0x8e959d, { roughness: 0.95 }),
+};
+/** Pedestal de concreto con un poste y una ménsula a la altura h. */
+function fieldStand(h) {
+  const g = new THREE.Group();
+  const foot = box(0.26, 0.06, 0.26, FM.concrete);
+  foot.position.y = 0.03;
+  const post = box(0.05, h, 0.05, FM.post);
+  post.position.y = h / 2 + 0.06;
+  g.add(foot, post);
+  return g;
+}
+/** LED de estado (esfera chica que se enciende). */
+function statusLed(r = 0.014, hex = 0xffb020) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), new THREE.MeshStandardMaterial({ color: 0x3a3a3a, emissive: 0x000000 }));
+  m.userData.hex = hex;
+  return m;
+}
+const setLed = (m, on) => {
+  m.material.color.setHex(on ? m.userData.hex : 0x3a3a3a);
+  m.material.emissive.setHex(on ? m.userData.hex : 0x000000);
+};
+/** Motor de campo sobre su base, con un volante pintado para ver el giro y el sentido. */
+function fieldMotor(d) {
+  const g = new THREE.Group();
+  const three = d.type === "jwsim/motor-3ph" || (d.type === "jwsim/motor" && !/DC/i.test(String(d.params?.rating ?? "")));
+  const bodyM = mat(three ? 0x2f6fb5 : 0x8b939c, { metalness: 0.35, roughness: 0.45 });
+  const base = box(0.5, 0.08, 0.36, FM.concrete);
+  base.position.y = 0.04;
+  const bed = box(0.4, 0.04, 0.26, PUMP.base);
+  bed.position.y = 0.1;
+  g.add(base, bed);
+  const ay = 0.27;
+  const R = 0.11;
+  const body = cyl(R, 0.26, bodyM, 28);
+  body.rotation.z = Math.PI / 2;
+  body.position.set(-0.03, ay, 0);
+  g.add(body);
+  for (let k = 0; k < 14; k++) {
+    const a = (k / 14) * Math.PI * 2;
+    if (Math.abs(a - Math.PI * 1.5) < 0.5) continue;
+    const fin = box(0.22, 0.022, 0.007, bodyM);
+    fin.position.set(-0.03, ay + Math.sin(a) * (R + 0.008), Math.cos(a) * (R + 0.008));
+    fin.rotation.x = -a;
+    g.add(fin);
+  }
+  for (const x of [-0.08, 0.04]) {
+    const foot = box(0.05, ay - R - 0.12, 0.22, bodyM);
+    foot.position.set(x, (ay - R + 0.12) / 2, 0);
+    g.add(foot);
+  }
+  const fan = cyl(R + 0.004, 0.08, FM.dark, 28);
+  fan.rotation.z = Math.PI / 2;
+  fan.position.set(-0.2, ay, 0);
+  g.add(fan);
+  const tb = box(0.1, 0.07, 0.1, mat(three ? 0x24578f : 0x6f7882));
+  tb.position.set(-0.03, ay + R + 0.035, 0);
+  const gland = cyl(0.014, 0.03, FM.dark, 10);
+  gland.rotation.x = Math.PI / 2;
+  gland.position.set(-0.03, ay + R + 0.035, -0.062);
+  g.add(tb, gland);
+  const np = plate(0.08, 0.04, three ? `${d.id} 3~` : `${d.id} 1~`, { bg: "#d9dde2", fg: "#1a1d21", font: "bold 40px sans-serif" });
+  np.position.set(-0.03, ay, R + 0.03);
+  g.add(np);
+  // Eje con un volante a franjas (se ve girar y en qué sentido).
+  const rotor = new THREE.Group();
+  const shaft = cyl(0.015, 0.1, FM.galv, 10);
+  shaft.rotation.z = Math.PI / 2;
+  shaft.position.x = -0.04;
+  const disk = cyl(0.09, 0.03, mat(0xe8eaed), 24);
+  disk.rotation.z = Math.PI / 2;
+  const stripe = box(0.032, 0.17, 0.03, mat(0xf08a24));
+  const dot = box(0.033, 0.03, 0.03, FM.dark);
+  dot.position.y = 0.06;
+  rotor.add(shaft, disk, stripe, dot);
+  rotor.position.set(0.2, ay, 0);
+  g.add(rotor);
+  return {
+    group: g,
+    anchor: [-0.03, ay + R + 0.035, -0.08],
+    update(o) {
+      rotor.rotation.x -= valOf(o.speed) * 0.5;
+    },
+  };
+}
+/** Final de carrera de palanca con rodillo sobre su soporte; una leva lo acciona. */
+function fieldLimit(d) {
+  const g = fieldStand(0.55);
+  const compact = d.params?.model === "compacto";
+  const body = box(0.07, compact ? 0.08 : 0.12, 0.05, compact ? FM.dark : FM.galv);
+  body.position.set(0, 0.5, 0.05);
+  const head = cyl(0.025, 0.03, FM.dark, 16);
+  head.rotation.x = Math.PI / 2;
+  head.position.set(0, compact ? 0.56 : 0.58, 0.06);
+  const lever = new THREE.Group();
+  const arm = box(0.012, 0.11, 0.012, FM.galv);
+  arm.position.y = 0.055;
+  const roller = cyl(0.02, 0.016, FM.dark, 16);
+  roller.rotation.x = Math.PI / 2;
+  roller.position.y = 0.11;
+  lever.add(arm, roller);
+  lever.position.set(0, compact ? 0.56 : 0.58, 0.085);
+  const cam = box(0.16, 0.025, 0.06, FM.yellow);
+  cam.position.set(0.12, 0.7, 0.085);
+  const led = statusLed();
+  led.position.set(0, 0.47, 0.078);
+  g.add(body, head, lever, cam, led);
+  return {
+    group: g,
+    anchor: [0, 0.44, 0.05],
+    hit: [body, head, lever, cam],
+    update(o) {
+      const on = !!o.actuated;
+      lever.rotation.z = on ? 0.5 : 0;
+      cam.position.x = on ? 0.05 : 0.14;
+      setLed(led, on);
+    },
+  };
+}
+/** Sensor de proximidad cilíndrico M18 (inductivo o capacitivo) mirando a su objetivo. */
+function fieldProx(d) {
+  const g = fieldStand(0.5);
+  const cap = d.type === "jwsim/sensor-capacitive";
+  const barrel = cyl(0.025, 0.12, cap ? mat(0x6f7882, { roughness: 0.4 }) : FM.brass, 18);
+  barrel.rotation.z = Math.PI / 2;
+  barrel.position.set(0.05, 0.5, 0.05);
+  const nuts = [0.02, 0.08].map((x) => {
+    const n = cyl(0.033, 0.012, FM.galv, 6);
+    n.rotation.z = Math.PI / 2;
+    n.position.set(x, 0.5, 0.05);
+    return n;
+  });
+  const face = cyl(0.023, 0.006, cap ? mat(0xf08a24) : mat(0x2f6fb5), 18);
+  face.rotation.z = Math.PI / 2;
+  face.position.set(0.113, 0.5, 0.05);
+  const led = statusLed(0.01);
+  led.position.set(-0.012, 0.5, 0.05);
+  const target = box(0.04, 0.1, 0.1, cap ? mat(0x2f8cff, { transparent: true, opacity: 0.6 }) : FM.galv);
+  target.position.set(0.3, 0.5, 0.05);
+  g.add(barrel, ...nuts, face, led, target);
+  return {
+    group: g,
+    anchor: [-0.03, 0.5, 0.05],
+    hit: [barrel, face, target],
+    update(o) {
+      const on = !!o.detecting;
+      setLed(led, on);
+      target.position.x = on ? 0.15 : 0.3;
+    },
+  };
+}
+/** Fotocélula con reflector enfrente y el haz visible. */
+function fieldPhoto() {
+  const g = fieldStand(0.5);
+  const body = box(0.05, 0.08, 0.04, mat(0x2b2f35));
+  body.position.set(0.03, 0.5, 0.05);
+  const lens = box(0.004, 0.05, 0.03, mat(0x161a1f, { metalness: 0.3 }));
+  lens.position.set(0.057, 0.5, 0.05);
+  const led = statusLed(0.008);
+  led.position.set(0.03, 0.545, 0.05);
+  const post2 = fieldStand(0.5);
+  post2.position.x = 0.9;
+  const refl = box(0.01, 0.06, 0.06, mat(0xd8282d, { roughness: 0.2 }));
+  refl.position.set(0.875, 0.5, 0.05);
+  const beam = cyl(0.004, 0.81, new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.55 }), 6);
+  beam.rotation.z = Math.PI / 2;
+  beam.position.set(0.465, 0.5, 0.05);
+  const person = new THREE.Group();
+  const torso = cyl(0.09, 0.5, mat(0x2f6fb5), 14);
+  torso.position.y = 0.55;
+  const headM = new THREE.Mesh(new THREE.SphereGeometry(0.08, 14, 10), mat(COL.person));
+  headM.position.y = 0.92;
+  person.add(torso, headM);
+  person.position.set(0.45, 0, 0.05);
+  g.add(body, lens, led, post2, refl, beam, person);
+  return {
+    group: g,
+    anchor: [-0.03, 0.5, 0.05],
+    hit: [body, refl, torso],
+    update(o) {
+      const on = !!o.detecting;
+      setLed(led, on);
+      person.visible = on;
+      beam.scale.y = on ? 0.5 : 1;
+      beam.position.x = on ? 0.26 : 0.465;
+    },
+  };
+}
+/** Sirena de pared: caja, cono rojo y destello mientras suena. */
+function fieldBuzzer() {
+  const g = new THREE.Group();
+  const wall = box(0.5, 0.9, 0.06, mat(0xd9dee4, { roughness: 0.9 }));
+  wall.position.set(0, 0.75, -0.06);
+  const bx = box(0.16, 0.16, 0.08, FM.red);
+  bx.position.set(0, 0.85, 0.01);
+  const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.09, 0.12, 20, 1, true), mat(0xb51e22, { side: THREE.DoubleSide }));
+  horn.rotation.x = Math.PI / 2;
+  horn.position.set(0, 0.85, 0.11);
+  const strobe = new THREE.Mesh(new THREE.SphereGeometry(0.05, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a2a2a, emissive: 0x000000, transparent: true, opacity: 0.9 }));
+  strobe.position.set(0, 0.94, 0.01);
+  g.add(wall, bx, horn, strobe);
+  let t = 0;
+  return {
+    group: g,
+    anchor: [0, 0.77, 0.0],
+    update(o) {
+      const on = !!o.sounding;
+      t += 0.2;
+      const blink = on && Math.sin(t * 2) > 0;
+      strobe.material.emissive.setHex(blink ? 0xff2a2a : 0x000000);
+      horn.scale.setScalar(on ? 1 + 0.06 * Math.sin(t * 6) : 1);
+    },
+  };
+}
+/** Electroválvula de agua en un tramo de tubería (cuerpo de bronce y bobina). */
+function fieldWaterValve() {
+  const g = fieldStand(0.35);
+  const pipe = cyl(0.03, 0.5, mat(0x2f6fb5, { metalness: 0.3 }), 14);
+  pipe.rotation.z = Math.PI / 2;
+  pipe.position.set(0, 0.45, 0.05);
+  const bodyV = box(0.1, 0.07, 0.07, FM.brass);
+  bodyV.position.set(0, 0.45, 0.05);
+  const coil = cyl(0.03, 0.07, FM.dark, 16);
+  coil.position.set(0, 0.52, 0.05);
+  const led = statusLed(0.01, 0x39e46a);
+  led.position.set(0.03, 0.54, 0.08);
+  const flow = cyl(0.012, 0.18, new THREE.MeshBasicMaterial({ color: 0x55aef0, transparent: true, opacity: 0.8 }), 8);
+  flow.position.set(0.25, 0.36, 0.05);
+  g.add(pipe, bodyV, coil, led, flow);
+  return {
+    group: g,
+    anchor: [0, 0.56, 0.0],
+    update(o) {
+      const open = !!o.open;
+      setLed(led, open);
+      flow.visible = open;
+    },
+  };
+}
+/** Presostato / termostato / instrumento genérico sobre un tramo de tubería. */
+function fieldInstrument(d) {
+  const g = fieldStand(0.4);
+  const pipe = cyl(0.03, 0.4, mat(0x2f6fb5, { metalness: 0.3 }), 14);
+  pipe.rotation.z = Math.PI / 2;
+  pipe.position.set(0, 0.45, 0.05);
+  const stem = cyl(0.01, 0.08, FM.galv, 8);
+  stem.position.set(0, 0.52, 0.05);
+  const head = box(0.1, 0.12, 0.07, d.type === "jwsim/pressure-switch" ? mat(0x2b2f35) : mat(0xe7ebef));
+  head.position.set(0, 0.62, 0.05);
+  const sc = screen(0.07, 0.03, { bg: "#0b1a10", fg: "#7dff9a", font: "bold 80px monospace" });
+  sc.plane.position.set(0, 0.64, 0.0855);
+  const led = statusLed(0.009);
+  led.position.set(0.035, 0.585, 0.087);
+  g.add(pipe, stem, head, sc.plane, led);
+  const q = { "jwsim/pressure-switch": "presion", "jwsim/thermostat": "temperatura", "jwsim/chlorine-rs485": "cloro", "jwsim/pressure-rs485": "presion" }[d.type];
+  return {
+    group: g,
+    anchor: [0, 0.62, 0.0],
+    hit: [head],
+    update(o) {
+      const v = o[q];
+      sc.paint(v == null ? "---" : typeof v === "number" ? v.toFixed(v < 10 ? 2 : 1) : String(v));
+      setLed(led, !!(o.closed ?? o.powered));
+    },
+  };
+}
+/** Flotador colgado de su cable en una cámara (pozo) abierta. */
+function fieldFloat() {
+  const g = new THREE.Group();
+  const sump = cyl(0.25, 0.5, mat(0x9aa0a6, { transparent: true, opacity: 0.35, depthWrite: false }), 24, true);
+  sump.position.y = 0.25;
+  const water = cyl(0.23, 0.3, mat(COL.water, { transparent: true, opacity: 0.7 }), 24);
+  water.position.y = 0.15;
+  const arm = box(0.4, 0.03, 0.03, FM.post);
+  arm.position.set(0, 0.62, 0);
+  const fl = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.08, 6, 12), mat(0xe7ebef));
+  g.add(sump, water, arm, fl);
+  return {
+    group: g,
+    anchor: [-0.2, 0.62, 0],
+    hit: [fl, sump],
+    update(o) {
+      const up = !!o.up;
+      fl.position.set(0.05, up ? 0.42 : 0.2, 0);
+      fl.rotation.z = up ? 1.2 : 0.2;
+      water.scale.y = up ? 2.2 : 1;
+      water.position.y = up ? 0.33 : 0.15;
+    },
+  };
+}
+function buildField(d) {
+  const t = d.type;
+  if (FIELD.motor.has(t)) return fieldMotor(d);
+  if (t === "jwsim/limit-switch") return fieldLimit(d);
+  if (t === "jwsim/sensor-inductive" || t === "jwsim/sensor-capacitive") return fieldProx(d);
+  if (t === "jwsim/sensor-photoelectric") return fieldPhoto(d);
+  if (t === "jwsim/buzzer") return fieldBuzzer(d);
+  if (t === "jwsim/water-valve") return fieldWaterValve(d);
+  if (t === "jwsim/float-switch") return fieldFloat(d);
+  return fieldInstrument(d);
+}
+/** Semáforo de poste para los pilotos rojo/ámbar/verde del ejercicio. */
+function buildTrafficLight(ids) {
+  const g = new THREE.Group();
+  const post = cyl(0.04, 1.4, FM.post, 12);
+  post.position.y = 0.7;
+  const housing = box(0.3, 0.84, 0.22, mat(0x1d2126));
+  housing.position.set(0, 1.85, 0);
+  g.add(post, housing);
+  const lenses = ids.map(({ id, hex }, i) => {
+    const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 20, 1, true, 0, Math.PI), FM.dark);
+    visor.rotation.x = Math.PI / 2;
+    visor.rotation.y = Math.PI;
+    visor.position.set(0, 2.12 - i * 0.27 + 0.03, 0.16);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.1, 24), new THREE.MeshStandardMaterial({ color: 0x2a2a2a, emissive: 0x000000 }));
+    lens.position.set(0, 2.12 - i * 0.27, 0.111);
+    g.add(visor, lens);
+    return { id, lens, hex };
+  });
+  return {
+    group: g,
+    anchor: [0, 0.3, -0.05],
+    lenses,
+    update() {
+      for (const l of lenses) {
+        const on = !!outOf(l.id).lit;
+        l.lens.material.color.setHex(on ? l.hex : 0x2a2a2a);
+        l.lens.material.emissive.setHex(on ? l.hex : 0x000000);
+      }
+    },
+  };
+}
+
+/**
+ * Junta en una sola malla por material las piezas fijas de un conjunto (el
+ * tablero tiene cientos: tornillos, cables, borneras…). Menos llamadas de
+ * dibujo y la vista sigue fluida en equipos modestos. `skip`: objetos que se
+ * mueven, cambian de color o se pueden clicar (se dejan con todo su
+ * subárbol); `keepMat`: materiales que cambian en vivo (no se mezclan con
+ * otros aunque se vean iguales).
+ */
+function bakeStatic(root, skip = [], keepMat = new Set()) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const skipSet = new Set();
+  for (const o of skip) o?.traverse?.((q) => skipSet.add(q));
+  const groups = new Map();
+  root.traverse((o) => {
+    if (!o.isMesh || skipSet.has(o) || Array.isArray(o.material) || !o.visible) return;
+    const g = o.geometry;
+    if (!g.index || !g.attributes.position || !g.attributes.normal || !g.attributes.uv) return;
+    const m = o.material;
+    const key = m.map || keepMat.has(m) ? m.uuid : [m.type, m.color?.getHex(), m.emissive?.getHex(), m.roughness, m.metalness, m.transparent, m.opacity, m.side, m.depthWrite, m.alphaTest].join("|");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  });
+  const mtx = new THREE.Matrix4();
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    let nv = 0;
+    let ni = 0;
+    for (const o of list) {
+      nv += o.geometry.attributes.position.count;
+      ni += o.geometry.index.count;
+    }
+    const pos = new Float32Array(nv * 3);
+    const nor = new Float32Array(nv * 3);
+    const uv = new Float32Array(nv * 2);
+    const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+    let v0 = 0;
+    let i0 = 0;
+    const nm = new THREE.Matrix3();
+    const p = new THREE.Vector3();
+    for (const o of list) {
+      const g = o.geometry;
+      mtx.multiplyMatrices(inv, o.matrixWorld);
+      nm.getNormalMatrix(mtx);
+      const P = g.attributes.position;
+      const N = g.attributes.normal;
+      const U = g.attributes.uv;
+      for (let i = 0; i < P.count; i++) {
+        p.fromBufferAttribute(P, i).applyMatrix4(mtx);
+        pos.set([p.x, p.y, p.z], (v0 + i) * 3);
+        p.fromBufferAttribute(N, i).applyMatrix3(nm).normalize();
+        nor.set([p.x, p.y, p.z], (v0 + i) * 3);
+        uv.set([U.getX(i), U.getY(i)], (v0 + i) * 2);
+      }
+      const I = g.index;
+      for (let i = 0; i < I.count; i++) idx[i0 + i] = I.getX(i) + v0;
+      v0 += P.count;
+      i0 += I.count;
+      o.parent.remove(o);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeBoundingSphere();
+    root.add(new THREE.Mesh(geo, list[0].material));
+  }
 }
 
 /**
@@ -1190,12 +1775,12 @@ function buildPanel(spec) {
     if (t === "power-24vdc") return dinPsu();
     if (t === "jwplc-basic") {
       const m = plcBasic();
-      plcs.push({ id: d.id, paint: m.screen?.paint, leds: m.leds ?? [], tft: m.tft });
+      plcs.push({ id: d.id, paint: m.screen?.paint, leds: m.leds ?? [], tft: m.tft, tftMesh: m.tftMesh });
       return m;
     }
     if (t === "vfd-el") {
       const m = vfdModel();
-      vfds.push({ id: d.id, paint: m.screen.paint, led: m.led });
+      vfds.push({ id: d.id, paint: m.screen.paint, led: m.led, plane: m.screen.plane });
       return m;
     }
     if (t === "contactor") return dinContactor(mounted.has(d.id));
@@ -1324,6 +1909,8 @@ function buildPanel(spec) {
   hinge.add(handle);
   const lamps = [];
   const doorAt = new Map();
+  const hits = [];
+  const controls = [];
   door.forEach((d, i) => {
     const cols = Math.max(1, Math.min(4, door.length));
     const cx = ((i % cols) + 0.5) * (W / cols);
@@ -1341,6 +1928,10 @@ function buildPanel(spec) {
       lens.position.set(cx, cy, 0.03);
       hinge.add(lens);
       lamps.push({ id: d.id, lens, hex });
+      if (t === "pushbutton-lit") {
+        hits.push({ mesh: lens, id: d.id });
+        controls.push({ id: d.id, action: "press", kind: "push", mesh: lens, z0: 0.03 });
+      }
     } else if (t === "emergency-stop") {
       const yb = box(0.09, 0.09, 0.004, mat(0xf2cf1d));
       yb.position.set(cx, cy, 0.013);
@@ -1348,6 +1939,8 @@ function buildPanel(spec) {
       mush.rotation.x = Math.PI / 2;
       mush.position.set(cx, cy, 0.035);
       hinge.add(yb, mush);
+      hits.push({ mesh: mush, id: d.id });
+      controls.push({ id: d.id, action: "press", kind: "push", mesh: mush, z0: 0.035 });
     } else if (t.startsWith("selector")) {
       const knob = cyl(0.026, 0.02, PM.black, 20);
       knob.rotation.x = Math.PI / 2;
@@ -1356,11 +1949,16 @@ function buildPanel(spec) {
       bar.position.set(cx, cy, 0.05);
       bar.rotation.z = -0.6;
       hinge.add(knob, bar);
+      hits.push({ mesh: knob, id: d.id }, { mesh: bar, id: d.id });
+      controls.push({ id: d.id, action: "position", kind: "rot", mesh: bar });
     } else {
-      const btn = cyl(0.024, 0.02, t === "pushbutton-nc" ? PM.red : PM.green, 16);
+      const bc = { verde: 0x2fae4f, rojo: 0xd8282d, amarillo: 0xf2cf1d, azul: 0x2f8be0, blanco: 0xf0f2f4, negro: 0x23272d }[d.params?.color];
+      const btn = cyl(0.024, 0.02, bc != null ? mat(bc, { roughness: 0.5 }) : t === "pushbutton-nc" ? PM.red : PM.green, 16);
       btn.rotation.x = Math.PI / 2;
       btn.position.set(cx, cy, 0.035);
       hinge.add(btn);
+      hits.push({ mesh: btn, id: d.id });
+      controls.push({ id: d.id, action: "press", kind: "push", mesh: btn, z0: 0.035 });
     }
     // Por dentro de la puerta: los bloques de contacto del mando, con sus cables.
     const blk = box(0.05, 0.05, 0.04, PM.white);
@@ -1532,7 +2130,8 @@ function buildPanel(spec) {
     }
   }
   const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
-  return { group: g, W, D, H, legH, vfds, plcs, lamps, glandX, bottom: y0 };
+  bakeStatic(g, [...lamps.map((l) => l.lens), ...hits.map((h) => h.mesh), ...controls.map((c) => c.mesh), ...vfds.flatMap((v) => [v.led, v.plane]), ...plcs.flatMap((p) => [...p.leds.map((l) => l.mesh), p.tftMesh])]);
+  return { group: g, W, D, H, legH, vfds, plcs, lamps, hits, controls, glandX, bottom: y0 };
 }
 
 // Electrobomba y válvulas de la sala de bombas. Eje de la bomba a lo largo de z
@@ -1915,6 +2514,7 @@ function buildBuilding(p, spec = { devices: [] }) {
   tag.position.set(cx, panel.bottom + panel.H + 0.2, cz);
   top.add(tag);
   const height = BH + 1.6;
+  bakeStatic(g, [panel.group, tank?.group, gg, ...pumps.map((pm) => pm.rotor)], new Set([winM, pipeM]));
   return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, panel, tank, tankId: tankDev?.id ?? null, height, roofY: BH + 0.04, size: [W, DP] };
 }
 
@@ -2061,6 +2661,7 @@ function frame(now) {
       const lvl = Math.max(0.001, Math.min(1, Number(out.nivelPct ?? 0) / 100));
       m.water.scale.y = lvl * m.H;
       m.water.position.y = 0.2 + (lvl * m.H) / 2;
+      if (m.cone) m.water.scale.x = m.water.scale.z = 0.23 + 0.77 * lvl;
       if (out.bombeando) m.impeller.rotation.x += 0.4;
       m.water.material.color.setHex(out.rebalse ? COL.warn : COL.water);
     } else if (o.type === "jwsim/door") {
@@ -2118,6 +2719,7 @@ function frame(now) {
       if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
     }
   }
+  for (const f of V.field ?? []) f.m.update(outOf(f.id));
   // Tablero: frecuencia y LED de cada variador, pilotos de la puerta y estado del PLC.
   if (V.panel) {
     for (const v of V.panel.vfds) {
@@ -2128,6 +2730,11 @@ function frame(now) {
       v.led.material.emissive.setHex(o.running ? 0x1f8a46 : 0x000000);
     }
     for (const l of V.panel.lamps) l.lens.material.emissive.setHex(outOf(l.id).lit ? l.hex : 0x000000);
+    for (const c of V.panel.controls ?? []) {
+      const on = !!window.JwsimScene?.actionState?.(c.id, c.action);
+      if (c.kind === "push") c.mesh.position.z = c.z0 - (on ? 0.012 : 0);
+      else c.mesh.rotation.z = on ? -0.6 : 0.6;
+    }
     for (const pl of V.panel.plcs) {
       pl.paint?.(running ? "RUN" : "STOP");
       const st = V.snap?.devices.find((d) => d.id === pl.id);
@@ -2150,6 +2757,20 @@ window.Jwsim3D = {
     V.controls.target.set(...target);
     V.controls.update();
   },
+  /** Para pruebas: punto de pantalla (px del cliente) de un mando o equipo clicable. */
+  screenOf(id) {
+    const h = V.hits?.find((q) => q.id === id);
+    if (!h) return null;
+    const v = new THREE.Vector3();
+    h.mesh.getWorldPosition(v);
+    v.project(V.camera);
+    const r = V.renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  },
+  /** Para pruebas: llamadas de dibujo y triángulos del último cuadro. */
+  stats: () => ({ calls: V.renderer?.info.render.calls, tris: V.renderer?.info.render.triangles, meshes: (() => { let n = 0; V.root?.traverse((o) => o.isMesh && n++); return n; })() }),
+  /** Para pruebas: equipos de campo dibujados en 3D. */
+  fieldIds: () => (V.field ?? []).map((f) => f.id),
   /** Para pruebas: posición del acople de cada electrobomba. */
   pumpsAt() {
     const v = new THREE.Vector3();
