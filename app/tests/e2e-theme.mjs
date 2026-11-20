@@ -79,6 +79,7 @@ try {
   await win.click('.mtab[data-tab="schematic"]');
   await win.waitForTimeout(250);
   const sceneBg = await win.$eval(".scene-main", (e) => getComputedStyle(e).backgroundColor);
+  const plcLabelFill = await win.$eval("#scene-board .dev svg text", (e) => getComputedStyle(e).fill);
   const headHidden = await win.$eval(".board-card .panel-head", (e) => getComputedStyle(e).display === "none");
   const faultsInTabs = await win.$eval("#faults-menu", (e) => e.parentElement?.id === "main-tabs");
   const themeBtnVisible = await win.$eval("#btn-theme", (e) => e.closest(".toolbar") !== null && e.getBoundingClientRect().width > 0);
@@ -87,8 +88,9 @@ try {
   await win.waitForTimeout(400);
   await win.screenshot({ path: join(OUT, "03-planta-3d-claro.png") });
   criteria.VIEWS_LIGHT = {
-    ok: sceneBg === "rgb(233, 238, 244)" && headHidden && faultsInTabs && themeBtnVisible && errors.length === 0,
+    ok: sceneBg === "rgb(233, 238, 244)" && plcLabelFill !== "rgb(31, 35, 40)" && headHidden && faultsInTabs && themeBtnVisible && errors.length === 0,
     sceneBg,
+    plcLabelFill,
     headHidden,
     faultsInTabs,
     themeBtnVisible,

@@ -1998,8 +1998,8 @@ button.io.on {
   stroke: var(--err);
   stroke-dasharray: 5 3;
 }
-/* Solo los textos que dibuja la app: una plantilla .svg (.tpl) trae los suyos. */
-.dev text:not(.tpl *) {
+/* Solo los textos que dibuja la app: una plantilla .svg (.tpl) o la placa (> svg) traen los suyos. */
+.dev text:not(.tpl *, svg *) {
   fill: var(--text);
   text-anchor: middle;
 }
