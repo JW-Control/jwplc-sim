@@ -4317,3 +4317,973 @@ body.dock-collapsed #btn-dock-toggle {
   stroke-linejoin: round;
   pointer-events: none;
 }
+
+/* ------------------------------------------------------------------ Inicio
+   Pantalla Inicio y Ruta de aprendizaje a toda la ventana (start.js). El
+   asistente de nuevo proyecto sigue como tarjeta (.start sin .full). */
+.start.full {
+  align-items: stretch;
+  justify-content: stretch;
+  background: var(--bg);
+  --jw: light-dark(#14833b, #37d67a);
+  --jw-2: light-dark(#0b6a2d, #1fae5a);
+  --ini-hex: light-dark(#e9eef4, #232a32);
+}
+.ini *,
+.ini *::before,
+.ini *::after {
+  box-sizing: border-box;
+}
+.ini {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.ini-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+}
+.ini .start-foot {
+  background: var(--panel);
+}
+.ini-ico {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.ini-ico.dim {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.ini-h {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+.ini-num {
+  font-family: var(--mono);
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.ini-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ini-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 14px 16px;
+  min-width: 0;
+}
+.ini-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--jw);
+}
+.ini-eyebrow .ini-ico {
+  width: 16px;
+  height: 16px;
+}
+.ini-eyebrow.sm {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+
+/* Cinta de accesos */
+.ini-ribbon {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.ini-rgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px;
+  border-right: 1px solid var(--border-subtle);
+}
+.ini-rgroup > small {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ini-rgroup > div {
+  display: flex;
+  gap: 2px;
+}
+.start .ini-rb,
+.ini-rb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 70px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.ini-rb .ini-ico {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+.ini-rb:hover {
+  background: var(--hover);
+  border-color: var(--border);
+}
+.ini-brand {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+}
+.ini-brand div {
+  display: grid;
+  line-height: 1.15;
+}
+.ini-brand small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.ini-close {
+  margin-left: 8px;
+}
+
+/* Inicio: rejilla */
+.ini-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-areas:
+    "hero prog"
+    "show recent"
+    "path recent";
+  gap: 12px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.ini-hero {
+  grid-area: hero;
+  position: relative;
+  min-height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(90deg, light-dark(rgba(255, 255, 255, 0.97), rgba(14, 17, 20, 0.97)) 0%, light-dark(rgba(255, 255, 255, 0.85), rgba(14, 17, 20, 0.82)) 42%, light-dark(rgba(255, 255, 255, 0.05), rgba(14, 17, 20, 0.1)) 75%),
+    var(--img) right center / cover no-repeat,
+    #101317;
+  display: flex;
+  align-items: center;
+}
+.ini-hero-txt {
+  padding: 26px 34px;
+  max-width: 620px;
+  display: grid;
+  gap: 12px;
+}
+.ini-hero h1 {
+  margin: 0;
+  font-size: clamp(42px, 5.4vw, 76px);
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+.ini-lead {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--text-soft);
+  max-width: 520px;
+}
+.ini-lead b {
+  color: var(--jw);
+}
+.ini-cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 6px;
+}
+.start .ini-go,
+.ini-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(100deg, var(--jw-2), var(--jw));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--jw) 30%, transparent);
+}
+.ini-go .ini-ico {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.ini-go:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.ini-go:disabled {
+  background: var(--strip);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.ini-next {
+  display: grid;
+  gap: 1px;
+  font-size: 12px;
+}
+.ini-next small {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ini-next em {
+  font-style: normal;
+  color: var(--text-soft);
+}
+
+/* Progreso y logros */
+.ini-progress {
+  grid-area: prog;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ini-prog-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ini-prog-txt {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+}
+.ini-prog-txt small {
+  color: var(--muted);
+}
+.ini-ring {
+  --p: 0;
+  width: 84px;
+  height: 84px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--jw) calc(var(--p) * 1%), var(--strip) 0);
+}
+.ini-ring span {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+.ini-ring.sm {
+  width: 46px;
+  height: 46px;
+}
+.ini-ring.sm span {
+  width: 36px;
+  height: 36px;
+  font-size: 12px;
+}
+.ini-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+}
+.ini-kv span {
+  color: var(--muted);
+}
+.ini-kv b {
+  text-align: right;
+}
+.ini-h2 {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+}
+.ini-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ini-progress .link {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.ini-hex {
+  position: relative;
+  width: 56px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--border);
+  color: var(--muted);
+  flex: none;
+}
+.ini-hex::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  clip-path: inherit;
+  background: var(--ini-hex);
+}
+.ini-hex .ini-ico {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+.ini-hex.full {
+  background: var(--jw);
+  color: var(--jw);
+}
+.ini-hex.full::before {
+  background: color-mix(in srgb, var(--jw) 16%, var(--panel));
+}
+.ini-hex.sm {
+  width: 32px;
+  height: 36px;
+}
+.ini-hex.sm .ini-ico {
+  width: 15px;
+  height: 15px;
+}
+.ini-hex.locked {
+  opacity: 0.55;
+}
+
+/* Vitrina */
+.ini-show {
+  grid-area: show;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  transition: box-shadow 0.3s;
+}
+.ini-show.flash {
+  box-shadow: 0 0 0 2px var(--jw);
+}
+.ini-show-txt {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  gap: 6px;
+}
+.ini-show-title {
+  font-size: 17px;
+  color: var(--text-strong);
+}
+.ini-show-txt p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+.start .ini-outline,
+.ini-outline {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--jw);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--jw);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ini-outline .ini-ico {
+  width: 16px;
+  height: 16px;
+}
+.ini-outline:hover {
+  background: color-mix(in srgb, var(--jw) 10%, transparent);
+}
+.ini-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ini-thumb {
+  position: relative;
+  width: 150px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #101317;
+  cursor: pointer;
+}
+.ini-thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.ini-thumb span {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ini-thumb.on {
+  border-color: var(--jw);
+}
+.ini-arrow {
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+}
+
+/* Recientes */
+.ini-recent {
+  grid-area: recent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 520px;
+}
+.ini-recent ul {
+  overflow: auto;
+}
+
+/* Ruta (etapas) en Inicio */
+.ini-path {
+  grid-area: path;
+}
+.ini-path ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 4px;
+}
+.ini-path li {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.ini-path li + li::before {
+  content: "";
+  position: absolute;
+  left: -30%;
+  right: 70%;
+  top: 31px;
+  border-top: 2px dashed var(--border);
+}
+.ini-node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+.ini-node b {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ini-node small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.ini-node:hover .ini-hex {
+  background: var(--accent);
+}
+.ini-node.now .ini-hex {
+  background: var(--jw);
+  color: var(--jw);
+}
+.ini-now {
+  position: absolute;
+  top: 52px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--jw);
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ini-n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-family: var(--mono);
+}
+.ini-n.big {
+  min-width: 34px;
+  height: 34px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--jw) 18%, var(--panel));
+  color: var(--jw);
+}
+
+/* Vista Ruta y Ejemplos */
+.ini-route {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.ini-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.ini-strip .ini-kv {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.ini-strip-prog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 230px;
+}
+.ini-strip-prog > div:last-child {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.ini-strip-prog small {
+  color: var(--muted);
+}
+.ini-strip .ini-close {
+  margin-left: auto;
+}
+.ini-cols {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 270px) minmax(280px, 390px) minmax(0, 1fr);
+  gap: 12px;
+}
+.ini-cols > .ini-card {
+  overflow: auto;
+}
+.ini-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ini-tier-grid {
+  display: grid;
+  gap: 4px;
+}
+.ini-tiers .ini-node {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  justify-items: start;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.ini-tiers .ini-node .ini-hex {
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 50px;
+}
+.ini-tiers .ini-node b {
+  align-self: end;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+}
+.ini-tiers .ini-node small {
+  align-self: start;
+}
+.ini-tiers .ini-now {
+  top: auto;
+  bottom: 2px;
+  left: 12px;
+}
+.ini-tiers .ini-node.on {
+  border-color: var(--jw);
+  background: color-mix(in srgb, var(--jw) 8%, transparent);
+}
+.ini-tiers .ini-node.locked b {
+  color: var(--muted);
+}
+.ini-tiers .learn-unlock {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ini-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ini-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ini-tier-head > div {
+  display: grid;
+}
+.ini-tier-head b {
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.ini-steps > p {
+  margin: 0;
+  font-size: 12px;
+}
+.learn-bar.grow {
+  flex: 1;
+}
+.ini-lockmsg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--warn-text);
+  font-size: 12px;
+}
+.ini-lockmsg .ini-ico {
+  width: 16px;
+  height: 16px;
+}
+.ini-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ini-list .learn-item {
+  align-items: center;
+  padding: 9px 10px;
+}
+.ini-list .learn-item b {
+  flex: 1;
+  font-weight: 500;
+}
+.ini-list .learn-item .ini-num {
+  color: var(--muted);
+}
+.ini-list .learn-item.on {
+  border-color: var(--jw);
+  background: color-mix(in srgb, var(--jw) 10%, var(--panel));
+}
+.ini-list .learn-item.locked {
+  opacity: 0.6;
+}
+.ini-list .up-next {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--jw) 18%, transparent);
+  color: var(--jw);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ini-ok {
+  color: var(--jw);
+}
+.ini-ok .ini-ico {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+.ini-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 22px;
+}
+.ini-brief h2 {
+  margin: 0;
+  font-size: clamp(26px, 2.6vw, 38px);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1.05;
+  color: var(--text-strong);
+}
+.ini-brief-body {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+.ini-brief-body p {
+  margin: 4px 0;
+}
+.ini-brief-body h4 {
+  margin: 14px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--jw);
+}
+.ini-brief-body ul,
+.ini-brief-body ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.ini-brief-img {
+  float: right;
+  width: min(44%, 360px);
+  margin: 6px 0 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.ini-goals li.merit {
+  color: var(--muted);
+}
+.ini-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ini-chips span {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  font-size: 12px;
+  color: var(--text);
+}
+.ini-brief-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.ini-cols.ex {
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+}
+.ini-libs {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+.ini-libs button {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ini-libs button small {
+  color: var(--muted);
+}
+.ini-libs button:hover {
+  background: var(--hover);
+}
+.ini-libs button.on {
+  border-color: var(--jw);
+  background: color-mix(in srgb, var(--jw) 10%, transparent);
+}
+.ini-exlist {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+}
+.ini-exlist h4 {
+  flex-basis: 100%;
+  margin: 10px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--jw);
+}
+.ini-ex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 260px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ini-ex .ini-ico {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+.ini-ex:hover {
+  border-color: var(--accent);
+}
+.ini-search {
+  flex: 0 1 320px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--text);
+}
+.ini-pad {
+  padding: 20px;
+}
+@media (max-width: 1100px) {
+  .ini-home {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "hero" "prog" "path" "show" "recent";
+  }
+  .ini-cols {
+    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  }
+  .ini-brief {
+    grid-column: 1 / -1;
+  }
+  .ini-show {
+    flex-wrap: wrap;
+  }
+}
+.ini-cols > .ini-card {
+  overflow-x: hidden;
+}
+.ini-tiers .ini-node,
+.ini-list .learn-item {
+  min-width: 0;
+  max-width: 100%;
+}
+.ini-tiers .ini-node b,
+.ini-tiers .ini-node small,
+.ini-list .learn-item b {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ini-tiers .ini-node > b,
+.ini-tiers .ini-node > small {
+  grid-column: 2;
+}
+.ini-list .learn-item > span:not(.ini-num) {
+  flex: none;
+}
+.ini-list,
+.ini-tier-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ini-rb span {
+  max-width: 82px;
+}
+.ini .ini-rb {
+  width: 84px;
+  min-width: 0;
+  padding: 6px 4px;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: normal;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+.ini .ini-rb:hover {
+  background: var(--hover);
+  border-color: var(--border);
+}
+.ini .ini-rb span {
+  max-width: none;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+}
