@@ -1344,6 +1344,44 @@
         }
         if (group !== null) body += `</details>`;
         if (body) html += sec("__ajustes", "Ajustes", body, isOpen("__ajustes", true));
+        // Finales de carrera y sensores magnéticos estilo FluidSIM: se configuran
+        // desde el cilindro y se colocan automáticamente encima del émbolo.
+        const CS = window.JwsimCylinderSensors;
+        if (CS?.isValve(dev)) {
+          const linkedSens = CS.sensorsForValve(S.spec.devices, dev.id);
+          const letter = CS.nextCylinderLetter(S.spec.devices, dev.id);
+          const has0 = linkedSens.some((s) => s.pos <= 0.05);
+          const has1 = linkedSens.some((s) => s.pos >= 0.95);
+          const defKind = S.cylSensorKind ?? "compacto";
+          const kindOpts = [
+            ["compacto", "Rodillo compacto"],
+            ["XCKJ", "Rodillo XCKJ"],
+            ["magnetic", "Magnético SMT-8M"],
+          ];
+          const optHtml = (sel) => kindOpts.map(([val, lbl]) => `<option value="${val}"${val === sel ? " selected" : ""}>${lbl}</option>`).join("");
+          let fcHtml =
+            `<div class="cyl-fc-bar">` +
+            `<select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select>` +
+            `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || (has0 && has1) ? "disabled" : ""} title="Colocar ${esc(letter)}0 (0) y ${esc(letter)}1 (1) encima del émbolo">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
+            `<button type="button" class="small" data-cyl-add="${esc(dev.id)}" ${dis} title="Agregar otra marca en cualquier posición 0..1">+ Marca</button>` +
+            `</div>` +
+            `<p id="cyl-fc-err" class="cyl-fc-err" hidden></p>`;
+          if (linkedSens.length) {
+            fcHtml += `<table class="cyl-fc-table"><thead><tr><th>Marca</th><th>Pos</th><th>Tipo</th><th></th></tr></thead><tbody>`;
+            for (const s of linkedSens) {
+              fcHtml +=
+                `<tr>` +
+                `<td><input class="cyl-fc-id" type="text" data-cyl-rename="${esc(s.id)}" value="${esc(s.id)}" ${dis}/></td>` +
+                `<td><input class="cyl-fc-pos" type="number" min="0" max="1" step="0.05" data-cyl-pos="${esc(s.id)}" value="${esc(s.pos)}" ${dis}/></td>` +
+                `<td><select class="cyl-fc-kind" data-cyl-kind="${esc(s.id)}" ${dis}>${optHtml(s.kind)}</select></td>` +
+                `<td><button type="button" class="small ghost" data-cyl-del="${esc(s.id)}" title="Quitar ${esc(s.id)}" ${dis}>×</button></td>` +
+                `</tr>`;
+            }
+            fcHtml += `</tbody></table>`;
+          }
+          fcHtml += `<p class="insp-desc muted">Se colocan sobre el émbolo listos para cablear sus bornes al PLC.</p>`;
+          html += sec("__fc", "Finales de carrera / Sensores", fcHtml, isOpen("__fc", true), `${linkedSens.length} ${linkedSens.length === 1 ? "marca" : "marcas"}`);
+        }
         // Cómo funciona con los ajustes actuales, en dos líneas; el resto, a pedido.
         const ex = explainDevice(dev, def);
         if (ex) {
@@ -2382,6 +2420,78 @@
       const b = e.target.closest("[data-setparam]");
       if (!b || b.disabled || S.sel?.kind !== "device") return;
       setParam(devById(S.sel.id), b.dataset.setparam, b.dataset.value);
+    });
+    // Configurador de finales de carrera/sensores desde la ficha del cilindro.
+    const syncSensorVersions = () => {
+      for (const d of S.spec.devices) {
+        const v = S.defs.get(d.type)?.version;
+        if (v && !d.version) d.version = v;
+      }
+    };
+    const showCylErr = (msg) => {
+      const el = $("cyl-fc-err");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.hidden = !msg;
+    };
+    $("scene-inspector").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-cyl-pair],[data-cyl-add],[data-cyl-del]");
+      const CS = window.JwsimCylinderSensors;
+      if (!btn || btn.disabled || S.running || !CS || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (!dev) return;
+      const kind = $("cyl-fc-default-kind")?.value || S.cylSensorKind || "compacto";
+      S.cylSensorKind = kind;
+      pushHistory();
+      if (btn.dataset.cylPair) CS.addStandardPair(S.spec, btn.dataset.cylPair, kind);
+      else if (btn.dataset.cylAdd) CS.addMark(S.spec, btn.dataset.cylAdd, { kind });
+      else if (btn.dataset.cylDel) CS.removeSensor(S.spec, btn.dataset.cylDel);
+      syncSensorVersions();
+      S.keepPane = true;
+      S.routeKey = null;
+      changed();
+    });
+    $("scene-inspector").addEventListener("change", (e) => {
+      if (e.target.id === "cyl-fc-default-kind") {
+        S.cylSensorKind = e.target.value;
+        return;
+      }
+      const CS = window.JwsimCylinderSensors;
+      if (!CS || S.running || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (!dev || !CS.isValve(dev)) return;
+      const t = e.target;
+      let sensorId = null;
+      let patch = null;
+      if (t.dataset.cylRename) {
+        sensorId = t.dataset.cylRename;
+        patch = { id: t.value };
+      } else if (t.dataset.cylPos) {
+        sensorId = t.dataset.cylPos;
+        const pos = Number(t.value);
+        if (!Number.isFinite(pos)) {
+          renderSide();
+          return;
+        }
+        patch = { pos };
+      } else if (t.dataset.cylKind) {
+        sensorId = t.dataset.cylKind;
+        patch = { kind: t.value };
+      }
+      if (!sensorId || !patch) return;
+      pushHistory();
+      const res = CS.updateSensorConfig(S.spec, dev.id, sensorId, patch);
+      if (!res.ok) {
+        S.undoStack.pop();
+        updateUndoRedoButtons();
+        showCylErr(res.error);
+        if (t.dataset.cylRename) t.value = sensorId;
+        return;
+      }
+      syncSensorVersions();
+      S.keepPane = true;
+      S.routeKey = null;
+      changed();
     });
     // Fallas (G9): en marcha el inspector se redibuja con cada instantánea;
     // con pointerdown el botón responde aunque se reemplace antes de soltar.
