@@ -74,7 +74,7 @@ motor_generic()
 
 # ------------------------------------------------ electroválvula 5/2 + cilindro
 PRESS=AIR; EXH='#9cc8f5'
-def cylinder(stroke=80):
+def cylinder(stroke=140):
     rod=rect(150,38,184,12,'#f4f6f8',2)+rect(334,33,16,22,'#b9c0c8',2)
     b=g(rod,data_translate=f'out.position:0:1:x:{stroke}')
     b+=rect(20,24,250,40,'#e3e7eb',4)
@@ -112,22 +112,22 @@ def coil(x,expr_led,flip=False):
     b+=text(x+29,174,'bobina',8,'#9aa3ad',600)
     return b
 
-# monoestable 440 x 220: bornes A1 A2 abajo a la derecha
+# monoestable 520 x 220: bornes A1 A2 compactos abajo a la derecha
 b=cylinder()+hoses('out.energized',110,150)+valve_body(80,'out.energized')+coil(184,'out.energized')
-b+=path('M242 168 H272 Q280 168 280 176 V184',stroke=DARK,sw=4)
-b+=band(256,184,88,34)+term(280,202,'A1',side='b',lab='none',r=7)+lbl(280,192,'A1',7.5)+term(320,202,'A2',side='b',lab='none',r=7)+lbl(320,192,'A2',7.5)
+b+=path('M242 168 H260 Q266 168 266 176 V188',stroke=DARK,sw=4)
+b+=band(264,188,52,26)+term(280,204,'A1',side='b',lab='none',r=5)+lbl(280,195,'A1',6.5)+term(300,204,'A2',side='b',lab='none',r=5)+lbl(300,195,'A2',6.5)
 b+=soot(213,150,40,30)
-svg('solenoid-valve',440,220,b,DEFS)
+svg('solenoid-valve',520,220,b,DEFS)
 
-# biestable 440 x 220: bobina A+ a la izquierda, A− a la derecha, borneras alineadas bajo cada bobina
+# biestable 520 x 220: bobina A+ a la izquierda, A− a la derecha, borneras compactas alineadas bajo cada bobina
 b=cylinder()
 b+=hoses('out.spoolA',170,210)+valve_body(140,'out.spoolA')
 b+=coil(80,'out.coilPlus',flip=True)+text(109,116,'A+',9,TXT,800)
 b+=coil(246,'out.coilMinus')+text(275,116,'A−',9,TXT,800)
-b+=band(60,184,80,34)+term(80,202,'A+1',side='b',lab='none',r=7)+lbl(80,192,'A+1',7.5)+term(120,202,'A+2',side='b',lab='none',r=7)+lbl(120,192,'A+2',7.5)
-b+=band(240,184,80,34)+term(260,202,'A-1',side='b',lab='none',r=7)+lbl(260,192,'A−1',7.5)+term(300,202,'A-2',side='b',lab='none',r=7)+lbl(300,192,'A−2',7.5)
+b+=band(64,188,72,26)+term(80,204,'A+1',side='b',lab='none',r=5)+lbl(80,195,'A+1',6.5)+term(120,204,'A+2',side='b',lab='none',r=5)+lbl(120,195,'A+2',6.5)
+b+=band(244,188,72,26)+term(260,204,'A-1',side='b',lab='none',r=5)+lbl(260,195,'A−1',6.5)+term(300,204,'A-2',side='b',lab='none',r=5)+lbl(300,195,'A−2',6.5)
 b+=soot(190,150,40,30)
-svg('solenoid-valve-2',440,220,b,DEFS)
+svg('solenoid-valve-2',520,220,b,DEFS)
 
 # ------------------------------------------------ finales de carrera
 def lswitch(name,H,body_col,pivot,lever_len,roller_r,rot_expr,datum):
