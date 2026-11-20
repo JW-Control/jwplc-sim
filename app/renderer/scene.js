@@ -1101,7 +1101,15 @@
     // Un símbolo con giro (data-spin) se redibuja en cada instante simulado.
     const pp = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
-    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired, mounted, hosting, dev.mount]);
+    const CS = window.JwsimCylinderSensors;
+    let cylTag = "";
+    if (CS?.isValve(dev)) {
+      const linkedSens = CS.sensorsForValve(S.spec.devices, dev.id);
+      const letter = linkedSens.map((s) => /^([A-Z])\d+$/.exec(s.id)?.[1]).find(Boolean);
+      const custom = String(pp.label ?? "").trim();
+      cylTag = custom ? `${dev.id} · ${custom}` : letter ? `${letter} · ${dev.id}` : dev.id;
+    }
+    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired, mounted, hosting, dev.mount, cylTag]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
@@ -1145,6 +1153,7 @@
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
         `<rect class="sel-frame" x="-2" y="-2" width="${sym.w + 4}" height="${sym.h + 4}" rx="3"/>` +
+        (cylTag ? `<text class="dev-cyl-tag" x="14" y="12">${esc(cylTag)}</text>` : "") +
         // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
         (hosting
           ? ""
@@ -1324,34 +1333,45 @@
           }
           body += `</div>`;
         }
+        const CS = window.JwsimCylinderSensors;
+        const isCyl = !!CS?.isValve(dev);
         let group = null;
-        for (const p of def.parameters.filter((x) => !isSim(x))) {
-          const v = dev.params?.[p.id] ?? p.default;
-          // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
-          if ((p.group ?? null) !== group) {
-            if (group !== null) body += `</details>`;
-            group = p.group ?? null;
-            if (group !== null) body += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
-          }
-          if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
-            // Placa de bornes con sus chapas: se elige con un clic.
-            const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
-            body += `<div class="insp-lbl"><span>${esc(p.label)}</span></div><div class="bornera-pick">`;
-            for (const o of p.options) {
-              body += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
-                `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
+        if (isCyl) {
+          body +=
+            `<div class="cyl-insp-grid">` +
+            `<div class="insp-field"><div class="insp-lbl"><span>ID</span></div><input type="text" data-dev-rename="${esc(dev.id)}" value="${esc(dev.id)}" ${dis} title="Identificador en bornes y programa"/></div>` +
+            `<div class="insp-field"><div class="insp-lbl"><span>Etiqueta</span></div><input type="text" data-param="label" value="${esc(dev.params?.label ?? "")}" placeholder="p. ej. A, Prensa" ${dis}/></div>` +
+            def.parameters.filter((x) => !isSim(x)).map(paramRow).join("") +
+            `</div>` +
+            `<p id="cyl-id-err" class="cyl-fc-err" hidden></p>`;
+        } else {
+          for (const p of def.parameters.filter((x) => !isSim(x))) {
+            const v = dev.params?.[p.id] ?? p.default;
+            // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
+            if ((p.group ?? null) !== group) {
+              if (group !== null) body += `</details>`;
+              group = p.group ?? null;
+              if (group !== null) body += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
             }
-            body += `</div>`;
-            continue;
+            if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
+              // Placa de bornes con sus chapas: se elige con un clic.
+              const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
+              body += `<div class="insp-lbl"><span>${esc(p.label)}</span></div><div class="bornera-pick">`;
+              for (const o of p.options) {
+                body += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
+                  `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
+              }
+              body += `</div>`;
+              continue;
+            }
+            body += paramRow(p);
           }
-          body += paramRow(p);
+          if (group !== null) body += `</details>`;
         }
-        if (group !== null) body += `</details>`;
         if (body) html += sec("__ajustes", "Ajustes", body, isOpen("__ajustes", true));
         // Finales de carrera y sensores magnéticos estilo FluidSIM: se configuran
         // desde el cilindro y se colocan automáticamente encima del émbolo.
-        const CS = window.JwsimCylinderSensors;
-        if (CS?.isValve(dev)) {
+        if (isCyl) {
           const linkedSens = CS.sensorsForValve(S.spec.devices, dev.id);
           const letter = CS.nextCylinderLetter(S.spec.devices, dev.id);
           const has0 = linkedSens.some((s) => s.pos <= 0.05);
@@ -1366,7 +1386,7 @@
           ];
           const optHtml = (sel) => kindOpts.map(([val, lbl]) => `<option value="${val}"${val === sel ? " selected" : ""}>${lbl}</option>`).join("");
           let fcHtml =
-            `<label class="insp-row wide"><span>Tipo de sensor</span><select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select></label>` +
+            `<label class="insp-row"><span>Tipo de sensor</span><select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select></label>` +
             `<div class="cyl-fc-actions">` +
             `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || !canApplyPair ? "disabled" : ""} title="Colocar o convertir ${esc(letter)}0 (0) y ${esc(letter)}1 (1)">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
             `<button type="button" class="small" data-cyl-add="${esc(dev.id)}" ${dis} title="Agregar otra marca en cualquier posición 0..1">+ Marca</button>` +
@@ -1385,7 +1405,6 @@
             }
             fcHtml += `</tbody></table>`;
           }
-          fcHtml += `<p class="insp-desc muted">Rodillos sobre el vástago y magnéticos sobre la camisa, listos para cablear al PLC.</p>`;
           html += sec("__fc", "Finales de carrera / Sensores", fcHtml, isOpen("__fc", true), `${linkedSens.length} ${linkedSens.length === 1 ? "marca" : "marcas"}`);
         }
         // Cómo funciona con los ajustes actuales, en dos líneas; el resto, a pedido.
@@ -1394,7 +1413,7 @@
           const more = def.description && def.description !== ex.text
             ? `<details class="insp-more"><summary>Más información</summary><p>${esc(def.description)}</p></details>`
             : "";
-          html += sec("__func", esc(ex.title), `<p class="insp-desc">${esc(ex.text)}</p>${more}`, isOpen("__func", true));
+          html += sec("__func", esc(ex.title), `<p class="insp-desc">${esc(ex.text)}</p>${more}`, isOpen("__func", !isCyl));
         }
         const simP = def.parameters.filter(isSim);
         if (simP.length) html += sec("__sim", "Parámetros de simulación", simP.map(paramRow).join(""), isOpen("__sim", false));
@@ -1809,6 +1828,44 @@
    * Cambia un parámetro. Si el cambio oculta bornes (la bornera del motor
    * pasa de «6 cables» a chapas), se quitan los cables que llegaban a ellos.
    */
+  function renameDevice(dev, rawNext) {
+    const old = dev.id;
+    const next = String(rawNext ?? "").trim();
+    if (next === old) return { ok: true };
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(next)) return { ok: false, error: "ID inválido (use letras, números, _ o -)" };
+    if (S.spec.devices.some((d) => d !== dev && d.id === next)) return { ok: false, error: `Ya existe un equipo llamado ${next}` };
+    pushHistory();
+    const oldPre = `${old}.`;
+    const newPre = `${next}.`;
+    for (const w of S.spec.wiring) {
+      if (w.from.startsWith(oldPre)) w.from = newPre + w.from.slice(oldPre.length);
+      if (w.to.startsWith(oldPre)) w.to = newPre + w.to.slice(oldPre.length);
+    }
+    for (const d of S.spec.devices) {
+      if (d.mount === old) d.mount = next;
+      const dp = d.params;
+      if (!dp) continue;
+      if (dp.cylinder === old) dp.cylinder = next;
+      if (dp.source === `${old}.position`) dp.source = `${next}.position`;
+      if (dp.air === old) dp.air = next;
+      if (typeof dp.consumers === "string" && dp.consumers) {
+        dp.consumers = dp.consumers
+          .split(/([\s,;]+)/)
+          .map((tok) => (tok === old ? next : tok))
+          .join("");
+      }
+    }
+    document.querySelector(`#scene-root .dev[data-id="${CSS.escape(old)}"]`)?.remove();
+    document.querySelector(`#scene-terms > g[data-id="${CSS.escape(old)}"]`)?.remove();
+    S.rendered.delete(old);
+    dev.id = next;
+    if (S.sel?.kind === "device" && S.sel.id === old) S.sel = { kind: "device", id: next };
+    S.routeKey = null;
+    S.keepPane = true;
+    changed();
+    return { ok: true };
+  }
+
   function setParam(dev, id, value, record = true) {
     if (record) pushHistory();
     dev.params = { ...(dev.params ?? {}), [id]: value };
@@ -2461,10 +2518,36 @@
     });
     $("scene-inspector").addEventListener("change", (e) => {
       const el = e.target;
+      if (el.dataset.devRename !== undefined && S.sel?.kind === "device") {
+        const dev = devById(S.sel.id);
+        if (!dev || S.running) return;
+        const res = renameDevice(dev, el.value);
+        if (!res.ok) {
+          const err = $("cyl-id-err");
+          if (err) {
+            err.textContent = res.error;
+            err.hidden = false;
+          }
+          el.value = dev.id;
+        }
+        return;
+      }
       const id = el.dataset.param;
       if (!id || S.sel?.kind !== "device") return;
       const dev = devById(S.sel.id);
+      if (id === "label") {
+        const v = String(el.value ?? "").trim();
+        pushHistory();
+        const nextP = { ...(dev.params ?? {}) };
+        if (v) nextP.label = v;
+        else delete nextP.label;
+        dev.params = nextP;
+        S.keepPane = true;
+        changed();
+        return;
+      }
       const p = S.defs.get(dev.type).parameters.find((x) => x.id === id);
+      if (!p) return;
       setParam(dev, id, p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value);
     });
     $("scene-inspector").addEventListener("click", (e) => {
