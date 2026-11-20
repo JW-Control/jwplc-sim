@@ -16,8 +16,11 @@ def lab(x,y,s,size=15,fill=INK,anchor='middle'):
             f'stroke="#ffffff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">{s}</text>')
 def T(t,x,y,r=13,side=None): return scr(x,y,r)+hit(t,x,y,r+1,side=side)
 def brand(x,y,w,datum='',h=22):
+    # Franja de marca: logotipo «JW CONTROL» en blanco (sin otras marcas) y un dato corto.
     s=rect(x,y,w,h,'#15181c',0,OL,1.5)
-    s+=text(x+7,y+h-6,'JW',14,'#fff',900,'start')+path(f'M{x+30} {y+h-7} l4 -7 l4 7',stroke='#7cb342',sw=2.4,stroke_linecap='round',stroke_linejoin='round')
+    s+=text(x+7,y+h-6,'JW',14,'#fff',900,'start')
+    if 71+(len(datum)*7+8 if datum else 0)<=w:
+        s+=text(x+31,y+h-7,'CONTROL',6.5,'#c9ced4',800,'start',letter_spacing='.6')
     if datum: s+=text(x+w-7,y+h-6,datum,12,'#f1f3f5',800,'end')
     return s
 
@@ -89,10 +92,18 @@ contactor('contactor','13','14','NO')
 contactor('contactor__01','21','22','NC')
 
 # ---------------- relé térmico 200 x 280 (va bajo el contactor)
-b=rect(4,24,192,254,BODY,4,OL,3)
+# Suelto: los puentes de cobre 1-3-5 asoman arriba. Acoplado (mounted): el
+# cuerpo queda pegado bajo el contactor y los puentes suben hasta entrar en
+# sus bornes 2/T1-4/T2-6/T3 (14 px por encima del símbolo, bajo el tornillo), con su collar negro.
+b=rect(4,14,192,264,BODY,4,OL,3)
+loose=''; plug=''
 for t,x in [('1',40),('3',80),('5',120)]:
-    b+=rect(x-8,0,16,32,'#c98a4b',2,OL,2)+rect(x-8,0,5,32,'#e0a56b',0,'none',0)+hit(t,x,12,9)
-b+=brand(4,32,192,'térmico')
+    loose+=rect(x-8,0,16,24,'#c98a4b',2,OL,2)+rect(x-8,0,5,24,'#e0a56b',0,'none',0)
+    plug+=rect(x-7,-14,14,28,'#c98a4b',2,OL,2)+rect(x-7,-14,4,28,'#e0a56b',0,'none',0)+rect(x-11,2,22,12,'#2a2e33',2,OL,1.6)
+b+=g(loose,data_show='!mounted')+g(plug,data_show='mounted')
+for t,x in [('1',40),('3',80),('5',120)]:
+    b+=hit(t,x,10,9)
+b+=brand(4,22,192,'térmico')
 b+=circ(46,106,26,BLUE,OL,2.4)
 for i in range(7):
     ang=-150+50*i; x1=46+29*math.sin(math.radians(ang)); y1=106-29*math.cos(math.radians(ang)); x2=46+34*math.sin(math.radians(ang)); y2=106-34*math.cos(math.radians(ang))
