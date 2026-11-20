@@ -31,7 +31,11 @@
     for (const d of sp.devices) {
       const p = d.params ?? {};
       if (d.type === "jwsim/sensor-cylinder" && p.cylinder === valveId) list.push({ id: d.id, end: p.end === "extendido" ? 1 : 0, out: "detecting" });
-      else if (d.type === "jwsim/limit-switch" && String(p.source ?? "") === `${valveId}.position`) list.push({ id: d.id, end: Number(p.min ?? 1) >= 0.5 ? 1 : 0, out: "actuated" });
+      else if (d.type === "jwsim/limit-switch" && String(p.source ?? "") === `${valveId}.position`) {
+        const min = Number(p.min ?? 1);
+        const max = Number(p.max ?? min);
+        list.push({ id: d.id, end: Math.max(0, Math.min(1, (min + max) / 2)), out: "actuated" });
+      }
     }
     return list;
   }
