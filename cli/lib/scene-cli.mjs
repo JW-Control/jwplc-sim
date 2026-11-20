@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 
 import { normalizeProject } from "./scene-normalize.mjs";
+import { previewSceneProject } from "./scene-oracle.mjs";
 import { describeCatalog, describeDevice } from "./scene-spec.mjs";
 import { validateSceneProject } from "./scene-validate.mjs";
 
@@ -177,7 +178,27 @@ export async function runSceneCommand({ opts, CliError, EXIT, emit }) {
   }
 
   if (sub === "preview") {
-    throw new CliError(EXIT.USAGE, "scene preview aún no está implementado");
+    if (!arg) throw new CliError(EXIT.USAGE, "uso: scene preview <archivo.jwsim> [--out <dir>] [--view 2d|3d|both] [--smoke-ms <ms>] [--json]");
+    const view = String(opts.view ?? "both");
+    if (!["2d", "3d", "both"].includes(view)) throw new CliError(EXIT.USAGE, `--view inválido '${view}' (2d, 3d, both)`);
+    let res;
+    try {
+      res = await previewSceneProject(arg, {
+        outDir: opts.outDir,
+        view,
+        smokeMs: Number.isFinite(opts.smokeMs) ? opts.smokeMs : 0,
+      });
+    } catch (err) {
+      if (err?.code === "MISSING_ORACLE_ENV") throw new CliError(EXIT.ENV, err.message);
+      throw err;
+    }
+    if (!opts.json) {
+      for (const w of res.warnings) console.error(`[jwsim-cli] AVISO SVG: ${w}`);
+      for (const [k, p] of Object.entries(res.screenshots)) console.log(`[jwsim-cli] captura ${k}: ${p}`);
+      console.log(`[jwsim-cli] preview ${res.ok ? "OK" : "CON AVISOS"}`);
+    }
+    emit({ subcommand: sub, ...res });
+    return res.ok ? EXIT.OK : EXIT.FAIL;
   }
 
   throw new CliError(EXIT.USAGE, `scene: subcomando desconocido '${sub ?? ""}' (describe, new, normalize, validate, preview, build)`);
