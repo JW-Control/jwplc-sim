@@ -43,6 +43,10 @@
     const l = sens.map((s) => /^([A-Z])\d+$/.exec(s.id)?.[1]).find(Boolean);
     return l || String.fromCharCode(65 + (idx % 26));
   }
+  function cylTitle(v, letter) {
+    const custom = String(v.params?.label ?? "").trim();
+    return custom ? `${custom} (${v.id})` : `Cilindro ${letter} · ${v.id}`;
+  }
 
   // Presión del aire de cada válvula (bar): la de su FR o compresor; sin aire
   // indicado, aire ideal a 6 bar.
@@ -217,7 +221,8 @@
       s += portRing(vc - 11, yV - 14) + portRing(vc + 11, yV - 14);
       s += `<text class="pn-port" x="${vc - 26}" y="${yV - 10}">4</text><text class="pn-port" x="${vc + 19}" y="${yV - 10}">2</text>`;
 
-      // 3. Cilindro ISO 1219-1 con émbolo magnético y amortiguación.
+      // 3. Cilindro ISO 1219-1 con émbolo magnético, amortiguación y rótulo de identificación.
+      s += `<text class="pn-name" x="${x0}" y="${yC - 22}">${esc(cylTitle(v, letter))}</text>`;
       s += cylinderIso(x0, yC, pos, aOn, bOn);
 
       // 4. Válvula 5/2, escapes (5 y 3), alimentación (1) y nodo en T sobre el colector.
