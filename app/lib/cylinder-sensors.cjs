@@ -11,6 +11,8 @@
   else root.JwsimCylinderSensors = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   const VALVES = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
+  const GROUP_HOME_TOL = 40;
+  const GROUP_SNAP_RADIUS = 100;
   const snap20 = (v) => Math.round(Number(v || 0) / 20) * 20;
   const round2 = (v) => Math.round(v * 100) / 100;
   const clampPos = (v) => Math.max(0, Math.min(1, Number(v) || 0));
@@ -84,7 +86,7 @@
     return `${letter}_${Date.now() % 1000}`;
   }
 
-  /** Posición (x, y) en la grilla 2D encima de la contracción/extensión del émbolo. */
+  /** Posición (x, y) en la grilla 2D: rodillos cerca del émbolo largo y magnéticos sobre la camisa. */
   function sensorPlacement(valve, kind, pos, existingDevices = [], ignoreId = null) {
     const bx = Number(valve?.x ?? 0);
     const by = Number(valve?.y ?? 0);
@@ -95,17 +97,63 @@
       x = snap20(bx + (p >= 0.5 ? 160 : 20));
       y = snap20(by - 120);
     } else {
-      x = snap20(bx + 260 + p * 120);
-      y = snap20(by - (kind === "XCKJ" ? 260 : 220));
+      x = snap20(bx + 280 + p * 140);
+      y = snap20(by - (kind === "XCKJ" ? 200 : 160));
     }
     const minDx = kind === "magnetic" ? 80 : 110;
     const minDy = kind === "magnetic" ? 100 : 180;
+    const targetType = kind === "magnetic" ? "jwsim/sensor-cylinder" : "jwsim/limit-switch";
     const occupied = (cx, cy) =>
       (existingDevices ?? []).some(
-        (d) => d.id !== ignoreId && Math.abs((d.x ?? 0) - cx) < minDx && Math.abs((d.y ?? 0) - cy) < minDy,
+        (d) =>
+          d.id !== ignoreId &&
+          d.type === targetType &&
+          Math.abs((d.x ?? 0) - cx) < minDx &&
+          Math.abs((d.y ?? 0) - cy) < minDy,
       );
     while (occupied(x, y)) y -= kind === "magnetic" ? 120 : 220;
     return { x, y };
+  }
+
+  /** Devuelve la electroválvula vinculada a un sensor/final de carrera, o null. */
+  function linkedValveOf(devices, dev) {
+    if (!dev || !Array.isArray(devices)) return null;
+    const p = dev.params ?? {};
+    let valveId = null;
+    if (dev.type === "jwsim/sensor-cylinder" && p.cylinder) {
+      valveId = String(p.cylinder);
+    } else if (dev.type === "jwsim/limit-switch" && p.source) {
+      const m = /^([^.]+)\.position$/.exec(String(p.source));
+      if (m) valveId = m[1];
+    }
+    if (!valveId) return null;
+    return devices.find((d) => d.id === valveId && isValve(d)) ?? null;
+  }
+
+  /** Posición de reposo esperada del sensor respecto a su cilindro vinculado. */
+  function sensorHome(devices, dev, valve = null) {
+    const v = valve ?? linkedValveOf(devices, dev);
+    if (!v) return null;
+    const info = sensorInfo(dev, v.id);
+    if (!info) return null;
+    return sensorPlacement(v, info.kind, info.pos, devices, dev.id);
+  }
+
+  /** Sensores actualmente acoplados/agrupados junto a la electroválvula (<= 40 px de su posición). */
+  function groupedSensorsForValve(devices, valveId) {
+    const valve = (devices ?? []).find((d) => d.id === valveId && isValve(d));
+    if (!valve) return [];
+    const out = [];
+    for (const d of devices ?? []) {
+      const info = sensorInfo(d, valve.id);
+      if (!info) continue;
+      const home = sensorPlacement(valve, info.kind, info.pos, devices, d.id);
+      const base = sensorPlacement(valve, info.kind, info.pos, [], d.id);
+      const distHome = Math.hypot((d.x ?? 0) - home.x, (d.y ?? 0) - home.y);
+      const distBase = Math.hypot((d.x ?? 0) - base.x, (d.y ?? 0) - base.y);
+      if (distHome <= GROUP_HOME_TOL || distBase <= GROUP_HOME_TOL) out.push(d);
+    }
+    return out;
   }
 
   function limitRange(pos) {
@@ -237,8 +285,12 @@
   }
 
   return {
+    GROUP_SNAP_RADIUS,
     isValve,
     sensorsForValve,
+    linkedValveOf,
+    sensorHome,
+    groupedSensorsForValve,
     nextCylinderLetter,
     nextMarkId,
     sensorPlacement,
