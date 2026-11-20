@@ -25,14 +25,28 @@
     text: "#d7dee7",
     muted: "#8794a2",
   };
+  const CYL_PALETTE_DARK = ["#38bdf8", "#f472b6", "#34d399", "#fb923c", "#a78bfa", "#22d3ee"];
+  const CYL_PALETTE_LIGHT = ["#0969da", "#c026d3", "#059669", "#ea580c", "#7c3aed", "#0891b2"];
+  const STYLE_SWATCHES = ["#0969da", "#c026d3", "#059669", "#d97706", "#e11d48", "#7c3aed", "#0891b2", "#475569"];
+  const LINE_WIDTHS = [1.5, 2.2, 3.2, 4.5];
+
+  function hexToRgba(hex, alpha) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? "").trim());
+    if (!m) return `rgba(47, 140, 255, ${alpha})`;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+
   function isDarkTheme() {
     const m = document.querySelector('meta[name="color-scheme"]')?.content;
     if (m === "dark") return true;
     if (m === "light") return false;
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
   }
+  let themeIsDark = isDarkTheme();
   function refreshThemeColors(forceDark) {
     const dark = typeof forceDark === "boolean" ? forceDark : isDarkTheme();
+    themeIsDark = dark;
     if (dark) {
       Object.assign(COLORS, {
         bg: "#1b1f24",
@@ -41,14 +55,10 @@
         grid: "#2b3139",
         text: "#d7dee7",
         muted: "#8794a2",
-        cyl: "#2f8cff",
-        cylFill: "rgba(47, 140, 255, 0.14)",
+        cyl: "#38bdf8",
         coil: "#ffb020",
-        coilFill: "rgba(255, 176, 32, 0.16)",
         sensor: "#37d67a",
-        sensorFill: "rgba(55, 214, 122, 0.16)",
         pressure: "#55aef0",
-        pressureFill: "rgba(85, 174, 240, 0.14)",
         thresh: "#ff5d5d",
       });
     } else {
@@ -60,13 +70,9 @@
         text: "#1f2328",
         muted: "#59636e",
         cyl: "#0969da",
-        cylFill: "rgba(9, 105, 218, 0.13)",
         coil: "#d97706",
-        coilFill: "rgba(217, 119, 6, 0.15)",
         sensor: "#1a7f37",
-        sensorFill: "rgba(26, 127, 55, 0.15)",
         pressure: "#0284c7",
-        pressureFill: "rgba(2, 132, 199, 0.13)",
         thresh: "#cf222e",
       });
     }
@@ -77,7 +83,7 @@
     if (typeof scheduleDraw === "function") scheduleDraw();
   });
 
-  const LABEL_W = 96;
+  const LABEL_W = 98;
   const PAD_R = 12;
   const PAD_T = 8;
   const AXIS_H = 22;
@@ -90,6 +96,8 @@
     meta: { groups: [], channels: [], hasPneumatics: false },
     active: new Set(),
     order: [],
+    trackStyles: new Map(),
+    lineWidth: 2.2,
     userCustomized: false,
     windowMs: 10000,
     frozen: false,
@@ -97,6 +105,8 @@
     hoverX: null,
     hoverTrackId: null,
     hoverCloseId: null,
+    hoverSwatchId: null,
+    styleTargetId: null,
     trackDrag: null,
     lastTracks: [],
     drag: null,
@@ -105,6 +115,17 @@
     running: false,
     lastSnap: null,
   };
+
+  function defaultColorOf(ch) {
+    if (ch?.kind === "cyl") {
+      const pal = themeIsDark ? CYL_PALETTE_DARK : CYL_PALETTE_LIGHT;
+      return pal[(ch.cylIndex ?? 0) % pal.length];
+    }
+    return COLORS[ch?.kind] ?? COLORS.cyl;
+  }
+  const colorOf = (ch) => S.trackStyles.get(ch?.id)?.color ?? defaultColorOf(ch);
+  const fillOf = (ch) => hexToRgba(colorOf(ch), themeIsDark ? 0.16 : 0.14);
+  const widthOf = (ch) => S.trackStyles.get(ch?.id)?.width ?? S.lineWidth;
 
   const spec = () => window.JwsimScene?.specForView?.() ?? { devices: [], wiring: [] };
   const visibleChannels = () => {
@@ -237,6 +258,59 @@
     return toAdd;
   }
 
+  function setTrackStyle(chId, patch) {
+    const cur = S.trackStyles.get(chId) ?? {};
+    const next = { ...cur, ...patch };
+    if (next.color == null) delete next.color;
+    if (next.width == null) delete next.width;
+    if (!next.color && !next.width) S.trackStyles.delete(chId);
+    else S.trackStyles.set(chId, next);
+    if (!$("sd-popover")?.hidden) renderPopover();
+    if (!$("sd-style-pop")?.hidden && S.styleTargetId === chId) renderStylePop();
+    scheduleDraw();
+  }
+
+  function closeStylePop() {
+    const sp = $("sd-style-pop");
+    if (sp) sp.hidden = true;
+    S.styleTargetId = null;
+  }
+
+  function renderStylePop() {
+    const sp = $("sd-style-pop");
+    if (!sp || !S.styleTargetId) return;
+    const ch = S.meta.channels.find((c) => c.id === S.styleTargetId);
+    if (!ch) {
+      closeStylePop();
+      return;
+    }
+    const curColor = colorOf(ch);
+    const curWidth = widthOf(ch);
+    const swHtml = STYLE_SWATCHES.map(
+      (hex) =>
+        `<button type="button" class="sd-sw${curColor.toLowerCase() === hex.toLowerCase() ? " on" : ""}" data-sw-color="${hex}" style="background:${hex}" title="${hex}"></button>`,
+    ).join("");
+    const wHtml = LINE_WIDTHS.map(
+      (w) => `<button type="button" class="small${Math.abs(curWidth - w) < 0.05 ? " primary" : ""}" data-sw-width="${w}">${w}px</button>`,
+    ).join("");
+    sp.innerHTML =
+      `<div class="sd-style-head"><span>${esc(trackTitle(ch))}</span><button type="button" class="small ghost" data-sw-auto title="Restablecer color y grosor">Auto</button></div>` +
+      `<div class="sd-style-row"><div class="sd-swatches">${swHtml}<input type="color" class="sd-sw-pick" value="${esc(curColor)}" title="Elegir color"/></div></div>` +
+      `<div class="sd-style-row sd-style-widths"><span class="muted">Grosor:</span>${wHtml}</div>`;
+  }
+
+  function openStylePop(chId, topY = 12) {
+    const sp = $("sd-style-pop");
+    const wrap = $("sd-wrap");
+    if (!sp || !wrap) return;
+    S.styleTargetId = chId;
+    renderStylePop();
+    const tr = S.lastTracks.find((t) => t.id === chId);
+    const y = tr ? tr.y + 4 - wrap.scrollTop : topY;
+    sp.style.top = `${Math.max(8, Math.min(Math.max(8, wrap.clientHeight - 110), y))}px`;
+    sp.hidden = false;
+  }
+
   function mount() {
     if (S.mounted) return;
     const host = $("state-diag-pane");
@@ -250,6 +324,9 @@
       `<select id="sd-win" aria-label="Ventana temporal" title="Ventana de tiempo visible">` +
       `<option value="5000">5 s</option><option value="10000" selected>10 s</option><option value="20000">20 s</option><option value="60000">60 s</option><option value="0">Todo</option>` +
       `</select>` +
+      `<select id="sd-width" aria-label="Grosor de línea" title="Grosor de todas las líneas">` +
+      `<option value="1.5">1.5 px</option><option value="2.2" selected>2.2 px</option><option value="3.2">3.2 px</option><option value="4.5">4.5 px</option>` +
+      `</select>` +
       `<div class="sd-pop-wrap"><button id="sd-signals-btn" class="small" aria-haspopup="true" aria-expanded="false">+ Señales</button>` +
       `<div id="sd-popover" class="sd-popover" hidden></div></div>` +
       `</div>` +
@@ -257,10 +334,11 @@
       `<div id="sd-readout" class="sd-readout">Sin datos aún</div>` +
       `<div class="sd-canvas-wrap" id="sd-wrap">` +
       `<canvas id="sd-canvas"></canvas>` +
+      `<div id="sd-style-pop" class="sd-style-pop" hidden></div>` +
       `<div id="sd-drop-hint" class="sd-drop-hint">Suelta aquí para agregar al Diagrama de estados</div>` +
       `<div id="sd-empty" class="sd-empty">Ejecuta la simulación para trazar las curvas de estado.</div>` +
       `</div>` +
-      `<div class="sd-foot">Rueda: zoom · Arrastra etiqueta: ordenar · ×: quitar · Arrastra equipo del plano aquí</div>`;
+      `<div class="sd-foot">Rueda: zoom · Clic en color: estilo · Arrastra etiqueta: ordenar · ×: quitar</div>`;
 
     $("sd-chips").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-kind-chip]");
@@ -281,11 +359,49 @@
       if (!S.frozen) S.panEndMs = null;
       scheduleDraw();
     });
+    $("sd-width").addEventListener("change", (e) => {
+      const w = Number(e.target.value);
+      if (Number.isFinite(w) && w > 0) {
+        S.lineWidth = w;
+        for (const [id, st] of S.trackStyles.entries()) {
+          if (st.width != null) setTrackStyle(id, { width: undefined });
+        }
+        scheduleDraw();
+      }
+    });
+
+    const stylePop = $("sd-style-pop");
+    stylePop.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!S.styleTargetId) return;
+      const sw = e.target.closest("[data-sw-color]");
+      if (sw) {
+        setTrackStyle(S.styleTargetId, { color: sw.dataset.swColor });
+        return;
+      }
+      const wb = e.target.closest("[data-sw-width]");
+      if (wb) {
+        setTrackStyle(S.styleTargetId, { width: Number(wb.dataset.swWidth) });
+        return;
+      }
+      if (e.target.closest("[data-sw-auto]")) {
+        S.trackStyles.delete(S.styleTargetId);
+        renderStylePop();
+        if (!$("sd-popover")?.hidden) renderPopover();
+        scheduleDraw();
+      }
+    });
+    stylePop.addEventListener("input", (e) => {
+      if (e.target.classList?.contains("sd-sw-pick") && S.styleTargetId) {
+        setTrackStyle(S.styleTargetId, { color: e.target.value });
+      }
+    });
 
     const popBtn = $("sd-signals-btn");
     const pop = $("sd-popover");
     popBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      closeStylePop();
       const open = pop.hidden;
       pop.hidden = !open;
       popBtn.setAttribute("aria-expanded", String(open));
@@ -297,24 +413,29 @@
         pop.hidden = true;
         popBtn.setAttribute("aria-expanded", "false");
       }
+      if (!stylePop.hidden) closeStylePop();
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !pop.hidden) {
-        pop.hidden = true;
-        popBtn.setAttribute("aria-expanded", "false");
+      if (e.key === "Escape") {
+        if (!pop.hidden) {
+          pop.hidden = true;
+          popBtn.setAttribute("aria-expanded", "false");
+        }
+        if (!stylePop.hidden) closeStylePop();
       }
     });
 
     const canvas = $("sd-canvas");
     const hitTrackAt = (x, y) => {
-      if (x < 0 || x >= LABEL_W) return { trackId: null, closeId: null };
+      if (x < 0 || x >= LABEL_W) return { trackId: null, closeId: null, swatchId: null };
       for (const tr of S.lastTracks) {
         if (y >= tr.y && y < tr.y + tr.h) {
           const onClose = x >= LABEL_W - 22 && x <= LABEL_W - 4 && y >= tr.y + 4 && y <= tr.y + 22;
-          return { trackId: tr.id, closeId: onClose ? tr.id : null };
+          const onSwatch = x >= 2 && x <= 17 && !onClose;
+          return { trackId: tr.id, closeId: onClose ? tr.id : null, swatchId: onSwatch ? tr.id : null };
         }
       }
-      return { trackId: null, closeId: null };
+      return { trackId: null, closeId: null, swatchId: null };
     };
     canvas.addEventListener("pointermove", (e) => {
       const r = canvas.getBoundingClientRect();
@@ -363,7 +484,8 @@
       const hit = hitTrackAt(x, y);
       S.hoverTrackId = hit.trackId;
       S.hoverCloseId = hit.closeId;
-      canvas.style.cursor = hit.closeId ? "pointer" : hit.trackId ? "grab" : "crosshair";
+      S.hoverSwatchId = hit.swatchId;
+      canvas.style.cursor = hit.closeId || hit.swatchId ? "pointer" : hit.trackId ? "grab" : "crosshair";
       S.hoverX = x >= LABEL_W && x <= r.width - PAD_R ? x : null;
       scheduleDraw();
     });
@@ -372,6 +494,7 @@
         S.hoverX = null;
         S.hoverTrackId = null;
         S.hoverCloseId = null;
+        S.hoverSwatchId = null;
         scheduleDraw();
       }
     });
@@ -386,6 +509,11 @@
           removeChannel(hit.closeId);
           return;
         }
+        if (hit.swatchId) {
+          e.stopPropagation();
+          openStylePop(hit.swatchId, y);
+          return;
+        }
         if (hit.trackId) {
           S.trackDrag = { id: hit.trackId };
           canvas.style.cursor = "grabbing";
@@ -396,6 +524,17 @@
       if (!(recorder?.samples().length > 1)) return;
       S.drag = { x: e.clientX, active: false, endMs: S.panEndMs ?? Math.max(0, recorder.lastTimeMs()) };
       canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("dblclick", (e) => {
+      const r = canvas.getBoundingClientRect();
+      const y = e.clientY - r.top;
+      for (const tr of S.lastTracks) {
+        if (y >= tr.y && y < tr.y + tr.h) {
+          e.stopPropagation();
+          openStylePop(tr.id, y);
+          return;
+        }
+      }
     });
     const endDrag = () => {
       S.drag = null;
@@ -486,11 +625,20 @@
       for (const ch of g.channels) {
         const checked = S.active.has(ch.id) ? " checked" : "";
         html += `<label class="sd-pop-item"><input type="checkbox" data-chid="${esc(ch.id)}"${checked}/>` +
-          `<i class="sd-dot ${esc(ch.kind)}"></i><span>${esc(ch.label)}</span></label>`;
+          `<button type="button" class="sd-dot-btn" data-style-chid="${esc(ch.id)}" style="background:${esc(colorOf(ch))}" title="Cambiar color y grosor"></button><span>${esc(ch.label)}</span></label>`;
       }
       html += `</div>`;
     }
     pop.innerHTML = html;
+    for (const db of pop.querySelectorAll("[data-style-chid]")) {
+      db.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        pop.hidden = true;
+        popBtn?.setAttribute("aria-expanded", "false");
+        openStylePop(db.dataset.styleChid);
+      });
+    }
     for (const b of pop.querySelectorAll("[data-preset]")) {
       b.addEventListener("click", () => {
         const p = b.dataset.preset;
@@ -680,8 +828,9 @@
         ctx.clip();
 
         const digital = ch.kind === "coil" || ch.kind === "sensor";
-        const color = COLORS[ch.kind];
-        const fill = COLORS[`${ch.kind}Fill`];
+        const color = colorOf(ch);
+        const fill = fillOf(ch);
+        const lw = widthOf(ch);
 
         // Determinar rango visible en samples (recortando con exactitud en t0 y t1).
         let i0 = 0;
@@ -729,7 +878,7 @@
           ctx.moveTo(pts[0][0], pts[0][1]);
           for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
           ctx.strokeStyle = color;
-          ctx.lineWidth = 1.9;
+          ctx.lineWidth = lw;
           ctx.stroke();
         }
         ctx.restore();
@@ -738,9 +887,9 @@
         const v0 = restingValueOf(ch);
         const y0 = yOf(v0);
         ctx.save();
-        ctx.strokeStyle = COLORS[ch.kind];
-        ctx.globalAlpha = 0.45;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = colorOf(ch);
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = widthOf(ch);
         ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.moveTo(LABEL_W, y0);
@@ -749,20 +898,27 @@
         ctx.restore();
       }
 
-      // Etiqueta izquierda de pista + valor leído (o valor inicial en reposo) + botón × para quitar.
+      // Etiqueta izquierda de pista + pastilla interactiva de color + valor + botón ×.
+      const trColor = colorOf(ch);
       const vNow = readT != null ? Core.valueAt(samples, ch, readT) : restingValueOf(ch);
       const isHovered = S.hoverTrackId === ch.id;
       const isCloseHover = S.hoverCloseId === ch.id;
-      ctx.fillStyle = COLORS[ch.kind];
-      ctx.fillRect(6, ty + 7, 3, th - 14);
+      const isSwatchHover = S.hoverSwatchId === ch.id;
+      ctx.fillStyle = trColor;
+      ctx.fillRect(5, ty + 6, isSwatchHover ? 8 : 5, th - 12);
+      if (isSwatchHover) {
+        ctx.strokeStyle = COLORS.text;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(4.5, ty + 5.5, 9, th - 11);
+      }
       ctx.font = 'bold 11px "Cascadia Code", Consolas, monospace';
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = COLORS.text;
-      ctx.fillText(trackTitle(ch), 13, ty + th * 0.38, LABEL_W - (isHovered ? 32 : 18));
+      ctx.fillText(trackTitle(ch), 16, ty + th * 0.38, LABEL_W - (isHovered ? 35 : 21));
       ctx.font = '10px "Cascadia Code", Consolas, monospace';
-      ctx.fillStyle = vNow !== undefined && (ch.kind === "cyl" || ch.kind === "pressure" || vNow >= 0.5) ? COLORS[ch.kind] : COLORS.muted;
-      ctx.fillText(formatVal(ch, vNow), 13, ty + th * 0.72, LABEL_W - 18);
+      ctx.fillStyle = vNow !== undefined && (ch.kind === "cyl" || ch.kind === "pressure" || vNow >= 0.5) ? trColor : COLORS.muted;
+      ctx.fillText(formatVal(ch, vNow), 16, ty + th * 0.72, LABEL_W - 21);
 
       // Botón × en la esquina superior derecha de la etiqueta para ocultar esa pista con un clic.
       if (isHovered) {
@@ -781,7 +937,7 @@
 
       // Punto de intersección sobre el cursor.
       if (hoverInData && vNow !== undefined) {
-        ctx.fillStyle = COLORS[ch.kind];
+        ctx.fillStyle = trColor;
         ctx.beginPath();
         ctx.arc(S.hoverX, yOf(vNow), 3, 0, Math.PI * 2);
         ctx.fill();
@@ -847,6 +1003,7 @@
     addDevice,
     removeChannel,
     toggleKind,
+    setTrackStyle,
     onSceneDragMove(clientX, clientY, devId) {
       const host = $("state-diag-pane");
       if (!host || !S.visible || !Core) return false;
@@ -859,7 +1016,7 @@
       const inside = r.width > 40 && clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
       host.classList.toggle("sd-drop-target", inside);
       const hint = $("sd-drop-hint");
-      if (hint && inside) hint.textContent = `Suelta aquí para graficar ${devId} en el Diagrama de estados`;
+      if (hint && inside) hint.textContent = `Suelta aquí para graficar ${devId} y elegir color`;
       return inside;
     },
     onSceneDragDrop(clientX, clientY, devId) {
@@ -871,7 +1028,13 @@
       const r = host.getBoundingClientRect();
       const inside = wasTarget || (r.width > 40 && clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom);
       if (!inside) return false;
-      return addDevice(devId).length > 0;
+      const added = addDevice(devId);
+      if (added.length) {
+        // Abre el selector compacto de color y grosor sin bloquear la interfaz.
+        requestAnimationFrame(() => openStylePop(added[0], 12));
+        return true;
+      }
+      return false;
     },
     setVisible(on) {
       mount();
@@ -887,6 +1050,8 @@
       lastMs: recorder?.lastTimeMs() ?? -1,
       channels: S.meta.channels.map((c) => c.id),
       visibleIds: visibleChannels().map((c) => c.id),
+      trackColors: visibleChannels().map((c) => ({ id: c.id, color: colorOf(c), width: widthOf(c) })),
+      lineWidth: S.lineWidth,
       frozen: S.frozen,
       windowMs: S.windowMs,
     }),
