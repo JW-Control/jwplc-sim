@@ -19,7 +19,8 @@
           "params": { "type": "object" },
           "x": { "type": "number" },
           "y": { "type": "number" },
-          "rotation": { "enum": [0, 90, 180, 270] }
+          "rotation": { "enum": [0, 90, 180, 270] },
+          "mount": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$", "description": "Id del equipo al que va acoplado sin cables (relé térmico bajo el contactor). Ver scene/mount.mjs." }
         }
       }
     },

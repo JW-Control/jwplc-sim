@@ -69,7 +69,7 @@ def contactor(name,aux_t,aux_b,auxlbl):
         b+=T(t,x,254,side='b')+lab(x,237,l,12.5)
     # orejas de bobina
     b+=rect(2,1.5,36,46,HOOD,3,OL,2.4)+T('A1',20,16,11)+lab(20,42,'A1',12.5)
-    b+=rect(162,272.5,36,46,HOOD,3,OL,2.4)+T('A2',180,304,11,side='b')+lab(180,286,'A2',12.5)
+    b+=rect(162,1.5,36,46,HOOD,3,OL,2.4)+T('A2',180,16,11)+lab(180,42,'A2',12.5)  # A2 arriba: el térmico se engrapa abajo
     b+=brand(6,100,188,'9 A')
     # símbolo impreso de los contactos
     sym=''

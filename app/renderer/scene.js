@@ -166,6 +166,47 @@
   // ------------------------------------------------------------ dibujo
   const devById = (id) => S.spec.devices.find((d) => d.id === id);
 
+  // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
+  // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 240 } };
+  const MOUNT_SNAP = 40;
+  const baseType = (t) => String(t ?? "").split("/").pop();
+  const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;
+  const canMount = (g, h) =>
+    !!mountRule(g) && !!h && g.id !== h.id && mountRule(g).hosts.includes(baseType(h.type)) && !(g.rotation ?? 0) && !(h.rotation ?? 0);
+  const mountPos = (g, h) => ({ x: (h.x ?? 0) + mountRule(g).dx, y: (h.y ?? 0) + mountRule(g).dy });
+  const guestsOf = (id) => S.spec.devices.filter((d) => d.mount === id);
+  /** Anfitrión libre más cercano a la posición (x, y) del equipo, dentro del imán. */
+  function mountTarget(dev, x, y) {
+    let best = null;
+    for (const h of S.spec.devices) {
+      if (!canMount(dev, h) || guestsOf(h.id).some((g) => g.id !== dev.id)) continue;
+      const p = mountPos(dev, h);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d <= MOUNT_SNAP && (!best || d < best.d)) best = { h, p, d };
+    }
+    return best;
+  }
+  /** El acoplado se dibuja encima del anfitrión (sus puentes tapan los bornes). */
+  function raiseGuest(g) {
+    const el = $("scene-devices").querySelector(`[data-id="${CSS.escape(g.id)}"]`);
+    if (el) $("scene-devices").appendChild(el);
+  }
+  /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
+  function settleMounts() {
+    for (const g of S.spec.devices) {
+      if (!g.mount) continue;
+      const h = devById(g.mount);
+      if (!canMount(g, h)) {
+        delete g.mount;
+        continue;
+      }
+      const p = mountPos(g, h);
+      g.x = p.x;
+      g.y = p.y;
+    }
+  }
+
   // Borne: entrada del cable (x, y), tornillo (sx, sy) y lado (arriba/abajo).
   function termPos(end) {
     const i = end.indexOf(".");
@@ -594,7 +635,9 @@
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
       const affected = (w, i) =>
-        S.drag.kind === "device" ? w.from.startsWith(`${S.drag.dev.id}.`) || w.to.startsWith(`${S.drag.dev.id}.`) : S.drag.kind === "vertex" && i === S.drag.i;
+        S.drag.kind === "device"
+          ? [S.drag.dev, ...guestsOf(S.drag.dev.id)].some((d) => w.from.startsWith(`${d.id}.`) || w.to.startsWith(`${d.id}.`))
+          : S.drag.kind === "vertex" && i === S.drag.i;
       if (moving) {
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
         ctx.limit = 40000;
@@ -931,7 +974,9 @@
     if (S.view !== "scene") return;
     const keep = new Set(S.spec.devices.map((d) => d.id));
     for (const g of [...$("scene-board").children, ...$("scene-devices").children, ...$("scene-terms").children]) if (!keep.has(g.dataset.id)) g.remove();
+    settleMounts();
     for (const dev of S.spec.devices) renderDevice(dev, force);
+    for (const dev of S.spec.devices) if (dev.mount) raiseGuest(dev);
     renderWires();
     commitView();
     renderSide();
@@ -1019,6 +1064,9 @@
           }
           html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
         }
+        if (dev.mount) html += `<p class="insp-desc">Acoplado bajo <b>${esc(dev.mount)}</b>, sin cables: sus puentes 1-3-5 entran en 2-4-6. Arrástrelo lejos para separarlo.</p>`;
+        else if (mountRule(dev)) html += `<p class="insp-desc muted">Se engrapa bajo un contactor: arrástrelo hasta su borde inferior y queda conectado sin cables.</p>`;
+        if (guestsOf(dev.id).length) html += `<p class="insp-desc">Lleva acoplado: <b>${guestsOf(dev.id).map((g) => esc(g.id)).join(", ")}</b> (se mueve con él).</p>`;
         if (dev.type !== "jwsim/jwplc-basic") html += `<p class="insp-desc muted">Supr o Ctrl+X lo quita; Ctrl+C / Ctrl+V lo copia; Ctrl+Z deshace.</p>`;
       }
     } else if (sel?.kind === "wire") {
@@ -1311,6 +1359,7 @@
       if (devById(id)?.type === "jwsim/jwplc-basic") return;
       S.spec.devices = S.spec.devices.filter((d) => d.id !== id);
       S.spec.wiring = S.spec.wiring.filter((w) => !w.from.startsWith(`${id}.`) && !w.to.startsWith(`${id}.`));
+      for (const g of guestsOf(id)) delete g.mount;
     }
     S.sel = null;
     changed();
@@ -1398,7 +1447,7 @@
 
   function cleanSpec() {
     return {
-      devices: S.spec.devices.map(({ id, type, version, params, x, y }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0 })),
+      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}) })),
       wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
         from,
         to,
@@ -1633,13 +1682,23 @@
           renderWires();
         }
       } else {
-        const nx = snap(w.x - S.drag.dx);
-        const ny = snap(w.y - S.drag.dy);
+        let nx = snap(w.x - S.drag.dx);
+        let ny = snap(w.y - S.drag.dy);
+        // Imán: cerca de su lugar bajo un anfitrión, el equipo se acopla.
+        const tgt = mountRule(S.drag.dev) ? mountTarget(S.drag.dev, nx, ny) : null;
+        if (tgt) ({ x: nx, y: ny } = tgt.p);
+        S.drag.mountTo = tgt?.h.id ?? null;
         if (nx !== S.drag.dev.x || ny !== S.drag.dev.y) {
           S.drag.dev.x = nx;
           S.drag.dev.y = ny;
           S.drag.moved = true;
           renderDevice(S.drag.dev);
+          if (S.drag.mountTo) raiseGuest(S.drag.dev);
+          for (const g of guestsOf(S.drag.dev.id)) {
+            Object.assign(g, mountPos(g, S.drag.dev));
+            renderDevice(g);
+            raiseGuest(g);
+          }
           // Un trazado por cuadro como máximo.
           if (!S.wireFrame) {
             S.wireFrame = requestAnimationFrame(() => {
@@ -1679,6 +1738,13 @@
       }
       const moved = S.drag?.moved;
       const snapshot = S.drag?.snapshot;
+      if (moved && S.drag.kind === "device" && mountRule(S.drag.dev)) {
+        const dev = S.drag.dev;
+        const was = dev.mount;
+        if (S.drag.mountTo) dev.mount = S.drag.mountTo;
+        else delete dev.mount;
+        if (was !== dev.mount) changed();
+      }
       if (moved) S.dirty = true;
       S.drag = null;
       if (moved && snapshot) {
