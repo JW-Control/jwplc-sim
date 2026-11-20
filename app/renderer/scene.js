@@ -1605,7 +1605,7 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", "sensor-cylinder": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", "sensor-cylinder": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", compressor: "CP", "service-unit": "FR", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
@@ -2185,6 +2185,7 @@
             renderDevice(cg.dev);
           }
           for (const it of S.drag.items) if (it.dev.mount && S.drag.movingIds.has(it.dev.mount)) raiseGuest(it.dev);
+          window.JwsimStateDiag?.onSceneDragMove?.(e.clientX, e.clientY, S.drag.anchor?.id);
           if (!S.wireFrame) {
             S.wireFrame = requestAnimationFrame(() => {
               S.wireFrame = 0;
@@ -2195,6 +2196,7 @@
       } else {
         let nx = snap(w.x - S.drag.dx);
         let ny = snap(w.y - S.drag.dy);
+        window.JwsimStateDiag?.onSceneDragMove?.(e.clientX, e.clientY, S.drag.dev?.id);
         // Imán: cerca de su lugar bajo un anfitrión, el equipo se acopla.
         const tgt = mountRule(S.drag.dev) ? mountTarget(S.drag.dev, nx, ny) : null;
         if (tgt) ({ x: nx, y: ny } = tgt.p);
@@ -2266,21 +2268,54 @@
       const moved = S.drag?.moved;
       const snapshot = S.drag?.snapshot;
       let didMove = moved;
-      if (moved && S.drag.kind === "device" && S.drag.cylHome && S.drag.snapActive) {
+      const dragDevId = (S.drag?.dev ?? S.drag?.anchor)?.id;
+      const droppedOnDiag = moved && dragDevId && window.JwsimStateDiag?.onSceneDragDrop?.(e.clientX, e.clientY, dragDevId);
+      if (droppedOnDiag) {
+        if (S.drag.kind === "device") {
+          S.drag.dev.x = S.drag.x0;
+          S.drag.dev.y = S.drag.y0;
+          renderDevice(S.drag.dev);
+          for (const g of guestsOf(S.drag.dev.id)) {
+            Object.assign(g, mountPos(g, S.drag.dev));
+            renderDevice(g);
+          }
+          for (const cg of S.drag.cylGuests ?? []) {
+            cg.dev.x = cg.x0;
+            cg.dev.y = cg.y0;
+            renderDevice(cg.dev);
+          }
+        } else if (S.drag.kind === "devices") {
+          for (const it of S.drag.items) {
+            it.dev.x = it.x0;
+            it.dev.y = it.y0;
+            renderDevice(it.dev);
+          }
+          for (const g of S.drag.guestItems) {
+            Object.assign(g.dev, mountPos(g.dev, g.host));
+            renderDevice(g.dev);
+          }
+          for (const cg of S.drag.cylGuestItems ?? []) {
+            cg.dev.x = cg.x0;
+            cg.dev.y = cg.y0;
+            renderDevice(cg.dev);
+          }
+        }
+        didMove = false;
+      } else if (moved && S.drag.kind === "device" && S.drag.cylHome && S.drag.snapActive) {
         const dev = S.drag.dev;
         dev.x = S.drag.cylHome.x;
         dev.y = S.drag.cylHome.y;
         renderDevice(dev);
         if (S.drag.wasAtHome && dev.x === S.drag.x0 && dev.y === S.drag.y0) didMove = false;
       }
-      if (moved && S.drag.kind === "device" && mountRule(S.drag.dev)) {
+      if (didMove && S.drag.kind === "device" && mountRule(S.drag.dev)) {
         const dev = S.drag.dev;
         const was = dev.mount;
         if (S.drag.mountTo) dev.mount = S.drag.mountTo;
         else delete dev.mount;
         if (was !== dev.mount) changed();
       }
-      if (moved && S.drag.kind === "devices") {
+      if (didMove && S.drag.kind === "devices") {
         let detached = false;
         for (const it of S.drag.items) {
           if (it.dev.mount && !S.drag.movingIds.has(it.dev.mount)) {
