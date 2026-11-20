@@ -59,19 +59,19 @@
       {
         "id": "B1",
         "type": "jwsim/limit-switch",
-        "x": 760,
+        "x": 820,
         "y": 0
       },
       {
         "id": "B2",
         "type": "jwsim/limit-switch",
-        "x": 960,
+        "x": 1020,
         "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 1240,
+        "x": 1300,
         "y": 0
       },
       {
@@ -81,7 +81,7 @@
           "color": "rojo",
           "label": "Tanque bajo"
         },
-        "x": 1460,
+        "x": 1560,
         "y": 0
       },
       {

@@ -65,7 +65,7 @@
           "label": "Marcha",
           "color": "verde"
         },
-        "x": 760,
+        "x": 820,
         "y": 0
       },
       {
@@ -75,25 +75,25 @@
           "label": "Parada",
           "color": "rojo"
         },
-        "x": 920,
+        "x": 980,
         "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 1180,
+        "x": 1240,
         "y": 0
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 1400,
+        "x": 1500,
         "y": 0
       },
       {
         "id": "KM3",
         "type": "jwsim/contactor",
-        "x": 1620,
+        "x": 1760,
         "y": 0
       },
       {
@@ -103,7 +103,7 @@
           "color": "verde",
           "label": "Marcha"
         },
-        "x": 1860,
+        "x": 2000,
         "y": 0
       },
       {

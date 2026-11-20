@@ -303,7 +303,9 @@ try {
       loadWarn.length === 0 && nTpl >= 14 && psWired &&
       variants.map((v) => v.tpl).join() === "jwsim/power-24vdc__mdr60,jwsim/power-24vdc__hdr60,jwsim/power-24vdc__ndr120" &&
       // Estilo «réplica JW» (19/11/2026): sin logos de terceros en los símbolos.
-      variants.every((v) => !v.logo) && new Set(variants.map((v) => `${v.w}x${v.h}`)).size === 3,
+      variants.every((v) => !v.logo) &&
+      // Regla de tablero (20/11/2026): todo lo de riel DIN tiene la misma altura.
+      new Set(variants.map((v) => v.h)).size === 1,
     templates: nTpl,
     warnings: loadWarn,
     variants,
