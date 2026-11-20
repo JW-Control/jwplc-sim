@@ -93,3 +93,17 @@ test("scene validate --strict falla con código 1 cuando hay advertencias", () =
   assert.equal(JSON.parse(strictRun.stdout).exit_code, 1);
   assert.equal(JSON.parse(readFileSync(reportFile, "utf8")).exit_code, 1);
 });
+
+test("scene normalize y scene build aceptan archivos JSON con BOM UTF-8 de PowerShell", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jwsim-scene-bom-"));
+  const bomFile = join(dir, "bom.json");
+  const payload = JSON.stringify({
+    name: "ConBom",
+    scene: { devices: [{ type: "power-24vdc" }, { type: "lamp" }], wiring: ["PS1.+V1 -> H1.X1", "H1.X2 -> PS1.-V1"] },
+  });
+  writeFileSync(bomFile, "\uFEFF" + payload, "utf8");
+  const out = join(dir, "out.jwsim");
+  const r = runCli("scene", "normalize", bomFile, "-o", out, "--json");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(r.stdout).ok, true);
+});

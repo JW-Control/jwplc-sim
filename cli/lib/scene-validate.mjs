@@ -36,6 +36,10 @@ const TYPE_ALIASES = {
   "final-carrera": "jwsim/limit-switch",
   "jwsim/electrovalvula": "jwsim/solenoid-valve",
   electrovalvula: "jwsim/solenoid-valve",
+  "jwsim/cylinder": "jwsim/solenoid-valve-2",
+  cylinder: "jwsim/solenoid-valve-2",
+  "jwsim/cilindro": "jwsim/solenoid-valve-2",
+  cilindro: "jwsim/solenoid-valve-2",
   "jwsim/rele-termico": "jwsim/overload-relay",
   "rele-termico": "jwsim/overload-relay",
   "jwsim/lampara": "jwsim/lamp",
@@ -332,6 +336,52 @@ export function validateSceneProject(project, { fast = false, strict = false, re
             guess ? `¿quisiste decir "${targetId}.${guess}"?` : undefined,
           );
         }
+      }
+    }
+  });
+
+  // 5b. Fuentes de alimentación sin ningún cable y consumidores neumáticos olvidados en compresor
+  const wiredDevs = new Set();
+  for (const w of wiring) {
+    for (const end of [w.from, w.to]) {
+      const dot = String(end ?? "").indexOf(".");
+      if (dot > 0) wiredDevs.add(String(end).slice(0, dot));
+    }
+  }
+  devices.forEach((d, idx) => {
+    if (/^jwsim\/power-/.test(d.type) && wiring.length > 0 && !wiredDevs.has(d.id)) {
+      warn(
+        `/scene/devices/${idx}`,
+        `la fuente ${d.id} (${d.type}) está sin cablear (no tiene ningún cable conectado)`,
+        `elimina ${d.id} si no se usa (p. ej. cuando el compresor tiene supply="propia") o cabléala`,
+      );
+    }
+    if (d.type === "jwsim/compressor") {
+      const p = resolvedParamsById.get(d.id) ?? {};
+      const declared = new Set(
+        String(p.consumers ?? "")
+          .split(/[\s,;]+/)
+          .filter(Boolean),
+      );
+      const serviceUnits = new Set(
+        devices
+          .filter((x) => x.type === "jwsim/service-unit" && (resolvedParamsById.get(x.id)?.source === d.id))
+          .map((x) => x.id),
+      );
+      const linkedValves = devices
+        .filter((x) => (x.type === "jwsim/solenoid-valve" || x.type === "jwsim/solenoid-valve-2"))
+        .filter((x) => {
+          const air = resolvedParamsById.get(x.id)?.air;
+          return air === d.id || serviceUnits.has(air);
+        })
+        .map((x) => x.id);
+      const missing = linkedValves.filter((vId) => !declared.has(vId));
+      if (missing.length) {
+        warn(
+          `/scene/devices/${idx}/params/consumers`,
+          `${d.id}: las válvulas ${missing.join(", ")} toman aire de ${d.id} pero no figuran en params.consumers (${JSON.stringify(p.consumers)})`,
+          `actualiza params.consumers a "${linkedValves.join(", ")}"`,
+        );
       }
     }
   });

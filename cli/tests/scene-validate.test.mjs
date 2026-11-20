@@ -86,3 +86,32 @@ test("valida salidas dependientes de parámetros (compressor -> solenoid-valve.m
   assert.equal(res.ok, true, JSON.stringify({ errors: res.errors, warnings: res.warnings }));
   assert.equal(res.warnings.length, 0);
 });
+
+test("sugiere solenoid-valve para alias cylinder/cilindro y avisa fuente sin cablear o consumidor faltante en compresor", () => {
+  const badType = {
+    format: "jwsim",
+    version: 1,
+    board: { id: "jwplcbasic" },
+    program: { kind: "arduino", sketch: "./a/a.ino" },
+    scene: { devices: [{ id: "Y1", type: "jwsim/cylinder", x: 0, y: 0 }], wiring: [] },
+  };
+  const rType = validateSceneProject(badType);
+  assert.equal(rType.ok, false);
+  assert.match(rType.errors[0].suggestion ?? "", /solenoid-valve/);
+
+  const unusedSupplyAndMissingConsumer = normalizeProject({
+    scene: {
+      devices: [
+        { id: "PS1", type: "power-24vdc" },
+        { id: "L1", type: "power-230vac" },
+        { id: "CP1", type: "compressor", params: { supply: "propia", consumers: "Y1" } },
+        { id: "Y1", type: "solenoid-valve-2", params: { air: "CP1" } },
+        { id: "Y2", type: "solenoid-valve-2", params: { air: "CP1" } },
+      ],
+      wiring: ["PS1.+V1 -> Y1.A+1", "Y1.A+2 -> PS1.-V1"],
+    },
+  });
+  const rWarn = validateSceneProject(unusedSupplyAndMissingConsumer);
+  assert.ok(rWarn.warnings.some((w) => w.message.includes("L1") && /sin cablear/i.test(w.message)));
+  assert.ok(rWarn.warnings.some((w) => w.message.includes("CP1") && w.message.includes("Y2")));
+});

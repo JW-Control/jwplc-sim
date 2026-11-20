@@ -84,3 +84,81 @@ test("normalizeProject es idempotente y conserva campos desconocidos", () => {
   assert.deepEqual(twice, once);
   assert.deepEqual(once.customMeta, { autor: "JW" });
 });
+
+test("reglas estrictas de diseño: riel DIN en y=0, cilindros en una sola fila con finales A0/A1..C0/C1 arriba y compresor abajo", () => {
+  const draft = {
+    name: "SecNeumatica",
+    scene: {
+      devices: [
+        { type: "power-24vdc" },
+        { type: "jwplc-basic" },
+        { type: "pushbutton-no", params: { color: "verde" } },
+        { type: "pushbutton-nc", params: { color: "rojo" } },
+        { type: "compressor", params: { supply: "propia" } },
+        { type: "solenoid-valve-2", sensors: "compacto", params: { air: "CP1" } },
+        { type: "solenoid-valve-2", sensors: "compacto", params: { air: "CP1" } },
+        { type: "solenoid-valve-2", sensors: "compacto", params: { air: "CP1" } },
+      ],
+      wiring: ["PS1.+V1 -> plc.24VDC"],
+    },
+  };
+  const out = normalizeProject(draft);
+  const byId = Object.fromEntries(out.scene.devices.map((d) => [d.id, d]));
+
+  // Riel superior alineado en y = 0
+  assert.equal(byId.PS1.y, 0);
+  assert.equal(byId.plc.y, 0);
+  assert.ok(byId.plc.x > byId.PS1.x);
+
+  // Botones abajo del riel izquierdo
+  assert.ok(byId.S1.y >= 580 && byId.S2.y >= 580);
+
+  // Tres electroválvulas Y1, Y2, Y3 en una sola fila horizontal
+  assert.ok(byId.Y1 && byId.Y2 && byId.Y3);
+  assert.equal(byId.Y1.y, byId.Y2.y);
+  assert.equal(byId.Y2.y, byId.Y3.y);
+  assert.ok(byId.Y1.x < byId.Y2.x && byId.Y2.x < byId.Y3.x);
+
+  // Finales de carrera autogenerados como A0/A1, B0/B1, C0/C1 encima de cada émbolo con orientacion abajo
+  for (const [cyl, s0, s1] of [
+    [byId.Y1, byId.A0, byId.A1],
+    [byId.Y2, byId.B0, byId.B1],
+    [byId.Y3, byId.C0, byId.C1],
+  ]) {
+    assert.ok(s0 && s1, `faltan sensores para ${cyl.id}`);
+    assert.equal(s0.params.orientacion, "abajo");
+    assert.equal(s0.y, cyl.y - 160);
+    assert.equal(s1.y, cyl.y - 160);
+    assert.equal(s0.x, cyl.x + 280);
+    assert.equal(s1.x, cyl.x + 420);
+  }
+
+  // Compresor CP1 una fila debajo de los cilindros y con consumers autocompletado a "Y1, Y2, Y3"
+  assert.ok(byId.CP1);
+  assert.ok(byId.CP1.y >= byId.Y1.y + 280);
+  assert.equal(byId.CP1.params.consumers, "Y1, Y2, Y3");
+});
+
+test("sensores declarados por separado sin id ni x/y reciben nombres A0/A1.. y se ubican encima de su cilindro", () => {
+  const draft = {
+    name: "SensoresSeparados",
+    scene: {
+      devices: [
+        { type: "solenoid-valve-2", id: "Y1" },
+        { type: "sensor-cylinder", params: { cylinder: "Y1", end: "retraído" } },
+        { type: "sensor-cylinder", params: { cylinder: "Y1", end: "extendido" } },
+        { type: "solenoid-valve-2", id: "Y2" },
+        { type: "sensor-cylinder", params: { cylinder: "Y2", end: "retraído" } },
+        { type: "sensor-cylinder", params: { cylinder: "Y2", end: "extendido" } },
+      ],
+      wiring: [],
+    },
+  };
+  const out = normalizeProject(draft);
+  const byId = Object.fromEntries(out.scene.devices.map((d) => [d.id, d]));
+  assert.ok(byId.A0 && byId.A1 && byId.B0 && byId.B1);
+  assert.equal(byId.A0.y, byId.Y1.y - 120);
+  assert.equal(byId.A1.y, byId.Y1.y - 120);
+  assert.equal(byId.B0.y, byId.Y2.y - 120);
+  assert.equal(byId.B1.y, byId.Y2.y - 120);
+});

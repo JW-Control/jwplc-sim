@@ -89,8 +89,8 @@ Total de tipos integrados: **65** · Grilla obligatoria: **20 px**.
 
 | Tipo | Prefijo | Tamaño | Bornes | Variantes / Enlaces | Descripción corta |
 |---|---|---|---|---|---|
-| `jwsim/compressor` | `C` | 360×240 | `L`, `N` | enlaces: consumers<br>salidas: pressure, running, powered, consumers | Compresor de pistón con tanque y presostato: arranca cuando la presión baja a la de arranque y para al llegar a la de corte. Los cilindro... |
-| `jwsim/service-unit` | `UM` | 200×280 | *(sin bornes)* | enlaces: source<br>salidas: pressure, inlet | Filtro-regulador con manómetro: entrega a los cilindros la presión regulada, o la del compresor si es menor. Sin compresor indicado entre... |
+| `jwsim/compressor` | `CP` | 360×240 | `L`, `N` | enlaces: consumers<br>salidas: pressure, running, powered, consumers | Compresor de pistón con tanque y presostato: arranca cuando la presión baja a la de arranque y para al llegar a la de corte. Los cilindro... |
+| `jwsim/service-unit` | `FR` | 200×280 | *(sin bornes)* | enlaces: source<br>salidas: pressure, inlet | Filtro-regulador con manómetro: entrega a los cilindros la presión regulada, o la del compresor si es menor. Sin compresor indicado entre... |
 
 ## Planta
 

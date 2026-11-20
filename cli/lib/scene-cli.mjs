@@ -50,7 +50,7 @@ const TEMPLATES = {
 
 const readJsonFile = (file, CliError, EXIT) => {
   try {
-    return JSON.parse(readFileSync(resolve(file), "utf8"));
+    return JSON.parse(readFileSync(resolve(file), "utf8").replace(/^\uFEFF/, ""));
   } catch (err) {
     throw new CliError(EXIT.USAGE, `no se pudo leer JSON "${file}": ${err.message}`);
   }

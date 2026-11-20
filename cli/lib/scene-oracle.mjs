@@ -65,13 +65,22 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
     ).catch(() => {});
 
     const screenshots = {};
+    const captureArea = async (selector, outPath) => {
+      const loc = win.locator(selector);
+      const box = await loc.boundingBox().catch(() => null);
+      if (box && box.width > 100 && box.height > 100) {
+        await loc.screenshot({ path: outPath });
+      } else {
+        await win.screenshot({ path: outPath });
+      }
+    };
     if (view === "2d" || view === "both") {
       await win.evaluate(() => window.JwsimTabs.select("schematic"));
       await win.click("#scene-fit").catch(() => {});
       await win.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       await win.waitForTimeout(300);
       const p2d = join(targetDir, "schematic-2d.png");
-      await win.screenshot({ path: p2d });
+      await captureArea("#scene-svg", p2d);
       screenshots.schematic = p2d;
     }
 
@@ -91,7 +100,7 @@ export async function previewSceneProject(projectFile, { outDir, view = "both", 
       );
       await win.waitForTimeout(500);
       const p3d = join(targetDir, "plant-3d.png");
-      await win.screenshot({ path: p3d });
+      await captureArea("#view3d", p3d);
       screenshots.plant3d = p3d;
     }
 
