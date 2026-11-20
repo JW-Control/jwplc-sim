@@ -119,16 +119,15 @@ b+=band(256,184,88,34)+term(280,202,'A1',side='b',lab='none',r=7)+lbl(280,192,'A
 b+=soot(213,150,40,30)
 svg('solenoid-valve',440,220,b,DEFS)
 
-# biestable 480 x 220: bobina A+ a la izquierda, A− a la derecha
+# biestable 440 x 220: bobina A+ a la izquierda, A− a la derecha, borneras alineadas bajo cada bobina
 b=cylinder()
 b+=hoses('out.spoolA',170,210)+valve_body(140,'out.spoolA')
 b+=coil(80,'out.coilPlus',flip=True)+text(109,116,'A+',9,TXT,800)
 b+=coil(246,'out.coilMinus')+text(275,116,'A−',9,TXT,800)
-b+=path('M96 184 V190 Q96 196 90 196 H72',stroke=DARK,sw=4)+path('M290 184 V190 Q290 196 296 196 H380',stroke=DARK,sw=4)
-b+=band(20,184,80,34)+term(40,202,'A+1',side='b',lab='none',r=7)+lbl(40,192,'A+1',7.5)+term(80,202,'A+2',side='b',lab='none',r=7)+lbl(80,192,'A+2',7.5)
-b+=band(380,184,80,34)+term(400,202,'A-1',side='b',lab='none',r=7)+lbl(400,192,'A−1',7.5)+term(440,202,'A-2',side='b',lab='none',r=7)+lbl(440,192,'A−2',7.5)
+b+=band(60,184,80,34)+term(80,202,'A+1',side='b',lab='none',r=7)+lbl(80,192,'A+1',7.5)+term(120,202,'A+2',side='b',lab='none',r=7)+lbl(120,192,'A+2',7.5)
+b+=band(240,184,80,34)+term(260,202,'A-1',side='b',lab='none',r=7)+lbl(260,192,'A−1',7.5)+term(300,202,'A-2',side='b',lab='none',r=7)+lbl(300,192,'A−2',7.5)
 b+=soot(190,150,40,30)
-svg('solenoid-valve-2',480,220,b,DEFS)
+svg('solenoid-valve-2',440,220,b,DEFS)
 
 # ------------------------------------------------ finales de carrera
 def lswitch(name,H,body_col,pivot,lever_len,roller_r,rot_expr,datum):
@@ -151,10 +150,32 @@ def lswitch(name,H,body_col,pivot,lever_len,roller_r,rot_expr,datum):
     for t,x in [('13',20),('14',40),('21',80),('22',100)]: b+=term(x,H-14,t,side='b',lab='none',r=7)+lbl(x,H-28,t,7.5)
     b+=lbl(30,H-38,'NA',6.5,MUTED,600)+lbl(90,H-38,'NC',6.5,MUTED,600)
     return b
+def lswitch_down(H,body_col,pivot_from_bottom,lever_len,roller_r,rot_deg,datum):
+    py=H-pivot_from_bottom
+    b=''
+    rx=60+lever_len*0.55; ry=py+lever_len*0.83
+    lever=path(f'M60 {py} L{rx:.0f} {ry:.0f}',stroke='#1f2328',sw=10,stroke_linecap='round')
+    lever+=path(f'M60 {py} L{rx:.0f} {ry:.0f}',stroke='#7d868f',sw=6,stroke_linecap='round')
+    lever+=circ(round(rx),round(ry),roller_r,'#2b2f35')+circ(round(rx),round(ry),roller_r*0.4,'#c3c9d0')
+    b+=g(lever,data_rotate=f'out.actuated:0:1:0:{rot_deg}:60:{py}',data_action='actuate',data_kind='momentary',style='cursor:pointer')
+    bh=py-40
+    b+=rect(22,48,76,bh,body_col,6)
+    b+=rect(28,py-14,64,30,'#8f98a2',5)          # cabeza giratoria abajo
+    b+=rect(30,68,60,bh*0.5,'#eef0f2',3)         # tapa con sus 4 tornillos
+    for xx,yy in [(36,74),(84,74),(36,62+bh*0.5),(84,62+bh*0.5)]: b+=circ(xx,yy,2.6,'#9aa3ad','#1f2328',1)
+    b+=circ(60,py,9,STEEL)+circ(60,py,3,'#1f2328','none',0)
+    b+=led(60,68+bh*0.25,'out.actuated',3.5,'#ff5a4e')
+    b+=text(60,60,datum,10,'#ffffff' if body_col.startswith('#3') else '#1e2226',900)
+    b+=band(14,6,92,40)
+    for t,x in [('13',20),('14',40),('21',80),('22',100)]: b+=term(x,14,t,side='t',lab='none',r=7)+lbl(x,32,t,7.5)
+    b+=lbl(30,42,'NA',6.5,MUTED,600)+lbl(90,42,'NC',6.5,MUTED,600)
+    return b
 b=lswitch('limit-switch__compacto',200,'#3f6fa8',62,40,11,'out.actuated:0:1:0:28:60:62','1NA + 1NC')
 svg('limit-switch__compacto',120,200,b,DEFS)
 b=lswitch('limit-switch',240,'#c9ced4',74,52,14,'out.actuated:0:1:0:25:60:74','1NA + 1NC')
 svg('limit-switch',120,240,b,DEFS)
+svg('limit-switch__compacto__abajo',120,200,lswitch_down(200,'#3f6fa8',62,40,11,-28,'1NA + 1NC'),DEFS)
+svg('limit-switch__xckj__abajo',120,240,lswitch_down(240,'#c9ced4',74,52,14,-25,'1NA + 1NC'),DEFS)
 
 # ------------------------------------------------ sensores inductivo y capacitivo (620 x 260), zona exagerada
 def prox(name,Sn,Hy,hpx,cap=False):
