@@ -12,9 +12,9 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const VALVES = new Set(["jwsim/solenoid-valve", "jwsim/solenoid-valve-2"]);
   const MIN_BAR = 1.5; // como scene/devices/pneumatics.mjs
-  const CW = 340; // ancho de cada columna cilindro + válvula
-  const X0 = 340; // primera columna (a la izquierda van el compresor y la FR)
-  const STROKE = 120;
+  const CW = 330; // ancho de cada columna cilindro + válvula
+  const X0 = 260; // primera columna (a la izquierda van la fuente y unidad de mantenimiento)
+  const STROKE = 84;
   const fmt = (v) => (Number.isFinite(v) ? v.toFixed(1).replace(".", ",") : "—");
 
   const P = { shown: false, snap: null, html: "", vb: null, drag: null };
@@ -39,10 +39,9 @@
     }
     return list;
   }
-  // Nombre del cilindro: la letra de sus finales (A0/A1 → A) o el id de la válvula.
-  function cylName(sens, v) {
-    const l = sens.map((s) => /^([A-Z])\d$/.exec(s.id)?.[1]).find(Boolean);
-    return l ? `Cilindro ${l}` : v.params?.label ? String(v.params.label) : `Cilindro ${v.id}`;
+  function cylLetter(sens, idx) {
+    const l = sens.map((s) => /^([A-Z])\d+$/.exec(s.id)?.[1]).find(Boolean);
+    return l || String.fromCharCode(65 + (idx % 26));
   }
 
   // Presión del aire de cada válvula (bar): la de su FR o compresor; sin aire
@@ -61,33 +60,92 @@
   }
 
   const line = (pts, on, cls = "") => `<polyline class="pn-line${on ? " on" : ""}${cls ? ` ${cls}` : ""}" points="${pts.map((p) => p.join(",")).join(" ")}"/>`;
-  const exhaust = (x, y) => `<path class="pn-sym" d="M${x} ${y}v10M${x - 6} ${y + 10}h12l-6 9z"/>`;
-  const blocked = (x, y, up) => `<path class="pn-sym" d="M${x} ${y}v${up ? -9 : 9}M${x - 5} ${y + (up ? -9 : 9)}h10"/>`;
+  const portRing = (x, y, r = 2.8) => `<circle class="pn-port-ring" cx="${x}" cy="${y}" r="${r}"/>`;
+  const exhaust = (x, y) => `<path class="pn-box" d="M${x - 5} ${y}h10l-5 9z"/>` + portRing(x, y + 3.2, 2);
+  const blocked = (x, y, up) => `<path class="pn-sym" d="M${x} ${y}v${up ? -8 : 8}M${x - 4.5} ${y + (up ? -8 : 8)}h9"/>`;
   const arrow = (x1, y1, x2, y2) => `<line class="pn-flow" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#pn-arrow)"/>`;
 
-  // Válvula 5/2: la casilla de la izquierda (lado de la bobina) es P→A, B→S;
-  // la de la derecha (resorte o segunda bobina) P→B, A→R. La corredera se
-  // desplaza para que la casilla activa quede frente a las conexiones.
-  function valve(vc, y, v, o, act) {
+  // Regla graduada superior estilo FluidSIM sobre el recorrido del vástago.
+  function strokeRuler(xR0, yR, sens) {
+    if (!sens.length) return "";
+    const xR1 = xR0 + STROKE;
+    let ticks = `M${xR0} ${yR}H${xR1}`;
+    for (let k = 0; k <= 10; k++) {
+      const tx = Math.round((xR0 + (k / 10) * STROKE) * 10) / 10;
+      const h = k === 0 || k === 10 ? 13 : k === 5 ? 10 : 7;
+      ticks += `M${tx} ${yR}V${yR + h}`;
+    }
+    let s = `<path class="pn-ruler" d="${ticks}"/>`;
+    for (const se of sens) {
+      const tx = xR0 + se.end * STROKE;
+      const lit = !!outOf(se.id)?.[se.out];
+      s +=
+        `<g class="pn-ls${lit ? " on" : ""}">` +
+        `<text x="${tx}" y="${yR + 27}" text-anchor="middle">${esc(se.id)}</text>` +
+        `<line x1="${tx}" y1="${yR + 33}" x2="${tx}" y2="${yR + 42}"/>` +
+        `<circle cx="${tx}" cy="${yR + 43}" r="2.4"/>` +
+        `</g>`;
+    }
+    return s;
+  }
+
+  // Cilindro de doble efecto ISO 1219-1 con imán permanente y amortiguación regulable.
+  function cylinderIso(x0, yC, pos, aOn, bOn) {
+    const px = x0 + 8 + pos * STROKE;
+    const xA = x0 + 12;
+    const xB = x0 + 124;
+    return (
+      `<rect class="pn-chamber${aOn ? " on" : ""}" x="${x0 + 2}" y="${yC + 2}" width="${Math.max(0, px - x0 - 2)}" height="40"/>` +
+      `<rect class="pn-chamber${bOn ? " on" : ""}" x="${px + 22}" y="${yC + 2}" width="${Math.max(0, x0 + 134 - px - 22)}" height="40"/>` +
+      `<rect class="pn-cyl" x="${x0}" y="${yC}" width="136" height="44"/>` +
+      `<g transform="translate(${px} ${yC})">` +
+      `<rect class="pn-cush" x="0" y="13" width="5" height="18"/>` +
+      `<rect class="pn-piston" x="5" y="1" width="12" height="42"/>` +
+      `<path class="pn-magnet" d="M7 7h8v7h-4v16h4v7h-8z"/>` +
+      `<rect class="pn-cush" x="17" y="13" width="5" height="18"/>` +
+      `<rect class="pn-rod" x="22" y="17" width="136" height="10"/>` +
+      arrow(3, 50, 19, -8) +
+      `</g>` +
+      `<line class="pn-sym" x1="${xA}" y1="${yC + 44}" x2="${xA}" y2="${yC + 58}"/>` +
+      `<line class="pn-sym" x1="${xB}" y1="${yC + 44}" x2="${xB}" y2="${yC + 58}"/>` +
+      portRing(xA, yC + 54) +
+      portRing(xB, yC + 54)
+    );
+  }
+
+  // Válvula 5/2 ISO 1219-1: casilla izquierda (1→4, 2→3, 5 cerrado), casilla
+  // derecha (1→2, 4→5, 3 cerrado). Pilotajes horizontales a los costados.
+  function valve(vc, y, v, o, act, letter) {
     const bi = v.type === "jwsim/solenoid-valve-2";
     const box = (x, a) =>
-      `<rect class="pn-box" x="${x}" y="${y}" width="44" height="44"/>` +
+      `<rect class="pn-box" x="${x}" y="${y}" width="44" height="34"/>` +
       (a
-        ? arrow(x + 22, y + 44, x + 11, y + 3) + arrow(x + 33, y, x + 38, y + 41) + blocked(x + 6, y + 44, true)
-        : arrow(x + 22, y + 44, x + 33, y + 3) + arrow(x + 11, y, x + 6, y + 41) + blocked(x + 38, y + 44, true));
+        ? arrow(x + 22, y + 34, x + 11, y + 2) + arrow(x + 33, y, x + 33, y + 32) + blocked(x + 11, y + 34, true)
+        : arrow(x + 11, y, x + 11, y + 32) + arrow(x + 22, y + 34, x + 33, y + 2) + blocked(x + 33, y + 34, true));
     const coilL = bi ? !!o?.coilPlus : !!o?.energized;
     const coilR = bi && !!o?.coilMinus;
-    const sol = (x, on, label) =>
-      `<g class="pn-sol${on ? " on" : ""}"><rect x="${x}" y="${y + 11}" width="14" height="22"/><line x1="${x}" y1="${y + 33}" x2="${x + 14}" y2="${y + 11}"/></g>` +
-      `<text class="pn-label" x="${x + 7}" y="${y + 50}" text-anchor="middle">${esc(label)}</text>`;
-    const spring = (x) => `<path class="pn-sym" d="M${x} ${y + 22}l4 -8l6 16l6 -16l6 16l4 -8"/>`;
+    const sol = (x, on, label, side) => {
+      const rx = side === "l" ? x : x + 26;
+      const tx = side === "l" ? x - 9 : x + 35;
+      const anc = side === "l" ? "end" : "start";
+      const sx1 = side === "l" ? x + 9 : x + 17;
+      const sx2 = side === "l" ? x + 16 : x + 10;
+      return (
+        `<g class="pn-sol${on ? " on" : ""}"><rect x="${x}" y="${y + 18}" width="26" height="16"/><line x1="${sx1}" y1="${y + 34}" x2="${sx2}" y2="${y + 18}"/></g>` +
+        portRing(rx, y + 26) +
+        `<text class="pn-pilot-lbl" x="${tx}" y="${y + 30}" text-anchor="${anc}">${esc(label)}</text>`
+      );
+    };
+    const spring = (x) => `<path class="pn-sym" d="M${x} ${y + 26}l4 -7l5 14l5 -14l5 14l4 -7"/>`;
     const shift = act ? 44 : 0;
+    const lblL = bi ? `${letter}+` : `${letter}+`;
+    const lblR = `${letter}-`;
     return (
       `<g class="pn-spool" transform="translate(${shift} 0)">` +
       box(vc - 66, true) +
       box(vc - 22, false) +
-      sol(vc - 80, coilL, bi ? `${v.id}+` : v.id) +
-      (bi ? sol(vc + 22, coilR, `${v.id}−`) : spring(vc + 22)) +
+      sol(vc - 92, coilL, lblL, "l") +
+      (bi ? sol(vc + 22, coilR, lblR, "r") : spring(vc + 22)) +
       `</g>`
     );
   }
@@ -100,54 +158,40 @@
     const fr = sp.devices.find((d) => d.type === "jwsim/service-unit");
     const running = !!P.snap;
     let s = "";
-    // ---- alimentación: compresor → tanque → FR → colector (abajo a la izquierda)
-    const yM = 290; // colector
-    const yS = 420; // línea de la alimentación
+    // ---- alimentación estilo FluidSIM: triángulo ISO (compresor) → unidad de mantenimiento → colector
+    const yM = 316; // línea principal del colector
     const co = comp && outOf(comp.id);
     const pc = co ? co.pressure : comp ? Number(comp.params?.start ?? 8) : NaN;
     const fo = fr && outOf(fr.id);
     const pf = fo ? fo.pressure : fr ? Math.min(Number(fr.params?.setpoint ?? 6), Number.isFinite(pc) ? pc : 99) : NaN;
     const supply = fr ? pf : comp ? pc : 6;
     const sOn = supply >= MIN_BAR;
-    const gauge = (x, y, v, label) =>
-      `<circle class="pn-gauge" cx="${x}" cy="${y - 34}" r="11"/><path class="pn-sym" d="M${x - 6} ${y - 29}L${x + 6} ${y - 40}"/><line class="pn-sym" x1="${x}" y1="${y - 23}" x2="${x}" y2="${y - 18}"/>` +
-      `<text class="pn-val" x="${x + 16}" y="${y - 38}">${fmt(v)} bar</text>${label ? `<text class="pn-port" x="${x + 16}" y="${y - 26}">${label}</text>` : ""}`;
-    let xOut = 160; // de dónde sale el aire hacia el colector
-    if (comp) {
-      const on = !!co?.running;
-      s +=
-        `<g class="pn-dev${on ? " run" : ""}"><circle cx="60" cy="${yS}" r="18" class="pn-box"/><path class="pn-fill" d="M60 ${yS - 15}l12 22h-24z"/>` +
-        `<line class="pn-sym" x1="60" y1="${yS + 18}" x2="60" y2="${yS + 33}"/><circle cx="60" cy="${yS + 46}" r="13" class="pn-box"/><text class="pn-m" x="60" y="${yS + 51}" text-anchor="middle">M</text></g>` +
-        `<text class="pn-label" x="60" y="${yS + 78}" text-anchor="middle">${esc(comp.id)} · ${on ? "en marcha" : "parado"}</text>`;
-      s += line([[78, yS], [110, yS]], pc > 0.2);
-      s += `<rect class="pn-box" x="110" y="${yS - 16}" width="44" height="32" rx="12"/><text class="pn-label" x="132" y="${yS + 32}" text-anchor="middle">tanque</text>`;
-      s += `<line class="pn-sym" x1="132" y1="${yS - 16}" x2="132" y2="${yS - 18}"/>` + gauge(132, yS, pc, "");
-      s += line([[154, yS], [fr ? 200 : 260, yS], ...(fr ? [] : [[260, yM], [X0 - 40, yM]])], pc >= MIN_BAR);
-      xOut = 260;
-    }
-    if (fr) {
-      const x = 200;
-      s +=
-        `<rect class="pn-frame" x="${x}" y="${yS - 22}" width="76" height="44"/>` +
-        `<path class="pn-box" d="M${x + 18} ${yS - 13}l12 13l-12 13l-12 -13z"/><line class="pn-sym" x1="${x + 8}" y1="${yS}" x2="${x + 28}" y2="${yS}" stroke-dasharray="3 2"/>` +
-        `<rect class="pn-box" x="${x + 40}" y="${yS - 13}" width="24" height="26"/><line class="pn-flow" x1="${x + 52}" y1="${yS + 11}" x2="${x + 52}" y2="${yS - 10}" marker-end="url(#pn-arrow)"/>` +
-        `<text class="pn-label" x="${x + 38}" y="${yS + 38}" text-anchor="middle">${esc(fr.id)} · filtro-regulador</text>` +
-        `<line class="pn-sym" x1="${x + 52}" y1="${yS - 22}" x2="${x + 52}" y2="${yS - 18}"/>` +
-        gauge(x + 52, yS, pf, "regulada");
-      if (!comp) s += line([[x - 30, yS], [x, yS]], sOn) + `<circle class="pn-box" cx="${x - 36}" cy="${yS}" r="6"/><circle class="pn-fill" cx="${x - 36}" cy="${yS}" r="2.5"/>`;
-      s += line([[x + 76, yS], [x + 100, yS], [x + 100, yM], [X0 - 40, yM]], sOn);
-      xOut = x + 100;
-    } else if (!comp) {
-      // Aire de red ideal: fuente de presión.
-      s += `<circle class="pn-box" cx="${xOut}" cy="${yM}" r="9"/><circle cx="${xOut}" cy="${yM}" r="3" class="pn-fill"/><text class="pn-label" x="${xOut - 20}" y="${yM - 16}">aire de red · 6 bar</text>`;
-      s += line([[xOut + 9, yM], [X0 - 40, yM]], true);
-    }
-    // ---- colector y columnas
-    const lastVc = X0 + (vs.length - 1) * CW + 75;
-    s += line([[X0 - 40, yM], [lastVc, yM]], sOn);
+
+    const xSrc = 44;
+    const xFr = 78;
+    const wFr = 68;
+    // Triángulo ISO 1219-1 de fuente de aire comprimido + tubería a la unidad de mantenimiento.
+    s +=
+      line([[xSrc, yM + 26], [xSrc, yM], [xFr, yM]], sOn) +
+      `<path class="pn-box" d="M${xSrc} ${yM + 26}l10 18h-20z"/>` +
+      (comp ? `<text class="pn-port" x="${xSrc}" y="${yM + 56}" text-anchor="middle">${esc(comp.id)}</text>` : "");
+    // Unidad de mantenimiento simplificada ISO (filtro punteado + purga + manómetro).
+    s +=
+      `<rect class="pn-box" x="${xFr}" y="${yM - 16}" width="${wFr}" height="32"/>` +
+      `<line class="pn-sym" x1="${xFr + 10}" y1="${yM - 16}" x2="${xFr + 10}" y2="${yM + 16}" stroke-dasharray="3 2"/>` +
+      `<line class="pn-flow" x1="${xFr + 10}" y1="${yM + 16}" x2="${xFr + 10}" y2="${yM + 25}" marker-end="url(#pn-arrow)"/>` +
+      `<circle class="pn-gauge" cx="${xFr + 38}" cy="${yM}" r="10.5"/>` +
+      `<line class="pn-flow" x1="${xFr + 44}" y1="${yM + 6}" x2="${xFr + 32}" y2="${yM - 6}" marker-end="url(#pn-arrow)"/>` +
+      `<text class="pn-val" x="${xFr + 34}" y="${yM - 22}" text-anchor="middle">${fmt(supply)} bar</text>` +
+      (fr ? `<text class="pn-port" x="${xFr + 34}" y="${yM + 30}" text-anchor="middle">${esc(fr.id)}</text>` : "");
+
+    // ---- colector principal y columnas de cilindros
+    const lastVc = X0 + (vs.length - 1) * CW + 68;
+    s += line([[xFr + wFr, yM], [lastVc, yM]], sOn);
+
     vs.forEach((v, i) => {
       const x0 = X0 + i * CW;
-      const vc = x0 + 75;
+      const vc = x0 + 68;
       const o = outOf(v.id);
       const bi = v.type === "jwsim/solenoid-valve-2";
       const act = o ? (bi ? !!o.spoolA : !!o.energized) : bi ? v.params?.start === "afuera" : false;
@@ -157,36 +201,37 @@
       const on = air >= MIN_BAR;
       const aOn = on && act;
       const bOn = on && !act;
-      const yV = 170;
-      // Cilindro de doble efecto.
-      const px = x0 + 6 + pos * STROKE;
-      s +=
-        `<rect class="pn-chamber${aOn ? " on" : ""}" x="${x0 + 3}" y="43" width="${px - x0 - 3}" height="34"/>` +
-        `<rect class="pn-chamber${bOn ? " on" : ""}" x="${px + 10}" y="43" width="${x0 + 147 - px - 10}" height="34"/>` +
-        `<rect class="pn-cyl" x="${x0}" y="40" width="150" height="40"/>` +
-        `<rect class="pn-piston" x="${px}" y="42" width="10" height="36"/>` +
-        `<rect class="pn-rod" x="${px + 10}" y="56" width="154" height="8"/>` +
-        `<text class="pn-name" x="${x0}" y="28">${esc(cylName(sensorsOf(sp, v.id), v))}</text>`;
-      // Finales de carrera en el vástago.
-      for (const se of sensorsOf(sp, v.id)) {
-        const tx = x0 + 170 + se.end * STROKE;
-        const lit = !!outOf(se.id)?.[se.out];
-        s += `<g class="pn-ls${lit ? " on" : ""}"><line x1="${tx}" y1="84" x2="${tx}" y2="100"/><circle cx="${tx}" cy="104" r="4"/><text x="${tx}" y="118" text-anchor="middle">${esc(se.id)}</text></g>`;
-      }
-      // Tuberías A (al fondo: sale) y B (al frente: entra).
-      s += line([[vc - 11, yV], [vc - 11, 130], [x0 + 20, 130], [x0 + 20, 80]], aOn, moving && aOn ? "flow" : moving && !aOn ? "vent" : "");
-      s += line([[vc + 11, yV], [vc + 11, 145], [x0 + 130, 145], [x0 + 130, 80]], bOn, moving && bOn ? "flow" : moving && !bOn ? "vent" : "");
-      s += `<text class="pn-port" x="${vc - 20}" y="${yV - 4}">4</text><text class="pn-port" x="${vc + 14}" y="${yV - 4}">2</text>`;
-      // Válvula, alimentación (1) y escapes (5 y 3).
-      s += valve(vc, yV, v, o, act);
-      s += line([[vc, yV + 44], [vc, yM]], on);
-      s += exhaust(vc - 16, yV + 44) + exhaust(vc + 16, yV + 44);
-      s += `<text class="pn-port" x="${vc + 3}" y="${yV + 58}">1</text>`;
-      s += `<text class="pn-label" x="${vc + 34}" y="${yV + 70}">${esc(v.id)} · 5/2 ${bi ? "biestable" : "monoestable"}</text>`;
-      if (running && !on) s += `<text class="pn-warn" x="${x0}" y="${yV + 88}">sin presión (${fmt(air)} bar)</text>`;
+      const sens = sensorsOf(sp, v.id);
+      const letter = cylLetter(sens, i);
+      const yC = 76;
+      const yV = 194;
+      const xA = x0 + 12;
+      const xB = x0 + 124;
+
+      // 1. Regla graduada superior y marcas de posición (A0, A1...).
+      s += strokeRuler(x0 + 166, 18, sens);
+
+      // 2. Tuberías 4 → toma trasera y 2 → toma delantera (con quiebre en Z).
+      s += line([[vc - 11, yV], [vc - 11, 148], [xA, 148], [xA, yC + 58]], aOn, moving && aOn ? "flow" : moving && !aOn ? "vent" : "");
+      s += line([[vc + 11, yV], [vc + 11, 148], [xB, 148], [xB, yC + 58]], bOn, moving && bOn ? "flow" : moving && !bOn ? "vent" : "");
+      s += portRing(vc - 11, yV - 14) + portRing(vc + 11, yV - 14);
+      s += `<text class="pn-port" x="${vc - 26}" y="${yV - 10}">4</text><text class="pn-port" x="${vc + 19}" y="${yV - 10}">2</text>`;
+
+      // 3. Cilindro ISO 1219-1 con émbolo magnético y amortiguación.
+      s += cylinderIso(x0, yC, pos, aOn, bOn);
+
+      // 4. Válvula 5/2, escapes (5 y 3), alimentación (1) y nodo en T sobre el colector.
+      s += line([[vc, yV + 34], [vc, yM]], on);
+      s += valve(vc, yV, v, o, act, letter);
+      s += exhaust(vc - 11, yV + 34) + exhaust(vc + 11, yV + 34);
+      s += portRing(vc, yV + 47);
+      s += `<text class="pn-port" x="${vc - 25}" y="${yV + 48}">5</text><text class="pn-port" x="${vc + 18}" y="${yV + 48}">3</text>`;
+      s += `<text class="pn-port" x="${vc + 10}" y="${yV + 62}">1</text>`;
+      if (i < vs.length - 1) s += `<circle class="pn-junction" cx="${vc}" cy="${yM}" r="3.8"/>`;
+      if (running && !on) s += `<text class="pn-warn" x="${x0}" y="${yV + 80}">sin presión (${fmt(air)} bar)</text>`;
     });
-    const w = X0 + vs.length * CW;
-    P.vb ??= [0, 0, w, 520];
+    const w = X0 + vs.length * CW + 40;
+    P.vb ??= [0, 0, w, 400];
     return s;
   }
 
@@ -199,13 +244,13 @@
       g.innerHTML = html;
     }
     const svg = $("pn-svg");
-    svg.setAttribute("viewBox", (P.vb ?? [0, 0, 1000, 520]).join(" "));
+    svg.setAttribute("viewBox", (P.vb ?? [0, 0, 1000, 400]).join(" "));
   }
 
   function fit() {
     const sp = spec();
     const n = Math.max(1, valvesOf(sp).length);
-    P.vb = [0, 0, X0 + n * CW, 520];
+    P.vb = [0, 0, X0 + n * CW + 40, 400];
     draw();
   }
 
