@@ -48,7 +48,7 @@ function label(text) {
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.generateMipmaps = true;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-  s.scale.set(1.6, 0.4, 1);
+  s.scale.set(1.0, 0.25, 1);
   return s;
 }
 
@@ -539,6 +539,14 @@ function fitView() {
   // Alto: el del equipo más alto (el pozo del montacargas, el edificio).
   const tall = Math.max(2.2, V.height ?? 0);
   const fitH = (tall * 0.75) / Math.tan(halfFov);
+  // Con un edificio, la cámara mira la azotea (bombas y tablero) desde arriba.
+  if (V.focus) {
+    const d = Math.max(fitW * 1.35, 5);
+    V.controls.target.set(w / 2, V.focus - 0.4, 0);
+    V.camera.position.set(w / 2 + d * 0.1, V.focus + d * 0.5, d * 0.85);
+    V.controls.update();
+    return;
+  }
   const d = Math.max(fitW, fitH, 4);
   const cx = w / 2;
   const cy = Math.max(0.8, tall * 0.4);
@@ -562,9 +570,26 @@ function resize() {
 function rebuild(spec) {
   V.root.clear();
   V.objects.clear();
-  const plant = spec.devices.filter((d) => PLANT.has(d.type)).sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+  // La cisterna que abastece a un edificio va en su azotea (la dibuja el edificio).
+  const onRoof = new Set(
+    spec.devices.filter((d) => d.type === "jwsim/building-water").map((d) => String(d.params?.cisterna ?? "").split(".")[0]),
+  );
+  const plant = spec.devices.filter((d) => PLANT.has(d.type) && !(d.type === "jwsim/tank" && onRoof.has(d.id))).sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
   let x = 0;
   const huds = [];
+  V.panel = null;
+  // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
+  if (plant.length && !plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
+    const panel = buildPanel(spec);
+    panel.group.position.set(panel.W / 2, 0, 0);
+    const tag = label("Tablero");
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
+    panel.group.add(tag);
+    V.root.add(panel.group);
+    V.panel = panel;
+    x = panel.W + 1.0;
+  }
   for (const d of plant) {
     const p = d.params ?? {};
     const BUILD = {
@@ -579,12 +604,14 @@ function rebuild(spec) {
       "jwsim/compressor": buildCompressor,
       "jwsim/service-unit": buildServiceUnit,
     };
-    const model = (BUILD[d.type] ?? buildCylinder)(p);
+    const model = (BUILD[d.type] ?? buildCylinder)(p, spec);
+    if (model.panel) V.panel = model.panel;
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? 4 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
+    if (d.type === "jwsim/building-water") tag.scale.set(0.7, 0.175, 1);
+    tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
     // Sensores enlazados a este equipo.
@@ -642,10 +669,20 @@ function rebuild(spec) {
       beacons.push({ id: s.id, b });
     }
     V.objects.set(d.id, { type: d.type, model, beacons, motor: String(p.motor ?? "").split(".")[0] });
+    // Cisterna en la azotea: es su propio equipo (nivel, rebalse) aunque la dibuje el edificio.
+    if (model.tank) {
+      const tt = label(model.tankId);
+      tt.scale.set(0.6, 0.15, 1);
+      tt.position.set(0, model.tank.H + 0.6, 0);
+      model.tank.group.add(tt);
+      V.objects.set(model.tankId, { type: "jwsim/tank", model: model.tank, beacons: [], motor: "" });
+    }
     huds.push(d.id);
     x += w + 1.2;
   }
   V.extent = Math.max(2, x - 1.2);
+  const roof = [...V.objects.values()].find((o) => o.model.roofY);
+  V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   fitView();
   const empty = document.getElementById("view3d-empty");
@@ -741,75 +778,436 @@ function buildServiceUnit() {
   return { group: g, gauge: gg, size: [1.0, 0.4] };
 }
 
-/** Sala de bombas y edificio: bombas sobre su base, colector, hidroneumático, manómetro y el edificio. */
-function buildBuilding(p) {
+// ------------------------------------------------------------ tablero, tubos y canalizaciones
+/** Velocidad de un motor (la salida puede venir como tramo { value, rate }). */
+const valOf = (v) => (v && typeof v === "object" ? Number(v.value ?? 0) : Number(v ?? 0)) || 0;
+
+/** Tramo recto de tubo (caño o canalización) entre dos puntos. */
+function segment(a, b, r, m) {
+  const va = new THREE.Vector3(...a);
+  const vb = new THREE.Vector3(...b);
+  const len = va.distanceTo(vb);
+  const c = cyl(r, len, m, 12);
+  c.position.copy(va.clone().add(vb).multiplyScalar(0.5));
+  c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vb.clone().sub(va).normalize());
+  return c;
+}
+/** Recorrido de tubo por varios puntos, con un codo en cada quiebre. */
+function run(points, r, m) {
+  const g = new THREE.Group();
+  for (let i = 1; i < points.length; i++) g.add(segment(points[i - 1], points[i], r, m));
+  for (const q of points.slice(1, -1)) {
+    const k = new THREE.Mesh(new THREE.SphereGeometry(r * 1.25, 12, 8), m);
+    k.position.set(...q);
+    g.add(k);
+  }
+  return g;
+}
+
+/** Texto pintado en un plano (pantallas y placas): devuelve el plano y su función de repintado. */
+function screen(w, h, { bg = "#0b0d10", fg = "#ff3b30", font = "bold 72px monospace", px = 256 } = {}) {
+  const c = document.createElement("canvas");
+  c.width = px;
+  c.height = Math.round((px * h) / w);
+  const g2 = c.getContext("2d");
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+  let last = null;
+  const paint = (text) => {
+    if (text === last) return;
+    last = text;
+    g2.fillStyle = bg;
+    g2.fillRect(0, 0, c.width, c.height);
+    g2.fillStyle = fg;
+    g2.font = font;
+    g2.textAlign = "center";
+    g2.textBaseline = "middle";
+    g2.fillText(text, c.width / 2, c.height / 2 + 2);
+    tex.needsUpdate = true;
+  };
+  return { plane, paint };
+}
+
+const LAMP_HEX = { verde: 0x2fd05a, rojo: 0xff3b30, amarillo: 0xffcc00, azul: 0x2f8cff, blanco: 0xf5f7fa };
+
+/**
+ * Tablero eléctrico con la puerta abierta: en la placa de montaje los equipos
+ * de la escena (interruptor, fuente, PLC, variadores, contactores...) sobre
+ * riel DIN, canaletas y borneras; en la puerta, los pilotos, selectores y
+ * pulsadores. Frente hacia +z, origen en el centro de la base.
+ */
+function buildPanel(spec) {
+  const g = new THREE.Group();
+  const base = (t) => t.split("/").pop();
+  const devs = spec.devices ?? [];
+  const of = (...types) => devs.filter((d) => types.includes(base(d.type)));
+  const row1 = [...of("power-230vac", "power-3ph", "breaker", "motor-protector"), ...of("power-24vdc"), ...of("jwplc-basic")];
+  const row2 = [...of("vfd-el"), ...of("contactor", "relay", "timer-relay", "ssr")];
+  const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop");
+  const W = Math.max(0.8, Math.min(1.6, 0.2 + 0.17 * Math.max(row1.length + 1, row2.length * 1.3)));
+  const H = 1.0;
+  const D = 0.3;
+  const legH = 0.45;
+  const steel = mat(0xd5d9de, { roughness: 0.5, metalness: 0.2 });
+  // Gabinete: fondo, costados, techo y piso (abierto al frente) sobre su soporte.
+  const y0 = legH;
+  const parts = [
+    [W, H, 0.02, 0, y0 + H / 2, -D / 2],
+    [0.02, H, D, -W / 2, y0 + H / 2, 0],
+    [0.02, H, D, W / 2, y0 + H / 2, 0],
+    [W, 0.02, D, 0, y0 + H, 0],
+    [W, 0.02, D, 0, y0, 0],
+  ];
+  for (const [w, h, d, x, y, z] of parts) {
+    const b = box(w, h, d, steel);
+    b.position.set(x, y, z);
+    g.add(b);
+  }
+  for (const x of [-W / 2 + 0.06, W / 2 - 0.06]) {
+    const leg = box(0.05, legH, 0.05, mat(0x5b6470));
+    leg.position.set(x, legH / 2, -D / 2 + 0.06);
+    g.add(leg);
+  }
+  // Placa de montaje (naranja claro, como la galvanizada pintada) con canaletas y rieles.
+  const plate = box(W - 0.08, H - 0.08, 0.01, mat(0xe9e3d6, { roughness: 0.8 }));
+  plate.position.set(0, y0 + H / 2, -D / 2 + 0.02);
+  g.add(plate);
+  const zf = -D / 2 + 0.03;
+  const duct = mat(0x9aa1a9, { roughness: 0.7 });
+  for (const y of [y0 + H - 0.1, y0 + H * 0.52, y0 + 0.1]) {
+    const dd = box(W - 0.12, 0.06, 0.05, duct);
+    dd.position.set(0, y, zf + 0.025);
+    g.add(dd);
+  }
+  const rows = [
+    { list: row1, y: y0 + H * 0.74 },
+    { list: row2, y: y0 + H * 0.3 },
+  ];
+  const vfds = [];
+  const plcs = [];
+  for (const { list, y } of rows) {
+    const rail = box(W - 0.14, 0.035, 0.012, mat(0xb8c0c8, { metalness: 0.6 }));
+    rail.position.set(0, y, zf + 0.006);
+    g.add(rail);
+    const sizes = list.map((d) => ({ "vfd-el": [0.15, 0.3], "jwplc-basic": [0.26, 0.2], "power-24vdc": [0.1, 0.16], contactor: [0.09, 0.16] })[base(d.type)] ?? [0.07, 0.15]);
+    const total = sizes.reduce((a, [w]) => a + w + 0.03, -0.03);
+    let x = -total / 2;
+    list.forEach((d, i) => {
+      const [w, h] = sizes[i];
+      const t = base(d.type);
+      const color = t === "jwplc-basic" ? 0x23272d : t === "vfd-el" ? 0x4b4e52 : t === "power-24vdc" ? 0xb8bec5 : 0xf1f3f5;
+      const body = box(w, h, 0.09, mat(color, { roughness: 0.55 }));
+      body.position.set(x + w / 2, y, zf + 0.06);
+      g.add(body);
+      const front = zf + 0.106;
+      if (t === "vfd-el") {
+        const sc = screen(0.08, 0.03);
+        sc.plane.position.set(x + w / 2, y + 0.06, front);
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+        led.position.set(x + w / 2 + 0.055, y + 0.06, front);
+        const pad = box(0.1, 0.06, 0.004, mat(0x2a2e33));
+        pad.position.set(x + w / 2, y - 0.01, front - 0.002);
+        g.add(sc.plane, led, pad);
+        vfds.push({ id: d.id, paint: sc.paint, led });
+      } else if (t === "jwplc-basic") {
+        const sc = screen(0.12, 0.06, { bg: "#0c2a16", fg: "#7dff9a", font: "bold 40px monospace" });
+        sc.plane.position.set(x + w / 2 - 0.04, y + 0.03, front);
+        const logo = screen(0.08, 0.025, { bg: "#23272d", fg: "#e7ebef", font: "bold 64px sans-serif" });
+        logo.paint("JW");
+        logo.plane.position.set(x + w / 2 + 0.08, y + 0.06, front);
+        g.add(sc.plane, logo.plane);
+        plcs.push({ id: d.id, paint: sc.paint });
+      } else if (t === "contactor" || t === "relay") {
+        const win = box(0.04, 0.03, 0.004, mat(0x37d67a));
+        win.position.set(x + w / 2, y, front);
+        g.add(win);
+      } else {
+        const lever = box(w * 0.5, 0.035, 0.03, mat(0x2a2e33));
+        lever.position.set(x + w / 2, y + 0.01, front + 0.01);
+        g.add(lever);
+      }
+      x += w + 0.03;
+    });
+  }
+  // Borneras al pie.
+  for (let i = 0; i < Math.floor((W - 0.2) / 0.025); i++) {
+    const tb = box(0.02, 0.05, 0.05, mat(i % 6 === 5 ? 0x3fae49 : 0x9aa3ad));
+    tb.position.set(-W / 2 + 0.12 + i * 0.025, y0 + 0.1, zf + 0.06);
+    g.add(tb);
+  }
+  // Puerta abierta (bisagra a la izquierda) con los mandos de la escena.
+  const hinge = new THREE.Group();
+  hinge.position.set(-W / 2, y0, D / 2);
+  const leaf = box(W, H, 0.02, steel);
+  leaf.position.set(W / 2, H / 2, 0);
+  hinge.add(leaf);
+  const lamps = [];
+  door.forEach((d, i) => {
+    const cols = Math.max(1, Math.min(4, door.length));
+    const cx = ((i % cols) + 0.5) * (W / cols);
+    const cy = H * 0.7 - Math.floor(i / cols) * 0.2;
+    const t = base(d.type);
+    const ring = cyl(0.034, 0.02, mat(0x8b929b, { metalness: 0.5 }), 20);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(cx, cy, 0.02);
+    hinge.add(ring);
+    if (t === "lamp" || t === "pushbutton-lit") {
+      const hex = LAMP_HEX[d.params?.color] ?? LAMP_HEX.verde;
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.026, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(hex, { emissive: 0x000000, transparent: true, opacity: 0.9 }));
+      lens.rotation.x = Math.PI / 2;
+      lens.position.set(cx, cy, 0.03);
+      hinge.add(lens);
+      lamps.push({ id: d.id, lens, hex });
+    } else if (t === "emergency-stop") {
+      const mush = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xd8282d));
+      mush.rotation.x = Math.PI / 2;
+      mush.position.set(cx, cy, 0.03);
+      hinge.add(mush);
+    } else if (t.startsWith("selector")) {
+      const knob = box(0.012, 0.05, 0.02, mat(0x23272d));
+      knob.position.set(cx, cy, 0.04);
+      knob.rotation.z = -0.6;
+      hinge.add(knob);
+    } else {
+      const btn = cyl(0.024, 0.02, mat(t === "pushbutton-nc" ? 0xd8282d : 0x2fae4f), 16);
+      btn.rotation.x = Math.PI / 2;
+      btn.position.set(cx, cy, 0.035);
+      hinge.add(btn);
+    }
+    const tag = screen(0.09, 0.022, { bg: "#f2f3f4", fg: "#1a1d21", font: "bold 44px sans-serif" });
+    tag.paint(d.params?.label ? `${d.id} ${d.params.label}` : d.id);
+    tag.plane.position.set(cx, cy - 0.055, 0.012);
+    hinge.add(tag.plane);
+  });
+  // Placa de la marca en la puerta.
+  const brand = screen(0.22, 0.045, { bg: "#23272d", fg: "#ffffff", font: "bold 60px sans-serif" });
+  brand.paint("JW CONTROL");
+  brand.plane.position.set(W / 2, H - 0.07, 0.012);
+  hinge.add(brand.plane);
+  hinge.rotation.y = -1.7;
+  g.add(hinge);
+  // Entrada de cables (prensaestopas) bajo el gabinete.
+  const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
+  return { group: g, W, D, H, legH, vfds, plcs, lamps, glandX, bottom: y0 };
+}
+
+/** Tanque elevado de la azotea (polietileno, con tapa), para la cisterna del edificio. */
+function buildRoofTank() {
+  const R = 0.62;
+  const H = 1.1;
+  const g = new THREE.Group();
+  const shell = cyl(R, H, mat(0x2b3a4a, { transparent: true, opacity: 0.35, roughness: 0.3, depthWrite: false }), 40);
+  shell.position.y = H / 2 + 0.2;
+  const water = cyl(R * 0.96, 1, mat(COL.water, { transparent: true, opacity: 0.85 }), 40);
+  water.position.y = 0.2;
+  const slab = box(1.6, 0.2, 1.6, mat(0x9aa0a6, { roughness: 0.9 }));
+  slab.position.y = 0.1;
+  const lid = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 10, 0, Math.PI * 2, 0, Math.PI / 5), mat(0x1f2a36));
+  lid.position.y = H + 0.2 - R * Math.cos(Math.PI / 5);
+  const cap = cyl(0.16, 0.06, mat(0x1f2a36), 20);
+  cap.position.y = H + 0.2 + 0.12;
+  for (const y of [0.2 + H * 0.33, 0.2 + H * 0.66]) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(R + 0.005, 0.012, 8, 48), mat(0x1f2a36));
+    band.rotation.x = Math.PI / 2;
+    band.position.y = y;
+    g.add(band);
+  }
+  g.add(shell, water, slab, lid, cap);
+  return { group: g, water, impeller: new THREE.Object3D(), H, R, size: [2 * R, 2 * R] };
+}
+
+/**
+ * Edificio con la sala de bombas en la azotea (como en los edificios de Lima):
+ * tanque elevado, electrobombas con motor sobre su base, colector de succión
+ * y de descarga con válvulas, hidroneumático, manómetro y transmisor; el
+ * tablero con la puerta abierta y las canalizaciones hasta cada motor; la
+ * bajada al edificio con una derivación por piso. La cisterna (p.cisterna) se
+ * dibuja aquí; rebuild() la registra como su propio equipo.
+ */
+function buildBuilding(p, spec = { devices: [] }) {
   const g = new THREE.Group();
   const ids = String(p.bombas ?? "")
     .split(/[\s,;]+/)
     .filter(Boolean);
+  const n = Math.max(1, ids.length);
+  const floors = 5;
+  const FH = 0.72;
+  const BH = floors * FH;
+  const W = Math.max(5.6, 3.6 + 0.9 * n);
+  const DP = 2.8;
   const steel = mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 });
   const pipeM = mat(0x2f6fb5, { metalness: 0.3 });
-  const n = Math.max(1, ids.length);
-  const skidW = 0.8 * n + 0.6;
-  const skid = box(skidW, 0.08, 0.9, mat(0x3a4048));
-  skid.position.set(skidW / 2, 0.04, 0);
-  g.add(skid);
+  const conduitM = mat(0x5f6670, { roughness: 0.6 });
+  // Edificio: fachada con ventanas que se encienden con el consumo, ingreso y parapeto.
+  const bldg = box(W, BH, DP, mat(0xd9dee4, { roughness: 0.85 }));
+  bldg.position.set(W / 2, BH / 2, 0);
+  g.add(bldg);
+  const winM = mat(0x2a2e33, { emissive: 0x000000 });
+  const cols = Math.floor((W - 0.6) / 0.62);
+  for (let f = 0; f < floors; f++)
+    for (let c = 0; c < cols; c++) {
+      if (f === 0 && c === Math.floor(cols / 2)) continue;
+      const w = box(0.34, 0.4, 0.02, winM);
+      w.position.set(0.5 + c * 0.62 + 0.17, f * FH + 0.36, DP / 2 + 0.01);
+      g.add(w);
+    }
+  const doorB = box(0.5, 0.6, 0.02, mat(0x3a4048));
+  doorB.position.set(0.5 + Math.floor(cols / 2) * 0.62 + 0.17, 0.3, DP / 2 + 0.01);
+  g.add(doorB);
+  for (let f = 1; f < floors; f++) {
+    const slabLine = box(W + 0.04, 0.05, DP + 0.04, mat(0xc4cad1));
+    slabLine.position.set(W / 2, f * FH, 0);
+    g.add(slabLine);
+  }
+  const roofM = mat(0x8e959d, { roughness: 0.95 });
+  const roof = box(W, 0.04, DP, roofM);
+  roof.position.set(W / 2, BH + 0.02, 0);
+  g.add(roof);
+  for (const [w, d, x, z] of [
+    [W, 0.08, W / 2, DP / 2 - 0.04],
+    [W, 0.08, W / 2, -DP / 2 + 0.04],
+    [0.08, DP, 0.04, 0],
+    [0.08, DP, W - 0.04, 0],
+  ]) {
+    const par = box(w, 0.22, d, mat(0xc4cad1));
+    par.position.set(x, BH + 0.11, z);
+    g.add(par);
+  }
+  const top = new THREE.Group();
+  top.position.y = BH + 0.04;
+  g.add(top);
+
+  // Tanque elevado (cisterna) a la izquierda de la azotea.
+  const tankId = String(p.cisterna ?? "").split(".")[0];
+  const tankDev = (spec.devices ?? []).find((d) => d.id === tankId && d.type === "jwsim/tank");
+  let tank = null;
+  const tx = 1.05;
+  const tz = -0.35;
+  if (tankDev) {
+    tank = buildRoofTank();
+    tank.group.position.set(tx, 0, tz);
+    top.add(tank.group);
+    // Flotador colgado de su cable dentro del tanque.
+    const fl = (spec.devices ?? []).find((d) => d.type === "jwsim/float-switch" && String(d.params?.source ?? "").startsWith(`${tankId}.`));
+    if (fl) {
+      const fy = 0.2 + tank.H * 0.45;
+      const floatB = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.1, 6, 12), mat(0xe7ebef));
+      floatB.position.set(tx + 0.25, fy, tz + 0.1);
+      floatB.rotation.z = 0.5;
+      top.add(floatB, run([[tx + 0.25, fy + 0.08, tz + 0.1], [tx + 0.25, tank.H + 0.32, tz + 0.1]], 0.008, mat(0x23272d)));
+    }
+  }
+
+  // Electrobombas sobre su base de concreto: motor (con caja de bornes y
+  // ventilador), acople a la vista (gira con la velocidad) y voluta.
+  const px0 = 2.35;
+  const pz = 0.15;
+  const skidW = 0.9 * n + 0.3;
+  const skid = box(skidW, 0.12, 1.0, mat(0x9aa0a6, { roughness: 0.9 }));
+  skid.position.set(px0 - 0.45 + skidW / 2, 0.06, pz);
+  top.add(skid);
+  const ay = 0.36; // altura del eje
   const pumps = ids.map((id, i) => {
-    const x = 0.5 + i * 0.8;
-    const motorB = cyl(0.14, 0.36, mat(0x2f6fb5, { metalness: 0.35 }), 24);
+    const x = px0 + i * 0.9;
+    const base2 = box(0.36, 0.1, 0.8, mat(0x3a4048, { metalness: 0.4 }));
+    base2.position.set(x, 0.17, pz);
+    const motorB = cyl(0.14, 0.38, mat(0x2f6fb5, { metalness: 0.35 }), 24);
     motorB.rotation.x = Math.PI / 2;
-    motorB.position.set(x, 0.26, 0.12);
-    const fanCover = cyl(0.15, 0.06, mat(0x23272d), 24);
+    motorB.position.set(x, ay, pz + 0.2);
+    for (let k = 0; k < 6; k++) {
+      const fin = box(0.3, 0.012, 0.32, motorB.material);
+      fin.position.set(x, ay, pz + 0.2);
+      fin.rotation.z = (k * Math.PI) / 6;
+      top.add(fin);
+    }
+    const fanCover = cyl(0.15, 0.08, mat(0x23272d), 24);
     fanCover.rotation.x = Math.PI / 2;
-    fanCover.position.set(x, 0.26, 0.33);
-    const volute = cyl(0.17, 0.12, mat(0x9aa3ad, { metalness: 0.5 }), 28);
-    volute.rotation.x = Math.PI / 2;
-    volute.position.set(x, 0.26, -0.12);
-    // Acople visible entre motor y bomba: gira con la velocidad.
+    fanCover.position.set(x, ay, pz + 0.43);
+    const tbox = box(0.12, 0.08, 0.12, mat(0x2a5d9c));
+    tbox.position.set(x, ay + 0.18, pz + 0.18);
+    const guard = box(0.2, 0.16, 0.12, mat(0xffb020, { transparent: true, opacity: 0.35 }));
+    guard.position.set(x, ay, pz - 0.02);
     const rotor = new THREE.Group();
-    const shaft = cyl(0.03, 0.08, steel, 12);
+    const shaft = cyl(0.03, 0.1, steel, 12);
     shaft.rotation.x = Math.PI / 2;
     const key = box(0.14, 0.02, 0.02, mat(0xffb020));
     rotor.add(shaft, key);
-    rotor.position.set(x, 0.26, -0.03);
-    const riser = cyl(0.035, 0.6, pipeM, 12);
-    riser.position.set(x, 0.62, -0.12);
+    rotor.position.set(x, ay, pz - 0.02);
+    const volute = cyl(0.17, 0.12, mat(0x9aa3ad, { metalness: 0.5 }), 28);
+    volute.rotation.x = Math.PI / 2;
+    volute.position.set(x, ay, pz - 0.16);
     const tag = label(id);
-    tag.scale.set(0.5, 0.125, 1);
-    tag.position.set(x, 0.05, 0.6);
-    g.add(motorB, fanCover, volute, rotor, riser, tag);
-    return { id, rotor };
+    tag.scale.set(0.44, 0.11, 1);
+    tag.position.set(x, 0.05, pz + 0.65);
+    top.add(base2, motorB, fanCover, tbox, guard, rotor, volute, tag);
+    // Succión desde el colector (atrás) y descarga vertical con su válvula de retención.
+    top.add(run([[x, ay, pz - 0.22], [x, ay, -0.75]], 0.04, steel));
+    top.add(run([[x, ay + 0.17, pz - 0.16], [x, 1.05, pz - 0.16]], 0.04, pipeM));
+    const check = box(0.11, 0.12, 0.11, mat(0x8b929b, { metalness: 0.5 }));
+    check.position.set(x, 0.75, pz - 0.16);
+    const valve = cyl(0.05, 0.02, mat(0xd8282d), 16);
+    valve.position.set(x, 0.92, pz - 0.16);
+    top.add(check, valve);
+    return { id, rotor, x, box: [x, ay + 0.22, pz + 0.18] };
   });
-  const len = skidW + 0.6;
-  const manifold = cyl(0.05, len, pipeM, 16);
-  manifold.rotation.z = Math.PI / 2;
-  manifold.position.set(len / 2 + 0.2, 0.92, -0.12);
-  // Hidroneumático vertical sobre el colector, al final de la base.
-  const hx = skidW - 0.05;
-  const hydro = cyl(0.22, 0.7, mat(0x3a7bd5, { metalness: 0.3, roughness: 0.4 }), 28);
-  hydro.position.set(hx, 0.47, -0.42);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), hydro.material);
-  dome.position.set(hx, 0.82, -0.42);
-  const gg = gauge(0.1);
-  gg.position.set(skidW + 0.35, 1.08, -0.06);
-  // Edificio con ventanas que se encienden cuando hay consumo.
-  const bx = skidW + 1.2;
-  const bldg = box(1.2, 3.2, 1, mat(0xd9dee4, { roughness: 0.8 }));
-  bldg.position.set(bx + 0.6, 1.6, -0.3);
-  const winM = mat(0x2a2e33, { emissive: 0x000000 });
-  for (let f = 0; f < 5; f++)
-    for (let c = 0; c < 3; c++) {
-      const w = box(0.22, 0.32, 0.02, winM);
-      w.position.set(bx + 0.22 + c * 0.38, 0.45 + f * 0.6, 0.21);
-      g.add(w);
-    }
-  const up = cyl(0.04, 2.6, pipeM, 12);
-  up.position.set(bx - 0.08, 2.2, -0.12);
-  const top = cyl(0.04, 0.5, pipeM, 12);
-  top.rotation.z = Math.PI / 2;
-  top.position.set(bx + 0.15, 3.5, -0.12);
-  g.add(manifold, hydro, dome, gg, bldg, up, top);
-  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, height: 3.8, size: [bx + 1.3, 1] };
+  // Colector de succión desde el pie del tanque, de descarga hasta el hidroneumático y la bajada.
+  const xEnd = px0 + (n - 1) * 0.9;
+  top.add(run([[tank ? tx + 0.55 : px0 - 0.4, ay, -0.75], [xEnd + 0.15, ay, -0.75]], 0.05, steel));
+  const hx = xEnd + 0.75;
+  const downX = W - 0.25;
+  top.add(run([[px0 - 0.15, 1.05, pz - 0.16], [downX, 1.05, pz - 0.16], [downX, 1.05, DP / 2 + 0.12]], 0.05, pipeM));
+  const hydro = cyl(0.17, 0.6, mat(0x3a7bd5, { metalness: 0.3, roughness: 0.4 }), 28);
+  hydro.position.set(hx, 0.5, -0.6);
+  const hfoot = cyl(0.12, 0.2, mat(0x3a4048), 16);
+  hfoot.position.set(hx, 0.1, -0.6);
+  top.add(hfoot);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), hydro.material);
+  dome.position.set(hx, 0.8, -0.6);
+  top.add(hydro, dome, run([[hx, 0.9, -0.6], [hx, 1.05, -0.6], [hx, 1.05, pz - 0.16]], 0.03, pipeM));
+  const gg = gauge(0.08);
+  gg.position.set(hx - 0.25, 1.2, pz - 0.1);
+  top.add(gg, run([[hx - 0.25, 1.05, pz - 0.16], [hx - 0.25, 1.12, pz - 0.16]], 0.012, steel));
+  // Transmisor de presión en el colector.
+  const pt = (spec.devices ?? []).find((d) => d.type === "jwsim/pressure-rs485");
+  let ptPos = null;
+  if (pt) {
+    const tx2 = hx + 0.25;
+    const body = cyl(0.035, 0.14, mat(0xb8c0c8, { metalness: 0.6 }), 16);
+    body.position.set(tx2, 1.17, pz - 0.16);
+    const head = cyl(0.05, 0.06, mat(0x23272d), 16);
+    head.position.set(tx2, 1.27, pz - 0.16);
+    const tag = label(pt.id);
+    tag.scale.set(0.5, 0.125, 1);
+    tag.position.set(tx2, 1.42, pz - 0.16);
+    top.add(body, head, tag);
+    ptPos = [tx2, 1.27, pz - 0.16];
+  }
+  // Bajada por la fachada con una derivación hacia cada piso.
+  const front = DP / 2 + 0.12;
+  g.add(run([[downX, BH + 1.09, front], [downX, 0.3, front]], 0.05, pipeM));
+  for (let f = 0; f < floors; f++) g.add(run([[downX, f * FH + 0.55, front], [downX - 0.25, f * FH + 0.55, front], [downX - 0.25, f * FH + 0.55, DP / 2]], 0.025, pipeM));
+
+  // Tablero en la azotea, adelante a la derecha, con canalizaciones a los motores.
+  const panel = buildPanel(spec);
+  const cx = Math.min(W - 0.3 - panel.W / 2, hx + 0.2 + panel.W / 2);
+  const cz = DP / 2 - 1.05;
+  panel.group.position.set(cx, 0, cz);
+  top.add(panel.group);
+  const yc = 0.06; // canalización apoyada en la losa
+  const targets = [...pumps.map((pm) => pm.box), ...(ptPos ? [ptPos] : []), ...(tank ? [[tx + 0.25, tank.H + 0.32, tz + 0.1]] : [])];
+  targets.forEach((t, k) => {
+    const gx = cx + panel.glandX(k, targets.length);
+    const gz = cz - panel.D / 2 + 0.08;
+    const zl = gz - 0.06 - k * 0.07;
+    top.add(run([[gx, panel.bottom, gz], [gx, yc, gz], [gx, yc, zl], [t[0], yc, zl], [t[0], yc, t[2]], [t[0], t[1], t[2]]], 0.022, conduitM));
+  });
+  const tag = label("Tablero");
+  tag.scale.set(0.5, 0.125, 1);
+  tag.position.set(cx, panel.bottom + panel.H + 0.2, cz);
+  top.add(tag);
+  const height = BH + 1.6;
+  return { group: g, pumps, gauge: gg, windows: winM, pipes: pipeM, panel, tank, tankId: tankDev?.id ?? null, height, roofY: BH + 0.04, size: [W, DP] };
 }
 
 /** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
@@ -984,7 +1382,7 @@ function frame(now) {
       });
       m.extra.visible = !!out.sobrecarga;
     } else if (o.type === "jwsim/building-water") {
-      for (const pm of m.pumps) pm.rotor.rotation.z += Number(outOf(pm.id).speed ?? 0) * 0.6;
+      for (const pm of m.pumps) pm.rotor.rotation.z += valOf(outOf(pm.id).speed) * 0.6;
       needleTo(m.gauge, Number(out.presion ?? 0), 10);
       const q = Math.min(1, Number(out.qConsumo ?? 0) / 120);
       m.windows.emissive.setRGB(0.55 * q, 0.75 * q, 1.0 * q);
@@ -1012,6 +1410,18 @@ function frame(now) {
       if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
     }
   }
+  // Tablero: frecuencia y LED de cada variador, pilotos de la puerta y estado del PLC.
+  if (V.panel) {
+    for (const v of V.panel.vfds) {
+      const o = outOf(v.id);
+      const hz = valOf(o.hz);
+      v.paint(!o.powered ? "" : typeof o.lcd === "string" ? o.lcd : hz.toFixed(1));
+      v.led.material.color.setHex(o.running ? COL.on : COL.off);
+      v.led.material.emissive.setHex(o.running ? 0x1f8a46 : 0x000000);
+    }
+    for (const l of V.panel.lamps) l.lens.material.emissive.setHex(outOf(l.id).lit ? l.hex : 0x000000);
+    for (const pl of V.panel.plcs) pl.paint(running ? "RUN" : "STOP");
+  }
   V.controls.update();
   V.renderer.render(V.scene, V.camera);
 }
@@ -1023,7 +1433,8 @@ window.Jwsim3D = {
     V.visible = visible;
     if (visible) {
       const spec = window.JwsimScene?.specForView?.() ?? { devices: [] };
-      const sig = JSON.stringify(spec.devices.filter((d) => PLANT.has(d.type) || SENSORS.has(d.type)).map((d) => [d.id, d.type, d.x, d.params]));
+      // El tablero muestra todos los equipos eléctricos: cualquier alta o baja rearma la planta.
+      const sig = JSON.stringify(spec.devices.map((d) => (PLANT.has(d.type) || SENSORS.has(d.type) ? [d.id, d.type, d.x, d.params] : [d.id, d.type, d.params?.color, d.params?.label])));
       if (sig !== V.sig) {
         V.sig = sig;
         rebuild(spec);
