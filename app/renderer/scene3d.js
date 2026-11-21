@@ -9,6 +9,7 @@
 // magnéticos de cilindro, montados sobre el tubo en su extremo.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const COL = {
   frame: 0x5b6470, belt: 0x23272d, roller: 0x9aa3ad, piece: 0xf08a24, floor: 0x1b1f24, grid: 0x2c333b,
@@ -27,28 +28,45 @@ const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
 
 /** Texto en un plano siempre de frente (rótulo del equipo). */
-// Lienzo a 4× (1024 × 256) con mipmaps y filtrado anisotrópico: el rótulo
-// sigue nítido al acercar la cámara y no parpadea al alejarla.
+// Todos los rótulos miden lo mismo en pantalla (sizeAttenuation: false), sin
+// importar la distancia ni el equipo, y su ancho sigue al texto. Lienzo a 2×
+// con mipmaps: nítido al acercar y sin parpadeo al alejar. Se ocultan todos
+// juntos con el botón «Etiquetas» (V.labelsOn).
+const LABEL_H = 0.03; // alto en pantalla: fracción de tan(fov/2) (≈ 3 % del alto de la vista)
 function label(text) {
+  const H = 128;
+  const font = "600 64px 'Segoe UI', system-ui, sans-serif";
   const c = document.createElement("canvas");
-  c.width = 1024;
-  c.height = 256;
-  const g = c.getContext("2d");
-  g.fillStyle = "rgba(20,23,27,0.85)";
-  g.roundRect(0, 32, 1024, 192, 40);
+  let g = c.getContext("2d");
+  g.font = font;
+  const W = Math.max(H * 1.4, Math.ceil(g.measureText(String(text)).width) + 72);
+  c.width = W;
+  c.height = H;
+  g = c.getContext("2d");
+  g.fillStyle = "rgba(17,21,26,0.82)";
+  g.beginPath();
+  g.roundRect(2, 14, W - 4, H - 28, 26);
   g.fill();
-  g.fillStyle = "#e7ebef";
-  g.font = "bold 112px sans-serif";
+  g.strokeStyle = "rgba(46,160,67,0.9)"; // filo verde JW
+  g.lineWidth = 4;
+  g.stroke();
+  g.fillStyle = "#f3f6f9";
+  g.font = font;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText(text, 512, 132);
+  g.fillText(String(text), W / 2, H / 2 + 2);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.generateMipmaps = true;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-  s.scale.set(1.0, 0.25, 1);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
+  s.renderOrder = 10;
+  s.scale.set((LABEL_H * W) / H, LABEL_H, 1);
+  s.center.set(0.5, 0);
+  s.userData.isLabel = true;
+  s.userData.base = [(LABEL_H * W) / H, LABEL_H];
+  s.visible = V.labelsOn !== false;
   return s;
 }
 
@@ -522,6 +540,117 @@ const V = {
   frames: [],
 };
 
+/** Cielo: degradado vertical de la parte alta al horizonte. */
+function skyTexture(p) {
+  const c = document.createElement("canvas");
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext("2d");
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, p.top);
+  gr.addColorStop(0.62, p.horizon);
+  gr.addColorStop(1, p.horizon);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Losa de concreto: grano fino y juntas de dilatación cada 2 m (una baldosa = 2 m). */
+function slabTexture(p) {
+  const N = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const g = c.getContext("2d");
+  g.fillStyle = p.slab;
+  g.fillRect(0, 0, N, N);
+  // Grano determinista (no cambia entre aperturas).
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 2600; i++) {
+    const v = rnd() < 0.5 ? 0 : 255;
+    g.fillStyle = `rgba(${v},${v},${v},${p.grain * rnd()})`;
+    g.fillRect(rnd() * N, rnd() * N, 1 + rnd() * 2, 1 + rnd() * 2);
+  }
+  g.strokeStyle = p.joint;
+  g.lineWidth = 2;
+  g.strokeRect(1, 1, N - 2, N - 2);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(80, 80);
+  t.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
+  return t;
+}
+
+let SHADOW_TEX = null;
+/** Sombra de contacto horneada bajo cada equipo: un degradado radial sobre el piso. */
+function contactShadows(root) {
+  if (!SHADOW_TEX) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const g = c.getContext("2d");
+    const gr = g.createRadialGradient(64, 64, 8, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,0.26)");
+    gr.addColorStop(0.5, "rgba(0,0,0,0.14)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 128, 128);
+    SHADOW_TEX = new THREE.CanvasTexture(c);
+  }
+  const box3 = new THREE.Box3();
+  const sm = new THREE.MeshBasicMaterial({ map: SHADOW_TEX, transparent: true, depthWrite: false });
+  for (const obj of [...root.children]) {
+    if (obj.userData.isLabel || obj.userData.isShadow) continue;
+    box3.setFromObject(obj, true);
+    if (box3.isEmpty() || box3.min.y > 0.6) continue; // solo lo que apoya en el piso
+    const w = box3.max.x - box3.min.x;
+    const d = box3.max.z - box3.min.z;
+    const h = box3.max.y - box3.min.y;
+    // Tuberías y canalizaciones a ras de piso no proyectan sombra; equipos muy
+    // grandes (edificio) tampoco, para no oscurecer media escena.
+    if (!(w > 0.05 && d > 0.05) || h < 0.25 || w > 8 || d > 8) continue;
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.25 + 0.4, d * 1.25 + 0.4), sm);
+    sh.rotation.x = -Math.PI / 2;
+    sh.position.set((box3.min.x + box3.max.x) / 2, 0.004, (box3.min.z + box3.max.z) / 2);
+    sh.userData.isShadow = true;
+    sh.renderOrder = -1;
+    root.add(sh);
+  }
+}
+
+/**
+ * Con sizeAttenuation: false la escala del padre sigue multiplicando al rótulo:
+ * se compensa para que todos midan lo mismo en pantalla.
+ */
+function normalizeLabels(root) {
+  const ws = new THREE.Vector3();
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    if (!o.userData?.isLabel || !o.parent) return;
+    o.parent.getWorldScale(ws);
+    const [bw, bh] = o.userData.base;
+    o.scale.set(bw / (Math.abs(ws.x) || 1), bh / (Math.abs(ws.y) || 1), 1);
+  });
+}
+
+/** Muestra u oculta todos los rótulos de la planta. */
+function setLabels(on) {
+  V.labelsOn = on;
+  V.root?.traverse((o) => {
+    if (o.userData?.isLabel) o.visible = on;
+  });
+  try {
+    localStorage.setItem("jwsim.3dLabels", on ? "1" : "0");
+  } catch {}
+  const b = document.getElementById("view3d-labels");
+  if (b) {
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  }
+}
+
 function init() {
   const canvas = document.getElementById("view3d-canvas");
   try {
@@ -540,11 +669,25 @@ function init() {
     if (m === "light") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   };
-  const pal = (dark) => (dark ? { bg: 0x14171b, floor: 0x1b1f24, grid: 0x2c333b } : { bg: 0xe8edf3, floor: 0xdde3ec, grid: 0xbac4d1 });
+  // Entorno: cielo en degradado, losa de concreto con juntas, luz de día con
+  // reflejos suaves (RoomEnvironment) y tono fílmico. Sin sombras en tiempo
+  // real: cada equipo lleva una sombra de contacto horneada (contactShadows).
+  const pal = (dark) =>
+    dark
+      ? { top: "#0b0e12", horizon: "#1d232b", fog: 0x1d232b, slab: "#2a2f36", joint: "rgba(0,0,0,0.35)", grain: 0.10, hemi: 0.55, sun: 1.1, env: 0.35 }
+      : { top: "#9fc0e3", horizon: "#e6edf4", fog: 0xe6edf4, slab: "#c9ccd0", joint: "rgba(70,75,82,0.35)", grain: 0.07, hemi: 0.9, sun: 2.2, env: 0.6 };
   const c0 = pal(isDark());
+  V.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  V.renderer.toneMappingExposure = 0.95;
   V.scene = new THREE.Scene();
-  V.scene.background = new THREE.Color(c0.bg);
-  V.scene.fog = new THREE.Fog(c0.bg, 18, 45);
+  V.scene.background = skyTexture(c0);
+  V.scene.fog = new THREE.Fog(c0.fog, 26, 70);
+  const pmrem = new THREE.PMREMGenerator(V.renderer);
+  V.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  V.scene.environment = V.envMap;
+  V.scene.environmentIntensity = c0.env;
+  V.palette = pal;
+  V.isDark = isDark;
   V.camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
   V.camera.position.set(4, 5, 9);
   V.controls = new OrbitControls(V.camera, canvas);
@@ -552,32 +695,37 @@ function init() {
   V.controls.maxPolarAngle = Math.PI / 2 - 0.05;
   // Si el usuario giró o acercó, el encuadre automático ya no lo pisa.
   V.controls.addEventListener("start", () => (V.userMoved = true));
-  V.scene.add(new THREE.HemisphereLight(0xdfe8f2, 0x20242a, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(5, 10, 6);
+  const hemi = new THREE.HemisphereLight(0xe8f0fa, 0x3a3f46, c0.hemi);
+  V.scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff4e2, c0.sun);
+  sun.position.set(6, 12, 8);
   V.scene.add(sun);
-  const floorMat = mat(c0.floor);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
+  const floorMat = new THREE.MeshStandardMaterial({ map: slabTexture(c0), roughness: 0.92, metalness: 0 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), floorMat);
   floor.rotation.x = -Math.PI / 2;
   V.scene.add(floor);
-  let grid = new THREE.GridHelper(80, 80, c0.grid, c0.grid);
-  grid.position.y = 0.002;
-  V.scene.add(grid);
   const apply3dTheme = (dark) => {
     const p = pal(dark);
-    V.scene.background.setHex(p.bg);
-    V.scene.fog.color.setHex(p.bg);
-    floorMat.color.setHex(p.floor);
-    V.scene.remove(grid);
-    grid.geometry?.dispose?.();
-    grid.material?.dispose?.();
-    grid = new THREE.GridHelper(80, 80, p.grid, p.grid);
-    grid.position.y = 0.002;
-    V.scene.add(grid);
+    V.scene.background?.dispose?.();
+    V.scene.background = skyTexture(p);
+    V.scene.fog.color.setHex(p.fog);
+    V.scene.environmentIntensity = p.env;
+    hemi.intensity = V.lowQuality ? p.hemi * 1.6 : p.hemi;
+    sun.intensity = p.sun;
+    floorMat.map?.dispose?.();
+    floorMat.map = slabTexture(p);
+    floorMat.needsUpdate = true;
   };
   window.addEventListener("jwsim:themechange", (e) => apply3dTheme(!!e.detail?.dark));
   V.root = new THREE.Group();
   V.scene.add(V.root);
+  try {
+    V.labelsOn = localStorage.getItem("jwsim.3dLabels") !== "0";
+  } catch {
+    V.labelsOn = true;
+  }
+  document.getElementById("view3d-labels")?.addEventListener("click", () => setLabels(!V.labelsOn));
+  setLabels(V.labelsOn);
   new ResizeObserver(resize).observe(canvas.parentElement);
   setupPicking(canvas);
   V.ready = true;
@@ -701,7 +849,6 @@ function processPipes(plant) {
       const lid = box(0.3, 0.012, 0.3, mat(0x3a4048, { metalness: 0.4 }));
       lid.position.set(p0.x + 0.08, 0.066, -0.95);
       const tagW = label("Agua cruda");
-      tagW.scale.set(0.5, 0.125, 1);
       tagW.position.set(p0.x, 0.3, -1.2);
       V.root.add(well, lid, tagW);
     }
@@ -766,7 +913,6 @@ function rebuild(spec) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
     const tag = label("Tablero");
-    tag.scale.set(0.5, 0.125, 1);
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
     V.root.add(panel.group);
@@ -804,7 +950,6 @@ function rebuild(spec) {
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    if (d.type === "jwsim/building-water") tag.scale.set(0.7, 0.175, 1);
     tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
@@ -817,7 +962,6 @@ function rebuild(spec) {
         const b = slotSensor();
         b.position.set(s.params.end === "extendido" ? CYL.front - 0.14 : CYL.rear + 0.1, CYL.y + CYL.tubeR + 0.012, CYL.z);
         const t = label(s.id);
-        t.scale.set(0.42, 0.105, 1);
         t.position.y = 0.06;
         b.add(t);
         (model.cyl ?? model.group).add(b);
@@ -832,7 +976,6 @@ function rebuild(spec) {
         const b = rollerSwitch();
         b.position.set(headX(cylPos) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
         const t = label(s.id);
-        t.scale.set(0.42, 0.105, 1);
         t.position.y = -0.17;
         b.add(t);
         model.cyl.add(b);
@@ -842,7 +985,6 @@ function rebuild(spec) {
       if (model.sensor) {
         const b = model.sensor(key);
         const t = label(s.id);
-        t.scale.set(0.6, 0.15, 1);
         t.position.set(0, -0.1, -0.12);
         b.add(t);
         model.group.add(b);
@@ -880,7 +1022,6 @@ function rebuild(spec) {
     // Cisterna en la azotea: es su propio equipo (nivel, rebalse) aunque la dibuje el edificio.
     if (model.tank) {
       const tt = label(model.tankId);
-      tt.scale.set(0.6, 0.15, 1);
       tt.position.set(0, model.tank.H + 0.6, 0);
       model.tank.group.add(tt);
       V.objects.set(model.tankId, { type: "jwsim/tank", model: model.tank, beacons: [], motor: "" });
@@ -944,7 +1085,6 @@ function rebuild(spec) {
       m.group.position.set(px + 0.15, 0, pz);
       V.root.add(m.group);
       const tag = label(it.label);
-      tag.scale.set(0.5, 0.125, 1);
       tag.position.set(0, it.id === "semaforo" ? 2.5 : 1.05, 0);
       m.group.add(tag);
       for (const h of m.hit ?? []) V.hits.push({ mesh: h, id: it.id });
@@ -970,6 +1110,8 @@ function rebuild(spec) {
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
   V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
+  contactShadows(V.root);
+  normalizeLabels(V.root);
   fitView();
   const empty = document.getElementById("view3d-empty");
   if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0;
@@ -2580,7 +2722,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     rotor.add(shaft, ...hubs, key);
     rotor.position.set(x, ay, pz - 0.02);
     const tag = label(id);
-    tag.scale.set(0.44, 0.11, 1);
     tag.position.set(x, 0.05, pz + 0.65);
     top.add(rotor, tag);
     // Succión desde el colector con su válvula de compuerta.
@@ -2627,7 +2768,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     const head = cyl(0.05, 0.06, mat(0x23272d), 16);
     head.position.set(tx2, 1.27, pz - 0.16);
     const tag = label(pt.id);
-    tag.scale.set(0.5, 0.125, 1);
     tag.position.set(tx2, 1.42, pz - 0.16);
     top.add(body, head, tag);
     ptPos = [tx2, 1.27, pz - 0.16];
@@ -2652,7 +2792,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     top.add(run([[gx, panel.bottom, gz], [gx, yc, gz], [gx, yc, zl], [t[0], yc, zl], [t[0], yc, t[2]], [t[0], t[1], t[2]]], 0.022, conduitM));
   });
   const tag = label("Tablero");
-  tag.scale.set(0.5, 0.125, 1);
   tag.position.set(cx, panel.bottom + panel.H + 0.2, cz);
   top.add(tag);
   const height = BH + 1.6;
@@ -2698,7 +2837,6 @@ function buildLift(p) {
     const door = box(0.04, 0.95, 0.9, mat(0x8a939d, { metalness: 0.3, transparent: true, opacity: 0.85 }));
     door.position.set(1.18, i * H + 0.48, 0);
     const tag = label(i === 0 ? "PB" : `P${i}`);
-    tag.scale.set(0.5, 0.125, 1);
     tag.position.set(2.4, i * H + 0.3, 0.6);
     g.add(slab, door, tag);
     doors.push(door);
@@ -2715,7 +2853,6 @@ function buildLift(p) {
     ring.rotation.y = Math.PI / 2;
     ring.position.x = 0.012;
     const t = label(id);
-    t.scale.set(0.36, 0.09, 1);
     t.position.set(0.05, 0.17, 0);
     st.add(plateB, btn, ring, t);
     st.position.set(1.22, i * H + 0.55, 0.6);
@@ -2799,11 +2936,38 @@ function buildChlorinator() {
 
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
 
+/**
+ * Calidad adaptable: si tras unos segundos la vista no llega a 24 cuadros por
+ * segundo (GPU integrada, escritorio remoto, render por software), se quitan
+ * los reflejos del entorno, que son lo más caro por píxel. No vuelve atrás
+ * hasta reabrir la app.
+ */
+function checkQuality(now) {
+  if (V.lowQuality || !V.envMap) return;
+  V.qualityFrom ??= now;
+  if (now - V.qualityFrom < 3000) return;
+  if (V.frames.length >= 24) {
+    V.qualityFrom = now; // sigue midiendo: una escena más pesada puede bajar luego
+    return;
+  }
+  V.lowQuality = true;
+  V.scene.environment = null;
+  const p = V.palette(V.isDark());
+  V.scene.children.forEach((o) => {
+    if (o.isHemisphereLight) o.intensity = p.hemi * 1.6;
+  });
+  console.info(`[3D] ${V.frames.length} FPS: calidad reducida (sin reflejos del entorno)`);
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
-  if (!V.visible) return;
+  if (!V.visible) {
+    V.qualityFrom = null;
+    return;
+  }
   V.frames.push(now);
   while (V.frames.length && now - V.frames[0] > 1000) V.frames.shift();
+  checkQuality(now);
   const running = !!window.JwsimScene?.isRunning?.();
   // Tiempo simulado desde la última instantánea (extrapolación).
   const dt = running ? Math.min(0.2, ((performance.now() - V.snapWall) / 1000) * V.simRate) : 0;
@@ -2977,5 +3141,13 @@ window.Jwsim3D = {
   },
   // Para las pruebas: cuadros por segundo del último segundo y objetos dibujados.
   fps: () => V.frames.length,
+  /** Para pruebas: true si la vista bajó la calidad por falta de cuadros. */
+  lowQuality: () => !!V.lowQuality,
+  /** Para pruebas: rótulos visibles y su escala en pantalla. */
+  labels: () => {
+    const out = [];
+    V.root?.traverse((o) => o.userData?.isLabel && out.push({ visible: o.visible, h: o.scale.y, att: o.material.sizeAttenuation }));
+    return out;
+  },
   objects: () => [...V.objects.entries()].map(([id, o]) => ({ id, type: o.type, beacons: o.beacons.length })),
 };
