@@ -1056,6 +1056,12 @@ function rebuild(spec) {
       else if (d.type === "jwsim/lift") {
         const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
         b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
+        // Dos finales a casi la misma altura (p. ej. el de piso y el de
+        // seguridad del extremo): el segundo va a su lado, no encima.
+        model.usedSw ??= [];
+        const near = model.usedSw.filter((q) => q.x === b.position.x && Math.abs(q.y - b.position.y) < 0.3).length;
+        if (near) b.position.z += (key === "altura" ? -0.42 : 0.42) * near;
+        model.usedSw.push({ x: b.position.x, y: b.position.y });
       } else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
       else b.position.set(min > 0.5 ? 1.4 : 0.9, 0, 0.35);
       if (sw) b.position.y += 0.25;
