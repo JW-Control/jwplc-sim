@@ -1565,6 +1565,7 @@
       S.diagHtml = diagHtml;
       diag.innerHTML = diagHtml;
     }
+    if ($("scene-arrange")) $("scene-arrange").disabled = S.running;
     $("scene-rearm").disabled = !S.running || !(S.snap?.faults?.length || S.snap?.devices.some((d) => d.tripped || d.damaged.length));
   }
 
@@ -1752,6 +1753,36 @@
     S.sel = { kind: "device", id };
     changed();
     return id;
+  }
+
+  // «Ordenar como tablero» (app/lib/scene-arrange.cjs): posiciones según
+  // las columnas del esquema IEC; los cables largos de las fuentes pasan a
+  // referencia y se borran los dobleces manuales. Se deshace con Ctrl+Z.
+  async function arrange() {
+    if (S.running) return { error: "Detenga la simulación para ordenar" };
+    const sp = cleanSpec();
+    const model = await api.sceneIec(sp, "");
+    if (model.error) return { error: model.error };
+    const devs = S.spec.devices.map((d) => {
+      const sym = symbolFor(d);
+      const terms = {};
+      for (const [id, p] of Object.entries(sym.terms)) terms[id] = [p[0], p[1], sym.sides[id]];
+      return { id: d.id, type: d.type, w: sym.w, h: sym.h, mount: d.mount && canMount(d, devById(d.mount)) ? d.mount : undefined, terms };
+    });
+    const mountDy = Object.fromEntries(S.spec.devices.filter((d) => mountRule(d)).map((d) => [d.type, mountRule(d).dy]));
+    const r = window.JwsimArrange.arrange(model, devs, S.spec.wiring, { mountDy });
+    pushHistory();
+    for (const d of S.spec.devices) {
+      const p = r.pos[d.id];
+      if (p) Object.assign(d, { x: p.x, y: p.y });
+    }
+    settleMounts();
+    for (const w of S.spec.wiring) delete w.points;
+    for (const i of r.refs) S.spec.wiring[i].ref = true;
+    S.fitted = false;
+    changed();
+    fit();
+    return { moved: Object.keys(r.pos).length, refs: r.refs.length, bands: r.bands };
   }
 
   function addWire(from, to) {
@@ -3250,6 +3281,7 @@
         return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
       },
       wire: (a, b) => addWire(a, b),
+      arrange: () => arrange(),
       act: (id, action, value) => act(id, action, value),
       view3d: () => window.Jwsim3D?.objects() ?? [],
       // Encuadre: zoom y punto de la escena que queda arriba a la izquierda.
@@ -3329,6 +3361,10 @@
     $("scene-undo")?.addEventListener("click", () => undo());
     $("scene-redo")?.addEventListener("click", () => redo());
     $("scene-fit").addEventListener("click", fit);
+    $("scene-arrange")?.addEventListener("click", async () => {
+      const r = await arrange();
+      if (r?.error) console.warn(r.error);
+    });
     $("scene-rearm").addEventListener("click", () => api.sceneRearm());
     api.onSceneSnapshot((snap) => {
       // Relés y contactores externos: clic al atraer y al soltar.

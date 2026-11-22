@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E del esquema normalizado (IEC 60617) generado de la escena:
-// botón «Normalizado (IEC)», hojas, referencias cruzadas y regeneración al
-// editar en «A colores».
+// botón «Normalizado (IEC)», hojas, referencias cruzadas, «Ordenar como
+// tablero» (y deshacer) y regeneración al editar en «A colores».
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -72,9 +72,31 @@ try {
   criteria.CROSS_REF = { ok: coil && after.sheet === 3 && after.flash, coil, ...after };
   log(`CROSS_REF ${JSON.stringify(criteria.CROSS_REF)}`);
 
-  // Editar en «A colores»: un piloto nuevo en 24 V aparece en el esquema.
+  // «Ordenar como tablero»: entradas arriba del PLC, salidas abajo; se deshace.
   await win.click("#schem-color");
   await sleep(300);
+  const pos = () => t(() => Object.fromEntries(window.jwsimTest.scene.spec().devices.map((d) => [d.id, [d.x, d.y]])));
+  const before = await pos();
+  await win.click("#scene-arrange");
+  await sleep(1500);
+  const arranged = await pos();
+  const refs = await t(() => window.jwsimTest.scene.spec().wiring.filter((w) => w.ref).length);
+  await win.screenshot({ path: join(OUT, "ordenado.png") });
+  await win.click("#scene-undo");
+  await sleep(600);
+  const undone = await pos();
+  criteria.ARRANGE = {
+    ok: arranged.SQ0[1] < arranged.plc[1] && arranged.KM1[1] > arranged.plc[1] && arranged.KM1[0] < arranged.KM2[0] && refs > 0 && JSON.stringify(undone) === JSON.stringify(before),
+    plc: arranged.plc,
+    SQ0: arranged.SQ0,
+    KM1: arranged.KM1,
+    KM2: arranged.KM2,
+    refs,
+    undone: JSON.stringify(undone) === JSON.stringify(before),
+  };
+  log(`ARRANGE ${JSON.stringify(criteria.ARRANGE)}`);
+
+  // Editar en «A colores»: un piloto nuevo en 24 V aparece en el esquema.
   await t(() => {
     window.jwsimTest.scene.add("jwsim/lamp", 200, 200, "H9");
     window.jwsimTest.scene.wire("PS1.+V2", "H9.X1");
@@ -94,7 +116,7 @@ try {
   await app.close();
 }
 
-const ok = ["SHEETS", "CROSS_REF", "REGENERATES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
+const ok = ["SHEETS", "CROSS_REF", "ARRANGE", "REGENERATES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_IEC_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_IEC_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);
