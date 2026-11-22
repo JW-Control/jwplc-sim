@@ -36,15 +36,19 @@ const MAX_DEPTH = 16;
  *   key: string, kind: string, dev: string, cid: string, type: string,
  *   x: number, y: number, top: string, bot: string, tTop: string, tBot: string,
  *   label: string, text?: string, nc?: boolean, act?: string, col?: number,
- *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string,
+ *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string, inModule?: boolean,
  * }} Elem
+ * @typedef {{ dev: string, label: string, com: string, comX: number, x: number, y: number, w: number, h: number }} Module
+ * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean }} IoRow
+ * @typedef {{ title: string, x: number, y: number, cw: number[], rowH: number, rows: IoRow[] }} IoTable
  * @typedef {{
  *   kind: string, dev: string, type: string, label: string, text?: string, x: number, y: number, w: number, h: number,
  *   poles: { x: number, cid: string, top: string, bot: string, tTop: string, tBot: string }[], ref?: string,
  * }} Block
  * @typedef {{
  *   n: number, id: string, kind: "power" | "control", title: string, src: string, srcKind: string,
- *   w: number, h: number, cols: number, colW: number, x0: number,
+ *   w: number, h: number, cols: number, colW: number, x0: number, used?: number,
+ *   modules?: Module[], table?: IoTable, railEnd?: number,
  *   rails?: { top: { y: number, label: string, rep: string }, bot: { y: number, label: string, rep: string } },
  *   bus?: { y: number, label: string, rep: string }[],
  *   elems: Elem[], blocks: Block[], wires: Wire[], dots: Dot[], notes: { x: number, y: number, text: string }[],
@@ -277,7 +281,7 @@ export function iecModel(scene, opts = {}) {
     const vtxt = `${src.volts} V${dc ? "DC" : "AC"}`;
     const groups = dc
       ? [
-          ["sup", `Alimentación ${vtxt}`],
+          ["sup", `${rungs.some((r) => r.target.e.lk === "plcpower") ? "PLC y alimentación" : "Alimentación"} ${vtxt}`],
           ["in", "Entradas del PLC"],
           ["out", "Mando y salidas del PLC"],
         ]
@@ -311,7 +315,7 @@ export function iecModel(scene, opts = {}) {
     }
     for (const b of s.blocks) {
       if (!contactsOf.has(b.dev)) contactsOf.set(b.dev, []);
-      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: `${s.n}.${Math.max(1, Math.round((p.x - s.x0) / s.colW) + 1)}`, sheet: s.n, col: 0 });
+      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: `${s.n}.${Math.max(1, Math.floor((p.x - s.x0) / s.colW) + 1)}`, sheet: s.n, col: 0 });
     }
   }
   for (const s of sheets) {
@@ -321,6 +325,9 @@ export function iecModel(scene, opts = {}) {
     }
     for (const b of s.blocks) if (coilAt.has(b.dev)) b.ref = coilAt.get(b.dev);
   }
+  // Mapa de E/S del PLC y formato de hoja A4.
+  addIoTable(sheets, devs, spec);
+  for (const s of sheets) toPaper(s);
   // Contactos libres (sin cables en sus bornes) de los equipos con bobina:
   // la vista los ofrece para agregar una autorretención o un enclavamiento.
   const free = [];
@@ -332,6 +339,94 @@ export function iecModel(scene, opts = {}) {
     }
   }
   return { title: projectTitle, sheets, free };
+}
+
+/** Proporción de la hoja: A4 / A3 apaisadas (√2). Ancho mínimo en unidades. */
+export const PAPER = { ratio: Math.SQRT2, minW: 980 };
+const TABLE = { cw: [58, 186, 128, 48], rowH: 15, head: 20 };
+
+/** Nombre legible del equipo: su rótulo o, si no tiene, el del tipo. */
+function devName(spec, devs, id) {
+  return funcText(spec, id) || devs.find((d) => d.id === id)?.def?.name || "";
+}
+
+/**
+ * Mapa de E/S del PLC (dirección, descripción, equipo y dónde está), con los
+ * canales sin usar como «Libre». Va en la hoja de alimentación del PLC, a la
+ * derecha del circuito; si no la hay, debajo de la hoja de entradas.
+ * @param {Sheet[]} sheets
+ */
+function addIoTable(sheets, devs, spec) {
+  /** @type {IoRow[]} */
+  const rows = [];
+  /** @type {Set<string>} */
+  const used = new Set();
+  let plcDev = "";
+  for (const s of sheets) {
+    for (const e of s.elems) {
+      const at = `${s.n}.${(e.col ?? 0) + 1}`;
+      const sameCol = s.elems.filter((x) => x.col === e.col && x !== e);
+      if (e.kind === "plcin") {
+        plcDev ||= e.dev;
+        // Lo que alimenta la entrada: el contacto de campo más cercano encima.
+        const f = sameCol.filter((x) => x.kind === "contact" && x.act !== "plc" && x.y < e.y).sort((a, b) => b.y - a.y)[0];
+        rows.push({ io: e.io ?? e.cid, desc: f ? devName(spec, devs, f.dev) : "", equip: f ? `${f.label} ${f.cid}` : "", at });
+        used.add(`${e.dev}.${e.cid}`);
+      } else if (e.kind === "contact" && e.act === "plc") {
+        plcDev ||= e.dev;
+        // Lo que manda la salida: la carga de su columna.
+        const l = sameCol.filter((x) => x.kind !== "contact" && x.y > e.y).sort((a, b) => a.y - b.y)[0];
+        rows.push({ io: e.io ?? e.cid, desc: l ? devName(spec, devs, l.dev) : "", equip: l ? `${l.label} ${l.tTop}-${l.tBot}` : "", at });
+        used.add(`${e.dev}.${e.cid}`);
+      }
+    }
+  }
+  if (!plcDev) return;
+  const plc = devs.find((d) => d.id === plcDev);
+  for (const l of plc?.el.loads ?? []) {
+    if (l.id === "power" || l.id === "supply" || used.has(`${plcDev}.${l.id}`)) continue;
+    rows.push({ io: l.id.replace("_", "."), desc: "Libre", equip: "", at: "", free: true });
+  }
+  for (const cid of Object.keys(plc?.el.contacts ?? {})) {
+    if (used.has(`${plcDev}.${cid}`)) continue;
+    rows.push({ io: cid.replace("_", "."), desc: "Libre", equip: "", at: "", free: true });
+  }
+  const key = (r) => [/^I/.test(r.io) ? 0 : 1, ...r.io.replace(/^\D+/, "").split(".").map(Number)];
+  rows.sort((a, b) => cmpArr(key(a), key(b)));
+  const tw = TABLE.cw.reduce((a, v) => a + v, 0);
+  const th = TABLE.head + TABLE.rowH * (rows.length + 1);
+  const title = `Mapa de E/S ${desig(plcDev)}`;
+  const home = sheets.find((s) => s.elems.some((e) => e.kind === "plcpower"));
+  if (home) {
+    const x = home.x0 + home.colW * Math.max(home.used ?? 1, 2) + 40;
+    home.table = { title, x, y: home.rails ? home.rails.top.y : 74, cw: TABLE.cw, rowH: TABLE.rowH, rows };
+    home.railEnd = x - 24;
+    home.w = Math.max(home.w, x + tw + 30);
+    home.h = Math.max(home.h, home.table.y + th + 100);
+    return;
+  }
+  const ins = sheets.find((s) => s.elems.some((e) => e.kind === "plcin")) ?? sheets.find((s) => s.elems.some((e) => e.act === "plc"));
+  if (!ins) return;
+  const y = (ins.rails?.bot.y ?? ins.h - 140) + 80;
+  ins.table = { title, x: ins.x0, y, cw: TABLE.cw, rowH: TABLE.rowH, rows };
+  ins.h = Math.max(ins.h, y + th + 100);
+}
+
+/**
+ * Lleva la hoja a la proporción del papel (A4/A3 apaisado): el dibujo queda
+ * arriba a la izquierda, como en un plano, y la rejilla de columnas ocupa
+ * todo el ancho.
+ * @param {Sheet} s
+ */
+function toPaper(s) {
+  const w0 = s.w;
+  const W = Math.round(Math.max(PAPER.minW, s.w, s.h * PAPER.ratio));
+  const H = Math.round(W / PAPER.ratio);
+  // Las barras de potencia llegan hasta el nuevo borde.
+  if (s.bus) for (const wr of s.wires) if (wr.pts.length === 2 && wr.pts[1][0] === w0 - 40 && s.bus.some((b) => b.y === wr.pts[0][1] && wr.pts[1][1] === b.y)) wr.pts[1][0] = W - 40;
+  s.w = W;
+  s.h = H;
+  s.cols = Math.max(s.cols, Math.floor((W - 20 - s.x0) / s.colW));
 }
 
 const cmpArr = (a, b) => {
@@ -414,6 +509,8 @@ function controlSheet(rungs, { src, title, rep, spec, dc }) {
   const dots = [];
   const posRep = rep(src.pos);
   const negRep = rep(src.neg);
+  /** @type {Elem[]} entradas del PLC (van dentro del marco del módulo) */
+  const plcIns = [];
 
   const mk = (s, col, row, isLoad) => {
     const e = s.e;
@@ -487,6 +584,13 @@ function controlSheet(rungs, { src, title, rep, spec, dc }) {
       bottom = [el.x, el.y + SYM, el.bot];
       row += 1;
       if (node.leaf) {
+        // Las entradas del PLC comparten su común dentro del módulo: un solo
+        // cable de COM al 0 V (se dibuja después, con el marco del módulo).
+        if (el.kind === "plcin") {
+          el.inModule = true;
+          plcIns.push(el);
+          return 1;
+        }
         wires.push({ pts: [[el.x, el.y + SYM], [el.x, railBot]], rep: el.bot });
         dots.push({ x: el.x, y: railBot, rep: negRep });
         return 1;
@@ -527,6 +631,32 @@ function controlSheet(rungs, { src, title, rep, spec, dc }) {
     dots.push({ x, y: RAIL_TOP, rep: posRep });
     c += place(kid, c, 0, [x, RAIL_TOP, posRep]);
   });
+  // Módulo de entradas digitales: marco a trazos, unión interna de los
+  // comunes y un único COM visible hacia el 0 V.
+  /** @type {Module[]} */
+  const modules = [];
+  if (plcIns.length) {
+    const xs = plcIns.map((e) => e.x);
+    const xa = Math.min(...xs);
+    const xb = Math.max(...xs);
+    const yBus = loadY + SYM;
+    const com = plcIns[0];
+    if (xb > xa) wires.push({ pts: [[xa, yBus], [xb, yBus]], rep: com.bot });
+    for (const e of plcIns.slice(1)) dots.push({ x: e.x, y: yBus, rep: com.bot });
+    wires.push({ pts: [[xb, yBus], [xb, railBot]], rep: com.bot });
+    dots.push({ x: xb, y: railBot, rep: negRep });
+    const x0 = xa - 34;
+    modules.push({
+      dev: com.dev,
+      label: `${desig(com.dev)} · Entradas digitales (DI)`,
+      com: `COM ${com.tBot}`,
+      comX: xb,
+      x: x0,
+      y: loadY - 15,
+      w: Math.max(xb + 34, x0 + 250) - x0,
+      h: SYM + 15 + 22,
+    });
+  }
   const cols = Math.max(c, 4);
   const w = X0 + COLW * cols + 40;
   const H = railBot + 96 + 70;
@@ -541,8 +671,10 @@ function controlSheet(rungs, { src, title, rep, spec, dc }) {
     w: Math.max(w, 760),
     h: H,
     cols,
+    used: c,
     colW: COLW,
     x0: X0,
+    modules,
     rails: {
       top: { y: RAIL_TOP, label: dc ? `+${src.volts} V` : "L", rep: posRep, desig: `${desig(src.dev.id)} ${vt}` },
       bot: { y: railBot, label: dc ? "0 V" : "N", rep: negRep },

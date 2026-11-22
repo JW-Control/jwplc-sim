@@ -135,7 +135,8 @@
     const { s, cls } = isC ? contact(e, top) : loadSym(e, loadOn(sh, e));
     const plcBox = e.kind === "plcin" || e.kind === "plcpower";
     const lx = e.x - (isC && e.act && e.act !== "plc" ? 42 : plcBox ? 26 : 20);
-    let lab = T(lx, e.y - 2, e.label, "iec-desig", "end");
+    // Dentro del módulo del PLC la designación va una vez, en el marco.
+    let lab = e.inModule ? "" : T(lx, e.y - 2, e.label, "iec-desig", "end");
     // La función va en la franja de arriba de su columna (colTexts).
     if (isC && e.io) lab += T(e.x + 19, e.y + 4, e.io, "iec-io", "start");
     if (e.ref) lab += T(lx, e.y + 11, `/${e.ref}`, "iec-ref", "end", ` data-goto="${e.ref}"`);
@@ -235,7 +236,41 @@
     s += T(bx + 55, by + 25, "JW Control", "iec-brand") + T(bx + 55, by + 42, "JWPLC Sim", "iec-tiny");
     s += T(bx + 118, by + 19, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + 48, sh.title, "iec-tb iec-tb-strong", "start");
     s += T(bx + bw - 35, by + 19, "Hoja", "iec-tiny") + T(bx + bw - 35, by + 48, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
-    s += T(20, sh.h - 22, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
+    s += T(20, sh.h - 22, `Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346 · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
+    return s;
+  }
+
+  // Módulo del PLC: marco a trazos, nombre y su común (COM) visible.
+  function moduleFrame(md) {
+    return (
+      `<rect class="iec-l iec-nofill iec-module" x="${md.x}" y="${md.y}" width="${md.w}" height="${md.h}" rx="3"/>` +
+      T(md.x + 6, md.y + md.h - 6, md.label, "iec-modt", "start") +
+      T(md.comX + 5, md.y + md.h + 8, md.com, "iec-term iec-com", "start")
+    );
+  }
+
+  // Mapa de E/S: dirección, descripción, equipo y dónde está (clicable).
+  function ioTable(t) {
+    const W = t.cw.reduce((a, v) => a + v, 0);
+    const xs = t.cw.reduce((a, v) => [...a, a[a.length - 1] + v], [t.x]);
+    const head = ["Dirección", "Descripción", "Equipo / borne", "Ref."];
+    const y0 = t.y + 20;
+    const H = 20 + t.rowH * (t.rows.length + 1);
+    let s = T(t.x, t.y + 12, t.title, "iec-tabt", "start");
+    s += `<rect class="iec-l iec-nofill" x="${t.x}" y="${y0}" width="${W}" height="${H - 20}"/>`;
+    s += `<rect class="iec-tabhead" x="${t.x}" y="${y0}" width="${W}" height="${t.rowH}"/>`;
+    head.forEach((h, i) => (s += T(xs[i] + 4, y0 + t.rowH - 4, h, "iec-tabh", "start")));
+    t.rows.forEach((r, k) => {
+      const y = y0 + t.rowH * (k + 1);
+      s += L(t.x, y, t.x + W, y, "iec-thin");
+      const fit = (txt, w) => (txt.length * 5.6 > w - 8 ? `${txt.slice(0, Math.floor((w - 8) / 5.6) - 1)}…` : txt);
+      const cls = r.free ? " iec-free" : "";
+      s += T(xs[0] + 4, y + t.rowH - 4, r.io, `iec-io${cls}`, "start");
+      s += T(xs[1] + 4, y + t.rowH - 4, fit(r.desc, t.cw[1]), `iec-tabc${cls}`, "start");
+      s += T(xs[2] + 4, y + t.rowH - 4, r.equip, "iec-tabc", "start");
+      if (r.at) s += T(xs[3] + 4, y + t.rowH - 4, `/${r.at}`, "iec-ref", "start", ` data-goto="${r.at}"`);
+    });
+    for (let i = 1; i < xs.length - 1; i++) s += L(xs[i], y0, xs[i], y0 + H - 20, "iec-thin");
     return s;
   }
 
@@ -244,7 +279,7 @@
     // Barras / rieles.
     if (sh.rails) {
       const { top, bot } = sh.rails;
-      const xr = sh.w - 30;
+      const xr = sh.railEnd ?? sh.w - 30;
       s += `<polyline class="iec-w iec-rail${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
       s += `<line class="iec-hit" data-rail="top" x1="${sh.x0 - 10}" y1="${top.y}" x2="${xr}" y2="${top.y}"><title>Clic: columna nueva</title></line>`;
       s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>`;
@@ -257,6 +292,8 @@
     if (sh.bus?.length) s += T(sh.w - 40, sh.bus[0].y - 8, sh.bus[0].desig ?? "", "iec-tiny", "end");
     for (const w of sh.wires) s += `<polyline class="iec-w${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
     for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
+    for (const md of sh.modules ?? []) s += moduleFrame(md);
+    if (sh.table) s += ioTable(sh.table);
     for (const b of sh.blocks) s += block(sh, b);
     for (const e of sh.elems) s += elem(sh, e);
     if (sh.rails) for (const e of sh.elems) if (/^coil/.test(e.kind)) s += xrefTable(e, sh.rails.bot.y + 14);

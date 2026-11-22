@@ -26,7 +26,7 @@ test("iec: montacargas → potencia, alimentación, entradas y salidas con refer
   const m = iecModel(new Scene(montacargas()), { title: "montacargas" });
   assert.deepEqual(
     m.sheets.map((s) => `${s.n} ${s.title}`),
-    ["1 Potencia 220 VAC 3~", "2 Alimentación 24 VDC", "3 Entradas del PLC", "4 Mando y salidas del PLC"],
+    ["1 Potencia 220 VAC 3~", "2 PLC y alimentación 24 VDC", "3 Entradas del PLC", "4 Mando y salidas del PLC"],
   );
   const [pot, , ent, sal] = m.sheets;
   // Potencia: inversor KM1/KM2 arriba, térmico y motor debajo.
@@ -55,6 +55,24 @@ test("iec: montacargas → potencia, alimentación, entradas y salidas con refer
   assert.equal(pot.blocks.find((b) => b.dev === "KM1").ref, `4.${coil1.col + 1}`);
   // Cada tramo lleva un borne cableado para pintar la tensión.
   for (const s of m.sheets) for (const w of s.wires) assert.match(w.rep, /^[A-Za-z_][\w-]*\.\S+$/);
+});
+
+test("iec: hojas A4 apaisadas, módulo DI con un solo COM y mapa de E/S del PLC", () => {
+  const m = iecModel(new Scene(montacargas()), { title: "montacargas" });
+  for (const s of m.sheets) assert.ok(Math.abs(s.w / s.h - Math.SQRT2) < 0.01, `hoja ${s.n} en proporción A4`);
+  const [, sup, ent] = m.sheets;
+  // Entradas: un marco de módulo y un único cable de COM (M1) al 0 V.
+  assert.equal(ent.modules.length, 1);
+  assert.equal(ent.modules[0].com, "COM M1");
+  const railBot = ent.rails.bot.y;
+  assert.equal(ent.wires.filter((w) => w.pts.at(-1)[1] === railBot && ent.elems.some((e) => e.kind === "plcin" && e.x === w.pts[0][0])).length, 1);
+  // Mapa de E/S en la hoja del PLC: 8 DI + 8 DO, las no usadas como «Libre».
+  const t = sup.table;
+  assert.ok(t && t.x > sup.x0 + sup.colW);
+  assert.equal(t.rows.length, 16);
+  assert.deepEqual(t.rows.find((r) => r.io === "I0.3"), { io: "I0.3", desc: "Llamar PB", equip: "-SB0 13-14", at: "3.4" });
+  assert.equal(t.rows.find((r) => r.io === "Q0.2").desc, "En movimiento");
+  assert.deepEqual(t.rows.filter((r) => r.free).map((r) => r.io), ["Q0.4", "Q0.5", "Q0.6", "Q0.7"]);
 });
 
 test("iec: marcha con autorretención → contactos en paralelo sobre una sola bobina", () => {
