@@ -1912,6 +1912,7 @@
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
     window.JwsimPneu?.onSnapshot(S.snap);
+    window.JwsimIec?.onSnapshot(S.snap);
     window.JwsimStateDiag?.onSnapshot?.(S.snap, false);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
@@ -3135,6 +3136,7 @@
       S.fitted = false;
       S.rendered.clear();
       window.JwsimPneu?.onSpec();
+      window.JwsimIec?.onSpec();
       window.JwsimStateDiag?.onSpec?.({ resetProject: true });
       if (!preserveView) {
         if (S.spec.devices.length) setView("scene");
@@ -3347,6 +3349,7 @@
       S.snap = snap;
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
+      window.JwsimIec?.onSnapshot(snap);
       window.JwsimStateDiag?.onSnapshot?.(snap, S.running);
       render();
     });

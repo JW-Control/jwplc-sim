@@ -1,0 +1,91 @@
+// SPDX-FileCopyrightText: 2026 JW Control
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Esquema normalizado IEC generado de la escena. node --test scene/tests/
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+import { contactIsNC, iecModel } from "../iec.mjs";
+import { Scene } from "../scene.mjs";
+
+const montacargas = () =>
+  JSON.parse(readFileSync(new URL("../../JWPLC_Aprende/extras/arquitecturas/02-montacargas/02-montacargas.jwsim", import.meta.url), "utf8")).scene;
+
+test("iec: NA/NC por la numeración de bornes (IEC 60947)", () => {
+  assert.equal(contactIsNC("jwsim/limit-switch", "13-14", true), false);
+  assert.equal(contactIsNC("jwsim/limit-switch", "21-22", false), true);
+  assert.equal(contactIsNC("jwsim/relay", "11-12", false), true);
+  assert.equal(contactIsNC("jwsim/relay", "11-14", false), false);
+  assert.equal(contactIsNC("jwsim/overload-relay", "95-96", false), true);
+  assert.equal(contactIsNC("jwsim/contactor", "1-2", false), false, "polo principal");
+  assert.equal(contactIsNC("jwsim/pressure-switch", "1-2", false), true);
+  assert.equal(contactIsNC("jwsim/jwplc-basic", "Q0_0", false), false);
+});
+
+test("iec: montacargas → potencia, alimentación, entradas y salidas con referencias cruzadas", () => {
+  const m = iecModel(new Scene(montacargas()), { title: "montacargas" });
+  assert.deepEqual(
+    m.sheets.map((s) => `${s.n} ${s.title}`),
+    ["1 Potencia 220 VAC 3~", "2 Alimentación 24 VDC", "3 Entradas del PLC", "4 Mando y salidas del PLC"],
+  );
+  const [pot, , ent, sal] = m.sheets;
+  // Potencia: inversor KM1/KM2 arriba, térmico y motor debajo.
+  const lv = Object.fromEntries(pot.blocks.map((b) => [b.dev, b.y]));
+  assert.equal(lv.KM1, lv.KM2);
+  assert.ok(lv.KM1 < lv.F1 && lv.F1 < lv.M1);
+  assert.equal(pot.blocks.find((b) => b.dev === "M1").kind, "motor3");
+  // Entradas: una columna por entrada, en orden I0.0 … I0.7; las puertas en serie.
+  const ins = ent.elems.filter((e) => e.kind === "plcin");
+  assert.deepEqual(ins.map((e) => e.io), ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6", "I0.7"]);
+  assert.deepEqual(ins.map((e) => e.col), [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(ent.elems.filter((e) => e.col === 6 && e.kind === "contact").map((e) => e.dev), ["SP0", "SP1", "SP2"]);
+  assert.ok(ent.elems.find((e) => e.dev === "F1").nc, "95-96 del térmico es NC");
+  // Salidas: la parada de emergencia se dibuja una sola vez y alimenta las 4 salidas.
+  assert.equal(sal.elems.filter((e) => e.dev === "ES").length, 1);
+  assert.deepEqual(sal.elems.filter((e) => e.act === "plc").map((e) => e.io), ["Q0.0", "Q0.1", "Q0.2", "Q0.3"]);
+  // Enclavamiento: el NC de KM2 en la columna de KM1 remite a la bobina de KM2 y viceversa.
+  const coil1 = sal.elems.find((e) => e.dev === "KM1" && e.kind === "coil");
+  const coil2 = sal.elems.find((e) => e.dev === "KM2" && e.kind === "coil");
+  assert.equal(sal.elems.find((e) => e.dev === "KM2" && e.cid === "21-22").ref, `4.${coil2.col + 1}`);
+  assert.equal(sal.elems.find((e) => e.dev === "KM1" && e.cid === "21-22").col, coil2.col);
+  assert.deepEqual(
+    coil1.xref.map((r) => `${r.cid}${r.nc ? " NC" : ""} /${r.at.split(".")[0]}`),
+    ["1-2 /1", "3-4 /1", "5-6 /1", "21-22 NC /4"],
+  );
+  assert.equal(pot.blocks.find((b) => b.dev === "KM1").ref, `4.${coil1.col + 1}`);
+  // Cada tramo lleva un borne cableado para pintar la tensión.
+  for (const s of m.sheets) for (const w of s.wires) assert.match(w.rep, /^[A-Za-z_][\w-]*\.\S+$/);
+});
+
+test("iec: marcha con autorretención → contactos en paralelo sobre una sola bobina", () => {
+  const sc = new Scene({
+    devices: [
+      { id: "PS1", type: "jwsim/power-24vdc" },
+      { id: "S0", type: "jwsim/pushbutton-nc" },
+      { id: "S1", type: "jwsim/pushbutton-no" },
+      { id: "KM1", type: "jwsim/contactor" },
+      { id: "H1", type: "jwsim/lamp", params: { label: "En marcha" } },
+    ],
+    wiring: [
+      { from: "PS1.+V1", to: "S0.11" },
+      { from: "S0.12", to: "S1.13" },
+      { from: "S0.12", to: "KM1.13" },
+      { from: "S1.14", to: "KM1.A1" },
+      { from: "KM1.14", to: "KM1.A1" },
+      { from: "KM1.A2", to: "PS1.-V1" },
+      { from: "PS1.+V1", to: "H1.X1" },
+      { from: "H1.X2", to: "PS1.-V1" },
+    ],
+  });
+  const m = iecModel(sc);
+  assert.equal(m.sheets.length, 1);
+  const s = m.sheets[0];
+  assert.equal(s.title, "Mando y salidas del PLC");
+  assert.equal(s.elems.filter((e) => e.dev === "KM1" && e.kind === "coil").length, 1, "una sola bobina");
+  const s1 = s.elems.find((e) => e.dev === "S1");
+  const ka = s.elems.find((e) => e.dev === "KM1" && e.cid === "13-14");
+  assert.equal(s1.y, ka.y, "S1 y KM1 13-14 en la misma fila");
+  assert.notEqual(s1.col, ka.col, "lado a lado");
+  assert.equal(s.elems.find((e) => e.dev === "H1").text, "En marcha");
+  assert.ok(s.elems.find((e) => e.dev === "S0").nc);
+});

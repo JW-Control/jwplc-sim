@@ -33,6 +33,7 @@ import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 import { Registry, builtinDevices } from "../scene/devices/index.mjs";
 import { Scene } from "../scene/scene.mjs";
+import { iecModel } from "../scene/iec.mjs";
 import { buildComponent, checkComponent, componentTerminals, componentVars, BLOCK_KINDS, IO_KINDS, SIGNALS } from "../scene/component.mjs";
 import { symbolSvg } from "../scene/component-symbol.mjs";
 import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
@@ -1211,6 +1212,16 @@ ipcMain.handle("scene:analyze", async (_e, spec) => {
     return { snapshot: wireSnapshot(new Scene(spec, { registry: await registry() }).snapshot()) };
   } catch (err) {
     return { error: err.message };
+  }
+});
+
+// Esquema normalizado (IEC 60617) generado del circuito: hojas con la
+// geometría y el borne de referencia de cada tramo (scene/iec.mjs).
+ipcMain.handle("scene:iec", async (_e, { spec, title }) => {
+  try {
+    return iecModel(new Scene(spec, { registry: await registry() }), { title });
+  } catch (err) {
+    return { error: err.message, sheets: [] };
   }
 });
 

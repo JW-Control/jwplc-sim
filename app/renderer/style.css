@@ -5300,3 +5300,233 @@ body.dock-collapsed #btn-dock-toggle {
   aspect-ratio: 16 / 9;
   background: var(--surface-deep);
 }
+
+/* ---------------------------------------------------------------- esquema normalizado IEC (iec.js) */
+.iec-view {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface-scene);
+  z-index: 1;
+  --iec-paper: light-dark(#ffffff, #12161b);
+  --iec-ink: light-dark(#1f2328, #d7dee7);
+  --iec-soft: light-dark(#59636e, #8794a2);
+  --iec-on: light-dark(#14883e, #37d67a);
+  --iec-ref: light-dark(#0969da, #6cb6ff);
+}
+.iec-view[hidden] {
+  display: none;
+}
+body[data-schem="iec"] #scene-pan,
+body[data-schem="iec"] .scene-float {
+  visibility: hidden;
+}
+#iec-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+.iec-tools {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--text);
+  font-size: 12px;
+  pointer-events: none;
+}
+.iec-tools > * {
+  pointer-events: auto;
+}
+.iec-sheets {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+.iec-sheets .seg {
+  font-size: 12px;
+  padding: 3px 9px;
+}
+.iec-legend {
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.iec-legend i {
+  display: inline-block;
+  width: 22px;
+  height: 3px;
+  margin: 0 4px 2px 0;
+  vertical-align: middle;
+  background: var(--iec-on);
+}
+.iec-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+.iec-empty[hidden] {
+  display: none;
+}
+.iec-paper {
+  fill: var(--iec-paper);
+}
+.iec-frame,
+.iec-titleblock {
+  fill: none;
+  stroke: var(--iec-ink);
+  stroke-width: 1.2;
+}
+.iec-l,
+.iec-w {
+  fill: none;
+  stroke: var(--iec-ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.iec-w.iec-rail {
+  stroke-width: 2.4;
+}
+.iec-l.iec-thin {
+  stroke-width: 0.8;
+  stroke: var(--iec-soft);
+}
+.iec-l.iec-body {
+  fill: var(--iec-paper);
+}
+.iec-l.iec-fill {
+  fill: var(--iec-ink);
+}
+.iec-l.iec-mech {
+  stroke-dasharray: 3 3;
+  stroke-width: 1.1;
+}
+.iec-l.iec-dash {
+  stroke-dasharray: 5 3;
+  stroke-width: 1;
+}
+.iec-l.iec-plcbox {
+  stroke: var(--iec-soft);
+  stroke-dasharray: 4 3;
+  stroke-width: 1;
+}
+.iec-w.on,
+.iec-l.on {
+  stroke: var(--iec-on);
+  stroke-width: 2.4;
+}
+.iec-el.on .iec-l.iec-body {
+  stroke: var(--iec-on);
+  stroke-width: 2.4;
+  fill: color-mix(in srgb, var(--iec-on) 18%, var(--iec-paper));
+}
+.iec-l.iec-run {
+  stroke: var(--iec-on);
+  stroke-width: 2.4;
+}
+.iec-dot {
+  fill: var(--iec-ink);
+}
+.iec-dot.on {
+  fill: var(--iec-on);
+}
+.iec-t {
+  fill: var(--iec-ink);
+  font-size: 10px;
+  stroke: none;
+}
+.iec-desig {
+  font-size: 12px;
+  font-weight: 600;
+}
+.iec-func {
+  font-size: 9.5px;
+  fill: var(--iec-soft);
+  font-style: italic;
+}
+.iec-term {
+  font-size: 8.5px;
+  fill: var(--iec-soft);
+}
+.iec-tiny {
+  font-size: 8.5px;
+  fill: var(--iec-soft);
+}
+.iec-io {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.iec-ref {
+  font-size: 9px;
+  fill: var(--iec-ref);
+  cursor: pointer;
+}
+.iec-ref:hover {
+  text-decoration: underline;
+}
+.iec-sym-t {
+  font-size: 10px;
+  font-weight: 700;
+}
+.iec-big {
+  font-size: 15px;
+}
+.iec-railt {
+  font-size: 11px;
+  font-weight: 700;
+}
+.iec-coltext {
+  font-size: 9.5px;
+  font-style: italic;
+  fill: var(--iec-ink);
+}
+.iec-colnum {
+  font-size: 10px;
+  fill: var(--iec-soft);
+}
+.iec-brand {
+  font-size: 15px;
+  font-weight: 800;
+  fill: var(--iec-on);
+}
+.iec-tb {
+  font-size: 11px;
+}
+.iec-tb-strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+.iec-colflash {
+  fill: var(--accent);
+  opacity: 0.12;
+  pointer-events: none;
+}
+.iec-el.flash {
+  animation: iec-flash 0.45s ease-in-out 3;
+}
+@keyframes iec-flash {
+  50% {
+    opacity: 0.25;
+  }
+}

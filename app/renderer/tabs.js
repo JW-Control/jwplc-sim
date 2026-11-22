@@ -63,19 +63,33 @@
   function paintSchem() {
     const pn = window.JwsimPneu;
     const can = !!pn?.available();
-    if (!can) schem = "color";
+    const iec = window.JwsimIec;
+    const canIec = !!iec?.available();
+    if ((!can && schem === "pneu") || (!canIec && schem === "iec")) schem = "color";
+    const bi = $("schem-iec");
+    bi.disabled = !canIec;
+    bi.title = canIec
+      ? "Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC"
+      : "Esquema normalizado: agregue y cablee equipos en «A colores»";
     const b = $("schem-pneu");
     b.disabled = !can;
     b.title = can
       ? "Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento"
       : "Circuito neumático: la escena necesita una electroválvula con cilindro";
-    for (const [id, v] of [["schem-color", "color"], ["schem-pneu", "pneu"]]) {
+    for (const [id, v] of [["schem-color", "color"], ["schem-iec", "iec"], ["schem-pneu", "pneu"]]) {
       $(id).classList.toggle("active", schem === v);
       $(id).setAttribute("aria-checked", String(schem === v));
     }
-    pn?.show(tab === "schematic" && schem === "pneu");
+    // Primero se oculta la que sale (cada una marca body.dataset.schem).
+    const showPn = tab === "schematic" && schem === "pneu";
+    const showIec = tab === "schematic" && schem === "iec";
+    if (!showPn) pn?.show(false);
+    if (!showIec) iec?.show(false);
+    if (showPn) pn?.show(true);
+    if (showIec) iec?.show(true);
   }
   $("schem-color").addEventListener("click", () => ((schem = "color"), paintSchem()));
+  $("schem-iec").addEventListener("click", () => ((schem = "iec"), paintSchem()));
   $("schem-pneu").addEventListener("click", () => ((schem = "pneu"), paintSchem()));
 
   async function select(next) {
