@@ -142,7 +142,9 @@
     // Bornes.
     const tt = T(e.x + 5, e.y - SYM + 7, e.tTop, "iec-term", "start") + T(e.x + 5, e.y + SYM - 1, e.tBot, "iec-term", "start");
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
-    return `<g class="iec-el ${cls}${flash}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}">${s}${lab}${plcBox || e.act === "plc" ? "" : tt}</g>`;
+    const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
+    const hit = `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
+    return `<g class="iec-el ${cls}${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hit}${s}${lab}${plcBox || e.act === "plc" ? "" : tt}</g>`;
   }
 
   // Tabla de referencias bajo la bobina: dónde están sus contactos.
@@ -244,6 +246,7 @@
       const { top, bot } = sh.rails;
       const xr = sh.w - 30;
       s += `<polyline class="iec-w iec-rail${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
+      s += `<line class="iec-hit" data-rail="top" x1="${sh.x0 - 10}" y1="${top.y}" x2="${xr}" y2="${top.y}"><title>Clic: columna nueva</title></line>`;
       s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>`;
       s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end") + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
       s += T(xr, top.y - 6, top.desig ?? "", "iec-tiny", "end");
@@ -358,6 +361,83 @@
     }
   }
 
+  // ---------- edición: lo que se hace en el plano cambia la escena (scene.js editCircuit)
+  const NEW = [
+    { label: "Pulsador NA", type: "jwsim/pushbutton-no", io: ["13", "14"] },
+    { label: "Pulsador NC", type: "jwsim/pushbutton-nc", io: ["11", "12"] },
+    { label: "Final de carrera NA", type: "jwsim/limit-switch", io: ["13", "14"] },
+    { label: "Final de carrera NC", type: "jwsim/limit-switch", io: ["21", "22"] },
+  ];
+  const RUNGS = [
+    { label: "Pulsador NA + piloto", chain: [NEW[0], { type: "jwsim/lamp", io: ["X1", "X2"] }] },
+    { label: "Pulsador NA + contactor", chain: [NEW[0], { type: "jwsim/contactor", io: ["A1", "A2"] }] },
+    { label: "Piloto", chain: [{ type: "jwsim/lamp", io: ["X1", "X2"] }] },
+  ];
+  function contactChoices() {
+    const own = (S.model?.free ?? []).map((f) => ({ label: `Contacto ${f.nc ? "NC" : "NA"} ${f.cid} de -${f.dev}`, dev: f.dev, io: [f.a, f.b] }));
+    return [...NEW, ...own];
+  }
+  function closeEdit() {
+    S.edit = null;
+    const box = $("iec-edit");
+    if (box) box.hidden = true;
+    draw();
+  }
+  function openEdit(what, ev) {
+    if (window.JwsimScene?.isRunning?.()) return;
+    const sh = S.model.sheets[S.sheet];
+    const box = $("iec-edit");
+    const view = $("iec-view").getBoundingClientRect();
+    let html = "";
+    const btns = (list, act) => list.map((c, i) => `<button data-act="${act}" data-i="${i}">${esc(c.label)}</button>`).join("");
+    if (what.rail) {
+      if (sh.kind !== "control" || sh.srcKind !== "DC") return;
+      S.edit = { sheet: sh.n, rail: true };
+      html = `<div class="iec-edit-h">Columna nueva desde ${esc(sh.rails.top.label)}</div>${btns(RUNGS, "rung")}`;
+    } else {
+      const e = sh.elems.find((x) => x.key === what.key);
+      if (!e) return;
+      S.edit = { sheet: sh.n, key: e.key, e };
+      const isC = e.kind === "contact";
+      const plcLoad = e.kind === "plcin" || e.kind === "plcpower";
+      html =
+        `<div class="iec-edit-h">${esc(e.label)} ${esc(e.io ?? e.cid)}</div>` +
+        `<div class="iec-edit-s">En serie, arriba</div>${btns(contactChoices(), "series")}` +
+        (plcLoad ? "" : `<div class="iec-edit-s">En paralelo</div>${btns(contactChoices(), "parallel")}`) +
+        (isC && e.act !== "plc" ? `<div class="iec-edit-s">Quitar</div><button data-act="bridge" class="danger">Quitar este contacto (se unen sus lados)</button>` : "") +
+        (!isC && !plcLoad ? `<div class="iec-edit-s">Quitar</div><button data-act="cut" class="danger">Quitar esta carga del circuito</button>` : "");
+    }
+    box.innerHTML = html + `<div class="iec-edit-foot">Cambia la escena · Ctrl+Z deshace</div>`;
+    box.hidden = false;
+    const x = Math.min(ev.clientX - view.left + 12, view.width - 250);
+    const y = Math.min(ev.clientY - view.top + 12, view.height - box.offsetHeight - 10);
+    box.style.left = `${Math.max(8, x)}px`;
+    box.style.top = `${Math.max(48, y)}px`;
+    draw();
+  }
+  function doEdit(act, i) {
+    const sh = S.model.sheets[S.sheet];
+    const ed = S.edit;
+    if (!ed) return;
+    const api = window.JwsimScene;
+    let r;
+    if (act === "rung") {
+      const k = RUNGS[i];
+      r = api.editCircuit({ kind: "rung", pos: sh.rails.top.rep, neg: sh.rails.bot.rep, chain: k.chain.map((c) => ({ type: c.type, dev: c.dev, io: c.io })) });
+    } else {
+      const e = ed.e;
+      const top = `${e.dev}.${e.tTop}`;
+      const bot = `${e.dev}.${e.tBot}`;
+      const c = contactChoices()[i];
+      if (act === "series") r = api.editCircuit({ kind: "series", before: top, type: c.type, dev: c.dev, io: c.io });
+      else if (act === "parallel") r = api.editCircuit({ kind: "parallel", top, bot, type: c.type, dev: c.dev, io: c.io });
+      else r = api.editCircuit({ kind: act, top, bot });
+    }
+    if (r?.error) console.warn(r.error);
+    closeEdit();
+    return r;
+  }
+
   function setup() {
     const svg = $("iec-svg");
     if (!svg || svg.dataset.ready) return;
@@ -382,8 +462,18 @@
       const g = e.target.closest?.("[data-goto]");
       if (g) return goto(g.dataset.goto);
       if (!S.vb) return;
-      S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box] };
+      S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box], target: e.target, moved: false };
       svg.setPointerCapture(e.pointerId);
+    });
+    // Clic sin arrastrar: sobre un elemento o sobre el riel +, el menú de edición.
+    svg.addEventListener("pointerup", (e) => {
+      const d = S.drag;
+      if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
+      const el = d.target.closest?.(".iec-el[data-key]");
+      const rail = d.target.closest?.("[data-rail]");
+      if (el) openEdit({ key: el.dataset.key }, e);
+      else if (rail) openEdit({ rail: rail.dataset.rail }, e);
+      else closeEdit();
     });
     svg.addEventListener("pointermove", (e) => {
       if (!S.drag) return;
@@ -398,6 +488,11 @@
     svg.addEventListener("pointercancel", end);
     $("iec-fit")?.addEventListener("click", fit);
     $("iec-pdf")?.addEventListener("click", () => exportPdf());
+    $("iec-edit")?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-act]");
+      if (b) doEdit(b.dataset.act, Number(b.dataset.i ?? 0));
+    });
+    window.addEventListener("keydown", (e) => e.key === "Escape" && S.edit && closeEdit());
     $("iec-sheets")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-sheet]");
       if (!b) return;
@@ -453,6 +548,14 @@
     }),
     goto,
     exportPdf,
+    // Para las pruebas: abre el menú de un elemento (o del riel) y aplica una opción.
+    edit: (what, act, i = 0) => {
+      const r = $("iec-view").getBoundingClientRect();
+      openEdit(what, { clientX: r.left + 200, clientY: r.top + 200 });
+      return S.edit ? doEdit(act, i) : { error: "sin menú" };
+    },
+    elems: () => (S.model?.sheets[S.sheet]?.elems ?? []).map((e) => ({ key: e.key, dev: e.dev, cid: e.cid, kind: e.kind, col: e.col })),
+    free: () => S.model?.free ?? [],
     sheet: (i) => {
       S.sheet = i;
       S.vb = null;

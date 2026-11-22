@@ -1785,6 +1785,83 @@
     return { moved: Object.keys(r.pos).length, refs: r.refs.length, bands: r.bands };
   }
 
+  // Edición desde el esquema IEC (iec.js): operaciones sobre el circuito
+  // que se traducen en equipos y cables de la escena. Una sola entrada en
+  // el historial (Ctrl+Z la deshace entera).
+  //   series    contacto nuevo (o libre de un equipo) en serie antes del borne `before`
+  //   parallel  contacto en paralelo entre los bornes `top` y `bot`
+  //   bridge    quitar un contacto: sus dos lados quedan unidos
+  //   cut       quitar una carga: se sueltan sus cables
+  //   rung      columna nueva de `pos` a `neg` con los equipos de `chain` en serie
+  function editCircuit(op) {
+    if (S.running) return { error: "Detenga la simulación para editar el circuito" };
+    const ends = (term) => S.spec.wiring.filter((w) => w.from === term || w.to === term);
+    const color = (a, b) => poleColor(a, S.staticPoles) ?? poleColor(b, S.staticPoles) ?? "negro";
+    const wire = (a, b) => {
+      if (a === b || S.spec.wiring.some((w) => (w.from === a && w.to === b) || (w.from === b && w.to === a))) return;
+      S.spec.wiring.push({ from: a, to: b, color: color(a, b) });
+    };
+    let near = 0;
+    const newDev = (it, anchorId) => {
+      if (it.dev) return it.dev;
+      const a = devById(anchorId) ?? S.spec.devices[0];
+      const sa = a ? symbolFor(a) : { w: 0 };
+      const id = nextId(it.type);
+      const def = S.defs.get(it.type);
+      S.spec.devices.push({ id, type: it.type, version: def?.version, params: structuredClone(it.params ?? {}), x: snap((a?.x ?? 0) + sa.w + 40 + near * 120), y: snap(a?.y ?? 0) });
+      near++;
+      return id;
+    };
+    const dropIfLoose = (id) => {
+      const d = devById(id);
+      if (!d || d.type === "jwsim/jwplc-basic") return;
+      if (S.spec.wiring.some((w) => devOf(w.from) === id || devOf(w.to) === id) || guestsOf(id).length || d.mount) return;
+      S.spec.devices = S.spec.devices.filter((x) => x !== d);
+    };
+    pushHistory();
+    let added = [];
+    if (op.kind === "series") {
+      const id = newDev(op, devOf(op.before));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      for (const w of ends(op.before)) {
+        if (w.from === op.before) w.from = i;
+        else w.to = i;
+        delete w.points;
+      }
+      wire(o, op.before);
+      added = [id];
+    } else if (op.kind === "parallel") {
+      const id = newDev(op, devOf(op.top));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      wire(op.top, i);
+      wire(o, op.bot);
+      added = [id];
+    } else if (op.kind === "bridge") {
+      // Lo que llegaba a sus dos bornes se une directo, sin el contacto.
+      const ws = [...ends(op.top), ...ends(op.bot)];
+      const others = ws.map((w) => ([op.top, op.bot].includes(w.from) ? w.to : w.from)).filter((e) => e !== op.top && e !== op.bot);
+      S.spec.wiring = S.spec.wiring.filter((w) => !ws.includes(w));
+      for (let k = 1; k < others.length; k++) wire(others[0], others[k]);
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "cut") {
+      S.spec.wiring = S.spec.wiring.filter((w) => ![w.from, w.to].some((e) => e === op.top || e === op.bot));
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "rung") {
+      let prev = op.pos;
+      for (const it of op.chain) {
+        const id = newDev(it, devOf(op.pos));
+        const [i, o] = it.io.map((t) => `${id}.${t}`);
+        wire(prev, i);
+        prev = o;
+        added.push(id);
+      }
+      wire(prev, op.neg);
+    } else return { error: `operación desconocida: ${op.kind}` };
+    S.sel = added.length ? { kind: "device", id: added[0] } : null;
+    changed();
+    return { added };
+  }
+
   function addWire(from, to) {
     if (from === to || from.split(".")[0] === to.split(".")[0] && from === to) return false;
     if (S.spec.wiring.some((w) => (w.from === from && w.to === to) || (w.from === to && w.to === from))) return false;
@@ -3194,6 +3271,7 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    editCircuit: (op) => editCircuit(op),
     // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
     // ancho y del alto, y de qué lado sale) y el color de cada cable.
     terminalOf(end) {

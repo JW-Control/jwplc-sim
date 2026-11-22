@@ -117,6 +117,47 @@ try {
   const d2 = await t(() => window.JwsimIec.debug());
   criteria.REGENERATES = { ok: d2.sheets.find((s) => s.title === "Mando y salidas del PLC")?.elems === 14, sheets: d2.sheets };
   log(`REGENERATES ${JSON.stringify(criteria.REGENERATES)}`);
+  // Editar desde el plano: contacto en serie, en paralelo, quitarlo y columna nueva.
+  const outSheet = () => t(() => window.JwsimIec.debug().sheets.findIndex((s) => s.title === "Mando y salidas del PLC"));
+  const waitIec = (pred) => win.waitForFunction(pred, null, { timeout: 15000 }).catch(() => {});
+  await t((i) => window.JwsimIec.sheet(i), await outSheet());
+  await sleep(400);
+  const hb = await t(() => {
+    const r = document.querySelector('#iec-root .iec-el[data-key="H1.lamp"] .iec-hitbox').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  await win.mouse.click(hb.x, hb.y);
+  await sleep(300);
+  const menu = await t(() => ({ shown: !document.getElementById("iec-edit").hidden, items: document.querySelectorAll("#iec-edit [data-act]").length }));
+  await win.screenshot({ path: join(OUT, "menu-edicion.png") });
+  await win.keyboard.press("Escape");
+  const nDev = () => t(() => window.jwsimTest.scene.spec().devices.length);
+  const n0 = await nDev();
+  const r1 = await t(() => window.JwsimIec.edit({ key: "H1.lamp" }, "series", 1)); // pulsador NC antes de H1
+  await waitIec(() => window.JwsimIec.elems().some((e) => e.dev.startsWith("S") && e.kind === "contact"));
+  const afterSeries = await t(() => window.JwsimIec.elems());
+  const sId = r1?.added?.[0];
+  const sCol = afterSeries.find((e) => e.dev === sId)?.col;
+  const hCol = afterSeries.find((e) => e.dev === "H1")?.col;
+  const r2 = await t(() => window.JwsimIec.edit({ key: "plc.Q0_2" }, "parallel", 0)); // pulsador NA en paralelo con Q0.2
+  const pId = r2?.added?.[0];
+  await waitIec((id) => window.JwsimIec.elems().some((e) => e.dev === id), pId);
+  const afterPar = await t(() => window.JwsimIec.elems());
+  const q2 = afterPar.find((e) => e.key === "plc.Q0_2");
+  const par = afterPar.find((e) => e.dev === pId);
+  await t((id) => window.JwsimIec.edit({ key: `${id}.11-12` }, "bridge"), sId);
+  await waitIec((id) => !window.JwsimIec.elems().some((e) => e.dev === id), sId);
+  const bridged = await t(() => window.JwsimIec.elems());
+  const stillLamp = bridged.some((e) => e.dev === "H1") && !(await t((id) => window.jwsimTest.scene.spec().devices.some((d) => d.id === id), sId));
+  await t(() => window.JwsimIec.edit({ rail: "top" }, "rung", 2)); // piloto nuevo
+  await sleep(1500);
+  const n4 = await nDev();
+  await win.screenshot({ path: join(OUT, "editado.png") });
+  criteria.EDIT = {
+    ok: menu.shown && menu.items >= 9 && !!sId && sCol === hCol && !!pId && par?.col !== q2?.col && Math.abs((par?.col ?? 0) - (q2?.col ?? 0)) === 1 && stillLamp && n4 === n0 + 2,
+    menu, sId, sCol, hCol, pId, parCol: par?.col, q2Col: q2?.col, stillLamp, n0, n4,
+  };
+  log(`EDIT ${JSON.stringify(criteria.EDIT)}`);
   criteria.NO_ERRORS = { ok: errors.length === 0, errors };
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
@@ -125,7 +166,7 @@ try {
   await app.close();
 }
 
-const ok = ["SHEETS", "CROSS_REF", "PDF", "ARRANGE", "REGENERATES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
+const ok = ["SHEETS", "CROSS_REF", "PDF", "ARRANGE", "REGENERATES", "EDIT", "NO_ERRORS"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_IEC_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_IEC_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

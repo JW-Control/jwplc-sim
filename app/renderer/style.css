@@ -5543,3 +5543,67 @@ body[data-schem="iec"] .scene-float {
     opacity: 0.25;
   }
 }
+
+/* Edición desde el plano IEC */
+.iec-hitbox,
+.iec-hit {
+  fill: transparent;
+  stroke: transparent;
+  cursor: pointer;
+}
+.iec-hit {
+  stroke-width: 12;
+  pointer-events: stroke;
+}
+.iec-el[data-key] {
+  cursor: pointer;
+}
+.iec-el:hover .iec-hitbox {
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.iec-el.sel .iec-hitbox {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  stroke: var(--accent);
+  stroke-dasharray: 3 3;
+}
+.iec-edit {
+  position: absolute;
+  z-index: 3;
+  width: 240px;
+  max-height: 70%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow);
+  font-size: 12px;
+}
+.iec-edit[hidden] {
+  display: none;
+}
+.iec-edit-h {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.iec-edit-s {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.iec-edit button {
+  text-align: left;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+.iec-edit button.danger {
+  color: var(--err);
+}
+.iec-edit-foot {
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-top: 6px;
+}

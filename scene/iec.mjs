@@ -321,7 +321,17 @@ export function iecModel(scene, opts = {}) {
     }
     for (const b of s.blocks) if (coilAt.has(b.dev)) b.ref = coilAt.get(b.dev);
   }
-  return { title: projectTitle, sheets };
+  // Contactos libres (sin cables en sus bornes) de los equipos con bobina:
+  // la vista los ofrece para agregar una autorretención o un enclavamiento.
+  const free = [];
+  for (const dev of devs) {
+    if (!(dev.el.loads ?? []).some((l) => l.coil || l.id === "coil")) continue;
+    for (const [cid, [a, b]] of Object.entries(dev.el.contacts ?? {})) {
+      if (/^[135]-[246]$/.test(cid) || isWired(`${dev.id}.${a}`) || isWired(`${dev.id}.${b}`)) continue;
+      free.push({ dev: dev.id, cid, a, b, nc: contactIsNC(dev.def.type, cid, !!rest.get(dev.id)?.[cid]) });
+    }
+  }
+  return { title: projectTitle, sheets, free };
 }
 
 const cmpArr = (a, b) => {
