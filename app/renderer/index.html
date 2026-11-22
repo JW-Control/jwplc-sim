@@ -208,8 +208,10 @@
                   <svg id="iec-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Esquema normalizado IEC" preserveAspectRatio="xMidYMid meet"></svg>
                   <div class="iec-tools"><button id="iec-fit" class="icon" title="Ajustar: ver la hoja completa" aria-label="Ajustar">⤢</button>
                     <div class="iec-sheets" id="iec-sheets" role="tablist" aria-label="Hojas"></div>
-                    <span class="iec-legend"><i class="on"></i>con tensión</span></div>
+                    <span class="iec-legend"><i class="on"></i>con tensión</span>
+                    <span class="iec-export"><select id="iec-size" title="Tamaño de hoja" aria-label="Tamaño de hoja"><option value="A4" selected>A4</option><option value="A3">A3</option></select><button id="iec-pdf" title="Exportar todas las hojas a PDF (apaisado, sin el estado de la simulación)">⇩ PDF</button></span></div>
                   <div class="iec-empty" id="iec-empty" hidden></div>
+                  <div class="iec-edit" id="iec-edit" role="menu" hidden></div>
                 </div>
                 <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
                 <div id="pn-view" class="pn-view" hidden>
