@@ -5530,6 +5530,77 @@ body[data-schem="iec"] .scene-float {
   font-size: 13px;
   font-weight: 700;
 }
+.iec-l.iec-module {
+  stroke: var(--iec-soft);
+  stroke-dasharray: 6 3;
+  stroke-width: 1;
+}
+.iec-modt {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--iec-soft);
+}
+.iec-com {
+  font-weight: 700;
+  fill: var(--iec-ink);
+}
+.iec-l.iec-plcmod {
+  fill: color-mix(in srgb, var(--iec-ink) 4%, var(--iec-paper));
+  stroke-width: 1.6;
+}
+.iec-plcname {
+  font-size: 15px;
+  font-weight: 700;
+}
+.iec-plcterm {
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--iec-ink);
+}
+.iec-wiretext {
+  font-size: 8.5px;
+  fill: var(--iec-ink);
+}
+.iec-l.iec-arrow {
+  fill: var(--iec-paper);
+  stroke-width: 1.2;
+}
+.iec-xref {
+  font-weight: 600;
+}
+.iec-cellhit {
+  fill: transparent;
+  cursor: text;
+}
+.iec-cellhit:hover {
+  fill: color-mix(in srgb, var(--iec-ref) 12%, transparent);
+}
+.iec-borne-in {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0 6px;
+  font: inherit;
+  padding: 4px 6px;
+}
+.iec-tabt {
+  font-size: 11px;
+  font-weight: 700;
+}
+.iec-tabhead {
+  fill: color-mix(in srgb, var(--iec-ink) 8%, var(--iec-paper));
+  stroke: none;
+}
+.iec-tabh {
+  font-size: 9px;
+  font-weight: 700;
+}
+.iec-tabc {
+  font-size: 9.5px;
+}
+.iec-free {
+  fill: var(--iec-soft);
+  font-style: italic;
+}
 .iec-colflash {
   fill: var(--accent);
   opacity: 0.12;

@@ -1225,9 +1225,10 @@ ipcMain.handle("scene:iec", async (_e, { spec, title }) => {
   }
 });
 
-// Esquema IEC a PDF: una hoja por página (A3 o A4 apaisada), impresa por
+// Esquema IEC a PDF: una hoja por página (A4 apaisada por defecto, o A3), impresa por
 // una ventana oculta con el SVG y los estilos que manda la vista.
-ipcMain.handle("iec:pdf", async (_e, { pages, css, name, size }) => {
+ipcMain.handle("iec:pdf", async (_e, { pages, css, name, size: req }) => {
+  const size = req === "A3" ? "A3" : "A4";
   const fmt = size === "A4" ? { w: 297, h: 210 } : { w: 420, h: 297 };
   const html =
     `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:${size === "A4" ? "A4" : "A3"} landscape;margin:0}` +
