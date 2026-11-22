@@ -129,20 +129,60 @@
     return { s, cls: on ? "on" : "" };
   }
 
+  // Flecha de continuación (▽) con su destino «hoja-FilaColumna», clicable.
+  const arrowDown = (x, y, on) => `<path class="iec-l iec-arrow${on ? " on" : ""}" d="M${x - 5} ${y}L${x + 5} ${y}L${x} ${y + 9}z"/>`;
+  const gotoT = (x, y, ref, anchor = "start") => (ref ? T(x, y, ref, "iec-ref iec-xref", anchor, ` data-goto="${ref}"`) : "");
+  const hitOf = (e) => `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
+  const wrapEl = (sh, e, inner) => {
+    const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
+    const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
+    return `<g class="iec-el${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hitOf(e)}${inner}</g>`;
+  };
+
+  // Entrada del PLC en su circuito: el cable termina en una flecha hacia el
+  // borne del módulo («-plc:I0.0», hoja del PLC).
+  function plcInArrow(sh, e) {
+    const on = live(sh, e.top);
+    const y = e.y - 6;
+    let s = L(e.x, e.y - SYM, e.x, y, on ? "on" : "") + arrowDown(e.x, y, on);
+    s += T(e.x + 9, y + 8, `${e.label}:${e.io ?? e.cid}`, "iec-io", "start");
+    s += gotoT(e.x + 9, y + 20, e.ref);
+    return wrapEl(sh, e, s);
+  }
+
+  // Salida a relé del PLC dentro de su circuito: el cable baja hasta el COM
+  // del relé (flecha a la hoja del PLC) y sigue desde su NA (otra flecha).
+  function plcOutBreak(sh, e) {
+    const onT = live(sh, e.top);
+    const onB = live(sh, e.bot);
+    let s = L(e.x, e.y - SYM, e.x, e.y - 14, onT ? "on" : "") + arrowDown(e.x, e.y - 14, onT);
+    s += arrowDown(e.x, e.y + 3, onB) + L(e.x, e.y + 12, e.x, e.y + SYM, onB ? "on" : "");
+    // A la izquierda el borne del módulo; a la derecha, dónde está.
+    s += T(e.x - 9, e.y - 6, `${e.io} COM`, "iec-io", "end") + gotoT(e.x + 9, e.y - 6, e.ref);
+    s += T(e.x - 9, e.y + 12, `${e.io} NA`, "iec-io", "end") + gotoT(e.x + 9, e.y + 12, e.ref2);
+    s += T(e.x - 9, e.y - 20, e.label, "iec-desig", "end");
+    return wrapEl(sh, e, s);
+  }
+
   function elem(sh, e) {
+    if (e.kind === "plcin" && e.arrow) return plcInArrow(sh, e);
+    if (e.kind === "contact" && e.act === "plc") return plcOutBreak(sh, e);
     const top = live(sh, e.top);
     const isC = e.kind === "contact";
     const { s, cls } = isC ? contact(e, top) : loadSym(e, loadOn(sh, e));
     const plcBox = e.kind === "plcin" || e.kind === "plcpower";
     const lx = e.x - (isC && e.act && e.act !== "plc" ? 42 : plcBox ? 26 : 20);
-    let lab = T(lx, e.y - 2, e.label, "iec-desig", "end");
+    // Dentro del módulo del PLC la designación va una vez, en el marco.
+    let lab = e.inModule ? "" : T(lx, e.y - 2, e.label, "iec-desig", "end");
     // La función va en la franja de arriba de su columna (colTexts).
     if (isC && e.io) lab += T(e.x + 19, e.y + 4, e.io, "iec-io", "start");
     if (e.ref) lab += T(lx, e.y + 11, `/${e.ref}`, "iec-ref", "end", ` data-goto="${e.ref}"`);
     // Bornes.
     const tt = T(e.x + 5, e.y - SYM + 7, e.tTop, "iec-term", "start") + T(e.x + 5, e.y + SYM - 1, e.tBot, "iec-term", "start");
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
-    return `<g class="iec-el ${cls}${flash}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}">${s}${lab}${plcBox || e.act === "plc" ? "" : tt}</g>`;
+    const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
+    const hit = `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
+    return `<g class="iec-el ${cls}${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hit}${s}${lab}${plcBox || e.act === "plc" ? "" : tt}</g>`;
   }
 
   // Tabla de referencias bajo la bobina: dónde están sus contactos.
@@ -210,30 +250,129 @@
     return (ld ?? es[0])?.text ?? (sh.blocks ?? []).find((b) => b.text && Math.floor((b.x - sh.x0) / sh.colW) === c)?.text ?? "";
   }
 
+  // Marco con la rejilla fija del documento: columnas 1–10 arriba, filas
+  // A–F a la izquierda y franja del cajetín abajo (igual en todas las hojas).
   function frame(sh) {
     const N = S.model.sheets.length;
+    const g = sh.grid ?? { x0: 34, colW: (sh.w - 44) / 10, cols: 10, y0: 50, rowH: (sh.h - 128) / 6, rows: 6 };
+    const yB = g.y0 + g.rowH * g.rows; // arriba de la franja del cajetín
     let s = `<rect class="iec-paper" x="0" y="0" width="${sh.w}" height="${sh.h}"/>`;
     s += `<rect class="iec-frame" x="10" y="10" width="${sh.w - 20}" height="${sh.h - 20}"/>`;
-    // Franja de columnas numeradas.
-    s += L(10, 30, sh.w - 10, 30, "iec-thin") + L(10, 50, sh.w - 10, 50, "iec-thin");
-    for (let c = 0; c < sh.cols; c++) {
+    s += L(g.x0, 10, g.x0, yB, "iec-thin") + L(g.x0, 30, sh.w - 10, 30, "iec-thin") + L(g.x0, 50, sh.w - 10, 50, "iec-thin") + L(10, yB, sh.w - 10, yB, "iec-thin");
+    for (let c = 0; c < g.cols; c++) {
+      const x = g.x0 + c * g.colW;
+      if (c) s += L(x, 10, x, 30, "iec-thin");
+      s += T(x + g.colW / 2, 24, String(c + 1), "iec-colnum");
+      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) {
+        const r = S.flash.row;
+        s += `<rect class="iec-colflash" x="${x}" y="${r ? g.y0 + (r - 1) * g.rowH : 30}" width="${g.colW}" height="${r ? g.rowH : yB - 30}"/>`;
+      }
+    }
+    for (let r = 0; r < g.rows; r++) {
+      const y = g.y0 + r * g.rowH;
+      if (r) s += L(10, y, g.x0, y, "iec-thin");
+      s += T(22, y + g.rowH / 2 + 4, String.fromCharCode(65 + r), "iec-colnum");
+    }
+    // Texto de función de cada columna del circuito, en la franja de arriba.
+    for (let c = 0; c < (sh.cols ?? 0); c++) {
+      const ft = sh.kind === "control" || sh.kind === "power" ? colText(sh, c) : "";
+      if (!ft) continue;
       const x = sh.x0 + c * sh.colW;
-      if (x + sh.colW > sh.w - 10) break;
-      s += L(x, 10, x, 30, "iec-thin") + T(x + sh.colW / 2, 24, String(c + 1), "iec-colnum");
-      const ft = colText(sh, c);
-      if (ft) s += T(x + sh.colW / 2, 43, ft.length > 20 ? `${ft.slice(0, 19)}…` : ft, "iec-coltext", "middle", ` data-full="${esc(ft)}"`);
-      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) s += `<rect class="iec-colflash" x="${x}" y="30" width="${sh.colW}" height="${sh.h - 130}"/>`;
+      s += T(x + sh.colW / 2, 43, ft.length > 18 ? `${ft.slice(0, 17)}…` : ft, "iec-coltext", "middle", ` data-full="${esc(ft)}"`);
     }
     // Cajetín.
-    const bw = 380;
+    const bh = sh.h - 10 - yB;
+    const bw = 400;
     const bx = sh.w - 10 - bw;
-    const by = sh.h - 10 - 58;
-    s += `<rect class="iec-titleblock" x="${bx}" y="${by}" width="${bw}" height="58"/>`;
-    s += L(bx + 110, by, bx + 110, by + 58, "iec-thin") + L(bx + 110, by + 29, bx + bw, by + 29, "iec-thin") + L(bx + bw - 70, by, bx + bw - 70, by + 58, "iec-thin");
-    s += T(bx + 55, by + 25, "JW Control", "iec-brand") + T(bx + 55, by + 42, "JWPLC Sim", "iec-tiny");
-    s += T(bx + 118, by + 19, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + 48, sh.title, "iec-tb iec-tb-strong", "start");
-    s += T(bx + bw - 35, by + 19, "Hoja", "iec-tiny") + T(bx + bw - 35, by + 48, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
-    s += T(20, sh.h - 22, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
+    const by = yB;
+    s += `<rect class="iec-titleblock" x="${bx}" y="${by}" width="${bw}" height="${bh}"/>`;
+    s += L(bx + 110, by, bx + 110, by + bh, "iec-thin") + L(bx + 110, by + bh / 2, bx + bw, by + bh / 2, "iec-thin") + L(bx + bw - 70, by, bx + bw - 70, by + bh, "iec-thin");
+    s += T(bx + 55, by + bh / 2, "JW Control", "iec-brand") + T(bx + 55, by + bh / 2 + 16, "JWPLC Sim", "iec-tiny");
+    s += T(bx + 118, by + bh / 2 - 10, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + bh - 12, sh.title, "iec-tb iec-tb-strong", "start");
+    s += T(bx + bw - 35, by + bh / 2 - 10, "Hoja", "iec-tiny") + T(bx + bw - 35, by + bh - 12, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
+    s += T(20, by + 18, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
+    s += T(20, by + 32, `Referencias hoja-FilaColumna (p. ej. 4-C3: hoja 4, fila C, columna 3) · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
+    return s;
+  }
+
+  // Módulo del PLC con sus bornes (como en los planos de tablero): arriba
+  // entradas, COM y alimentación; abajo salidas a relé. Las flechas remiten
+  // a la hoja.columna del circuito de cada borne.
+  function plcModule(sh, m) {
+    let s = `<rect class="iec-l iec-plcmod" x="${m.x}" y="${m.y}" width="${m.w}" height="${m.h}" rx="4"/>`;
+    s += T(m.x + m.w / 2, m.y + m.h / 2 - 2, m.name, "iec-plcname") + T(m.x + m.w / 2, m.y + m.h / 2 + 14, m.label, "iec-desig");
+    const ins = m.terms.filter((t) => t.side === "top" && t.kind === "in");
+    if (ins.length) {
+      const xa = ins[0].x - 18;
+      const xb = m.terms.filter((t) => t.side === "top" && t.kind !== "pwr").at(-1).x + 18;
+      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + 6}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + 54, "Entradas digitales (DI)", "iec-modt", "start");
+    }
+    const outs = m.terms.filter((t) => t.side === "bot");
+    if (outs.length) {
+      s += T(outs[0].x - 14, m.y + m.h - 58, "Salidas a relé (contacto seco: COM – NA)", "iec-modt", "start");
+      // Un marco por salida con su nombre: Q0.0 = COM + NA.
+      for (const io of [...new Set(outs.map((t) => t.io))]) {
+        const ts = outs.filter((t) => t.io === io);
+        const xa = ts[0].x - 12;
+        const xb = ts.at(-1).x + 12;
+        const free = ts.every((t) => t.free);
+        s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + m.h - 50}" width="${xb - xa}" height="44" rx="2"/>`;
+        s += T((xa + xb) / 2, m.y + m.h - 40, io, `iec-plcterm${free ? " iec-free" : ""}`);
+      }
+    }
+    const pw = m.terms.filter((t) => t.kind === "pwr");
+    if (pw.length) {
+      const xa = pw[0].x - 18;
+      const xb = pw.at(-1).x + 18;
+      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + 6}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + 54, "Alimentación", "iec-modt", "start");
+    }
+    for (const t of m.terms) {
+      const y = t.side === "top" ? m.y : m.y + m.h;
+      const ty = t.side === "top" ? m.y + 16 : m.y + m.h - 16;
+      const ly = t.side === "top" ? m.y + 36 : m.y + m.h - 26;
+      s += L(t.x, y, t.x, ty + (t.side === "top" ? -5 : 5), t.free ? "iec-thin" : "");
+      s += `<circle class="iec-l iec-body" cx="${t.x}" cy="${ty}" r="5"/>` + L(t.x - 3.5, ty - 3.5, t.x + 3.5, ty + 3.5) + L(t.x - 3.5, ty + 3.5, t.x + 3.5, ty - 3.5);
+      s += T(t.x, ly, t.label, `iec-term iec-plcterm${t.free ? " iec-free" : ""}`);
+    }
+    for (const ln of m.links) {
+      const up = ln.dir === "up";
+      const y = ln.y;
+      s += `<path class="iec-l iec-body" d="M${ln.x - 5} ${up ? y + 9 : y - 9}L${ln.x + 5} ${up ? y + 9 : y - 9}L${ln.x} ${y}z"/>`;
+      if (ln.at) s += T(ln.x, up ? y - 6 : y + 20, ln.at, "iec-ref iec-xref", "middle", ` data-goto="${ln.at}"`);
+      if (ln.desc) {
+        // Texto a lo largo del cable, leído de abajo arriba (como en los planos).
+        const yy = up ? y + 16 : y - 16;
+        s += T(ln.x - 4, yy, ln.desc.length > 24 ? `${ln.desc.slice(0, 23)}…` : ln.desc, "iec-wiretext", up ? "end" : "start", ` transform="rotate(-90 ${ln.x - 4} ${yy})"`);
+      }
+    }
+    const flash = S.flash && S.flash.dev === m.dev ? " flash" : "";
+    return `<g class="iec-el iec-block${flash}" data-dev="${esc(m.dev)}">${s}</g>`;
+  }
+
+  // Tabla (lista de E/S y bornes): encabezado gris, filas, referencia clicable.
+  function table(t) {
+    if (t.note) return T(t.x, t.y, t.note, "iec-tiny", "start");
+    const W = t.cw.reduce((a, v) => a + v, 0);
+    const xs = t.cw.reduce((a, v) => [...a, a[a.length - 1] + v], [t.x]);
+    const y0 = t.y + 20;
+    const H = t.rowH * (t.rows.length + 1);
+    let s = T(t.x, t.y + 12, t.title, "iec-tabt", "start");
+    s += `<rect class="iec-tabhead" x="${t.x}" y="${y0}" width="${W}" height="${t.rowH}"/>`;
+    s += `<rect class="iec-l iec-nofill" x="${t.x}" y="${y0}" width="${W}" height="${H}"/>`;
+    t.head.forEach((h, i) => (s += T(xs[i] + 4, y0 + t.rowH - 4, h, "iec-tabh", "start")));
+    const fit = (txt, w) => (txt.length * 5.4 > w - 8 ? `${txt.slice(0, Math.max(1, Math.floor((w - 8) / 5.4) - 1))}…` : txt);
+    t.rows.forEach((r, k) => {
+      const y = y0 + t.rowH * (k + 1);
+      s += L(t.x, y, t.x + W, y, "iec-thin");
+      r.cells.forEach((c, i) => {
+        const last = i === r.cells.length - 1 && r.at;
+        const cls = i === 0 ? "iec-io" : last ? "iec-ref" : "iec-tabc";
+        const ed = r.edit && r.edit.col === i ? r.edit : null;
+        if (ed) s += `<rect class="iec-cellhit" x="${xs[i]}" y="${y}" width="${t.cw[i]}" height="${t.rowH}" data-borne="${esc(ed.ch ?? "")}" data-dev="${esc(ed.dev)}" data-value="${esc(ed.value)}"><title>Clic: escribir el borne</title></rect>`;
+        s += T(xs[i] + 4, y + t.rowH - 4, fit(String(c), t.cw[i]), `${cls}${r.free && !last ? " iec-free" : ""}`, "start", last ? ` data-goto="${r.at}"` : "");
+      });
+    });
+    for (let i = 1; i < xs.length - 1; i++) s += L(xs[i], y0, xs[i], y0 + H, "iec-thin");
     return s;
   }
 
@@ -242,10 +381,14 @@
     // Barras / rieles.
     if (sh.rails) {
       const { top, bot } = sh.rails;
-      const xr = sh.w - 30;
+      const xr = sh.railEnd ?? sh.w - 30;
       s += `<polyline class="iec-w iec-rail${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
-      s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>`;
-      s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end") + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
+      s += `<line class="iec-hit" data-rail="top" x1="${sh.x0 - 10}" y1="${top.y}" x2="${xr}" y2="${top.y}"><title>Clic: columna nueva</title></line>`;
+      // El riel de retorno solo si algo llega a él (p. ej. las entradas del
+      // PLC terminan en flechas y su común va en la hoja del PLC).
+      const usesBot = sh.dots.some((d) => d.y === bot.y) || sh.wires.some((w) => w.pts.some((p) => p[1] === bot.y));
+      if (usesBot) s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>` + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
+      s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end");
       s += T(xr, top.y - 6, top.desig ?? "", "iec-tiny", "end");
     }
     for (const b of sh.bus ?? []) {
@@ -254,6 +397,8 @@
     if (sh.bus?.length) s += T(sh.w - 40, sh.bus[0].y - 8, sh.bus[0].desig ?? "", "iec-tiny", "end");
     for (const w of sh.wires) s += `<polyline class="iec-w${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
     for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
+    for (const t of sh.tables ?? []) s += table(t);
+    if (sh.plc) s += plcModule(sh, sh.plc);
     for (const b of sh.blocks) s += block(sh, b);
     for (const e of sh.elems) s += elem(sh, e);
     if (sh.rails) for (const e of sh.elems) if (/^coil/.test(e.kind)) s += xrefTable(e, sh.rails.bot.y + 14);
@@ -294,12 +439,17 @@
   }
 
   function goto(at) {
-    const [n, col] = String(at).split(".").map(Number);
+    // «4-C3» (hoja-FilaColumna); también acepta el formato viejo «4.3».
+    const m = /^(\d+)-([A-Z])(\d+)$/.exec(String(at)) ?? /^(\d+)\.(\d+)$/.exec(String(at));
+    if (!m) return;
+    const n = Number(m[1]);
+    const row = m.length === 4 ? m[2].charCodeAt(0) - 64 : 0;
+    const col = Number(m[m.length - 1]);
     const i = S.model.sheets.findIndex((s) => s.n === n);
     if (i < 0) return;
     S.sheet = i;
     S.vb = null;
-    S.flash = { sheet: n, col };
+    S.flash = { sheet: n, col, row };
     draw();
     clearTimeout(S.flashT);
     S.flashT = setTimeout(() => {
@@ -358,6 +508,118 @@
     }
   }
 
+  // ---------- edición: lo que se hace en el plano cambia la escena (scene.js editCircuit)
+  const NEW = [
+    { label: "Pulsador NA", type: "jwsim/pushbutton-no", io: ["13", "14"] },
+    { label: "Pulsador NC", type: "jwsim/pushbutton-nc", io: ["11", "12"] },
+    { label: "Final de carrera NA", type: "jwsim/limit-switch", io: ["13", "14"] },
+    { label: "Final de carrera NC", type: "jwsim/limit-switch", io: ["21", "22"] },
+  ];
+  const RUNGS = [
+    { label: "Pulsador NA + piloto", chain: [NEW[0], { type: "jwsim/lamp", io: ["X1", "X2"] }] },
+    { label: "Pulsador NA + contactor", chain: [NEW[0], { type: "jwsim/contactor", io: ["A1", "A2"] }] },
+    { label: "Piloto", chain: [{ type: "jwsim/lamp", io: ["X1", "X2"] }] },
+  ];
+  function contactChoices() {
+    const own = (S.model?.free ?? []).map((f) => ({ label: `Contacto ${f.nc ? "NC" : "NA"} ${f.cid} de -${f.dev}`, dev: f.dev, io: [f.a, f.b] }));
+    return [...NEW, ...own];
+  }
+  function closeEdit() {
+    S.edit = null;
+    const box = $("iec-edit");
+    if (box) box.hidden = true;
+    draw();
+  }
+  function openEdit(what, ev) {
+    if (window.JwsimScene?.isRunning?.()) return;
+    const sh = S.model.sheets[S.sheet];
+    const box = $("iec-edit");
+    const view = $("iec-view").getBoundingClientRect();
+    let html = "";
+    const btns = (list, act) => list.map((c, i) => `<button data-act="${act}" data-i="${i}">${esc(c.label)}</button>`).join("");
+    if (what.rail) {
+      if (sh.kind !== "control" || sh.srcKind !== "DC") return;
+      S.edit = { sheet: sh.n, rail: true };
+      html = `<div class="iec-edit-h">Columna nueva desde ${esc(sh.rails.top.label)}</div>${btns(RUNGS, "rung")}`;
+    } else {
+      const e = sh.elems.find((x) => x.key === what.key);
+      if (!e) return;
+      S.edit = { sheet: sh.n, key: e.key, e };
+      const isC = e.kind === "contact";
+      const plcLoad = e.kind === "plcin" || e.kind === "plcpower";
+      html =
+        `<div class="iec-edit-h">${esc(e.label)} ${esc(e.io ?? e.cid)}</div>` +
+        `<div class="iec-edit-s">En serie, arriba</div>${btns(contactChoices(), "series")}` +
+        (plcLoad ? "" : `<div class="iec-edit-s">En paralelo</div>${btns(contactChoices(), "parallel")}`) +
+        (isC && e.act !== "plc" ? `<div class="iec-edit-s">Quitar</div><button data-act="bridge" class="danger">Quitar este contacto (se unen sus lados)</button>` : "") +
+        (!isC && !plcLoad ? `<div class="iec-edit-s">Quitar</div><button data-act="cut" class="danger">Quitar esta carga del circuito</button>` : "");
+    }
+    box.innerHTML = html + `<div class="iec-edit-foot">Cambia la escena · Ctrl+Z deshace</div>`;
+    box.hidden = false;
+    const x = Math.min(ev.clientX - view.left + 12, view.width - 250);
+    const y = Math.min(ev.clientY - view.top + 12, view.height - box.offsetHeight - 10);
+    box.style.left = `${Math.max(8, x)}px`;
+    box.style.top = `${Math.max(48, y)}px`;
+    draw();
+  }
+  // Borne de un canal del PLC (hoja de bornes): se guarda en el equipo.
+  function openBorne(ds, ev) {
+    if (window.JwsimScene?.isRunning?.()) return;
+    const box = $("iec-edit");
+    const view = $("iec-view").getBoundingClientRect();
+    S.edit = { sheet: S.model.sheets[S.sheet].n, borne: ds.borne, dev: ds.dev };
+    box.innerHTML =
+      `<div class="iec-edit-h">Borne de -${esc(ds.dev)} ${esc(ds.borne.replace("_", "."))}</div>` +
+      `<input id="iec-borne-in" class="iec-borne-in" maxlength="16" placeholder="p. ej. XI:00" value="${esc(ds.value ?? "")}">` +
+      `<button data-act="borne-ok">Guardar</button><button data-act="borne-auto">Usar el propuesto</button>` +
+      `<div class="iec-edit-foot">Se guarda en el proyecto · Ctrl+Z deshace</div>`;
+    box.hidden = false;
+    box.style.left = `${Math.max(8, Math.min(ev.clientX - view.left + 12, view.width - 250))}px`;
+    box.style.top = `${Math.max(48, Math.min(ev.clientY - view.top + 12, view.height - 160))}px`;
+    const inp = $("iec-borne-in");
+    inp.focus();
+    inp.select();
+    inp.addEventListener("keydown", (k) => {
+      if (k.key === "Enter") saveBorne(inp.value);
+      else if (k.key === "Escape") closeEdit();
+      k.stopPropagation();
+    });
+  }
+  function saveBorne(value) {
+    const ed = S.edit;
+    if (!ed?.borne) return;
+    const dev = (spec().devices ?? []).find((d) => d.id === ed.dev);
+    const cur = { ...(dev?.params?.bornes ?? {}) };
+    const v = value == null ? "" : String(value).trim();
+    if (v) cur[ed.borne] = v;
+    else delete cur[ed.borne];
+    window.JwsimScene?.setDeviceParam?.(ed.dev, "bornes", Object.keys(cur).length ? cur : undefined);
+    closeEdit();
+  }
+
+  function doEdit(act, i) {
+    const sh = S.model.sheets[S.sheet];
+    const ed = S.edit;
+    if (!ed) return;
+    const api = window.JwsimScene;
+    let r;
+    if (act === "rung") {
+      const k = RUNGS[i];
+      r = api.editCircuit({ kind: "rung", pos: sh.rails.top.rep, neg: sh.rails.bot.rep, chain: k.chain.map((c) => ({ type: c.type, dev: c.dev, io: c.io })) });
+    } else {
+      const e = ed.e;
+      const top = `${e.dev}.${e.tTop}`;
+      const bot = `${e.dev}.${e.tBot}`;
+      const c = contactChoices()[i];
+      if (act === "series") r = api.editCircuit({ kind: "series", before: top, type: c.type, dev: c.dev, io: c.io });
+      else if (act === "parallel") r = api.editCircuit({ kind: "parallel", top, bot, type: c.type, dev: c.dev, io: c.io });
+      else r = api.editCircuit({ kind: act, top, bot });
+    }
+    if (r?.error) console.warn(r.error);
+    closeEdit();
+    return r;
+  }
+
   function setup() {
     const svg = $("iec-svg");
     if (!svg || svg.dataset.ready) return;
@@ -382,8 +644,20 @@
       const g = e.target.closest?.("[data-goto]");
       if (g) return goto(g.dataset.goto);
       if (!S.vb) return;
-      S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box] };
+      S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box], target: e.target, moved: false };
       svg.setPointerCapture(e.pointerId);
+    });
+    // Clic sin arrastrar: sobre un elemento o sobre el riel +, el menú de edición.
+    svg.addEventListener("pointerup", (e) => {
+      const d = S.drag;
+      if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
+      const el = d.target.closest?.(".iec-el[data-key]");
+      const rail = d.target.closest?.("[data-rail]");
+      const borne = d.target.closest?.("[data-borne]");
+      if (borne) openBorne(borne.dataset, e);
+      else if (el) openEdit({ key: el.dataset.key }, e);
+      else if (rail) openEdit({ rail: rail.dataset.rail }, e);
+      else closeEdit();
     });
     svg.addEventListener("pointermove", (e) => {
       if (!S.drag) return;
@@ -398,6 +672,14 @@
     svg.addEventListener("pointercancel", end);
     $("iec-fit")?.addEventListener("click", fit);
     $("iec-pdf")?.addEventListener("click", () => exportPdf());
+    $("iec-edit")?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-act]");
+      if (!b) return;
+      if (b.dataset.act === "borne-ok") return saveBorne($("iec-borne-in")?.value);
+      if (b.dataset.act === "borne-auto") return saveBorne("");
+      doEdit(b.dataset.act, Number(b.dataset.i ?? 0));
+    });
+    window.addEventListener("keydown", (e) => e.key === "Escape" && S.edit && closeEdit());
     $("iec-sheets")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-sheet]");
       if (!b) return;
@@ -450,9 +732,24 @@
       sheet: S.sheet,
       on: document.querySelectorAll("#iec-root .iec-w.on").length,
       error: S.model?.error ?? null,
+      // Celdas «Borne» de la hoja de bornes (E/S → texto).
+      bornes: Object.fromEntries((S.model?.sheets.at(-1)?.tables ?? []).flatMap((t) => t.rows.filter((r) => r.edit).map((r) => [r.cells[0], r.cells[1]]))),
     }),
     goto,
     exportPdf,
+    // Para las pruebas: abre el menú de un elemento (o del riel) y aplica una opción.
+    edit: (what, act, i = 0) => {
+      const r = $("iec-view").getBoundingClientRect();
+      openEdit(what, { clientX: r.left + 200, clientY: r.top + 200 });
+      return S.edit ? doEdit(act, i) : { error: "sin menú" };
+    },
+    // Para las pruebas: escribe el borne de un canal como lo haría el usuario.
+    borne: (dev, ch, value) => {
+      S.edit = { borne: ch, dev };
+      saveBorne(value);
+    },
+    elems: () => (S.model?.sheets[S.sheet]?.elems ?? []).map((e) => ({ key: e.key, dev: e.dev, cid: e.cid, kind: e.kind, col: e.col })),
+    free: () => S.model?.free ?? [],
     sheet: (i) => {
       S.sheet = i;
       S.vb = null;

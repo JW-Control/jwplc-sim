@@ -5530,6 +5530,77 @@ body[data-schem="iec"] .scene-float {
   font-size: 13px;
   font-weight: 700;
 }
+.iec-l.iec-module {
+  stroke: var(--iec-soft);
+  stroke-dasharray: 6 3;
+  stroke-width: 1;
+}
+.iec-modt {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--iec-soft);
+}
+.iec-com {
+  font-weight: 700;
+  fill: var(--iec-ink);
+}
+.iec-l.iec-plcmod {
+  fill: color-mix(in srgb, var(--iec-ink) 4%, var(--iec-paper));
+  stroke-width: 1.6;
+}
+.iec-plcname {
+  font-size: 15px;
+  font-weight: 700;
+}
+.iec-plcterm {
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--iec-ink);
+}
+.iec-wiretext {
+  font-size: 8.5px;
+  fill: var(--iec-ink);
+}
+.iec-l.iec-arrow {
+  fill: var(--iec-paper);
+  stroke-width: 1.2;
+}
+.iec-xref {
+  font-weight: 600;
+}
+.iec-cellhit {
+  fill: transparent;
+  cursor: text;
+}
+.iec-cellhit:hover {
+  fill: color-mix(in srgb, var(--iec-ref) 12%, transparent);
+}
+.iec-borne-in {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0 6px;
+  font: inherit;
+  padding: 4px 6px;
+}
+.iec-tabt {
+  font-size: 11px;
+  font-weight: 700;
+}
+.iec-tabhead {
+  fill: color-mix(in srgb, var(--iec-ink) 8%, var(--iec-paper));
+  stroke: none;
+}
+.iec-tabh {
+  font-size: 9px;
+  font-weight: 700;
+}
+.iec-tabc {
+  font-size: 9.5px;
+}
+.iec-free {
+  fill: var(--iec-soft);
+  font-style: italic;
+}
 .iec-colflash {
   fill: var(--accent);
   opacity: 0.12;
@@ -5542,4 +5613,68 @@ body[data-schem="iec"] .scene-float {
   50% {
     opacity: 0.25;
   }
+}
+
+/* Edición desde el plano IEC */
+.iec-hitbox,
+.iec-hit {
+  fill: transparent;
+  stroke: transparent;
+  cursor: pointer;
+}
+.iec-hit {
+  stroke-width: 12;
+  pointer-events: stroke;
+}
+.iec-el[data-key] {
+  cursor: pointer;
+}
+.iec-el:hover .iec-hitbox {
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.iec-el.sel .iec-hitbox {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  stroke: var(--accent);
+  stroke-dasharray: 3 3;
+}
+.iec-edit {
+  position: absolute;
+  z-index: 3;
+  width: 240px;
+  max-height: 70%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow);
+  font-size: 12px;
+}
+.iec-edit[hidden] {
+  display: none;
+}
+.iec-edit-h {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.iec-edit-s {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.iec-edit button {
+  text-align: left;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+.iec-edit button.danger {
+  color: var(--err);
+}
+.iec-edit-foot {
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-top: 6px;
 }
