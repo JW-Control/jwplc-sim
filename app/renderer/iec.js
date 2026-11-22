@@ -323,6 +323,41 @@
     draw();
   }
 
+  // ---------- PDF: todas las hojas en reposo (sin el estado en vivo).
+  function printCss() {
+    let css = "";
+    for (const ss of document.styleSheets) {
+      let rules;
+      try {
+        rules = ss.cssRules;
+      } catch {
+        continue;
+      }
+      for (const r of rules) if (/\.iec-/.test(r.selectorText ?? r.cssText.split("{")[0])) css += r.cssText;
+    }
+    return css;
+  }
+  async function exportPdf() {
+    if (!S.model?.sheets.length) return null;
+    const keep = { snap: S.snap, flash: S.flash };
+    S.snap = null;
+    S.flash = null;
+    let pages;
+    try {
+      pages = S.model.sheets.map((sh) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sh.w} ${sh.h}" preserveAspectRatio="xMidYMid meet" font-family="Segoe UI, Arial, sans-serif">${drawSheet(sh)}</svg>`);
+    } finally {
+      Object.assign(S, keep);
+    }
+    const name = (S.model.title || "esquema").replace(/[\\/:*?"<>|]+/g, "_");
+    const btn = $("iec-pdf");
+    btn.disabled = true;
+    try {
+      return await window.jwsim.iecPdf(pages, printCss(), name, $("iec-size").value);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function setup() {
     const svg = $("iec-svg");
     if (!svg || svg.dataset.ready) return;
@@ -362,6 +397,7 @@
     svg.addEventListener("pointerup", end);
     svg.addEventListener("pointercancel", end);
     $("iec-fit")?.addEventListener("click", fit);
+    $("iec-pdf")?.addEventListener("click", () => exportPdf());
     $("iec-sheets")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-sheet]");
       if (!b) return;
@@ -416,6 +452,7 @@
       error: S.model?.error ?? null,
     }),
     goto,
+    exportPdf,
     sheet: (i) => {
       S.sheet = i;
       S.vb = null;

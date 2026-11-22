@@ -3,7 +3,7 @@
 // Prueba E2E del esquema normalizado (IEC 60617) generado de la escena:
 // botón «Normalizado (IEC)», hojas, referencias cruzadas, «Ordenar como
 // tablero» (y deshacer) y regeneración al editar en «A colores».
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -18,7 +18,8 @@ const criteria = {};
 const log = (m) => console.log(`[e2e] ${m}`);
 
 createRequire(import.meta.url)("electron");
-const env = { ...process.env, JWSIM_WORKSPACE: mkdtempSync(join(tmpdir(), "jwsim-iec-ws-")) };
+const PDF_DIR = mkdtempSync(join(tmpdir(), "jwsim-iec-pdf-"));
+const env = { ...process.env, JWSIM_WORKSPACE: mkdtempSync(join(tmpdir(), "jwsim-iec-ws-")), JWSIM_E2E_PDF_DIR: PDF_DIR };
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({ args: [APP, `--user-data-dir=${mkdtempSync(join(tmpdir(), "jwsim-iec-ud-"))}`], env });
 const win = await app.firstWindow();
@@ -72,6 +73,14 @@ try {
   criteria.CROSS_REF = { ok: coil && after.sheet === 3 && after.flash, coil, ...after };
   log(`CROSS_REF ${JSON.stringify(criteria.CROSS_REF)}`);
 
+  // PDF: una página por hoja, en A3 apaisada.
+  const pdf = await t(() => window.JwsimIec.exportPdf());
+  const bytes = pdf?.file ? readFileSync(pdf.file) : Buffer.alloc(0);
+  const pdfPages = (bytes.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+  if (pdf?.file) copyFileSync(pdf.file, join(OUT, "esquema.pdf"));
+  criteria.PDF = { ok: bytes.subarray(0, 5).toString() === "%PDF-" && pdfPages === 4 && pdf.pages === 4, file: pdf?.file, size: bytes.length, pdfPages };
+  log(`PDF ${JSON.stringify(criteria.PDF)}`);
+
   // «Ordenar como tablero»: entradas arriba del PLC, salidas abajo; se deshace.
   await win.click("#schem-color");
   await sleep(300);
@@ -116,7 +125,7 @@ try {
   await app.close();
 }
 
-const ok = ["SHEETS", "CROSS_REF", "ARRANGE", "REGENERATES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
+const ok = ["SHEETS", "CROSS_REF", "PDF", "ARRANGE", "REGENERATES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_IEC_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_IEC_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

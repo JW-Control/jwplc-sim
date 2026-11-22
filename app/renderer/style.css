@@ -5375,6 +5375,19 @@ body[data-schem="iec"] .scene-float {
   vertical-align: middle;
   background: var(--iec-on);
 }
+.iec-export {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+.iec-export select,
+.iec-export button {
+  font-size: 12px;
+  padding: 2px 8px;
+}
 .iec-empty {
   position: absolute;
   inset: 0;
