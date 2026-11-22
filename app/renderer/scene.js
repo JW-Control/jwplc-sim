@@ -1565,6 +1565,7 @@
       S.diagHtml = diagHtml;
       diag.innerHTML = diagHtml;
     }
+    if ($("scene-arrange")) $("scene-arrange").disabled = S.running;
     $("scene-rearm").disabled = !S.running || !(S.snap?.faults?.length || S.snap?.devices.some((d) => d.tripped || d.damaged.length));
   }
 
@@ -1754,6 +1755,113 @@
     return id;
   }
 
+  // «Ordenar como tablero» (app/lib/scene-arrange.cjs): posiciones según
+  // las columnas del esquema IEC; los cables largos de las fuentes pasan a
+  // referencia y se borran los dobleces manuales. Se deshace con Ctrl+Z.
+  async function arrange() {
+    if (S.running) return { error: "Detenga la simulación para ordenar" };
+    const sp = cleanSpec();
+    const model = await api.sceneIec(sp, "");
+    if (model.error) return { error: model.error };
+    const devs = S.spec.devices.map((d) => {
+      const sym = symbolFor(d);
+      const terms = {};
+      for (const [id, p] of Object.entries(sym.terms)) terms[id] = [p[0], p[1], sym.sides[id]];
+      return { id: d.id, type: d.type, w: sym.w, h: sym.h, mount: d.mount && canMount(d, devById(d.mount)) ? d.mount : undefined, terms };
+    });
+    const mountDy = Object.fromEntries(S.spec.devices.filter((d) => mountRule(d)).map((d) => [d.type, mountRule(d).dy]));
+    const r = window.JwsimArrange.arrange(model, devs, S.spec.wiring, { mountDy });
+    pushHistory();
+    for (const d of S.spec.devices) {
+      const p = r.pos[d.id];
+      if (p) Object.assign(d, { x: p.x, y: p.y });
+    }
+    settleMounts();
+    for (const w of S.spec.wiring) delete w.points;
+    for (const i of r.refs) S.spec.wiring[i].ref = true;
+    S.fitted = false;
+    changed();
+    fit();
+    return { moved: Object.keys(r.pos).length, refs: r.refs.length, bands: r.bands };
+  }
+
+  // Edición desde el esquema IEC (iec.js): operaciones sobre el circuito
+  // que se traducen en equipos y cables de la escena. Una sola entrada en
+  // el historial (Ctrl+Z la deshace entera).
+  //   series    contacto nuevo (o libre de un equipo) en serie antes del borne `before`
+  //   parallel  contacto en paralelo entre los bornes `top` y `bot`
+  //   bridge    quitar un contacto: sus dos lados quedan unidos
+  //   cut       quitar una carga: se sueltan sus cables
+  //   rung      columna nueva de `pos` a `neg` con los equipos de `chain` en serie
+  function editCircuit(op) {
+    if (S.running) return { error: "Detenga la simulación para editar el circuito" };
+    const ends = (term) => S.spec.wiring.filter((w) => w.from === term || w.to === term);
+    const color = (a, b) => poleColor(a, S.staticPoles) ?? poleColor(b, S.staticPoles) ?? "negro";
+    const wire = (a, b) => {
+      if (a === b || S.spec.wiring.some((w) => (w.from === a && w.to === b) || (w.from === b && w.to === a))) return;
+      S.spec.wiring.push({ from: a, to: b, color: color(a, b) });
+    };
+    let near = 0;
+    const newDev = (it, anchorId) => {
+      if (it.dev) return it.dev;
+      const a = devById(anchorId) ?? S.spec.devices[0];
+      const sa = a ? symbolFor(a) : { w: 0 };
+      const id = nextId(it.type);
+      const def = S.defs.get(it.type);
+      S.spec.devices.push({ id, type: it.type, version: def?.version, params: structuredClone(it.params ?? {}), x: snap((a?.x ?? 0) + sa.w + 40 + near * 120), y: snap(a?.y ?? 0) });
+      near++;
+      return id;
+    };
+    const dropIfLoose = (id) => {
+      const d = devById(id);
+      if (!d || d.type === "jwsim/jwplc-basic") return;
+      if (S.spec.wiring.some((w) => devOf(w.from) === id || devOf(w.to) === id) || guestsOf(id).length || d.mount) return;
+      S.spec.devices = S.spec.devices.filter((x) => x !== d);
+    };
+    pushHistory();
+    let added = [];
+    if (op.kind === "series") {
+      const id = newDev(op, devOf(op.before));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      for (const w of ends(op.before)) {
+        if (w.from === op.before) w.from = i;
+        else w.to = i;
+        delete w.points;
+      }
+      wire(o, op.before);
+      added = [id];
+    } else if (op.kind === "parallel") {
+      const id = newDev(op, devOf(op.top));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      wire(op.top, i);
+      wire(o, op.bot);
+      added = [id];
+    } else if (op.kind === "bridge") {
+      // Lo que llegaba a sus dos bornes se une directo, sin el contacto.
+      const ws = [...ends(op.top), ...ends(op.bot)];
+      const others = ws.map((w) => ([op.top, op.bot].includes(w.from) ? w.to : w.from)).filter((e) => e !== op.top && e !== op.bot);
+      S.spec.wiring = S.spec.wiring.filter((w) => !ws.includes(w));
+      for (let k = 1; k < others.length; k++) wire(others[0], others[k]);
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "cut") {
+      S.spec.wiring = S.spec.wiring.filter((w) => ![w.from, w.to].some((e) => e === op.top || e === op.bot));
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "rung") {
+      let prev = op.pos;
+      for (const it of op.chain) {
+        const id = newDev(it, devOf(op.pos));
+        const [i, o] = it.io.map((t) => `${id}.${t}`);
+        wire(prev, i);
+        prev = o;
+        added.push(id);
+      }
+      wire(prev, op.neg);
+    } else return { error: `operación desconocida: ${op.kind}` };
+    S.sel = added.length ? { kind: "device", id: added[0] } : null;
+    changed();
+    return { added };
+  }
+
   function addWire(from, to) {
     if (from === to || from.split(".")[0] === to.split(".")[0] && from === to) return false;
     if (S.spec.wiring.some((w) => (w.from === from && w.to === to) || (w.from === to && w.to === from))) return false;
@@ -1912,6 +2020,7 @@
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
     window.JwsimPneu?.onSnapshot(S.snap);
+    window.JwsimIec?.onSnapshot(S.snap);
     window.JwsimStateDiag?.onSnapshot?.(S.snap, false);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
@@ -3135,6 +3244,7 @@
       S.fitted = false;
       S.rendered.clear();
       window.JwsimPneu?.onSpec();
+      window.JwsimIec?.onSpec();
       window.JwsimStateDiag?.onSpec?.({ resetProject: true });
       if (!preserveView) {
         if (S.spec.devices.length) setView("scene");
@@ -3161,6 +3271,21 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    editCircuit: (op) => editCircuit(op),
+    // Un dato del equipo que no cambia su dibujo (p. ej. los bornes del PLC
+    // que se escriben en el plano IEC). value undefined lo quita. Ctrl+Z deshace.
+    setDeviceParam(id, key, value) {
+      if (S.running) return false;
+      const dev = S.spec.devices.find((d) => d.id === id);
+      if (!dev) return false;
+      pushHistory();
+      const params = { ...(dev.params ?? {}) };
+      if (value === undefined) delete params[key];
+      else params[key] = value;
+      dev.params = params;
+      changed();
+      return true;
+    },
     // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
     // ancho y del alto, y de qué lado sale) y el color de cada cable.
     terminalOf(end) {
@@ -3248,6 +3373,7 @@
         return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
       },
       wire: (a, b) => addWire(a, b),
+      arrange: () => arrange(),
       act: (id, action, value) => act(id, action, value),
       view3d: () => window.Jwsim3D?.objects() ?? [],
       // Encuadre: zoom y punto de la escena que queda arriba a la izquierda.
@@ -3327,6 +3453,10 @@
     $("scene-undo")?.addEventListener("click", () => undo());
     $("scene-redo")?.addEventListener("click", () => redo());
     $("scene-fit").addEventListener("click", fit);
+    $("scene-arrange")?.addEventListener("click", async () => {
+      const r = await arrange();
+      if (r?.error) console.warn(r.error);
+    });
     $("scene-rearm").addEventListener("click", () => api.sceneRearm());
     api.onSceneSnapshot((snap) => {
       // Relés y contactores externos: clic al atraer y al soltar.
@@ -3347,6 +3477,7 @@
       S.snap = snap;
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
+      window.JwsimIec?.onSnapshot(snap);
       window.JwsimStateDiag?.onSnapshot?.(snap, S.running);
       render();
     });

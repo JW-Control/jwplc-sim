@@ -33,6 +33,7 @@ import { SceneSession, wireSnapshot } from "./lib/scene-session.mjs";
 import { RunnerProcess } from "./lib/sim-port.mjs";
 import { Registry, builtinDevices } from "../scene/devices/index.mjs";
 import { Scene } from "../scene/scene.mjs";
+import { iecModel } from "../scene/iec.mjs";
 import { buildComponent, checkComponent, componentTerminals, componentVars, BLOCK_KINDS, IO_KINDS, SIGNALS } from "../scene/component.mjs";
 import { symbolSvg } from "../scene/component-symbol.mjs";
 import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
@@ -1211,6 +1212,51 @@ ipcMain.handle("scene:analyze", async (_e, spec) => {
     return { snapshot: wireSnapshot(new Scene(spec, { registry: await registry() }).snapshot()) };
   } catch (err) {
     return { error: err.message };
+  }
+});
+
+// Esquema normalizado (IEC 60617) generado del circuito: hojas con la
+// geometría y el borne de referencia de cada tramo (scene/iec.mjs).
+ipcMain.handle("scene:iec", async (_e, { spec, title }) => {
+  try {
+    return iecModel(new Scene(spec, { registry: await registry() }), { title });
+  } catch (err) {
+    return { error: err.message, sheets: [] };
+  }
+});
+
+// Esquema IEC a PDF: una hoja por página (A4 apaisada por defecto, o A3), impresa por
+// una ventana oculta con el SVG y los estilos que manda la vista.
+ipcMain.handle("iec:pdf", async (_e, { pages, css, name, size: req }) => {
+  const size = req === "A3" ? "A3" : "A4";
+  const fmt = size === "A4" ? { w: 297, h: 210 } : { w: 420, h: 297 };
+  const html =
+    `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:${size === "A4" ? "A4" : "A3"} landscape;margin:0}` +
+    `html,body{margin:0;background:#fff}.iec-view{position:static;display:block;background:#fff;color-scheme:light}` +
+    `.pg{width:${fmt.w}mm;height:${fmt.h}mm;page-break-after:always;overflow:hidden}.pg:last-child{page-break-after:auto}.pg svg{display:block;width:100%;height:100%}` +
+    `${css}</style></head><body><div class="iec-view">${pages.map((p) => `<div class="pg">${p}</div>`).join("")}</div></body></html>`;
+  let file;
+  if (process.env.JWSIM_E2E_PDF_DIR) file = join(process.env.JWSIM_E2E_PDF_DIR, `${basename(name || "esquema")}.pdf`);
+  else {
+    const r = await dialog.showSaveDialog(win, {
+      title: "Exportar esquema IEC a PDF",
+      defaultPath: join(workspaceDir(), `${name || "esquema"} - esquema IEC.pdf`),
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+    });
+    if (r.canceled || !r.filePath) return null;
+    file = r.filePath;
+  }
+  const tmp = join(app.getPath("temp"), `jwsim-iec-${process.pid}.html`);
+  writeFileSync(tmp, html);
+  const pw = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
+  try {
+    await pw.loadFile(tmp);
+    const pdf = await pw.webContents.printToPDF({ pageSize: size === "A4" ? "A4" : "A3", landscape: true, printBackground: true, margins: { marginType: "none" } });
+    writeFileSync(file, pdf);
+    return { file, pages: pages.length };
+  } finally {
+    pw.destroy();
+    rmSync(tmp, { force: true });
   }
 });
 

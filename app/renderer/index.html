@@ -63,7 +63,7 @@
       </div>
       <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
         <button class="seg active" id="schem-color" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
-        <button class="seg" role="radio" aria-checked="false" disabled title="Símbolos IEC 60617 generados del mismo circuito: llega en la fase 3">Normalizado (IEC)</button>
+        <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado (IEC)</button>
         <button class="seg" id="schem-pneu" role="radio" aria-checked="false" title="Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento">Neumático</button>
       </div>
     </nav>
@@ -203,6 +203,16 @@
                   </g>
                 </svg>
                 </div>
+                <!-- Esquema normalizado IEC (iec.js): reemplaza al lienzo mientras se mira. -->
+                <div id="iec-view" class="iec-view" hidden>
+                  <svg id="iec-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Esquema normalizado IEC" preserveAspectRatio="xMidYMid meet"></svg>
+                  <div class="iec-tools"><button id="iec-fit" class="icon" title="Ajustar: ver la hoja completa" aria-label="Ajustar">⤢</button>
+                    <div class="iec-sheets" id="iec-sheets" role="tablist" aria-label="Hojas"></div>
+                    <span class="iec-legend"><i class="on"></i>con tensión</span>
+                    <span class="iec-export"><select id="iec-size" title="Tamaño de hoja" aria-label="Tamaño de hoja"><option value="A4" selected>A4</option><option value="A3">A3</option></select><button id="iec-pdf" title="Exportar todas las hojas a PDF (apaisado, sin el estado de la simulación)">⇩ PDF</button></span></div>
+                  <div class="iec-empty" id="iec-empty" hidden></div>
+                  <div class="iec-edit" id="iec-edit" role="menu" hidden></div>
+                </div>
                 <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
                 <div id="pn-view" class="pn-view" hidden>
                   <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Circuito neumático" preserveAspectRatio="xMidYMid meet"></svg>
@@ -214,6 +224,7 @@
                   <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>
                   <button id="scene-redo" class="icon" title="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>↷</button>
                   <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
+                  <button id="scene-arrange" class="icon" title="Ordenar como tablero: entradas arriba del PLC, salidas abajo y potencia bajo su contactor, en el orden del esquema IEC (se deshace con Ctrl+Z)" aria-label="Ordenar como tablero">▦</button>
                   <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
                   <button id="scene-sound" class="icon" title="Sonido (relés, contactores y buzzer)" aria-label="Sonido">🔊</button>
                 </div>
@@ -428,8 +439,10 @@
     <script src="sound.js"></script>
     <script src="scene-symbols.js"></script>
     <script src="../lib/cylinder-sensors.cjs"></script>
+    <script src="../lib/scene-arrange.cjs"></script>
     <script src="scene.js"></script>
     <script src="pneumatic.js"></script>
+    <script src="iec.js"></script>
     <script src="../lib/state-diagram-core.cjs"></script>
     <script src="state-diagram.js"></script>
     <script src="tabs.js"></script>
