@@ -208,8 +208,10 @@
                   <svg id="iec-svg" xmlns="http://www.w3.org/2000/svg" aria-label="Esquema normalizado IEC" preserveAspectRatio="xMidYMid meet"></svg>
                   <div class="iec-tools"><button id="iec-fit" class="icon" title="Ajustar: ver la hoja completa" aria-label="Ajustar">⤢</button>
                     <div class="iec-sheets" id="iec-sheets" role="tablist" aria-label="Hojas"></div>
-                    <span class="iec-legend"><i class="on"></i>con tensión</span></div>
+                    <span class="iec-legend"><i class="on"></i>con tensión</span>
+                    <span class="iec-export"><select id="iec-size" title="Tamaño de hoja" aria-label="Tamaño de hoja"><option value="A4" selected>A4</option><option value="A3">A3</option></select><button id="iec-pdf" title="Exportar todas las hojas a PDF (apaisado, sin el estado de la simulación)">⇩ PDF</button></span></div>
                   <div class="iec-empty" id="iec-empty" hidden></div>
+                  <div class="iec-edit" id="iec-edit" role="menu" hidden></div>
                 </div>
                 <!-- Circuito neumático (pneumatic.js): reemplaza al lienzo mientras se mira. -->
                 <div id="pn-view" class="pn-view" hidden>
@@ -222,6 +224,7 @@
                   <button id="scene-undo" class="icon" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>↶</button>
                   <button id="scene-redo" class="icon" title="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>↷</button>
                   <button id="scene-fit" class="icon" title="Ajustar: ver toda la escena" aria-label="Ajustar">⤢</button>
+                  <button id="scene-arrange" class="icon" title="Ordenar como tablero: entradas arriba del PLC, salidas abajo y potencia bajo su contactor, en el orden del esquema IEC (se deshace con Ctrl+Z)" aria-label="Ordenar como tablero">▦</button>
                   <button id="scene-rearm" class="icon" title="Rearmar las fuentes disparadas y reponer las cargas quemadas" aria-label="Rearmar" disabled>↺</button>
                   <button id="scene-sound" class="icon" title="Sonido (relés, contactores y buzzer)" aria-label="Sonido">🔊</button>
                 </div>
@@ -436,6 +439,7 @@
     <script src="sound.js"></script>
     <script src="scene-symbols.js"></script>
     <script src="../lib/cylinder-sensors.cjs"></script>
+    <script src="../lib/scene-arrange.cjs"></script>
     <script src="scene.js"></script>
     <script src="pneumatic.js"></script>
     <script src="iec.js"></script>

@@ -110,6 +110,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   sceneSymbols: () => ipcRenderer.invoke("scene:symbols"),
   sceneAnalyze: (spec) => ipcRenderer.invoke("scene:analyze", spec),
   sceneIec: (spec, title) => ipcRenderer.invoke("scene:iec", { spec, title }),
+  iecPdf: (pages, css, name, size) => ipcRenderer.invoke("iec:pdf", { pages, css, name, size }),
   sceneAct: (device, action, value) => ipcRenderer.invoke("scene:act", { device, action, value }),
   sceneRearm: () => ipcRenderer.invoke("scene:rearm"),
   sceneInject: (fault) => ipcRenderer.invoke("scene:inject", fault),
