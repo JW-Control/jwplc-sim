@@ -5664,6 +5664,29 @@ body[data-schem="iec"] .scene-float {
   opacity: 0.12;
   pointer-events: none;
 }
+.iec-colflash.soft {
+  opacity: 0.06;
+}
+/* Destino exacto de una referencia: anillo con mira que late. */
+.iec-target {
+  pointer-events: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  animation: iec-target 0.65s ease-in-out 4;
+}
+.iec-target circle {
+  fill: var(--accent);
+  fill-opacity: 0.14;
+}
+.iec-target line {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+}
+@keyframes iec-target {
+  50% {
+    opacity: 0.5;
+  }
+}
 .iec-el.flash {
   animation: iec-flash 0.45s ease-in-out 3;
 }

@@ -140,7 +140,10 @@
 
   // Flecha de continuación (▽) con su destino «hoja-FilaColumna», clicable.
   const arrowDown = (x, y, on) => `<path class="iec-l iec-arrow${on ? " on" : ""}" d="M${x - 5} ${y}L${x + 5} ${y}L${x} ${y + 9}z"/>`;
-  const gotoT = (x, y, ref, anchor = "start") => (ref ? T(x, y, ref, "iec-ref iec-xref", anchor, ` data-goto="${ref}"`) : "");
+  // Atributos de una referencia clicable: celda «hoja-FilaColumna» y, si se
+  // conoce, el punto exacto del destino (para marcar el elemento mismo).
+  const goA = (ref, pt) => ` data-goto="${ref}"${pt ? ` data-pt="${pt}"` : ""}`;
+  const gotoT = (x, y, ref, anchor = "start", pt) => (ref ? T(x, y, ref, "iec-ref iec-xref", anchor, goA(ref, pt)) : "");
   const hitOf = (e) => `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
   const wrapEl = (sh, e, inner) => {
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
@@ -155,7 +158,7 @@
     const y = e.y - 6;
     let s = L(e.x, e.y - SYM, e.x, y, `iec-lead${wireCls(sh, e.top)}${on ? " on" : ""}`) + arrowDown(e.x, y, on);
     s += T(e.x + 9, y + 8, `${e.label}:${e.io ?? e.cid}`, "iec-io", "start");
-    s += gotoT(e.x + 9, y + 20, e.ref);
+    s += gotoT(e.x + 9, y + 20, e.ref, "start", e.refPt);
     return wrapEl(sh, e, s);
   }
 
@@ -167,8 +170,8 @@
     let s = L(e.x, e.y - SYM, e.x, e.y - 14, `iec-lead${wireCls(sh, e.top)}${onT ? " on" : ""}`) + arrowDown(e.x, e.y - 14, onT);
     s += arrowDown(e.x, e.y + 3, onB) + L(e.x, e.y + 12, e.x, e.y + SYM, `iec-lead${wireCls(sh, e.bot)}${onB ? " on" : ""}`);
     // A la izquierda el borne del módulo; a la derecha, dónde está.
-    s += T(e.x - 9, e.y - 6, `${e.io} COM`, "iec-io", "end") + gotoT(e.x + 9, e.y - 6, e.ref);
-    s += T(e.x - 9, e.y + 12, `${e.io} NA`, "iec-io", "end") + gotoT(e.x + 9, e.y + 12, e.ref2);
+    s += T(e.x - 9, e.y - 6, `${e.io} COM`, "iec-io", "end") + gotoT(e.x + 9, e.y - 6, e.ref, "start", e.refPt);
+    s += T(e.x - 9, e.y + 12, `${e.io} NA`, "iec-io", "end") + gotoT(e.x + 9, e.y + 12, e.ref2, "start", e.ref2Pt);
     s += T(e.x - 9, e.y - 20, e.label, "iec-desig", "end");
     return wrapEl(sh, e, s);
   }
@@ -185,7 +188,7 @@
     let lab = e.inModule ? "" : T(lx, e.y - 2, e.label, "iec-desig", "end");
     // La función va en la franja de arriba de su columna (colTexts).
     if (isC && e.io) lab += T(e.x + 19, e.y + 4, e.io, "iec-io", "start");
-    if (e.ref) lab += T(lx, e.y + 11, `/${e.ref}`, "iec-ref", "end", ` data-goto="${e.ref}"`);
+    if (e.ref) lab += T(lx, e.y + 11, `/${e.ref}`, "iec-ref", "end", goA(e.ref, e.refPt));
     // Bornes.
     const tt = T(e.x + 5, e.y - SYM + 7, e.tTop, "iec-term", "start") + T(e.x + 5, e.y + SYM - 1, e.tBot, "iec-term", "start");
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
@@ -203,7 +206,7 @@
       const k = r.nc ? "nc" : "na";
       const yy = y0 + 22 + rows[k]++ * 10;
       const xx = r.nc ? e.x + 3 : e.x - 3;
-      s += T(xx, yy, `${r.cid} /${r.at}`, "iec-ref", r.nc ? "start" : "end", ` data-goto="${r.at}"`);
+      s += T(xx, yy, `${r.cid} /${r.at}`, "iec-ref", r.nc ? "start" : "end", goA(r.at, r.pt));
     }
     return s;
   }
@@ -250,7 +253,7 @@
     }
     const lx = x0 - 16;
     let lab = T(lx, y + b.h / 2 - 2, b.label, "iec-desig", "end");
-    if (b.ref) lab += T(lx, y + b.h / 2 + 11, `/${b.ref}`, "iec-ref", "end", ` data-goto="${b.ref}"`);
+    if (b.ref) lab += T(lx, y + b.h / 2 + 11, `/${b.ref}`, "iec-ref", "end", goA(b.ref, b.refPt));
     const flash = S.flash && S.flash.dev === b.dev ? " flash" : "";
     return `<g class="iec-el iec-block ${on ? "on" : ""}${flash}" data-dev="${esc(b.dev)}">${s}${lab}</g>`;
   }
@@ -278,7 +281,7 @@
       s += T(x + g.colW / 2, 24, String(c + 1), "iec-colnum");
       if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) {
         const r = S.flash.row;
-        s += `<rect class="iec-colflash" x="${x}" y="${r ? g.y0 + (r - 1) * g.rowH : 30}" width="${g.colW}" height="${r ? g.rowH : yB - 30}"/>`;
+        s += `<rect class="iec-colflash${S.flash.pt ? " soft" : ""}" x="${x}" y="${r ? g.y0 + (r - 1) * g.rowH : 30}" width="${g.colW}" height="${r ? g.rowH : yB - 30}"/>`;
       }
     }
     for (let r = 0; r < g.rows; r++) {
@@ -360,7 +363,7 @@
       const up = ln.dir === "up";
       const y = ln.y;
       s += `<path class="iec-l iec-body" d="M${ln.x - 5} ${up ? y + 9 : y - 9}L${ln.x + 5} ${up ? y + 9 : y - 9}L${ln.x} ${y}z"/>`;
-      if (ln.at) s += T(ln.x, up ? y - 6 : y + 20, ln.at, "iec-ref iec-xref", "middle", ` data-goto="${ln.at}"`);
+      if (ln.at) s += T(ln.x, up ? y - 6 : y + 20, ln.at, "iec-ref iec-xref", "middle", goA(ln.at, ln.pt));
       if (ln.desc) {
         // Texto a lo largo del cable, leído de abajo arriba (como en los planos).
         const yy = up ? y + 16 : y - 16;
@@ -391,7 +394,7 @@
         const cls = i === 0 ? "iec-io" : last ? "iec-ref" : "iec-tabc";
         const ed = r.edit && r.edit.col === i ? r.edit : null;
         if (ed) s += `<rect class="iec-cellhit" x="${xs[i]}" y="${y}" width="${t.cw[i]}" height="${t.rowH}" data-borne="${esc(ed.ch ?? "")}" data-dev="${esc(ed.dev)}" data-value="${esc(ed.value)}"><title>Clic: escribir el borne</title></rect>`;
-        s += T(xs[i] + 4, y + t.rowH - 4, fit(String(c), t.cw[i]), `${cls}${r.free && !last ? " iec-free" : ""}`, "start", last ? ` data-goto="${r.at}"` : "");
+        s += T(xs[i] + 4, y + t.rowH - 4, fit(String(c), t.cw[i]), `${cls}${r.free && !last ? " iec-free" : ""}`, "start", last ? goA(r.at, r.pt) : "");
       });
     });
     for (let i = 1; i < xs.length - 1; i++) s += L(xs[i], y0, xs[i], y0 + H, "iec-thin");
@@ -424,6 +427,13 @@
     for (const b of sh.blocks) s += block(sh, b);
     for (const e of sh.elems) s += elem(sh, e);
     if (sh.rails) for (const e of sh.elems) if (/^coil/.test(e.kind)) s += xrefTable(e, sh.rails.bot.y + 14);
+    // Destino exacto de la referencia seguida: anillo y mira sobre el
+    // elemento (en zonas apretadas, como los bornes del PLC, la celda sola
+    // no dice cuál es).
+    if (S.flash?.pt && S.flash.sheet === sh.n) {
+      const [x, y] = S.flash.pt;
+      s += `<g class="iec-target"><circle cx="${x}" cy="${y}" r="13"/>${L(x - 21, y, x - 15, y)}${L(x + 15, y, x + 21, y)}${L(x, y - 21, x, y - 15)}${L(x, y + 15, x, y + 21)}</g>`;
+    }
     return s;
   }
 
@@ -460,7 +470,7 @@
     $("iec-svg").setAttribute("viewBox", S.vb.box.join(" "));
   }
 
-  function goto(at) {
+  function goto(at, pt) {
     // «4-C3» (hoja-FilaColumna); también acepta el formato viejo «4.3».
     const m = /^(\d+)-([A-Z])(\d+)$/.exec(String(at)) ?? /^(\d+)\.(\d+)$/.exec(String(at));
     if (!m) return;
@@ -471,13 +481,18 @@
     if (i < 0) return;
     S.sheet = i;
     S.vb = null;
-    S.flash = { sheet: n, col, row };
+    const p = /^(-?\d+),(-?\d+)$/.exec(String(pt ?? ""));
+    S.flash = { sheet: n, col, row, pt: p ? [Number(p[1]), Number(p[2])] : null };
     draw();
     clearTimeout(S.flashT);
-    S.flashT = setTimeout(() => {
-      S.flash = null;
-      draw();
-    }, 1400);
+    // Con punto exacto la marca dura más: hay que encontrarla con la vista.
+    S.flashT = setTimeout(
+      () => {
+        S.flash = null;
+        draw();
+      },
+      p ? 2600 : 1400,
+    );
   }
 
   async function load() {
@@ -664,7 +679,7 @@
     );
     svg.addEventListener("pointerdown", (e) => {
       const g = e.target.closest?.("[data-goto]");
-      if (g) return goto(g.dataset.goto);
+      if (g) return goto(g.dataset.goto, g.dataset.pt);
       if (!S.vb) return;
       S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box], target: e.target, moved: false };
       svg.setPointerCapture(e.pointerId);

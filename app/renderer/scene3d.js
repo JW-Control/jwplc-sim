@@ -558,26 +558,37 @@ function buildCylinder(p) {
 /** Posición x de la cabeza del vástago para una posición 0..1. */
 const headX = (pos) => CYL.front + 0.03 + CYL.rodOut + pos * CYL.S;
 
-/** Final de carrera de rodillo (cuerpo negro sobre base azul) bajo el recorrido de la cabeza. */
+/**
+ * Final de carrera de rodillo (tipo XCK): cuerpo metálico con su tapa y
+ * piloto al frente, cabezal giratorio negro arriba y prensaestopa abajo. La
+ * palanca sale del eje del cabezal y apunta a +y con el rodillo en y = 0.05;
+ * el cuerpo queda debajo. Origen: a la altura del eje, detrás de la palanca.
+ */
 function rollerSwitch() {
   const g = new THREE.Group();
-  const base = cyl(0.045, 0.02, mat(0x1f6fd1), 24);
-  base.rotation.x = Math.PI / 2;
-  base.position.set(0, -0.06, -0.02);
-  const body = box(0.07, 0.11, 0.06, mat(0x1b1e22, { roughness: 0.5 }));
-  body.position.y = -0.055;
-  const plug = box(0.05, 0.03, 0.02, mat(0xd8323a));
-  plug.position.set(0, -0.06, 0.04);
+  const metal = mat(0x9aa3ad, { metalness: 0.6, roughness: 0.35 });
+  const body = box(0.06, 0.095, 0.05, metal);
+  body.position.y = -0.0825;
+  const cover = box(0.048, 0.072, 0.004, mat(0x5b6470, { metalness: 0.4, roughness: 0.4 }));
+  cover.position.set(0, -0.085, 0.026);
+  const head = box(0.046, 0.034, 0.046, mat(0x1b1e22, { roughness: 0.5 }));
+  head.position.y = -0.0175;
+  const shaft = cyl(0.008, 0.012, metal, 12);
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.set(0, -0.0175, 0.028);
+  const gland = cyl(0.011, 0.022, mat(0x1b1e22, { roughness: 0.6 }), 12);
+  gland.position.y = -0.141;
   const lever = new THREE.Group();
-  const arm = box(0.012, 0.05, 0.012, mat(0x9aa3ad, { metalness: 0.7 }));
-  arm.position.y = 0.025;
-  const roller = cyl(0.016, 0.02, mat(0x2a2e33), 16);
+  lever.position.set(0, -0.0175, 0.034);
+  const arm = box(0.012, 0.072, 0.006, metal);
+  arm.position.y = 0.032;
+  const roller = cyl(0.016, 0.014, mat(0x2a2e33), 16);
   roller.rotation.x = Math.PI / 2;
-  roller.position.y = 0.05;
+  roller.position.set(0, 0.0675, 0.004);
   lever.add(arm, roller);
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), mat(COL.off, { emissive: 0x000000 }));
-  lamp.position.set(0.022, -0.03, 0.031);
-  g.add(base, body, plug, lever, lamp);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.012, -0.06, 0.029);
+  g.add(body, cover, head, shaft, gland, lever, lamp);
   g.userData.lamp = lamp;
   g.userData.lever = lever;
   return g;
@@ -1036,6 +1047,13 @@ function rebuild(spec) {
         model.cyl.add(b);
         beacons.push({ id: s.id, b });
         continue;
+      }
+      if (model.liftSwitch && s.type === "jwsim/limit-switch") {
+        const b = model.liftSwitch(s, key, LIFT_K);
+        if (b) {
+          beacons.push({ id: s.id, b });
+          continue;
+        }
       }
       if (model.sensor) {
         const b = model.sensor(key);
@@ -2863,6 +2881,10 @@ function buildBuilding(p, spec = { devices: [] }) {
 
 /** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
 const LIFT_K = 0.5;
+/** Leva de la cabina (altura local de su centro y media altura) y columnas de los finales de altura. */
+const CAM_Y = 0.55;
+const CAM_H = 0.06;
+const LIFT_SW = { x: [0.2, 0.4], z: 0.628 };
 let MESH_TEX = null;
 /** Malla metálica (rejilla de 10 cm) con fondo transparente, para el pozo y las puertas. */
 function meshTexture() {
@@ -3033,12 +3055,20 @@ function buildLift(p) {
     edge.position.set(1.23, y + 0.01, 0);
     g.add(edge);
     if (i > 0) {
-      // Baranda: pasamanos, travesaño y rodapié en x = 2.58 y z = ±0.68.
+      // Baranda: pasamanos, travesaño y rodapié en x = 2.58 y z = ±0.68,
+      // sobre parantes apoyados en la losa (a lo más cada 0.7 m).
       const hr = (len, x, z, alongZ) => {
         for (const [hy, th] of [[0.95, 0.035], [0.5, 0.025], [0.06, 0.12]]) {
           const r = alongZ ? box(0.03, th, len, yellow) : box(len, th, 0.03, yellow);
           r.position.set(x, y + hy, z);
           g.add(r);
+        }
+        const k = Math.max(1, Math.ceil(len / 0.7));
+        for (let j = 0; j <= k; j++) {
+          const u = -len / 2 + 0.02 + (j * (len - 0.04)) / k;
+          const pst = box(0.04, 0.97, 0.04, yellow);
+          pst.position.set(alongZ ? x : x + u, y + 0.485, alongZ ? u : z);
+          g.add(pst);
         }
       };
       hr(1.4, 2.58, 0, true);
@@ -3062,6 +3092,16 @@ function buildLift(p) {
     door.position.set(1.18, y + 0.5, 0);
     g.add(door);
     doors.push(door);
+    // Marco de la puerta del lado del piso: jambas y dintel (allí van el
+    // final de puerta y la botonera de llamada).
+    for (const zz of [-0.52, 0.52]) {
+      const jb = box(0.04, 1.32, 0.04, yellow);
+      jb.position.set(1.25, y + 0.66, zz);
+      g.add(jb);
+    }
+    const lintel = box(0.04, 0.05, 1.08, yellow);
+    lintel.position.set(1.25, y + 1.3, 0);
+    g.add(lintel);
     const tag = label(i === 0 ? "PB" : `P${i}`);
     tag.position.set(2.4, y + 0.3, 0.6);
     g.add(tag);
@@ -3074,21 +3114,24 @@ function buildLift(p) {
       g.add(c);
     }
   }
-  // Botonera de llamada en cada piso, junto a la puerta: un pulsador por
-  // piso que se acciona con clic (el que nombra ese piso en su rótulo).
+  // Botonera de llamada en cada piso: caja en la jamba del lado +z de la
+  // puerta, a la altura de la mano (1.2 m reales) y girada hacia el frente
+  // para verla y pulsarla con clic sin rodear el pozo.
   const station = (i, id) => {
     const st = new THREE.Group();
-    const plateB = box(0.02, 0.2, 0.12, mat(0xc9cfd6, { metalness: 0.5, roughness: 0.3 }));
-    const btn = cyl(0.03, 0.025, mat(0x2f8be0, { roughness: 0.4 }), 18);
+    const boxB = box(0.05, 0.26, 0.15, mat(0xc9cfd6, { metalness: 0.5, roughness: 0.3 }));
+    boxB.position.x = 0.025;
+    const btn = cyl(0.04, 0.03, mat(0x2f8be0, { roughness: 0.4 }), 20);
     btn.rotation.z = Math.PI / 2;
-    btn.position.x = 0.015;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.006, 6, 20), mat(0xb8c0c8, { metalness: 0.7 }));
+    btn.position.x = 0.065;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.047, 0.007, 6, 22), mat(0xb8c0c8, { metalness: 0.7 }));
     ring.rotation.y = Math.PI / 2;
-    ring.position.x = 0.012;
+    ring.position.x = 0.052;
     const t = label(id);
-    t.position.set(0.05, 0.17, 0);
-    st.add(plateB, btn, ring, t);
-    st.position.set(1.22, i * H + 0.55, 0.6);
+    t.position.set(0.06, 0.22, 0);
+    st.add(boxB, btn, ring, t);
+    st.position.set(1.27, i * H + 0.6, 0.56);
+    st.rotation.y = -Math.PI / 5;
     g.add(st);
     return { btn };
   };
@@ -3116,14 +3159,84 @@ function buildLift(p) {
   const extra = box(0.5, 0.36, 0.5, mat(0xd8282d));
   extra.position.set(0.05, 0.56, 0.05);
   extra.visible = false;
-  cab.add(floor, roof, backW, side1, side2, yoke, yokeL, yokeR, crate, extra);
+  // Leva (rampa naranja) en el costado +z de la cabina: al pasar empuja el
+  // rodillo de los finales de piso y, si se pasa de largo, los de seguridad.
+  const cam = box(0.34, 2 * CAM_H, 0.04, mat(0xff8a00, { roughness: 0.5 }));
+  // Cubre en x los rodillos de las dos columnas (x ≈ 0.26 y 0.46 en el pozo).
+  cam.position.set(0.36 - 0.55, CAM_Y, 0.505);
+  const camArm = box(0.04, 0.04, 0.03, steel);
+  camArm.position.set(0.36 - 0.55, CAM_Y, 0.47);
+  cab.add(floor, roof, backW, side1, side2, yoke, yokeL, yokeR, crate, extra, cam, camArm);
   cab.position.set(0.55, 0, 0);
   const rope = cyl(0.01, 1, mat(0x23272d), 6);
   rope.position.set(0.55, 0, 0);
   const cwRope = cyl(0.008, 1, mat(0x23272d), 6);
   cwRope.position.set(-0.22, 0, -0.2);
   g.add(cab, rope, cwRope);
-  return { group: g, cab, rope, cw, cwRope, drum, doors, extra, tall, station, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
+  /**
+   * Final de carrera del montacargas, montado donde lo acciona su pieza:
+   *  - altura (SQ de piso y de seguridad): por fuera del costado +z del pozo,
+   *    con la palanca hacia adentro; lo empuja la leva de la cabina. Los de
+   *    piso van en la columna A (rodillo a la mitad de la leva cuando la
+   *    cabina está en su cota); los de sobrerrecorrido en la B, con el
+   *    rodillo justo encima (o debajo) del borde de la leva: solo los toca
+   *    si la cabina se pasa.
+   *  - puertaN (SP): colgado del dintel de la puerta de ese piso, con el
+   *    rodillo sobre el larguero de arriba de la puerta: puerta cerrada =
+   *    palanca pisada.
+   *  - sobrecarga (BW): sobre el techo de la cabina, junto al enganche del
+   *    cable (viaja con la cabina).
+   * Devuelve el grupo ya ubicado, o null si la señal no es de este equipo.
+   */
+  const liftSwitch = (s, key, epK) => {
+    const b = rollerSwitch();
+    const min = Number(s.params?.min ?? 0);
+    const max = Number(s.params?.max ?? min);
+    let sc = 1.6;
+    let parent = g;
+    if (key === "altura") {
+      const up = max >= 50;
+      const down = min <= -50;
+      const col = up || down ? 1 : 0;
+      const k = (up ? min : down ? max : (min + max) / 2) * epK;
+      // Cuerpo vertical con el frente (y su piloto) hacia +x y la palanca
+      // horizontal hacia el pozo; el rodillo queda 0.028 m bajo el origen.
+      const y = k + CAM_Y + (up ? CAM_H + 0.03 : down ? -CAM_H - 0.03 : 0) + 0.028;
+      const x = LIFT_SW.x[col];
+      b.rotation.y = Math.PI / 2;
+      b.userData.leverRest = -Math.PI / 2;
+      b.userData.lever.rotation.z = -Math.PI / 2;
+      b.position.set(x, y, LIFT_SW.z);
+      // Ménsula: pletina detrás del cuerpo hasta la columna del pozo (x = 0).
+      const bar = box(x + 0.04, 0.03, 0.02, mat(0x5b6470, { metalness: 0.4 }));
+      bar.position.set((x + 0.04) / 2 - 0.015, y - 0.15, 0.688);
+      const leg = box(0.03, 0.03, 0.11, bar.material);
+      leg.position.set(0, y - 0.15, 0.64);
+      g.add(bar, leg);
+    } else if (/^puerta\d+$/.test(key)) {
+      const i = Number(key.slice(6));
+      if (i >= n) return null;
+      sc = 1.4;
+      const y = i * H;
+      b.setRotationFromMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, -1, 0), new THREE.Vector3(1, 0, 0)));
+      b.position.set(1.127, y + 1.082, -0.36);
+      const br = box(0.1, 0.03, 0.05, mat(0x5b6470, { metalness: 0.4 }));
+      br.position.set(1.19, y + 1.29, -0.36);
+      g.add(br);
+    } else if (key === "sobrecarga") {
+      sc = 1.2;
+      b.position.set(-0.2, 1.02 + 0.152 * sc, 0.25);
+      parent = cab;
+    } else return null;
+    b.scale.setScalar(sc);
+    parent.add(b);
+    // Rótulo arriba del interruptor, sea cual sea su giro.
+    const t = label(s.id);
+    t.position.copy(new THREE.Vector3(0, 0.16, 0).applyQuaternion(b.quaternion.clone().invert()).divideScalar(sc));
+    b.add(t);
+    return b;
+  };
+  return { group: g, cab, rope, cw, cwRope, drum, doors, extra, tall, station, liftSwitch, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
 /** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
@@ -3264,7 +3377,7 @@ function frame(now) {
       const sp = valOf(outOf(String(o.motor ?? "")).speed);
       m.drum.rotation.x += sp * 0.3;
       m.motorRotor?.update({ speed: sp });
-      for (const c of m.calls ?? []) c.btn.position.x = window.JwsimScene?.actionState?.(c.id, "press") ? 0.004 : 0.015;
+      for (const c of m.calls ?? []) c.btn.position.x = window.JwsimScene?.actionState?.(c.id, "press") ? 0.052 : 0.065;
       m.doors.forEach((dd, i) => {
         dd.position.z = out[`puerta${i}`] ? 0.8 : 0;
       });
@@ -3295,7 +3408,7 @@ function frame(now) {
       const so = outOf(sid);
       const on = !!(so.actuated ?? so.detecting);
       lightBeacon(b, on);
-      if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
+      if (b.userData.lever) b.userData.lever.rotation.z = (b.userData.leverRest ?? 0) + (on ? 0.45 : 0);
     }
   }
   for (const f of V.field ?? []) f.m.update(outOf(f.id));
@@ -3399,4 +3512,12 @@ window.Jwsim3D = {
     return out;
   },
   objects: () => [...V.objects.entries()].map(([id, o]) => ({ id, type: o.type, beacons: o.beacons.length })),
+  /** Para pruebas: posición en la escena del origen de un equipo de planta. */
+  objectAt(id) {
+    const g = V.objects.get(id)?.model.group;
+    if (!g) return null;
+    const v = new THREE.Vector3();
+    g.getWorldPosition(v);
+    return [v.x, v.y, v.z];
+  },
 };

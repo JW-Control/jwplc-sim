@@ -69,8 +69,26 @@ try {
   await sleep(300);
   await t(() => document.querySelector('#iec-root .iec-block[data-dev="KM1"] [data-goto]').dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));
   await sleep(300);
-  const after = await t(() => ({ sheet: window.JwsimIec.debug().sheet, flash: !!document.querySelector("#iec-root .iec-colflash") }));
-  criteria.CROSS_REF = { ok: coil && after.sheet === 3 && after.flash, coil, ...after };
+  const after = await t(() => ({ sheet: window.JwsimIec.debug().sheet, flash: !!document.querySelector("#iec-root .iec-colflash"), target: !!document.querySelector("#iec-root .iec-target") }));
+  // En la hoja del PLC varios bornes comparten celda: la flecha de una
+  // entrada marca su borne exacto (anillo sobre el punto del enlace).
+  await win.click('#iec-sheets [data-sheet="2"]');
+  await sleep(300);
+  const plcRef = await t(() => {
+    const g = document.querySelector("#iec-root [data-goto][data-pt]");
+    if (!g) return null;
+    const pt = g.dataset.pt;
+    g.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    return pt;
+  });
+  await sleep(300);
+  const plcHit = await t(() => {
+    const c = document.querySelector("#iec-root .iec-target circle");
+    return { sheet: window.JwsimIec.debug().sheet, at: c ? `${c.getAttribute("cx")},${c.getAttribute("cy")}` : null };
+  });
+  await win.screenshot({ path: join(OUT, "destino-plc.png") });
+  const plcOk = !!plcRef && plcHit.sheet === 1 && plcHit.at === plcRef;
+  criteria.CROSS_REF = { ok: coil && after.sheet === 3 && after.flash && after.target && plcOk, coil, ...after, plcRef, plcHit };
   log(`CROSS_REF ${JSON.stringify(criteria.CROSS_REF)}`);
 
   // PDF: una página por hoja (5), en A4 apaisada (valor por defecto).
