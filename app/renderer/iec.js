@@ -213,30 +213,45 @@
     return (ld ?? es[0])?.text ?? (sh.blocks ?? []).find((b) => b.text && Math.floor((b.x - sh.x0) / sh.colW) === c)?.text ?? "";
   }
 
+  // Marco con la rejilla fija del documento: columnas 1–10 arriba, filas
+  // A–F a la izquierda y franja del cajetín abajo (igual en todas las hojas).
   function frame(sh) {
     const N = S.model.sheets.length;
+    const g = sh.grid ?? { x0: 34, colW: (sh.w - 44) / 10, cols: 10, y0: 50, rowH: (sh.h - 128) / 6, rows: 6 };
+    const yB = g.y0 + g.rowH * g.rows; // arriba de la franja del cajetín
     let s = `<rect class="iec-paper" x="0" y="0" width="${sh.w}" height="${sh.h}"/>`;
     s += `<rect class="iec-frame" x="10" y="10" width="${sh.w - 20}" height="${sh.h - 20}"/>`;
-    // Franja de columnas numeradas.
-    s += L(10, 30, sh.w - 10, 30, "iec-thin") + L(10, 50, sh.w - 10, 50, "iec-thin");
-    for (let c = 0; c < sh.cols; c++) {
+    s += L(g.x0, 10, g.x0, yB, "iec-thin") + L(g.x0, 30, sh.w - 10, 30, "iec-thin") + L(g.x0, 50, sh.w - 10, 50, "iec-thin") + L(10, yB, sh.w - 10, yB, "iec-thin");
+    for (let c = 0; c < g.cols; c++) {
+      const x = g.x0 + c * g.colW;
+      if (c) s += L(x, 10, x, 30, "iec-thin");
+      s += T(x + g.colW / 2, 24, String(c + 1), "iec-colnum");
+      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) s += `<rect class="iec-colflash" x="${x}" y="30" width="${g.colW}" height="${yB - 30}"/>`;
+    }
+    for (let r = 0; r < g.rows; r++) {
+      const y = g.y0 + r * g.rowH;
+      if (r) s += L(10, y, g.x0, y, "iec-thin");
+      s += T(22, y + g.rowH / 2 + 4, String.fromCharCode(65 + r), "iec-colnum");
+    }
+    // Texto de función de cada columna del circuito, en la franja de arriba.
+    for (let c = 0; c < (sh.cols ?? 0); c++) {
+      const ft = sh.kind === "control" || sh.kind === "power" ? colText(sh, c) : "";
+      if (!ft) continue;
       const x = sh.x0 + c * sh.colW;
-      if (x + sh.colW > sh.w - 10) break;
-      s += L(x, 10, x, 30, "iec-thin") + T(x + sh.colW / 2, 24, String(c + 1), "iec-colnum");
-      const ft = colText(sh, c);
-      if (ft) s += T(x + sh.colW / 2, 43, ft.length > 20 ? `${ft.slice(0, 19)}…` : ft, "iec-coltext", "middle", ` data-full="${esc(ft)}"`);
-      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) s += `<rect class="iec-colflash" x="${x}" y="30" width="${sh.colW}" height="${sh.h - 130}"/>`;
+      s += T(x + sh.colW / 2, 43, ft.length > 18 ? `${ft.slice(0, 17)}…` : ft, "iec-coltext", "middle", ` data-full="${esc(ft)}"`);
     }
     // Cajetín.
-    const bw = 380;
+    const bh = sh.h - 10 - yB;
+    const bw = 400;
     const bx = sh.w - 10 - bw;
-    const by = sh.h - 10 - 58;
-    s += `<rect class="iec-titleblock" x="${bx}" y="${by}" width="${bw}" height="58"/>`;
-    s += L(bx + 110, by, bx + 110, by + 58, "iec-thin") + L(bx + 110, by + 29, bx + bw, by + 29, "iec-thin") + L(bx + bw - 70, by, bx + bw - 70, by + 58, "iec-thin");
-    s += T(bx + 55, by + 25, "JW Control", "iec-brand") + T(bx + 55, by + 42, "JWPLC Sim", "iec-tiny");
-    s += T(bx + 118, by + 19, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + 48, sh.title, "iec-tb iec-tb-strong", "start");
-    s += T(bx + bw - 35, by + 19, "Hoja", "iec-tiny") + T(bx + bw - 35, by + 48, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
-    s += T(20, sh.h - 22, `Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346 · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
+    const by = yB;
+    s += `<rect class="iec-titleblock" x="${bx}" y="${by}" width="${bw}" height="${bh}"/>`;
+    s += L(bx + 110, by, bx + 110, by + bh, "iec-thin") + L(bx + 110, by + bh / 2, bx + bw, by + bh / 2, "iec-thin") + L(bx + bw - 70, by, bx + bw - 70, by + bh, "iec-thin");
+    s += T(bx + 55, by + bh / 2, "JW Control", "iec-brand") + T(bx + 55, by + bh / 2 + 16, "JWPLC Sim", "iec-tiny");
+    s += T(bx + 118, by + bh / 2 - 10, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + bh - 12, sh.title, "iec-tb iec-tb-strong", "start");
+    s += T(bx + bw - 35, by + bh / 2 - 10, "Hoja", "iec-tiny") + T(bx + bw - 35, by + bh - 12, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
+    s += T(20, by + 18, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
+    s += T(20, by + 32, `Referencias /hoja.columna · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
     return s;
   }
 
@@ -296,28 +311,28 @@
     return `<g class="iec-el iec-block${flash}" data-dev="${esc(m.dev)}">${s}</g>`;
   }
 
-  // Mapa de E/S: dirección, descripción, equipo y dónde está (clicable).
-  function ioTable(t) {
+  // Tabla (lista de E/S y bornes): encabezado gris, filas, referencia clicable.
+  function table(t) {
+    if (t.note) return T(t.x, t.y, t.note, "iec-tiny", "start");
     const W = t.cw.reduce((a, v) => a + v, 0);
     const xs = t.cw.reduce((a, v) => [...a, a[a.length - 1] + v], [t.x]);
-    const head = ["Dirección", "Descripción", "Equipo / borne", "Ref."];
     const y0 = t.y + 20;
-    const H = 20 + t.rowH * (t.rows.length + 1);
+    const H = t.rowH * (t.rows.length + 1);
     let s = T(t.x, t.y + 12, t.title, "iec-tabt", "start");
-    s += `<rect class="iec-l iec-nofill" x="${t.x}" y="${y0}" width="${W}" height="${H - 20}"/>`;
     s += `<rect class="iec-tabhead" x="${t.x}" y="${y0}" width="${W}" height="${t.rowH}"/>`;
-    head.forEach((h, i) => (s += T(xs[i] + 4, y0 + t.rowH - 4, h, "iec-tabh", "start")));
+    s += `<rect class="iec-l iec-nofill" x="${t.x}" y="${y0}" width="${W}" height="${H}"/>`;
+    t.head.forEach((h, i) => (s += T(xs[i] + 4, y0 + t.rowH - 4, h, "iec-tabh", "start")));
+    const fit = (txt, w) => (txt.length * 5.4 > w - 8 ? `${txt.slice(0, Math.max(1, Math.floor((w - 8) / 5.4) - 1))}…` : txt);
     t.rows.forEach((r, k) => {
       const y = y0 + t.rowH * (k + 1);
       s += L(t.x, y, t.x + W, y, "iec-thin");
-      const fit = (txt, w) => (txt.length * 5.6 > w - 8 ? `${txt.slice(0, Math.floor((w - 8) / 5.6) - 1)}…` : txt);
-      const cls = r.free ? " iec-free" : "";
-      s += T(xs[0] + 4, y + t.rowH - 4, r.io, `iec-io${cls}`, "start");
-      s += T(xs[1] + 4, y + t.rowH - 4, fit(r.desc, t.cw[1]), `iec-tabc${cls}`, "start");
-      s += T(xs[2] + 4, y + t.rowH - 4, r.equip, "iec-tabc", "start");
-      if (r.at) s += T(xs[3] + 4, y + t.rowH - 4, `/${r.at}`, "iec-ref", "start", ` data-goto="${r.at}"`);
+      r.cells.forEach((c, i) => {
+        const last = i === r.cells.length - 1 && r.at;
+        const cls = i === 0 ? "iec-io" : last ? "iec-ref" : "iec-tabc";
+        s += T(xs[i] + 4, y + t.rowH - 4, fit(String(c), t.cw[i]), `${cls}${r.free && !last ? " iec-free" : ""}`, "start", last ? ` data-goto="${r.at}"` : "");
+      });
     });
-    for (let i = 1; i < xs.length - 1; i++) s += L(xs[i], y0, xs[i], y0 + H - 20, "iec-thin");
+    for (let i = 1; i < xs.length - 1; i++) s += L(xs[i], y0, xs[i], y0 + H, "iec-thin");
     return s;
   }
 
@@ -340,7 +355,7 @@
     for (const w of sh.wires) s += `<polyline class="iec-w${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
     for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
     for (const md of sh.modules ?? []) s += moduleFrame(md);
-    if (sh.table) s += ioTable(sh.table);
+    for (const t of sh.tables ?? []) s += table(t);
     if (sh.plc) s += plcModule(sh, sh.plc);
     for (const b of sh.blocks) s += block(sh, b);
     for (const e of sh.elems) s += elem(sh, e);

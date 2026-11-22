@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { contactIsNC, iecModel } from "../iec.mjs";
+import { contactIsNC, gridCol, iecModel } from "../iec.mjs";
 import { Scene } from "../scene.mjs";
 
 const montacargas = () =>
@@ -26,7 +26,7 @@ test("iec: montacargas → potencia, alimentación, entradas y salidas con refer
   const m = iecModel(new Scene(montacargas()), { title: "montacargas" });
   assert.deepEqual(
     m.sheets.map((s) => `${s.n} ${s.title}`),
-    ["1 Potencia 220 VAC 3~", "2 PLC y alimentación 24 VDC", "3 Entradas del PLC", "4 Mando y salidas del PLC"],
+    ["1 Potencia 220 VAC 3~", "2 PLC y alimentación 24 VDC", "3 Entradas del PLC", "4 Mando y salidas del PLC", "5 Lista de E/S y bornes"],
   );
   const [pot, , ent, sal] = m.sheets;
   // Potencia: inversor KM1/KM2 arriba, térmico y motor debajo.
@@ -46,42 +46,51 @@ test("iec: montacargas → potencia, alimentación, entradas y salidas con refer
   // Enclavamiento: el NC de KM2 en la columna de KM1 remite a la bobina de KM2 y viceversa.
   const coil1 = sal.elems.find((e) => e.dev === "KM1" && e.kind === "coil");
   const coil2 = sal.elems.find((e) => e.dev === "KM2" && e.kind === "coil");
-  assert.equal(sal.elems.find((e) => e.dev === "KM2" && e.cid === "21-22").ref, `4.${coil2.col + 1}`);
+  assert.equal(sal.elems.find((e) => e.dev === "KM2" && e.cid === "21-22").ref, `4.${coil2.col + 2}`);
   assert.equal(sal.elems.find((e) => e.dev === "KM1" && e.cid === "21-22").col, coil2.col);
   assert.deepEqual(
     coil1.xref.map((r) => `${r.cid}${r.nc ? " NC" : ""} /${r.at.split(".")[0]}`),
     ["1-2 /1", "3-4 /1", "5-6 /1", "21-22 NC /4"],
   );
-  assert.equal(pot.blocks.find((b) => b.dev === "KM1").ref, `4.${coil1.col + 1}`);
+  assert.equal(pot.blocks.find((b) => b.dev === "KM1").ref, `4.${coil1.col + 2}`);
   // Cada tramo lleva un borne cableado para pintar la tensión.
   for (const s of m.sheets) for (const w of s.wires) assert.match(w.rep, /^[A-Za-z_][\w-]*\.\S+$/);
 });
 
-test("iec: hojas A4 apaisadas, módulo DI con un solo COM y mapa de E/S del PLC", () => {
+test("iec: hojas A4 iguales con rejilla fija, módulo PLC, COM DI y lista de E/S y bornes", () => {
   const m = iecModel(new Scene(montacargas()), { title: "montacargas" });
-  for (const s of m.sheets) assert.ok(Math.abs(s.w / s.h - Math.SQRT2) < 0.01, `hoja ${s.n} en proporción A4`);
-  const [, sup, ent] = m.sheets;
+  assert.equal(m.sheets.at(-1).title, "Lista de E/S y bornes");
+  const [s0] = m.sheets;
+  for (const s of m.sheets) {
+    assert.ok(Math.abs(s.w / s.h - Math.SQRT2) < 0.01, `hoja ${s.n} en proporción A4`);
+    assert.equal(s.w, s0.w, "todas las hojas del mismo tamaño");
+    assert.deepEqual([s.grid.cols, s.grid.rows], [10, 6], "rejilla 1–10 × A–F");
+  }
+  const [, sup, ent, sal, lista] = m.sheets;
+  // Columnas del mando = columnas de la rejilla (la 1 queda para los rótulos).
+  const coil1 = sal.elems.find((e) => e.dev === "KM1" && e.kind === "coil");
+  assert.equal(gridCol(sal, coil1.x), coil1.col + 2);
   // Entradas: un marco de módulo y un único cable de COM (M1) al 0 V.
   assert.equal(ent.modules.length, 1);
   assert.equal(ent.modules[0].com, "COM M1");
   const railBot = ent.rails.bot.y;
   assert.equal(ent.wires.filter((w) => w.pts.at(-1)[1] === railBot && ent.elems.some((e) => e.kind === "plcin" && e.x === w.pts[0][0])).length, 1);
-  // Mapa de E/S en la hoja del PLC: 8 DI + 8 DO, las no usadas como «Libre».
-  const t = sup.table;
-  assert.ok(t && t.x > sup.x0 + sup.colW);
-  assert.equal(t.rows.length, 16);
-  assert.deepEqual(t.rows.find((r) => r.io === "I0.3"), { io: "I0.3", desc: "Llamar PB", equip: "-SB0 13-14", at: "3.4" });
-  assert.equal(t.rows.find((r) => r.io === "Q0.2").desc, "En movimiento");
-  assert.deepEqual(t.rows.filter((r) => r.free).map((r) => r.io), ["Q0.4", "Q0.5", "Q0.6", "Q0.7"]);
+  // Lista de E/S: 8 DI + 8 DO con borne propuesto; las no usadas como «Libre».
+  const [ti, to] = lista.tables;
+  assert.equal(ti.rows.length, 8);
+  assert.equal(to.rows.length, 8);
+  assert.deepEqual(ti.rows[3].cells, ["I0.3", "XI:03", "Llamar PB", "-SB0 13-14", "COM M1", `/${ent.n}.5`]);
+  assert.equal(to.rows[2].cells[2], "En movimiento");
+  assert.deepEqual(to.rows.filter((r) => r.free).map((r) => r.cells[1]), ["XQ:04", "XQ:05", "XQ:06", "XQ:07"]);
   // Hoja del PLC: módulo con bornes; cada flecha remite a su circuito y vuelve.
   assert.equal(sup.kind, "plc");
   const p = sup.plc;
   assert.deepEqual(p.terms.filter((x) => x.side === "top").map((x) => x.label), ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6", "I0.7", "COM M1", "24VDC", "M0"]);
   assert.equal(p.terms.filter((x) => x.side === "bot" && x.free).length, 4);
   const l3 = p.links.find((x) => x.io === "I0.3");
-  assert.equal(l3.at, "3.4");
+  assert.equal(l3.at, "3.5");
   assert.equal(l3.desc, "Llamar PB -SB0");
-  assert.equal(p.links.find((x) => x.io === "Q0.0").at, "4.1");
+  assert.equal(p.links.find((x) => x.io === "Q0.0").at, "4.2");
   assert.match(ent.elems.find((e) => e.key === "plc.I0_3").ref, /^2\.\d+$/);
   // COM y alimentación llegan a los rieles de la fuente.
   assert.equal(sup.dots.filter((d) => d.y === sup.rails.top.y).length, 1);

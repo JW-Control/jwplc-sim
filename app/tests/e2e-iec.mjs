@@ -52,7 +52,7 @@ try {
   }));
   await win.screenshot({ path: join(OUT, "potencia.png") });
   criteria.SHEETS = {
-    ok: enabled && ui.view && ui.canvasHidden && ui.motor && d.sheets.map((s) => s.title).join("|") === "Potencia 220 VAC 3~|PLC y alimentación 24 VDC|Entradas del PLC|Mando y salidas del PLC" && d.on > 0,
+    ok: enabled && ui.view && ui.canvasHidden && ui.motor && d.sheets.map((s) => s.title).join("|") === "Potencia 220 VAC 3~|PLC y alimentación 24 VDC|Entradas del PLC|Mando y salidas del PLC|Lista de E/S y bornes" && d.on > 0,
     enabled,
     ...ui,
     sheets: d.sheets,
@@ -73,7 +73,7 @@ try {
   criteria.CROSS_REF = { ok: coil && after.sheet === 3 && after.flash, coil, ...after };
   log(`CROSS_REF ${JSON.stringify(criteria.CROSS_REF)}`);
 
-  // PDF: una página por hoja, en A4 apaisada (valor por defecto).
+  // PDF: una página por hoja (5), en A4 apaisada (valor por defecto).
   const a4 = await t(() => document.getElementById("iec-size").value);
   const pdf = await t(() => window.JwsimIec.exportPdf());
   const bytes = pdf?.file ? readFileSync(pdf.file) : Buffer.alloc(0);
@@ -81,7 +81,7 @@ try {
   if (pdf?.file) copyFileSync(pdf.file, join(OUT, "esquema.pdf"));
   const box = /\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)/.exec(bytes.toString("latin1"));
   const mm = box ? [Math.round((Number(box[1]) * 25.4) / 72), Math.round((Number(box[2]) * 25.4) / 72)] : null;
-  criteria.PDF = { ok: bytes.subarray(0, 5).toString() === "%PDF-" && pdfPages === 4 && pdf.pages === 4 && a4 === "A4" && mm?.join("x") === "297x210", file: pdf?.file, size: bytes.length, pdfPages, sel: a4, mm };
+  criteria.PDF = { ok: bytes.subarray(0, 5).toString() === "%PDF-" && pdfPages === 5 && pdf.pages === 5 && a4 === "A4" && mm?.join("x") === "297x210", file: pdf?.file, size: bytes.length, pdfPages, sel: a4, mm };
   log(`PDF ${JSON.stringify(criteria.PDF)}`);
 
   // «Ordenar como tablero»: entradas arriba del PLC, salidas abajo; se deshace.

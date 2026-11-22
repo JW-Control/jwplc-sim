@@ -19,12 +19,15 @@
 // de referencia de cada tramo: la vista lo pinta energizado mirando los polos
 // del snapshot (`poles["PS1.+V1"]` contiene "PS1+"), sin repetir el análisis.
 
-const COLW = 116; // ancho de columna del mando
-const X0 = 60; // margen izquierdo (rótulos de las barras)
+// Rejilla de la hoja (A4 apaisado de 1100 unidades): franja de filas A–F de
+// 34 y 10 columnas iguales. Cada columna del mando cae en una de la rejilla;
+// la columna 1 queda para los rótulos de las barras (como en los planos).
+const COLW = (1100 - 10 - 34) / 10; // ancho de columna del mando (= de la rejilla)
+const X0 = 34 + COLW; // el mando empieza en la columna 2 de la rejilla
 const RAIL_TOP = 74;
 const ROWH = 78;
 const SYM = 18; // media altura de un símbolo
-const MAX_COLS = 12; // columnas por hoja de mando
+const MAX_COLS = 9; // columnas por hoja de mando (2…10 de la rejilla)
 const MAX_PATHS = 600;
 const MAX_DEPTH = 16;
 
@@ -39,8 +42,9 @@ const MAX_DEPTH = 16;
  *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string, inModule?: boolean,
  * }} Elem
  * @typedef {{ dev: string, label: string, com: string, comX: number, x: number, y: number, w: number, h: number, ref?: string }} Module
- * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean }} IoRow
- * @typedef {{ title: string, x: number, y: number, cw: number[], rowH: number, rows: IoRow[] }} IoTable
+ * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean, com?: string, borne?: string, sheet?: number, x?: number }} IoRow
+ * @typedef {{ x0: number, colW: number, cols: number, y0: number, rowH: number, rows: number }} Grid
+ * @typedef {{ title: string, x: number, y: number, cw: number[], head: string[], rows: { cells: string[], free: boolean, at: string }[], rowH: number, note?: string }} Table
  * @typedef {{ x: number, side: "top" | "bot", label: string, kind: string, free?: boolean }} PlcTerm
  * @typedef {{ x: number, y: number, dir: "up" | "down", key: string, io?: string, at: string, desc: string }} PlcLink
  * @typedef {{ dev: string, label: string, name: string, x: number, y: number, w: number, h: number, terms: PlcTerm[], links: PlcLink[] }} PlcModule
@@ -49,9 +53,9 @@ const MAX_DEPTH = 16;
  *   poles: { x: number, cid: string, top: string, bot: string, tTop: string, tBot: string }[], ref?: string,
  * }} Block
  * @typedef {{
- *   n: number, id: string, kind: "power" | "control" | "plc", title: string, src: string, srcKind: string,
+ *   n: number, id: string, kind: "power" | "control" | "plc" | "list", title: string, src: string, srcKind: string,
  *   w: number, h: number, cols: number, colW: number, x0: number, used?: number,
- *   modules?: Module[], table?: IoTable, railEnd?: number, plc?: PlcModule,
+ *   modules?: Module[], tables?: Table[], grid?: Grid, railEnd?: number, plc?: PlcModule,
  *   rails?: { top: { y: number, label: string, rep: string }, bot: { y: number, label: string, rep: string } },
  *   bus?: { y: number, label: string, rep: string }[],
  *   elems: Elem[], blocks: Block[], wires: Wire[], dots: Dot[], notes: { x: number, y: number, text: string }[],
@@ -312,21 +316,32 @@ export function iecModel(scene, opts = {}) {
     s.n = i + 1;
     s.id = `h${i + 1}`;
   });
-  /** @type {Map<string, { cid: string, nc: boolean, at: string, sheet: number, col: number }[]>} */
+  // Lista de E/S y bornes (hoja final) y formato: todas las hojas del mismo
+  // tamaño A4 apaisado con la misma rejilla (columnas 1–10, filas A–F).
+  const io = ioRows(sheets, devs, spec);
+  if (io) {
+    const ls = ioSheet(io);
+    ls.n = sheets.length + 1;
+    ls.id = `h${ls.n}`;
+    sheets.push(ls);
+  }
+  toPaper(sheets);
+  /** Referencia «hoja.columna» de un punto, sobre la rejilla de la hoja. */
+  const at = (s, x) => `${s.n}.${gridCol(s, x)}`;
+  /** @type {Map<string, { cid: string, nc: boolean, at: string }[]>} */
   const contactsOf = new Map();
   /** @type {Map<string, string>} */
   const coilAt = new Map();
   for (const s of sheets) {
     for (const e of s.elems) {
-      const at = `${s.n}.${(e.col ?? 0) + 1}`;
       if (e.kind === "contact") {
         if (!contactsOf.has(e.dev)) contactsOf.set(e.dev, []);
-        contactsOf.get(e.dev)?.push({ cid: e.cid, nc: !!e.nc, at, sheet: s.n, col: e.col ?? 0 });
-      } else if (/^coil/.test(e.kind) && !coilAt.has(e.dev)) coilAt.set(e.dev, at);
+        contactsOf.get(e.dev)?.push({ cid: e.cid, nc: !!e.nc, at: at(s, e.x) });
+      } else if (/^coil/.test(e.kind) && !coilAt.has(e.dev)) coilAt.set(e.dev, at(s, e.x));
     }
     for (const b of s.blocks) {
       if (!contactsOf.has(b.dev)) contactsOf.set(b.dev, []);
-      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: `${s.n}.${Math.max(1, Math.floor((p.x - s.x0) / s.colW) + 1)}`, sheet: s.n, col: 0 });
+      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: at(s, p.x) });
     }
   }
   for (const s of sheets) {
@@ -336,10 +351,11 @@ export function iecModel(scene, opts = {}) {
     }
     for (const b of s.blocks) if (coilAt.has(b.dev)) b.ref = coilAt.get(b.dev);
   }
-  // Mapa de E/S del PLC, enlaces del módulo y formato de hoja A4.
-  addIoTable(sheets, devs, spec);
-  linkPlc(sheets);
-  for (const s of sheets) toPaper(s);
+  if (io) {
+    for (const r of io.rows) if (r.sheet) r.at = at(/** @type {Sheet} */ (sheets.find((x) => x.n === r.sheet)), r.x);
+    sheets[sheets.length - 1].tables = ioTables(io);
+    linkPlc(sheets, io.rows, at);
+  }
   // Contactos libres (sin cables en sus bornes) de los equipos con bobina:
   // la vista los ofrece para agregar una autorretención o un enclavamiento.
   const free = [];
@@ -464,29 +480,37 @@ function plcSheet(src, plc, { net, rep, isWired, vtxt }) {
  * Une el módulo del PLC con sus circuitos: cada flecha remite a la columna
  * de la entrada o salida, y éstas remiten de vuelta al borne del módulo.
  * @param {Sheet[]} sheets
+ * @param {IoRow[]} rows
+ * @param {(s: Sheet, x: number) => string} at
  */
-function linkPlc(sheets) {
+function linkPlc(sheets, rows, at) {
   const ps = sheets.find((s) => s.kind === "plc");
   if (!ps?.plc) return;
-  const colOf = (x) => Math.max(1, Math.floor((x - ps.x0) / ps.colW) + 1);
-  const rows = new Map((ps.table?.rows ?? []).map((r) => [r.io, r]));
+  const byIo = new Map(rows.map((r) => [r.io, r]));
   for (const ln of ps.plc.links) {
     for (const s of sheets) {
       const e = s.elems.find((x) => x.key === ln.key);
       if (!e) continue;
-      ln.at = `${s.n}.${(e.col ?? 0) + 1}`;
-      e.ref = `${ps.n}.${colOf(ln.x)}`;
-      for (const md of s.modules ?? []) if (md.dev === e.dev && !md.ref) md.ref = e.ref;
+      ln.at = at(s, e.x);
+      e.ref = at(ps, ln.x);
       break;
     }
-    const r = ln.io ? rows.get(ln.io) : null;
+    const r = ln.io ? byIo.get(ln.io) : null;
     if (r) ln.desc = [r.desc, r.equip.split(" ")[0]].filter(Boolean).join(" ");
   }
 }
 
-/** Proporción de la hoja: A4 / A3 apaisadas (√2). Ancho mínimo en unidades. */
-export const PAPER = { ratio: Math.SQRT2, minW: 980 };
-const TABLE = { cw: [58, 186, 128, 48], rowH: 15, head: 20 };
+/**
+ * Hoja A4 apaisada (proporción √2) con rejilla fija: 10 columnas y filas
+ * A–F, igual en todas las hojas del documento. Ancho mínimo en unidades.
+ */
+export const PAPER = { ratio: Math.SQRT2, minW: 1100, cols: 10, rows: 6, left: 34, top: 50, bottom: 78 };
+
+/** Columna (1…10) de la rejilla en la que cae x. */
+export function gridCol(s, x) {
+  const g = /** @type {Grid} */ (s.grid);
+  return Math.min(g.cols, Math.max(1, Math.floor((x - g.x0) / g.colW) + 1));
+}
 
 /** Nombre legible del equipo: su rótulo o, si no tiene, el del tipo. */
 function devName(spec, devs, id) {
@@ -494,12 +518,13 @@ function devName(spec, devs, id) {
 }
 
 /**
- * Mapa de E/S del PLC (dirección, descripción, equipo y dónde está), con los
- * canales sin usar como «Libre». Va en la hoja de alimentación del PLC, a la
- * derecha del circuito; si no la hay, debajo de la hoja de entradas.
+ * E/S del PLC tal como están en el circuito: dirección, borne propuesto,
+ * función, equipo y común; los canales sin usar como «Libre». La columna
+ * («hoja.columna») se completa cuando ya hay rejilla.
  * @param {Sheet[]} sheets
+ * @returns {{ plc: string, rows: IoRow[], sources: string[][] } | null}
  */
-function addIoTable(sheets, devs, spec) {
+function ioRows(sheets, devs, spec) {
   /** @type {IoRow[]} */
   const rows = [];
   /** @type {Set<string>} */
@@ -507,69 +532,119 @@ function addIoTable(sheets, devs, spec) {
   let plcDev = "";
   for (const s of sheets) {
     for (const e of s.elems) {
-      const at = `${s.n}.${(e.col ?? 0) + 1}`;
       const sameCol = s.elems.filter((x) => x.col === e.col && x !== e);
       if (e.kind === "plcin") {
         plcDev ||= e.dev;
         // Lo que alimenta la entrada: el contacto de campo más cercano encima.
         const f = sameCol.filter((x) => x.kind === "contact" && x.act !== "plc" && x.y < e.y).sort((a, b) => b.y - a.y)[0];
-        rows.push({ io: e.io ?? e.cid, desc: f ? devName(spec, devs, f.dev) : "", equip: f ? `${f.label} ${f.cid}` : "", at });
+        rows.push({ io: e.io ?? e.cid, desc: f ? devName(spec, devs, f.dev) : "", equip: f ? `${f.label} ${f.cid}` : "", com: `COM ${e.tBot}`, at: "", sheet: s.n, x: e.x });
         used.add(`${e.dev}.${e.cid}`);
       } else if (e.kind === "contact" && e.act === "plc") {
         plcDev ||= e.dev;
         // Lo que manda la salida: la carga de su columna.
         const l = sameCol.filter((x) => x.kind !== "contact" && x.y > e.y).sort((a, b) => a.y - b.y)[0];
-        rows.push({ io: e.io ?? e.cid, desc: l ? devName(spec, devs, l.dev) : "", equip: l ? `${l.label} ${l.tTop}-${l.tBot}` : "", at });
+        rows.push({ io: e.io ?? e.cid, desc: l ? devName(spec, devs, l.dev) : "", equip: l ? `${l.label} ${l.tTop}-${l.tBot}` : "", com: `${e.tTop} / ${e.tBot}`, at: "", sheet: s.n, x: e.x });
         used.add(`${e.dev}.${e.cid}`);
       }
     }
   }
-  if (!plcDev) return;
+  if (!plcDev) return null;
   const plc = devs.find((d) => d.id === plcDev);
   for (const l of plc?.el.loads ?? []) {
     if (l.id === "power" || l.id === "supply" || used.has(`${plcDev}.${l.id}`)) continue;
-    rows.push({ io: l.id.replace("_", "."), desc: "Libre", equip: "", at: "", free: true });
+    rows.push({ io: l.id.replace("_", "."), desc: "Libre", equip: "", com: `COM ${l.b}`, at: "", free: true });
   }
-  for (const cid of Object.keys(plc?.el.contacts ?? {})) {
+  for (const [cid, [a, b]] of Object.entries(plc?.el.contacts ?? {})) {
     if (used.has(`${plcDev}.${cid}`)) continue;
-    rows.push({ io: cid.replace("_", "."), desc: "Libre", equip: "", at: "", free: true });
+    rows.push({ io: cid.replace("_", "."), desc: "Libre", equip: "", com: `${a} / ${b}`, at: "", free: true });
   }
   const key = (r) => [/^I/.test(r.io) ? 0 : 1, ...r.io.replace(/^\D+/, "").split(".").map(Number)];
   rows.sort((a, b) => cmpArr(key(a), key(b)));
-  const tw = TABLE.cw.reduce((a, v) => a + v, 0);
-  const th = TABLE.head + TABLE.rowH * (rows.length + 1);
-  const title = `Mapa de E/S ${desig(plcDev)}`;
-  const home = sheets.find((s) => s.kind === "plc") ?? sheets.find((s) => s.elems.some((e) => e.kind === "plcpower"));
-  if (home) {
-    const x = home.plc ? home.plc.x + home.plc.w + 50 : home.x0 + home.colW * Math.max(home.used ?? 1, 2) + 40;
-    home.table = { title, x, y: home.rails ? home.rails.top.y : 74, cw: TABLE.cw, rowH: TABLE.rowH, rows };
-    home.railEnd = x - 24;
-    home.w = Math.max(home.w, x + tw + 30);
-    home.h = Math.max(home.h, home.table.y + th + 100);
-    return;
+  // Borne propuesto por canal: XI (entradas) y XQ (salidas), como regletas.
+  for (const r of rows) {
+    const [, g = "0", n = "0"] = /^\D+(\d+)\.(\d+)/.exec(r.io) ?? [];
+    r.borne = `${/^I/.test(r.io) ? "XI" : "XQ"}${g === "0" ? "" : g}:${n.padStart(2, "0")}`;
   }
-  const ins = sheets.find((s) => s.elems.some((e) => e.kind === "plcin")) ?? sheets.find((s) => s.elems.some((e) => e.act === "plc"));
-  if (!ins) return;
-  const y = (ins.rails?.bot.y ?? ins.h - 140) + 80;
-  ins.table = { title, x: ins.x0, y, cw: TABLE.cw, rowH: TABLE.rowH, rows };
-  ins.h = Math.max(ins.h, y + th + 100);
+  // Fuentes de mando: qué hojas alimenta cada una.
+  /** @type {Map<string, Set<number>>} */
+  const bySrc = new Map();
+  for (const s of sheets) {
+    if (!s.rails) continue;
+    const k = `${s.rails.top.desig ?? s.src}`;
+    if (!bySrc.has(k)) bySrc.set(k, new Set());
+    bySrc.get(k)?.add(s.n);
+  }
+  const sources = [...bySrc].map(([k, ns]) => [k, [...ns].join(" / ")]);
+  return { plc: plcDev, rows, sources };
+}
+
+const IO_CW = [52, 64, 190, 130, 110, 52];
+const SRC_CW = [260, 120];
+
+/**
+ * Hoja final con la lista de E/S y el plan de bornes (como el folio de
+ * regletas de un plano de tablero). Las tablas se llenan con ioTables.
+ */
+function ioSheet(io) {
+  const n = io.rows.length;
+  return /** @type {Sheet} */ ({
+    n: 0,
+    id: "",
+    kind: "list",
+    title: "Lista de E/S y bornes",
+    src: "",
+    srcKind: "",
+    w: X0 + IO_CW.reduce((a, v) => a + v, 0) + 60,
+    h: 74 + 3 * 44 + 15 * (n + io.sources.length) + 140,
+    cols: 0,
+    colW: COLW,
+    x0: X0,
+    elems: [],
+    blocks: [],
+    wires: [],
+    dots: [],
+    notes: [],
+  });
+}
+
+/** Tablas de la hoja de E/S: entradas, salidas y fuentes de mando. */
+function ioTables(io) {
+  const ins = io.rows.filter((r) => /^I/.test(r.io));
+  const outs = io.rows.filter((r) => !/^I/.test(r.io));
+  const rowOf = (r) => ({ cells: [r.io, r.borne ?? "", r.desc, r.equip, r.com ?? "", r.at ? `/${r.at}` : ""], free: !!r.free, at: r.at });
+  /** @type {Table[]} */
+  const out = [];
+  let y = 74;
+  const add = (title, head, cw, rows) => {
+    out.push({ title, x: X0, y, cw, head, rows, rowH: 15 });
+    y += 20 + 15 * (rows.length + 1) + 24;
+  };
+  if (ins.length) add(`Entradas digitales ${desig(io.plc)}`, ["E/S", "Borne*", "Función / dispositivo", "Equipo / contacto", "Común", "Ref."], IO_CW, ins.map(rowOf));
+  if (outs.length) add(`Salidas digitales ${desig(io.plc)} (relé)`, ["E/S", "Borne*", "Función", "Destino / bornes", "Contacto", "Ref."], IO_CW, outs.map(rowOf));
+  if (io.sources.length) add("Fuentes de mando", ["Fuente", "Hojas"], SRC_CW, io.sources.map((c) => ({ cells: c, free: false, at: "" })));
+  out.push({ title: "", x: X0, y: y - 12, cw: [], head: [], rows: [], rowH: 15, note: "* Borne propuesto: numeración automática por canal (XI entradas, XQ salidas). Revisar antes de fabricar." });
+  return out;
 }
 
 /**
- * Lleva la hoja a la proporción del papel (A4/A3 apaisado): el dibujo queda
- * arriba a la izquierda, como en un plano, y la rejilla de columnas ocupa
- * todo el ancho.
- * @param {Sheet} s
+ * Lleva todas las hojas al mismo tamaño A4 apaisado y les pone la rejilla:
+ * el dibujo queda arriba a la izquierda, como en un plano.
+ * @param {Sheet[]} sheets
  */
-function toPaper(s) {
-  const w0 = s.w;
-  const W = Math.round(Math.max(PAPER.minW, s.w, s.h * PAPER.ratio));
+function toPaper(sheets) {
+  const need = (s) => Math.max(s.w, (s.h + PAPER.bottom - 70) * PAPER.ratio);
+  const W = Math.round(Math.max(PAPER.minW, ...sheets.map(need)));
   const H = Math.round(W / PAPER.ratio);
-  // Las barras de potencia llegan hasta el nuevo borde.
-  if (s.bus) for (const wr of s.wires) if (wr.pts.length === 2 && wr.pts[1][0] === w0 - 40 && s.bus.some((b) => b.y === wr.pts[0][1] && wr.pts[1][1] === b.y)) wr.pts[1][0] = W - 40;
-  s.w = W;
-  s.h = H;
-  s.cols = Math.max(s.cols, Math.floor((W - 20 - s.x0) / s.colW));
+  for (const s of sheets) {
+    const w0 = s.w;
+    // Las barras de potencia llegan hasta el nuevo borde.
+    if (s.bus) for (const wr of s.wires) if (wr.pts.length === 2 && wr.pts[1][0] === w0 - 40 && s.bus.some((b) => b.y === wr.pts[0][1] && wr.pts[1][1] === b.y)) wr.pts[1][0] = W - 40;
+    s.w = W;
+    s.h = H;
+    const x0 = PAPER.left;
+    const y1 = H - PAPER.bottom;
+    s.grid = { x0, colW: (W - 10 - x0) / PAPER.cols, cols: PAPER.cols, y0: PAPER.top, rowH: (y1 - PAPER.top) / PAPER.rows, rows: PAPER.rows };
+  }
 }
 
 const cmpArr = (a, b) => {
@@ -801,7 +876,7 @@ function controlSheet(rungs, { src, title, rep, spec, dc }) {
     });
   }
   const cols = Math.max(c, 4);
-  const w = X0 + COLW * cols + 40;
+  const w = X0 + COLW * cols + 10;
   const H = railBot + 96 + 70;
   const vt = `${src.volts} V${dc ? "DC" : "AC"}`;
   return /** @type {Sheet} */ ({
@@ -891,7 +966,7 @@ function powerSheet(src, devs, net, rep, isWired, spec) {
   // Orden en cada nivel: por el promedio de la posición de lo que lo alimenta.
   /** @type {Map<string, number>} x de cada borne de salida ya dibujado */
   const outX = new Map();
-  const X = 80;
+  const X = X0 + 20;
   let y = 70;
   /** @type {Block[]} */
   const out = [];
