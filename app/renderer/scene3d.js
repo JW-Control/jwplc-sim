@@ -70,6 +70,33 @@ function label(text) {
   return s;
 }
 
+/**
+ * Interruptor de nivel montado en la pared del tanque (origen = punto de la
+ * pared a la altura que detecta): cabezal con su LED afuera, prensaestopa y
+ * varilla con flotador hacia adentro (+X).
+ */
+function levelSwitch() {
+  const g = new THREE.Group();
+  const steelM = mat(0xb8c0c8, { metalness: 0.75, roughness: 0.3 });
+  const gland = cyl(0.03, 0.07, steelM, 16);
+  gland.rotation.z = Math.PI / 2;
+  gland.position.x = -0.035;
+  const head = box(0.09, 0.09, 0.09, mat(0x3a4048, { metalness: 0.3 }));
+  head.position.x = -0.115;
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 10), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(-0.165, 0.02, 0);
+  const rod = cyl(0.008, 0.2, steelM, 8);
+  rod.rotation.z = Math.PI / 2;
+  rod.position.x = 0.1;
+  const fl = cyl(0.035, 0.06, mat(0xf2f2f2, { roughness: 0.5 }), 14);
+  fl.position.set(0.19, -0.02, 0);
+  const cable = cyl(0.008, 0.25, mat(0x23272d), 6);
+  cable.position.set(-0.115, -0.17, 0);
+  g.add(gland, head, lamp, rod, fl, cable);
+  g.userData.lamp = lamp;
+  return g;
+}
+
 /** Baliza de un sensor enlazado: poste y luz. */
 function beacon() {
   const g = new THREE.Group();
@@ -369,6 +396,32 @@ function buildTank(p, spec) {
   const rim = new THREE.Mesh(new THREE.TorusGeometry(R, 0.02, 8, 48), mat(COL.frame));
   rim.rotation.x = Math.PI / 2;
   rim.position.y = H + 0.2;
+  if (!cone) {
+    // Tapa con boca de inspección, base de concreto y escalera de gato atrás.
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R + 0.01, 0.12, 40, 1, true), mat(COL.tank, { roughness: 0.4, side: THREE.DoubleSide }));
+    lid.position.y = H + 0.26;
+    const hatch = cyl(R * 0.4, 0.05, mat(0x3a4048, { metalness: 0.4 }), 32);
+    hatch.position.y = H + 0.34;
+    const pad = box(2 * R + 0.3, 0.12, 2 * R + 0.3, mat(0xa9adb2, { roughness: 0.95, metalness: 0 }));
+    pad.position.y = 0.06;
+    base.position.y = 0.14;
+    base.scale.y = 0.6;
+    const lad = new THREE.Group();
+    const ladM = mat(0x9aa3ad, { metalness: 0.6 });
+    for (const lx of [-0.17, 0.17]) {
+      const rail = box(0.03, H + 0.35, 0.03, ladM);
+      rail.position.set(lx, (H + 0.35) / 2 + 0.1, 0);
+      lad.add(rail);
+    }
+    for (let y = 0.35; y < H + 0.4; y += 0.3) {
+      const rung = cyl(0.012, 0.34, ladM, 8);
+      rung.rotation.z = Math.PI / 2;
+      rung.position.y = y;
+      lad.add(rung);
+    }
+    lad.position.set(0, 0, -R - 0.06);
+    g.add(lid, hatch, pad, lad);
+  }
   // Bomba al costado con su caño al tanque.
   // Electrobomba al costado (la misma de la sala de bombas) con su descarga al
   // tanque, si lo llena un motor; si lo llena otro equipo (un filtro), solo la entrada.
@@ -396,7 +449,9 @@ function buildTank(p, spec) {
   pipeTop.position.set(px, 0.75, zd);
   holder.visible = pipe.visible = pipeTop.visible = motorFed;
   g.add(shell, water, base, rim, ep.group, holder, pipe, pipeTop);
-  return { group: g, water, impeller, H, R, cone, size: [2 * R + 0.8, 2 * R] };
+  // Radio de la pared a una altura relativa (0 = fondo, 1 = borde), para montar sensores.
+  const wallR = (k) => rb + (R - rb) * Math.max(0, Math.min(1, k));
+  return { group: g, water, impeller, H, R, cone, wallR, size: [2 * R + 0.8, 2 * R] };
 }
 
 function buildDoor(p) {
@@ -992,11 +1047,12 @@ function rebuild(spec) {
         continue;
       }
       // Un final de carrera se ve como tal (palanca con rodillo); el resto, baliza.
-      const sw = s.type === "jwsim/limit-switch" && !CONVEYORS.has(d.type);
-      const b = sw ? rollerSwitch() : beacon();
+      const onTank = d.type === "jwsim/tank";
+      const sw = s.type === "jwsim/limit-switch" && !CONVEYORS.has(d.type) && !onTank;
+      const b = onTank ? levelSwitch() : sw ? rollerSwitch() : beacon();
       if (sw) b.scale.setScalar(2.2);
       if (CONVEYORS.has(d.type)) b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
-      else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
+      else if (onTank) b.position.set(-model.wallR(min), 0.2 + Math.max(0.04, Math.min(0.97, min)) * model.H, 0);
       else if (d.type === "jwsim/lift") {
         const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
         b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
@@ -1018,7 +1074,8 @@ function rebuild(spec) {
         model.group.add(br);
       }
       const t = label(s.id);
-      t.position.y = sw ? 0.1 : 0.8;
+      t.position.y = onTank ? 0.08 : sw ? 0.1 : 0.8;
+      if (onTank) t.position.x = -0.12;
       b.add(t);
       model.group.add(b);
       beacons.push({ id: s.id, b });
