@@ -5561,6 +5561,13 @@ body[data-schem="iec"] .scene-float {
   font-size: 8.5px;
   fill: var(--iec-ink);
 }
+.iec-l.iec-arrow {
+  fill: var(--iec-paper);
+  stroke-width: 1.2;
+}
+.iec-xref {
+  font-weight: 600;
+}
 .iec-tabt {
   font-size: 11px;
   font-weight: 700;

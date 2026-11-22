@@ -129,7 +129,44 @@
     return { s, cls: on ? "on" : "" };
   }
 
+  // Flecha de continuación (▽) con su destino «hoja-FilaColumna», clicable.
+  const arrowDown = (x, y, on) => `<path class="iec-l iec-arrow${on ? " on" : ""}" d="M${x - 5} ${y}L${x + 5} ${y}L${x} ${y + 9}z"/>`;
+  const gotoT = (x, y, ref, anchor = "start") => (ref ? T(x, y, ref, "iec-ref iec-xref", anchor, ` data-goto="${ref}"`) : "");
+  const hitOf = (e) => `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
+  const wrapEl = (sh, e, inner) => {
+    const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
+    const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
+    return `<g class="iec-el${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hitOf(e)}${inner}</g>`;
+  };
+
+  // Entrada del PLC en su circuito: el cable termina en una flecha hacia el
+  // borne del módulo («-plc:I0.0», hoja del PLC).
+  function plcInArrow(sh, e) {
+    const on = live(sh, e.top);
+    const y = e.y - 6;
+    let s = L(e.x, e.y - SYM, e.x, y, on ? "on" : "") + arrowDown(e.x, y, on);
+    s += T(e.x + 9, y + 8, `${e.label}:${e.io ?? e.cid}`, "iec-io", "start");
+    s += gotoT(e.x + 9, y + 20, e.ref);
+    return wrapEl(sh, e, s);
+  }
+
+  // Salida a relé del PLC dentro de su circuito: el cable baja hasta el COM
+  // del relé (flecha a la hoja del PLC) y sigue desde su NA (otra flecha).
+  function plcOutBreak(sh, e) {
+    const onT = live(sh, e.top);
+    const onB = live(sh, e.bot);
+    let s = L(e.x, e.y - SYM, e.x, e.y - 14, onT ? "on" : "") + arrowDown(e.x, e.y - 14, onT);
+    s += arrowDown(e.x, e.y + 3, onB) + L(e.x, e.y + 12, e.x, e.y + SYM, onB ? "on" : "");
+    // A la izquierda el borne del módulo; a la derecha, dónde está.
+    s += T(e.x - 9, e.y - 6, `${e.io} COM`, "iec-io", "end") + gotoT(e.x + 9, e.y - 6, e.ref);
+    s += T(e.x - 9, e.y + 12, `${e.io} NA`, "iec-io", "end") + gotoT(e.x + 9, e.y + 12, e.ref2);
+    s += T(e.x - 9, e.y - 20, e.label, "iec-desig", "end");
+    return wrapEl(sh, e, s);
+  }
+
   function elem(sh, e) {
+    if (e.kind === "plcin" && e.arrow) return plcInArrow(sh, e);
+    if (e.kind === "contact" && e.act === "plc") return plcOutBreak(sh, e);
     const top = live(sh, e.top);
     const isC = e.kind === "contact";
     const { s, cls } = isC ? contact(e, top) : loadSym(e, loadOn(sh, e));
@@ -226,7 +263,10 @@
       const x = g.x0 + c * g.colW;
       if (c) s += L(x, 10, x, 30, "iec-thin");
       s += T(x + g.colW / 2, 24, String(c + 1), "iec-colnum");
-      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) s += `<rect class="iec-colflash" x="${x}" y="30" width="${g.colW}" height="${yB - 30}"/>`;
+      if (S.flash && S.flash.sheet === sh.n && S.flash.col === c + 1) {
+        const r = S.flash.row;
+        s += `<rect class="iec-colflash" x="${x}" y="${r ? g.y0 + (r - 1) * g.rowH : 30}" width="${g.colW}" height="${r ? g.rowH : yB - 30}"/>`;
+      }
     }
     for (let r = 0; r < g.rows; r++) {
       const y = g.y0 + r * g.rowH;
@@ -251,17 +291,8 @@
     s += T(bx + 118, by + bh / 2 - 10, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + bh - 12, sh.title, "iec-tb iec-tb-strong", "start");
     s += T(bx + bw - 35, by + bh / 2 - 10, "Hoja", "iec-tiny") + T(bx + bw - 35, by + bh - 12, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
     s += T(20, by + 18, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
-    s += T(20, by + 32, `Referencias /hoja.columna · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
+    s += T(20, by + 32, `Referencias hoja-FilaColumna (p. ej. 4-C3: hoja 4, fila C, columna 3) · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
     return s;
-  }
-
-  // Módulo del PLC: marco a trazos, nombre y su común (COM) visible.
-  function moduleFrame(md) {
-    return (
-      `<rect class="iec-l iec-nofill iec-module" x="${md.x}" y="${md.y}" width="${md.w}" height="${md.h}" rx="3"/>` +
-      T(md.x + 6, md.y + md.h - 6, md.label, "iec-modt", "start") +
-      T(md.comX + 5, md.y + md.h + 8, md.com, "iec-term iec-com", "start")
-    );
   }
 
   // Módulo del PLC con sus bornes (como en los planos de tablero): arriba
@@ -278,9 +309,16 @@
     }
     const outs = m.terms.filter((t) => t.side === "bot");
     if (outs.length) {
-      const xa = outs[0].x - 18;
-      const xb = outs.at(-1).x + 18;
-      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + m.h - 44}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + m.h - 50, "Salidas a relé (contacto seco)", "iec-modt", "start");
+      s += T(outs[0].x - 14, m.y + m.h - 58, "Salidas a relé (contacto seco: COM – NA)", "iec-modt", "start");
+      // Un marco por salida con su nombre: Q0.0 = COM + NA.
+      for (const io of [...new Set(outs.map((t) => t.io))]) {
+        const ts = outs.filter((t) => t.io === io);
+        const xa = ts[0].x - 12;
+        const xb = ts.at(-1).x + 12;
+        const free = ts.every((t) => t.free);
+        s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + m.h - 50}" width="${xb - xa}" height="44" rx="2"/>`;
+        s += T((xa + xb) / 2, m.y + m.h - 40, io, `iec-plcterm${free ? " iec-free" : ""}`);
+      }
     }
     const pw = m.terms.filter((t) => t.kind === "pwr");
     if (pw.length) {
@@ -291,7 +329,7 @@
     for (const t of m.terms) {
       const y = t.side === "top" ? m.y : m.y + m.h;
       const ty = t.side === "top" ? m.y + 16 : m.y + m.h - 16;
-      const ly = t.side === "top" ? m.y + 36 : m.y + m.h - 28;
+      const ly = t.side === "top" ? m.y + 36 : m.y + m.h - 26;
       s += L(t.x, y, t.x, ty + (t.side === "top" ? -5 : 5), t.free ? "iec-thin" : "");
       s += `<circle class="iec-l iec-body" cx="${t.x}" cy="${ty}" r="5"/>` + L(t.x - 3.5, ty - 3.5, t.x + 3.5, ty + 3.5) + L(t.x - 3.5, ty + 3.5, t.x + 3.5, ty - 3.5);
       s += T(t.x, ly, t.label, `iec-term iec-plcterm${t.free ? " iec-free" : ""}`);
@@ -300,7 +338,7 @@
       const up = ln.dir === "up";
       const y = ln.y;
       s += `<path class="iec-l iec-body" d="M${ln.x - 5} ${up ? y + 9 : y - 9}L${ln.x + 5} ${up ? y + 9 : y - 9}L${ln.x} ${y}z"/>`;
-      if (ln.at) s += T(ln.x, up ? y - 6 : y + 15, `/${ln.at}`, "iec-ref", "middle", ` data-goto="${ln.at}"`);
+      if (ln.at) s += T(ln.x, up ? y - 6 : y + 20, ln.at, "iec-ref iec-xref", "middle", ` data-goto="${ln.at}"`);
       if (ln.desc) {
         // Texto a lo largo del cable, leído de abajo arriba (como en los planos).
         const yy = up ? y + 16 : y - 16;
@@ -344,8 +382,11 @@
       const xr = sh.railEnd ?? sh.w - 30;
       s += `<polyline class="iec-w iec-rail${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
       s += `<line class="iec-hit" data-rail="top" x1="${sh.x0 - 10}" y1="${top.y}" x2="${xr}" y2="${top.y}"><title>Clic: columna nueva</title></line>`;
-      s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>`;
-      s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end") + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
+      // El riel de retorno solo si algo llega a él (p. ej. las entradas del
+      // PLC terminan en flechas y su común va en la hoja del PLC).
+      const usesBot = sh.dots.some((d) => d.y === bot.y) || sh.wires.some((w) => w.pts.some((p) => p[1] === bot.y));
+      if (usesBot) s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>` + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
+      s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end");
       s += T(xr, top.y - 6, top.desig ?? "", "iec-tiny", "end");
     }
     for (const b of sh.bus ?? []) {
@@ -354,7 +395,6 @@
     if (sh.bus?.length) s += T(sh.w - 40, sh.bus[0].y - 8, sh.bus[0].desig ?? "", "iec-tiny", "end");
     for (const w of sh.wires) s += `<polyline class="iec-w${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
     for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
-    for (const md of sh.modules ?? []) s += moduleFrame(md);
     for (const t of sh.tables ?? []) s += table(t);
     if (sh.plc) s += plcModule(sh, sh.plc);
     for (const b of sh.blocks) s += block(sh, b);
@@ -397,12 +437,17 @@
   }
 
   function goto(at) {
-    const [n, col] = String(at).split(".").map(Number);
+    // «4-C3» (hoja-FilaColumna); también acepta el formato viejo «4.3».
+    const m = /^(\d+)-([A-Z])(\d+)$/.exec(String(at)) ?? /^(\d+)\.(\d+)$/.exec(String(at));
+    if (!m) return;
+    const n = Number(m[1]);
+    const row = m.length === 4 ? m[2].charCodeAt(0) - 64 : 0;
+    const col = Number(m[m.length - 1]);
     const i = S.model.sheets.findIndex((s) => s.n === n);
     if (i < 0) return;
     S.sheet = i;
     S.vb = null;
-    S.flash = { sheet: n, col };
+    S.flash = { sheet: n, col, row };
     draw();
     clearTimeout(S.flashT);
     S.flashT = setTimeout(() => {
