@@ -5315,6 +5315,13 @@ body.dock-collapsed #btn-dock-toggle {
   --iec-soft: light-dark(#59636e, #8794a2);
   --iec-on: light-dark(#14883e, #37d67a);
   --iec-ref: light-dark(#0969da, #6cb6ff);
+  /* Conductores, IEC 60204-1 §13.2.4 */
+  --iec-c-pwr: var(--iec-ink);
+  --iec-c-ac: light-dark(#c62828, #ff6b6b);
+  --iec-c-n: light-dark(#2b9fd9, #7cc8f0);
+  --iec-c-dc: light-dark(#1f3fa3, #7f9bff);
+  --iec-pe-g: light-dark(#2e9d3a, #4cc35a);
+  --iec-pe-y: light-dark(#e6b800, #ffd84d);
 }
 .iec-view[hidden] {
   display: none;
@@ -5416,6 +5423,40 @@ body[data-schem="iec"] .scene-float {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.iec-w.iec-c-pwr,
+.iec-l.iec-c-pwr {
+  stroke: var(--iec-c-pwr);
+}
+.iec-w.iec-c-ac,
+.iec-l.iec-c-ac {
+  stroke: var(--iec-c-ac);
+}
+.iec-w.iec-c-n,
+.iec-l.iec-c-n {
+  stroke: var(--iec-c-n);
+}
+.iec-w.iec-c-dc,
+.iec-l.iec-c-dc {
+  stroke: var(--iec-c-dc);
+}
+.iec-dot.iec-c-ac {
+  fill: var(--iec-c-ac);
+}
+.iec-dot.iec-c-n {
+  fill: var(--iec-c-n);
+}
+.iec-dot.iec-c-dc {
+  fill: var(--iec-c-dc);
+}
+.iec-l.iec-pe-g {
+  stroke: var(--iec-pe-g);
+  stroke-width: 1.6;
+}
+.iec-l.iec-pe-y {
+  stroke: var(--iec-pe-y);
+  stroke-width: 1.6;
+  stroke-dasharray: 6 6;
 }
 .iec-w.iec-rail {
   stroke-width: 2.4;

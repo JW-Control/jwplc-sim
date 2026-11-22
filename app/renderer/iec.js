@@ -8,7 +8,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const S = { shown: false, model: null, key: "", sheet: 0, snap: null, vb: null, drag: null, loading: null, flash: null };
+  const S = { colors: "iec", shown: false, model: null, key: "", sheet: 0, snap: null, vb: null, drag: null, loading: null, flash: null };
   const SYM = 18;
 
   const spec = () => window.JwsimScene?.specForSave?.() ?? { devices: [], wiring: [] };
@@ -21,6 +21,15 @@
     const ps = polesOf(rep);
     if (sh.srcKind === "AC3") return ps.some((p) => p.startsWith(`${sh.src}~`));
     return ps.includes(`${sh.src}+`) && !ps.includes(`${sh.src}-`);
+  }
+  // Color del conductor según IEC 60204-1 (13.2.4): potencia negro, mando
+  // AC rojo, neutro azul claro, mando DC azul oscuro. «Negro»: todo en tinta.
+  function wireCls(sh, rep) {
+    if (S.colors === "mono") return "";
+    if (sh.kind === "power" || sh.srcKind === "AC3") return " iec-c-pwr";
+    if (sh.srcKind === "DC") return " iec-c-dc";
+    if (sh.srcKind === "AC") return rep && rep === sh.rails?.bot.rep ? " iec-c-n" : " iec-c-ac";
+    return "";
   }
   const devSnap = (id) => S.snap?.devices?.find((d) => d.id === id);
   function closed(e) {
@@ -144,7 +153,7 @@
   function plcInArrow(sh, e) {
     const on = live(sh, e.top);
     const y = e.y - 6;
-    let s = L(e.x, e.y - SYM, e.x, y, on ? "on" : "") + arrowDown(e.x, y, on);
+    let s = L(e.x, e.y - SYM, e.x, y, `iec-lead${wireCls(sh, e.top)}${on ? " on" : ""}`) + arrowDown(e.x, y, on);
     s += T(e.x + 9, y + 8, `${e.label}:${e.io ?? e.cid}`, "iec-io", "start");
     s += gotoT(e.x + 9, y + 20, e.ref);
     return wrapEl(sh, e, s);
@@ -155,8 +164,8 @@
   function plcOutBreak(sh, e) {
     const onT = live(sh, e.top);
     const onB = live(sh, e.bot);
-    let s = L(e.x, e.y - SYM, e.x, e.y - 14, onT ? "on" : "") + arrowDown(e.x, e.y - 14, onT);
-    s += arrowDown(e.x, e.y + 3, onB) + L(e.x, e.y + 12, e.x, e.y + SYM, onB ? "on" : "");
+    let s = L(e.x, e.y - SYM, e.x, e.y - 14, `iec-lead${wireCls(sh, e.top)}${onT ? " on" : ""}`) + arrowDown(e.x, e.y - 14, onT);
+    s += arrowDown(e.x, e.y + 3, onB) + L(e.x, e.y + 12, e.x, e.y + SYM, `iec-lead${wireCls(sh, e.bot)}${onB ? " on" : ""}`);
     // A la izquierda el borne del módulo; a la derecha, dónde está.
     s += T(e.x - 9, e.y - 6, `${e.io} COM`, "iec-io", "end") + gotoT(e.x + 9, e.y - 6, e.ref);
     s += T(e.x - 9, e.y + 12, `${e.io} NA`, "iec-io", "end") + gotoT(e.x + 9, e.y + 12, e.ref2);
@@ -199,6 +208,10 @@
     return s;
   }
 
+  // Conductor de protección: verde-amarillo a trazos (en «Negro», trazos).
+  const pe = (x1, y1, x2, y2) =>
+    S.colors === "mono" ? L(x1, y1, x2, y2, "iec-dash") : L(x1, y1, x2, y2, "iec-pe-g") + L(x1, y1, x2, y2, "iec-pe-y");
+
   function block(sh, b) {
     const on = b.poles.some((p) => live(sh, p.top));
     let s = "";
@@ -216,7 +229,7 @@
       }
       const spd = Number(devSnap(b.dev)?.outputs?.speed ?? 0);
       s += `<circle class="iec-l iec-body${spd > 0.01 ? " iec-run" : ""}" cx="${cx}" cy="${cy}" r="${r}"/>` + T(cx, cy + 1, "M", "iec-sym-t iec-big") + T(cx, cy + 14, "3~", "iec-tiny");
-      s += L(cx + r * 0.7, cy + r * 0.7, cx + r + 10, cy + r + 4) + T(cx + r + 12, cy + r + 8, "PE", "iec-term", "start");
+      s += pe(cx + r * 0.7, cy + r * 0.7, cx + r + 10, cy + r + 4) + T(cx + r + 12, cy + r + 8, "PE", "iec-term", "start");
     } else {
       for (const p of b.poles) {
         const pon = live(sh, p.top);
@@ -291,6 +304,15 @@
     s += T(bx + 118, by + bh / 2 - 10, S.model.title || "Proyecto sin título", "iec-tb", "start") + T(bx + 118, by + bh - 12, sh.title, "iec-tb iec-tb-strong", "start");
     s += T(bx + bw - 35, by + bh / 2 - 10, "Hoja", "iec-tiny") + T(bx + bw - 35, by + bh - 12, `${sh.n} / ${N}`, "iec-tb iec-tb-strong");
     s += T(20, by + 18, "Generado del circuito de la escena · símbolos IEC 60617 · designaciones IEC 81346", "iec-tiny", "start");
+    if (S.colors !== "mono") {
+      // Leyenda de colores de conductores (IEC 60204-1).
+      let lx = 20;
+      for (const [cls, txt] of [["iec-c-pwr", "potencia"], ["iec-c-ac", "mando AC"], ["iec-c-n", "neutro"], ["iec-c-dc", "mando DC"]]) {
+        s += `<line class="iec-w ${cls}" x1="${lx}" y1="${by + 47}" x2="${lx + 16}" y2="${by + 47}"/>` + T(lx + 20, by + 50, txt, "iec-tiny", "start");
+        lx += 30 + txt.length * 5;
+      }
+      s += L(lx, by + 47, lx + 16, by + 47, "iec-pe-g") + L(lx, by + 47, lx + 16, by + 47, "iec-pe-y") + T(lx + 20, by + 50, "PE · colores IEC 60204-1", "iec-tiny", "start");
+    }
     s += T(20, by + 32, `Referencias hoja-FilaColumna (p. ej. 4-C3: hoja 4, fila C, columna 3) · estado: ${S.snap ? "simulación en curso" : "reposo"}`, "iec-tiny", "start");
     return s;
   }
@@ -382,12 +404,12 @@
     if (sh.rails) {
       const { top, bot } = sh.rails;
       const xr = sh.railEnd ?? sh.w - 30;
-      s += `<polyline class="iec-w iec-rail${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
+      s += `<polyline class="iec-w iec-rail${wireCls(sh, top.rep)}${live(sh, top.rep) ? " on" : ""}" points="${sh.x0 - 10},${top.y} ${xr},${top.y}"/>`;
       s += `<line class="iec-hit" data-rail="top" x1="${sh.x0 - 10}" y1="${top.y}" x2="${xr}" y2="${top.y}"><title>Clic: columna nueva</title></line>`;
       // El riel de retorno solo si algo llega a él (p. ej. las entradas del
       // PLC terminan en flechas y su común va en la hoja del PLC).
       const usesBot = sh.dots.some((d) => d.y === bot.y) || sh.wires.some((w) => w.pts.some((p) => p[1] === bot.y));
-      if (usesBot) s += `<polyline class="iec-w iec-rail" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>` + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
+      if (usesBot) s += `<polyline class="iec-w iec-rail${wireCls(sh, bot.rep)}" points="${sh.x0 - 10},${bot.y} ${xr},${bot.y}"/>` + T(sh.x0 - 14, bot.y + 4, bot.label, "iec-railt", "end");
       s += T(sh.x0 - 14, top.y + 4, top.label, "iec-railt", "end");
       s += T(xr, top.y - 6, top.desig ?? "", "iec-tiny", "end");
     }
@@ -395,8 +417,8 @@
       s += T(sh.x0 - 4, b.y + 4, b.label, "iec-railt", "end");
     }
     if (sh.bus?.length) s += T(sh.w - 40, sh.bus[0].y - 8, sh.bus[0].desig ?? "", "iec-tiny", "end");
-    for (const w of sh.wires) s += `<polyline class="iec-w${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
-    for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
+    for (const w of sh.wires) s += `<polyline class="iec-w${wireCls(sh, w.rep)}${live(sh, w.rep) ? " on" : ""}${sh.bus && sh.bus.some((b) => b.rep === w.rep && w.pts[0][1] === b.y && w.pts[1][1] === b.y) ? " iec-rail" : ""}" points="${w.pts.map((p) => p.join(",")).join(" ")}"/>`;
+    for (const d of sh.dots) s += `<circle class="iec-dot${wireCls(sh, d.rep)}${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
     for (const t of sh.tables ?? []) s += table(t);
     if (sh.plc) s += plcModule(sh, sh.plc);
     for (const b of sh.blocks) s += block(sh, b);
@@ -672,6 +694,21 @@
     svg.addEventListener("pointercancel", end);
     $("iec-fit")?.addEventListener("click", fit);
     $("iec-pdf")?.addEventListener("click", () => exportPdf());
+    const col = $("iec-colors");
+    if (col) {
+      try {
+        const v = localStorage.getItem("jwsim.iec.colors");
+        if (v === "mono" || v === "iec") col.value = v;
+      } catch {}
+      S.colors = col.value;
+      col.addEventListener("change", () => {
+        S.colors = col.value;
+        try {
+          localStorage.setItem("jwsim.iec.colors", S.colors);
+        } catch {}
+        draw();
+      });
+    }
     $("iec-edit")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) return;
