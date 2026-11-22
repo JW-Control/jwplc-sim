@@ -5544,6 +5544,23 @@ body[data-schem="iec"] .scene-float {
   font-weight: 700;
   fill: var(--iec-ink);
 }
+.iec-l.iec-plcmod {
+  fill: color-mix(in srgb, var(--iec-ink) 4%, var(--iec-paper));
+  stroke-width: 1.6;
+}
+.iec-plcname {
+  font-size: 15px;
+  font-weight: 700;
+}
+.iec-plcterm {
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--iec-ink);
+}
+.iec-wiretext {
+  font-size: 8.5px;
+  fill: var(--iec-ink);
+}
 .iec-tabt {
   font-size: 11px;
   font-weight: 700;

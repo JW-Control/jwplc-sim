@@ -38,17 +38,20 @@ const MAX_DEPTH = 16;
  *   label: string, text?: string, nc?: boolean, act?: string, col?: number,
  *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string, inModule?: boolean,
  * }} Elem
- * @typedef {{ dev: string, label: string, com: string, comX: number, x: number, y: number, w: number, h: number }} Module
+ * @typedef {{ dev: string, label: string, com: string, comX: number, x: number, y: number, w: number, h: number, ref?: string }} Module
  * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean }} IoRow
  * @typedef {{ title: string, x: number, y: number, cw: number[], rowH: number, rows: IoRow[] }} IoTable
+ * @typedef {{ x: number, side: "top" | "bot", label: string, kind: string, free?: boolean }} PlcTerm
+ * @typedef {{ x: number, y: number, dir: "up" | "down", key: string, io?: string, at: string, desc: string }} PlcLink
+ * @typedef {{ dev: string, label: string, name: string, x: number, y: number, w: number, h: number, terms: PlcTerm[], links: PlcLink[] }} PlcModule
  * @typedef {{
  *   kind: string, dev: string, type: string, label: string, text?: string, x: number, y: number, w: number, h: number,
  *   poles: { x: number, cid: string, top: string, bot: string, tTop: string, tBot: string }[], ref?: string,
  * }} Block
  * @typedef {{
- *   n: number, id: string, kind: "power" | "control", title: string, src: string, srcKind: string,
+ *   n: number, id: string, kind: "power" | "control" | "plc", title: string, src: string, srcKind: string,
  *   w: number, h: number, cols: number, colW: number, x0: number, used?: number,
- *   modules?: Module[], table?: IoTable, railEnd?: number,
+ *   modules?: Module[], table?: IoTable, railEnd?: number, plc?: PlcModule,
  *   rails?: { top: { y: number, label: string, rep: string }, bot: { y: number, label: string, rep: string } },
  *   bus?: { y: number, label: string, rep: string }[],
  *   elems: Elem[], blocks: Block[], wires: Wire[], dots: Dot[], notes: { x: number, y: number, text: string }[],
@@ -279,9 +282,17 @@ export function iecModel(scene, opts = {}) {
     }
     const dc = src.kind === "DC";
     const vtxt = `${src.volts} V${dc ? "DC" : "AC"}`;
+    // El PLC se dibuja como módulo con sus bornes (hoja propia); su
+    // alimentación directa desde la fuente ya va en esa hoja.
+    const plcRung = dc ? rungs.find((r) => r.target.e.lk === "plcpower") : null;
+    if (plcRung) {
+      const plc = devs.find((d) => d.id === plcRung.target.e.dev);
+      sheets.push(plcSheet(src, plc, { net, rep, isWired, vtxt }));
+      if (plcRung.items.length === 1) rungs.splice(rungs.indexOf(plcRung), 1);
+    }
     const groups = dc
       ? [
-          ["sup", `${rungs.some((r) => r.target.e.lk === "plcpower") ? "PLC y alimentación" : "Alimentación"} ${vtxt}`],
+          ["sup", `Alimentación ${vtxt}`],
           ["in", "Entradas del PLC"],
           ["out", "Mando y salidas del PLC"],
         ]
@@ -325,8 +336,9 @@ export function iecModel(scene, opts = {}) {
     }
     for (const b of s.blocks) if (coilAt.has(b.dev)) b.ref = coilAt.get(b.dev);
   }
-  // Mapa de E/S del PLC y formato de hoja A4.
+  // Mapa de E/S del PLC, enlaces del módulo y formato de hoja A4.
   addIoTable(sheets, devs, spec);
+  linkPlc(sheets);
   for (const s of sheets) toPaper(s);
   // Contactos libres (sin cables en sus bornes) de los equipos con bobina:
   // la vista los ofrece para agregar una autorretención o un enclavamiento.
@@ -339,6 +351,137 @@ export function iecModel(scene, opts = {}) {
     }
   }
   return { title: projectTitle, sheets, free };
+}
+
+/**
+ * Hoja del PLC como en los planos de tablero: el módulo es un rectángulo con
+ * sus bornes; arriba las entradas (con su COM) y la alimentación, abajo las
+ * salidas a relé. Cada borne cableado sale con una flecha que remite a la
+ * hoja y columna donde está su circuito.
+ */
+function plcSheet(src, plc, { net, rep, isWired, vtxt }) {
+  const P = 46; // paso entre bornes
+  const yP = RAIL_TOP;
+  const yN = RAIL_TOP + 26;
+  const yUp = 180; // flechas de las entradas
+  const yBox = 350;
+  const boxH = 150;
+  const yDown = yBox + boxH + 150; // flechas de las salidas
+  const loads = plc.el.loads ?? [];
+  const pwr = loads.find((l) => l.id === "power" || l.id === "supply");
+  const ins = loads.filter((l) => l !== pwr).sort((a, b) => natural(a.id, b.id));
+  const coms = [...new Set(ins.map((l) => l.b))];
+  const outs = Object.entries(plc.el.contacts ?? {}).sort(([a], [b]) => natural(a, b));
+  /** @type {Wire[]} */
+  const wires = [];
+  /** @type {Dot[]} */
+  const dots = [];
+  /** @type {PlcTerm[]} */
+  const terms = [];
+  /** @type {PlcLink[]} */
+  const links = [];
+  let x = X0 + 70;
+  // Bornes que van a un riel de la fuente (COM y alimentación).
+  const toRail = (t, tx, label, kind) => {
+    const full = `${plc.id}.${t}`;
+    terms.push({ x: tx, side: "top", label, kind });
+    const y = net(full) === net(src.pos) ? yP : net(full) === net(src.neg) ? yN : null;
+    if (y !== null) {
+      wires.push({ pts: [[tx, yBox], [tx, y]], rep: rep(full) });
+      dots.push({ x: tx, y, rep: rep(full) });
+    } else if (isWired(full)) {
+      wires.push({ pts: [[tx, yBox], [tx, yUp]], rep: rep(full) });
+      links.push({ x: tx, y: yUp, dir: "up", key: full, at: "", desc: t });
+    }
+  };
+  for (const l of ins) {
+    const full = `${plc.id}.${l.a}`;
+    const io = l.id.replace("_", ".");
+    const wired = isWired(full);
+    terms.push({ x, side: "top", label: io, kind: "in", free: !wired });
+    if (wired) {
+      wires.push({ pts: [[x, yBox], [x, yUp]], rep: rep(full) });
+      links.push({ x, y: yUp, dir: "up", key: `${plc.id}.${l.id}`, io, at: "", desc: "" });
+    }
+    x += P;
+  }
+  for (const c of coms) {
+    toRail(c, x, `COM ${c}`, "com");
+    x += P;
+  }
+  const xTopEnd = x;
+  if (pwr) {
+    x += P / 2;
+    toRail(pwr.a, x, pwr.a, "pwr");
+    x += P;
+    toRail(pwr.b, x, pwr.b, "pwr");
+    x += P;
+  }
+  let xo = X0 + 70;
+  for (const [cid, [a, b]] of outs) {
+    const io = cid.replace("_", ".");
+    const ta = `${plc.id}.${a}`;
+    const tb = `${plc.id}.${b}`;
+    const wired = isWired(ta) || isWired(tb);
+    terms.push({ x: xo, side: "bot", label: io, kind: "out", free: !wired });
+    if (wired) {
+      const r = rep(isWired(tb) ? tb : ta);
+      wires.push({ pts: [[xo, yBox + boxH], [xo, yDown]], rep: r });
+      links.push({ x: xo, y: yDown, dir: "down", key: `${plc.id}.${cid}`, io, at: "", desc: "" });
+    }
+    xo += P;
+  }
+  const bx = X0 + 30;
+  const bw = Math.max(x, xo, xTopEnd) - P / 2 + 30 - bx;
+  const used = Math.ceil((bx + bw + 30 - X0) / COLW);
+  return /** @type {Sheet} */ ({
+    n: 0,
+    id: "",
+    kind: "plc",
+    title: `PLC y alimentación ${vtxt}`,
+    src: src.id,
+    srcKind: src.kind,
+    w: X0 + COLW * used + 40,
+    h: yDown + 110,
+    cols: Math.max(used, 4),
+    used,
+    colW: COLW,
+    x0: X0,
+    rails: {
+      top: { y: yP, label: `+${src.volts} V`, rep: rep(src.pos), desig: `${desig(src.dev.id)} ${vtxt}` },
+      bot: { y: yN, label: "0 V", rep: rep(src.neg) },
+    },
+    plc: { dev: plc.id, label: desig(plc.id), name: plc.def?.name ?? "PLC", x: bx, y: yBox, w: bw, h: boxH, terms, links },
+    elems: [],
+    blocks: [],
+    wires,
+    dots,
+    notes: [],
+  });
+}
+
+/**
+ * Une el módulo del PLC con sus circuitos: cada flecha remite a la columna
+ * de la entrada o salida, y éstas remiten de vuelta al borne del módulo.
+ * @param {Sheet[]} sheets
+ */
+function linkPlc(sheets) {
+  const ps = sheets.find((s) => s.kind === "plc");
+  if (!ps?.plc) return;
+  const colOf = (x) => Math.max(1, Math.floor((x - ps.x0) / ps.colW) + 1);
+  const rows = new Map((ps.table?.rows ?? []).map((r) => [r.io, r]));
+  for (const ln of ps.plc.links) {
+    for (const s of sheets) {
+      const e = s.elems.find((x) => x.key === ln.key);
+      if (!e) continue;
+      ln.at = `${s.n}.${(e.col ?? 0) + 1}`;
+      e.ref = `${ps.n}.${colOf(ln.x)}`;
+      for (const md of s.modules ?? []) if (md.dev === e.dev && !md.ref) md.ref = e.ref;
+      break;
+    }
+    const r = ln.io ? rows.get(ln.io) : null;
+    if (r) ln.desc = [r.desc, r.equip.split(" ")[0]].filter(Boolean).join(" ");
+  }
 }
 
 /** Proporción de la hoja: A4 / A3 apaisadas (√2). Ancho mínimo en unidades. */
@@ -396,9 +539,9 @@ function addIoTable(sheets, devs, spec) {
   const tw = TABLE.cw.reduce((a, v) => a + v, 0);
   const th = TABLE.head + TABLE.rowH * (rows.length + 1);
   const title = `Mapa de E/S ${desig(plcDev)}`;
-  const home = sheets.find((s) => s.elems.some((e) => e.kind === "plcpower"));
+  const home = sheets.find((s) => s.kind === "plc") ?? sheets.find((s) => s.elems.some((e) => e.kind === "plcpower"));
   if (home) {
-    const x = home.x0 + home.colW * Math.max(home.used ?? 1, 2) + 40;
+    const x = home.plc ? home.plc.x + home.plc.w + 50 : home.x0 + home.colW * Math.max(home.used ?? 1, 2) + 40;
     home.table = { title, x, y: home.rails ? home.rails.top.y : 74, cw: TABLE.cw, rowH: TABLE.rowH, rows };
     home.railEnd = x - 24;
     home.w = Math.max(home.w, x + tw + 30);

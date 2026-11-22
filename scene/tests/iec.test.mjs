@@ -73,6 +73,19 @@ test("iec: hojas A4 apaisadas, módulo DI con un solo COM y mapa de E/S del PLC"
   assert.deepEqual(t.rows.find((r) => r.io === "I0.3"), { io: "I0.3", desc: "Llamar PB", equip: "-SB0 13-14", at: "3.4" });
   assert.equal(t.rows.find((r) => r.io === "Q0.2").desc, "En movimiento");
   assert.deepEqual(t.rows.filter((r) => r.free).map((r) => r.io), ["Q0.4", "Q0.5", "Q0.6", "Q0.7"]);
+  // Hoja del PLC: módulo con bornes; cada flecha remite a su circuito y vuelve.
+  assert.equal(sup.kind, "plc");
+  const p = sup.plc;
+  assert.deepEqual(p.terms.filter((x) => x.side === "top").map((x) => x.label), ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6", "I0.7", "COM M1", "24VDC", "M0"]);
+  assert.equal(p.terms.filter((x) => x.side === "bot" && x.free).length, 4);
+  const l3 = p.links.find((x) => x.io === "I0.3");
+  assert.equal(l3.at, "3.4");
+  assert.equal(l3.desc, "Llamar PB -SB0");
+  assert.equal(p.links.find((x) => x.io === "Q0.0").at, "4.1");
+  assert.match(ent.elems.find((e) => e.key === "plc.I0_3").ref, /^2\.\d+$/);
+  // COM y alimentación llegan a los rieles de la fuente.
+  assert.equal(sup.dots.filter((d) => d.y === sup.rails.top.y).length, 1);
+  assert.equal(sup.dots.filter((d) => d.y === sup.rails.bot.y).length, 2);
 });
 
 test("iec: marcha con autorretención → contactos en paralelo sobre una sola bobina", () => {

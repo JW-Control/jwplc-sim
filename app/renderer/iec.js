@@ -249,6 +249,53 @@
     );
   }
 
+  // Módulo del PLC con sus bornes (como en los planos de tablero): arriba
+  // entradas, COM y alimentación; abajo salidas a relé. Las flechas remiten
+  // a la hoja.columna del circuito de cada borne.
+  function plcModule(sh, m) {
+    let s = `<rect class="iec-l iec-plcmod" x="${m.x}" y="${m.y}" width="${m.w}" height="${m.h}" rx="4"/>`;
+    s += T(m.x + m.w / 2, m.y + m.h / 2 - 2, m.name, "iec-plcname") + T(m.x + m.w / 2, m.y + m.h / 2 + 14, m.label, "iec-desig");
+    const ins = m.terms.filter((t) => t.side === "top" && t.kind === "in");
+    if (ins.length) {
+      const xa = ins[0].x - 18;
+      const xb = m.terms.filter((t) => t.side === "top" && t.kind !== "pwr").at(-1).x + 18;
+      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + 6}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + 54, "Entradas digitales (DI)", "iec-modt", "start");
+    }
+    const outs = m.terms.filter((t) => t.side === "bot");
+    if (outs.length) {
+      const xa = outs[0].x - 18;
+      const xb = outs.at(-1).x + 18;
+      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + m.h - 44}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + m.h - 50, "Salidas a relé (contacto seco)", "iec-modt", "start");
+    }
+    const pw = m.terms.filter((t) => t.kind === "pwr");
+    if (pw.length) {
+      const xa = pw[0].x - 18;
+      const xb = pw.at(-1).x + 18;
+      s += `<rect class="iec-l iec-nofill iec-module" x="${xa}" y="${m.y + 6}" width="${xb - xa}" height="38" rx="2"/>` + T(xa + 4, m.y + 54, "Alimentación", "iec-modt", "start");
+    }
+    for (const t of m.terms) {
+      const y = t.side === "top" ? m.y : m.y + m.h;
+      const ty = t.side === "top" ? m.y + 16 : m.y + m.h - 16;
+      const ly = t.side === "top" ? m.y + 36 : m.y + m.h - 28;
+      s += L(t.x, y, t.x, ty + (t.side === "top" ? -5 : 5), t.free ? "iec-thin" : "");
+      s += `<circle class="iec-l iec-body" cx="${t.x}" cy="${ty}" r="5"/>` + L(t.x - 3.5, ty - 3.5, t.x + 3.5, ty + 3.5) + L(t.x - 3.5, ty + 3.5, t.x + 3.5, ty - 3.5);
+      s += T(t.x, ly, t.label, `iec-term iec-plcterm${t.free ? " iec-free" : ""}`);
+    }
+    for (const ln of m.links) {
+      const up = ln.dir === "up";
+      const y = ln.y;
+      s += `<path class="iec-l iec-body" d="M${ln.x - 5} ${up ? y + 9 : y - 9}L${ln.x + 5} ${up ? y + 9 : y - 9}L${ln.x} ${y}z"/>`;
+      if (ln.at) s += T(ln.x, up ? y - 6 : y + 15, `/${ln.at}`, "iec-ref", "middle", ` data-goto="${ln.at}"`);
+      if (ln.desc) {
+        // Texto a lo largo del cable, leído de abajo arriba (como en los planos).
+        const yy = up ? y + 16 : y - 16;
+        s += T(ln.x - 4, yy, ln.desc.length > 24 ? `${ln.desc.slice(0, 23)}…` : ln.desc, "iec-wiretext", up ? "end" : "start", ` transform="rotate(-90 ${ln.x - 4} ${yy})"`);
+      }
+    }
+    const flash = S.flash && S.flash.dev === m.dev ? " flash" : "";
+    return `<g class="iec-el iec-block${flash}" data-dev="${esc(m.dev)}">${s}</g>`;
+  }
+
   // Mapa de E/S: dirección, descripción, equipo y dónde está (clicable).
   function ioTable(t) {
     const W = t.cw.reduce((a, v) => a + v, 0);
@@ -294,6 +341,7 @@
     for (const d of sh.dots) s += `<circle class="iec-dot${live(sh, d.rep) ? " on" : ""}" cx="${d.x}" cy="${d.y}" r="2.6"/>`;
     for (const md of sh.modules ?? []) s += moduleFrame(md);
     if (sh.table) s += ioTable(sh.table);
+    if (sh.plc) s += plcModule(sh, sh.plc);
     for (const b of sh.blocks) s += block(sh, b);
     for (const e of sh.elems) s += elem(sh, e);
     if (sh.rails) for (const e of sh.elems) if (/^coil/.test(e.kind)) s += xrefTable(e, sh.rails.bot.y + 14);
