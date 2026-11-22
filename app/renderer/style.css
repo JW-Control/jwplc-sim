@@ -2693,6 +2693,23 @@ body[data-tab="plant"] .board-card .panel-head {
 body[data-tab="plant"] .view3d-empty {
   right: 268px;
 }
+/* Botón «Etiquetas» de la planta 3D (arriba a la izquierda). */
+.view3d-labels {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  opacity: 0.92;
+}
+.view3d-labels.on {
+  color: var(--text);
+  border-color: var(--accent);
+}
 .view3d-add[hidden] {
   display: none;
 }

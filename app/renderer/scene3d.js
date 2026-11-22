@@ -9,6 +9,7 @@
 // magnéticos de cilindro, montados sobre el tubo en su extremo.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const COL = {
   frame: 0x5b6470, belt: 0x23272d, roller: 0x9aa3ad, piece: 0xf08a24, floor: 0x1b1f24, grid: 0x2c333b,
@@ -27,29 +28,73 @@ const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
 
 /** Texto en un plano siempre de frente (rótulo del equipo). */
-// Lienzo a 4× (1024 × 256) con mipmaps y filtrado anisotrópico: el rótulo
-// sigue nítido al acercar la cámara y no parpadea al alejarla.
+// Todos los rótulos miden lo mismo en pantalla (sizeAttenuation: false), sin
+// importar la distancia ni el equipo, y su ancho sigue al texto. Lienzo a 2×
+// con mipmaps: nítido al acercar y sin parpadeo al alejar. Se ocultan todos
+// juntos con el botón «Etiquetas» (V.labelsOn).
+const LABEL_H = 0.03; // alto en pantalla: fracción de tan(fov/2) (≈ 3 % del alto de la vista)
 function label(text) {
+  const H = 128;
+  const font = "600 64px 'Segoe UI', system-ui, sans-serif";
   const c = document.createElement("canvas");
-  c.width = 1024;
-  c.height = 256;
-  const g = c.getContext("2d");
-  g.fillStyle = "rgba(20,23,27,0.85)";
-  g.roundRect(0, 32, 1024, 192, 40);
+  let g = c.getContext("2d");
+  g.font = font;
+  const W = Math.max(H * 1.4, Math.ceil(g.measureText(String(text)).width) + 72);
+  c.width = W;
+  c.height = H;
+  g = c.getContext("2d");
+  g.fillStyle = "rgba(17,21,26,0.82)";
+  g.beginPath();
+  g.roundRect(2, 14, W - 4, H - 28, 26);
   g.fill();
-  g.fillStyle = "#e7ebef";
-  g.font = "bold 112px sans-serif";
+  g.strokeStyle = "rgba(46,160,67,0.9)"; // filo verde JW
+  g.lineWidth = 4;
+  g.stroke();
+  g.fillStyle = "#f3f6f9";
+  g.font = font;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText(text, 512, 132);
+  g.fillText(String(text), W / 2, H / 2 + 2);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.generateMipmaps = true;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-  s.scale.set(1.0, 0.25, 1);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
+  s.renderOrder = 10;
+  s.scale.set((LABEL_H * W) / H, LABEL_H, 1);
+  s.center.set(0.5, 0);
+  s.userData.isLabel = true;
+  s.userData.base = [(LABEL_H * W) / H, LABEL_H];
+  s.visible = V.labelsOn !== false;
   return s;
+}
+
+/**
+ * Interruptor de nivel montado en la pared del tanque (origen = punto de la
+ * pared a la altura que detecta): cabezal con su LED afuera, prensaestopa y
+ * varilla con flotador hacia adentro (+X).
+ */
+function levelSwitch() {
+  const g = new THREE.Group();
+  const steelM = mat(0xb8c0c8, { metalness: 0.75, roughness: 0.3 });
+  const gland = cyl(0.03, 0.07, steelM, 16);
+  gland.rotation.z = Math.PI / 2;
+  gland.position.x = -0.035;
+  const head = box(0.09, 0.09, 0.09, mat(0x3a4048, { metalness: 0.3 }));
+  head.position.x = -0.115;
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 10), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(-0.165, 0.02, 0);
+  const rod = cyl(0.008, 0.2, steelM, 8);
+  rod.rotation.z = Math.PI / 2;
+  rod.position.x = 0.1;
+  const fl = cyl(0.035, 0.06, mat(0xf2f2f2, { roughness: 0.5 }), 14);
+  fl.position.set(0.19, -0.02, 0);
+  const cable = cyl(0.008, 0.25, mat(0x23272d), 6);
+  cable.position.set(-0.115, -0.17, 0);
+  g.add(gland, head, lamp, rod, fl, cable);
+  g.userData.lamp = lamp;
+  return g;
 }
 
 /** Baliza de un sensor enlazado: poste y luz. */
@@ -351,6 +396,32 @@ function buildTank(p, spec) {
   const rim = new THREE.Mesh(new THREE.TorusGeometry(R, 0.02, 8, 48), mat(COL.frame));
   rim.rotation.x = Math.PI / 2;
   rim.position.y = H + 0.2;
+  if (!cone) {
+    // Tapa con boca de inspección, base de concreto y escalera de gato atrás.
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R + 0.01, 0.12, 40, 1, true), mat(COL.tank, { roughness: 0.4, side: THREE.DoubleSide }));
+    lid.position.y = H + 0.26;
+    const hatch = cyl(R * 0.4, 0.05, mat(0x3a4048, { metalness: 0.4 }), 32);
+    hatch.position.y = H + 0.34;
+    const pad = box(2 * R + 0.3, 0.12, 2 * R + 0.3, mat(0xa9adb2, { roughness: 0.95, metalness: 0 }));
+    pad.position.y = 0.06;
+    base.position.y = 0.14;
+    base.scale.y = 0.6;
+    const lad = new THREE.Group();
+    const ladM = mat(0x9aa3ad, { metalness: 0.6 });
+    for (const lx of [-0.17, 0.17]) {
+      const rail = box(0.03, H + 0.35, 0.03, ladM);
+      rail.position.set(lx, (H + 0.35) / 2 + 0.1, 0);
+      lad.add(rail);
+    }
+    for (let y = 0.35; y < H + 0.4; y += 0.3) {
+      const rung = cyl(0.012, 0.34, ladM, 8);
+      rung.rotation.z = Math.PI / 2;
+      rung.position.y = y;
+      lad.add(rung);
+    }
+    lad.position.set(0, 0, -R - 0.06);
+    g.add(lid, hatch, pad, lad);
+  }
   // Bomba al costado con su caño al tanque.
   // Electrobomba al costado (la misma de la sala de bombas) con su descarga al
   // tanque, si lo llena un motor; si lo llena otro equipo (un filtro), solo la entrada.
@@ -378,7 +449,9 @@ function buildTank(p, spec) {
   pipeTop.position.set(px, 0.75, zd);
   holder.visible = pipe.visible = pipeTop.visible = motorFed;
   g.add(shell, water, base, rim, ep.group, holder, pipe, pipeTop);
-  return { group: g, water, impeller, H, R, cone, size: [2 * R + 0.8, 2 * R] };
+  // Radio de la pared a una altura relativa (0 = fondo, 1 = borde), para montar sensores.
+  const wallR = (k) => rb + (R - rb) * Math.max(0, Math.min(1, k));
+  return { group: g, water, impeller, H, R, cone, wallR, size: [2 * R + 0.8, 2 * R] };
 }
 
 function buildDoor(p) {
@@ -522,6 +595,117 @@ const V = {
   frames: [],
 };
 
+/** Cielo: degradado vertical de la parte alta al horizonte. */
+function skyTexture(p) {
+  const c = document.createElement("canvas");
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext("2d");
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, p.top);
+  gr.addColorStop(0.62, p.horizon);
+  gr.addColorStop(1, p.horizon);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Losa de concreto: grano fino y juntas de dilatación cada 2 m (una baldosa = 2 m). */
+function slabTexture(p) {
+  const N = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const g = c.getContext("2d");
+  g.fillStyle = p.slab;
+  g.fillRect(0, 0, N, N);
+  // Grano determinista (no cambia entre aperturas).
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 2600; i++) {
+    const v = rnd() < 0.5 ? 0 : 255;
+    g.fillStyle = `rgba(${v},${v},${v},${p.grain * rnd()})`;
+    g.fillRect(rnd() * N, rnd() * N, 1 + rnd() * 2, 1 + rnd() * 2);
+  }
+  g.strokeStyle = p.joint;
+  g.lineWidth = 2;
+  g.strokeRect(1, 1, N - 2, N - 2);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(80, 80);
+  t.anisotropy = V.renderer?.capabilities.getMaxAnisotropy?.() ?? 4;
+  return t;
+}
+
+let SHADOW_TEX = null;
+/** Sombra de contacto horneada bajo cada equipo: un degradado radial sobre el piso. */
+function contactShadows(root) {
+  if (!SHADOW_TEX) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const g = c.getContext("2d");
+    const gr = g.createRadialGradient(64, 64, 8, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,0.26)");
+    gr.addColorStop(0.5, "rgba(0,0,0,0.14)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 128, 128);
+    SHADOW_TEX = new THREE.CanvasTexture(c);
+  }
+  const box3 = new THREE.Box3();
+  const sm = new THREE.MeshBasicMaterial({ map: SHADOW_TEX, transparent: true, depthWrite: false });
+  for (const obj of [...root.children]) {
+    if (obj.userData.isLabel || obj.userData.isShadow) continue;
+    box3.setFromObject(obj, true);
+    if (box3.isEmpty() || box3.min.y > 0.6) continue; // solo lo que apoya en el piso
+    const w = box3.max.x - box3.min.x;
+    const d = box3.max.z - box3.min.z;
+    const h = box3.max.y - box3.min.y;
+    // Tuberías y canalizaciones a ras de piso no proyectan sombra; equipos muy
+    // grandes (edificio) tampoco, para no oscurecer media escena.
+    if (!(w > 0.05 && d > 0.05) || h < 0.25 || w > 8 || d > 8) continue;
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.25 + 0.4, d * 1.25 + 0.4), sm);
+    sh.rotation.x = -Math.PI / 2;
+    sh.position.set((box3.min.x + box3.max.x) / 2, 0.004, (box3.min.z + box3.max.z) / 2);
+    sh.userData.isShadow = true;
+    sh.renderOrder = -1;
+    root.add(sh);
+  }
+}
+
+/**
+ * Con sizeAttenuation: false la escala del padre sigue multiplicando al rótulo:
+ * se compensa para que todos midan lo mismo en pantalla.
+ */
+function normalizeLabels(root) {
+  const ws = new THREE.Vector3();
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    if (!o.userData?.isLabel || !o.parent) return;
+    o.parent.getWorldScale(ws);
+    const [bw, bh] = o.userData.base;
+    o.scale.set(bw / (Math.abs(ws.x) || 1), bh / (Math.abs(ws.y) || 1), 1);
+  });
+}
+
+/** Muestra u oculta todos los rótulos de la planta. */
+function setLabels(on) {
+  V.labelsOn = on;
+  V.root?.traverse((o) => {
+    if (o.userData?.isLabel) o.visible = on;
+  });
+  try {
+    localStorage.setItem("jwsim.3dLabels", on ? "1" : "0");
+  } catch {}
+  const b = document.getElementById("view3d-labels");
+  if (b) {
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  }
+}
+
 function init() {
   const canvas = document.getElementById("view3d-canvas");
   try {
@@ -540,11 +724,25 @@ function init() {
     if (m === "light") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   };
-  const pal = (dark) => (dark ? { bg: 0x14171b, floor: 0x1b1f24, grid: 0x2c333b } : { bg: 0xe8edf3, floor: 0xdde3ec, grid: 0xbac4d1 });
+  // Entorno: cielo en degradado, losa de concreto con juntas, luz de día con
+  // reflejos suaves (RoomEnvironment) y tono fílmico. Sin sombras en tiempo
+  // real: cada equipo lleva una sombra de contacto horneada (contactShadows).
+  const pal = (dark) =>
+    dark
+      ? { top: "#0b0e12", horizon: "#1d232b", fog: 0x1d232b, slab: "#2a2f36", joint: "rgba(0,0,0,0.35)", grain: 0.10, hemi: 0.55, sun: 1.1, env: 0.35 }
+      : { top: "#9fc0e3", horizon: "#e6edf4", fog: 0xe6edf4, slab: "#c9ccd0", joint: "rgba(70,75,82,0.35)", grain: 0.07, hemi: 0.9, sun: 2.2, env: 0.6 };
   const c0 = pal(isDark());
+  V.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  V.renderer.toneMappingExposure = 0.95;
   V.scene = new THREE.Scene();
-  V.scene.background = new THREE.Color(c0.bg);
-  V.scene.fog = new THREE.Fog(c0.bg, 18, 45);
+  V.scene.background = skyTexture(c0);
+  V.scene.fog = new THREE.Fog(c0.fog, 26, 70);
+  const pmrem = new THREE.PMREMGenerator(V.renderer);
+  V.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  V.scene.environment = V.envMap;
+  V.scene.environmentIntensity = c0.env;
+  V.palette = pal;
+  V.isDark = isDark;
   V.camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
   V.camera.position.set(4, 5, 9);
   V.controls = new OrbitControls(V.camera, canvas);
@@ -552,32 +750,37 @@ function init() {
   V.controls.maxPolarAngle = Math.PI / 2 - 0.05;
   // Si el usuario giró o acercó, el encuadre automático ya no lo pisa.
   V.controls.addEventListener("start", () => (V.userMoved = true));
-  V.scene.add(new THREE.HemisphereLight(0xdfe8f2, 0x20242a, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(5, 10, 6);
+  const hemi = new THREE.HemisphereLight(0xe8f0fa, 0x3a3f46, c0.hemi);
+  V.scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff4e2, c0.sun);
+  sun.position.set(6, 12, 8);
   V.scene.add(sun);
-  const floorMat = mat(c0.floor);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
+  const floorMat = new THREE.MeshStandardMaterial({ map: slabTexture(c0), roughness: 0.92, metalness: 0 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), floorMat);
   floor.rotation.x = -Math.PI / 2;
   V.scene.add(floor);
-  let grid = new THREE.GridHelper(80, 80, c0.grid, c0.grid);
-  grid.position.y = 0.002;
-  V.scene.add(grid);
   const apply3dTheme = (dark) => {
     const p = pal(dark);
-    V.scene.background.setHex(p.bg);
-    V.scene.fog.color.setHex(p.bg);
-    floorMat.color.setHex(p.floor);
-    V.scene.remove(grid);
-    grid.geometry?.dispose?.();
-    grid.material?.dispose?.();
-    grid = new THREE.GridHelper(80, 80, p.grid, p.grid);
-    grid.position.y = 0.002;
-    V.scene.add(grid);
+    V.scene.background?.dispose?.();
+    V.scene.background = skyTexture(p);
+    V.scene.fog.color.setHex(p.fog);
+    V.scene.environmentIntensity = p.env;
+    hemi.intensity = V.lowQuality ? p.hemi * 1.6 : p.hemi;
+    sun.intensity = p.sun;
+    floorMat.map?.dispose?.();
+    floorMat.map = slabTexture(p);
+    floorMat.needsUpdate = true;
   };
   window.addEventListener("jwsim:themechange", (e) => apply3dTheme(!!e.detail?.dark));
   V.root = new THREE.Group();
   V.scene.add(V.root);
+  try {
+    V.labelsOn = localStorage.getItem("jwsim.3dLabels") !== "0";
+  } catch {
+    V.labelsOn = true;
+  }
+  document.getElementById("view3d-labels")?.addEventListener("click", () => setLabels(!V.labelsOn));
+  setLabels(V.labelsOn);
   new ResizeObserver(resize).observe(canvas.parentElement);
   setupPicking(canvas);
   V.ready = true;
@@ -701,7 +904,6 @@ function processPipes(plant) {
       const lid = box(0.3, 0.012, 0.3, mat(0x3a4048, { metalness: 0.4 }));
       lid.position.set(p0.x + 0.08, 0.066, -0.95);
       const tagW = label("Agua cruda");
-      tagW.scale.set(0.5, 0.125, 1);
       tagW.position.set(p0.x, 0.3, -1.2);
       V.root.add(well, lid, tagW);
     }
@@ -766,7 +968,6 @@ function rebuild(spec) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
     const tag = label("Tablero");
-    tag.scale.set(0.5, 0.125, 1);
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
     V.root.add(panel.group);
@@ -804,7 +1005,6 @@ function rebuild(spec) {
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     const tag = label(d.id);
-    if (d.type === "jwsim/building-water") tag.scale.set(0.7, 0.175, 1);
     tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
     V.root.add(model.group);
@@ -817,7 +1017,6 @@ function rebuild(spec) {
         const b = slotSensor();
         b.position.set(s.params.end === "extendido" ? CYL.front - 0.14 : CYL.rear + 0.1, CYL.y + CYL.tubeR + 0.012, CYL.z);
         const t = label(s.id);
-        t.scale.set(0.42, 0.105, 1);
         t.position.y = 0.06;
         b.add(t);
         (model.cyl ?? model.group).add(b);
@@ -832,7 +1031,6 @@ function rebuild(spec) {
         const b = rollerSwitch();
         b.position.set(headX(cylPos) + 0.03, CYL.y - CYL.headR - 0.016 - 0.05, CYL.z);
         const t = label(s.id);
-        t.scale.set(0.42, 0.105, 1);
         t.position.y = -0.17;
         b.add(t);
         model.cyl.add(b);
@@ -842,7 +1040,6 @@ function rebuild(spec) {
       if (model.sensor) {
         const b = model.sensor(key);
         const t = label(s.id);
-        t.scale.set(0.6, 0.15, 1);
         t.position.set(0, -0.1, -0.12);
         b.add(t);
         model.group.add(b);
@@ -850,14 +1047,21 @@ function rebuild(spec) {
         continue;
       }
       // Un final de carrera se ve como tal (palanca con rodillo); el resto, baliza.
-      const sw = s.type === "jwsim/limit-switch" && !CONVEYORS.has(d.type);
-      const b = sw ? rollerSwitch() : beacon();
+      const onTank = d.type === "jwsim/tank";
+      const sw = s.type === "jwsim/limit-switch" && !CONVEYORS.has(d.type) && !onTank;
+      const b = onTank ? levelSwitch() : sw ? rollerSwitch() : beacon();
       if (sw) b.scale.setScalar(2.2);
       if (CONVEYORS.has(d.type)) b.position.set(key === "sensorB" ? model.sB : model.sA, 0.7, model.W / 2 + 0.25);
-      else if (d.type === "jwsim/tank") b.position.set(-model.R - 0.2, 0.2 + min * model.H - 0.55, 0);
+      else if (onTank) b.position.set(-model.wallR(min), 0.2 + Math.max(0.04, Math.min(0.97, min)) * model.H, 0);
       else if (d.type === "jwsim/lift") {
         const k = key === "altura" ? Math.max(-0.4, Math.min(Number(d.params?.entrePisos ?? 3) * 5, min)) * LIFT_K : Number(key.replace(/\D/g, "") || 0) * Number(d.params?.entrePisos ?? 3) * LIFT_K;
         b.position.set(key === "altura" ? -0.35 : 1.5, Math.max(0, k), key === "altura" ? 0.6 : -0.65);
+        // Dos finales a casi la misma altura (p. ej. el de piso y el de
+        // seguridad del extremo): el segundo va a su lado, no encima.
+        model.usedSw ??= [];
+        const near = model.usedSw.filter((q) => q.x === b.position.x && Math.abs(q.y - b.position.y) < 0.3).length;
+        if (near) b.position.z += (key === "altura" ? -0.42 : 0.42) * near;
+        model.usedSw.push({ x: b.position.x, y: b.position.y });
       } else if (d.type === "jwsim/door") b.position.set(key === "persona" ? 0.2 : min > 0.5 ? 2 * model.A - 0.2 : model.A - 0.2, 0, 0.35);
       else b.position.set(min > 0.5 ? 1.4 : 0.9, 0, 0.35);
       if (sw) b.position.y += 0.25;
@@ -870,8 +1074,8 @@ function rebuild(spec) {
         model.group.add(br);
       }
       const t = label(s.id);
-      t.scale.set(sw ? 0.25 : 1, sw ? 0.0625 : 0.25, 1);
-      t.position.y = sw ? 0.1 : 0.8;
+      t.position.y = onTank ? 0.08 : sw ? 0.1 : 0.8;
+      if (onTank) t.position.x = -0.12;
       b.add(t);
       model.group.add(b);
       beacons.push({ id: s.id, b });
@@ -880,7 +1084,6 @@ function rebuild(spec) {
     // Cisterna en la azotea: es su propio equipo (nivel, rebalse) aunque la dibuje el edificio.
     if (model.tank) {
       const tt = label(model.tankId);
-      tt.scale.set(0.6, 0.15, 1);
       tt.position.set(0, model.tank.H + 0.6, 0);
       model.tank.group.add(tt);
       V.objects.set(model.tankId, { type: "jwsim/tank", model: model.tank, beacons: [], motor: "" });
@@ -944,7 +1147,6 @@ function rebuild(spec) {
       m.group.position.set(px + 0.15, 0, pz);
       V.root.add(m.group);
       const tag = label(it.label);
-      tag.scale.set(0.5, 0.125, 1);
       tag.position.set(0, it.id === "semaforo" ? 2.5 : 1.05, 0);
       m.group.add(tag);
       for (const h of m.hit ?? []) V.hits.push({ mesh: h, id: it.id });
@@ -970,6 +1172,8 @@ function rebuild(spec) {
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
   V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
+  contactShadows(V.root);
+  normalizeLabels(V.root);
   fitView();
   const empty = document.getElementById("view3d-empty");
   if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0;
@@ -2580,7 +2784,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     rotor.add(shaft, ...hubs, key);
     rotor.position.set(x, ay, pz - 0.02);
     const tag = label(id);
-    tag.scale.set(0.44, 0.11, 1);
     tag.position.set(x, 0.05, pz + 0.65);
     top.add(rotor, tag);
     // Succión desde el colector con su válvula de compuerta.
@@ -2627,7 +2830,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     const head = cyl(0.05, 0.06, mat(0x23272d), 16);
     head.position.set(tx2, 1.27, pz - 0.16);
     const tag = label(pt.id);
-    tag.scale.set(0.5, 0.125, 1);
     tag.position.set(tx2, 1.42, pz - 0.16);
     top.add(body, head, tag);
     ptPos = [tx2, 1.27, pz - 0.16];
@@ -2652,7 +2854,6 @@ function buildBuilding(p, spec = { devices: [] }) {
     top.add(run([[gx, panel.bottom, gz], [gx, yc, gz], [gx, yc, zl], [t[0], yc, zl], [t[0], yc, t[2]], [t[0], t[1], t[2]]], 0.022, conduitM));
   });
   const tag = label("Tablero");
-  tag.scale.set(0.5, 0.125, 1);
   tag.position.set(cx, panel.bottom + panel.H + 0.2, cz);
   top.add(tag);
   const height = BH + 1.6;
@@ -2662,26 +2863,144 @@ function buildBuilding(p, spec = { devices: [] }) {
 
 /** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
 const LIFT_K = 0.5;
+let MESH_TEX = null;
+/** Malla metálica (rejilla de 10 cm) con fondo transparente, para el pozo y las puertas. */
+function meshTexture() {
+  if (MESH_TEX) return MESH_TEX;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  g.strokeStyle = "rgba(60,66,74,1)";
+  g.lineWidth = 3;
+  g.beginPath();
+  for (let i = 0; i <= 64; i += 32) {
+    g.moveTo(i, 0);
+    g.lineTo(i, 64);
+    g.moveTo(0, i);
+    g.lineTo(64, i);
+  }
+  g.stroke();
+  MESH_TEX = new THREE.CanvasTexture(c);
+  MESH_TEX.wrapS = MESH_TEX.wrapT = THREE.RepeatWrapping;
+  return MESH_TEX;
+}
+/** Panel de malla de w × h (m) en el plano YZ (normal en X) o XY (normal en Z). */
+function meshPanel(w, h, normalZ = false) {
+  const t = meshTexture().clone();
+  t.repeat.set(w / 0.2, h / 0.2);
+  t.needsUpdate = true;
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, h),
+    new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.4, transparent: false, side: THREE.DoubleSide, metalness: 0.5, roughness: 0.5 }),
+  );
+  if (!normalZ) m.rotation.y = Math.PI / 2;
+  return m;
+}
+
+/**
+ * Montacargas de obra: pozo de estructura metálica con malla y arriostres,
+ * rieles guía, cabina con yugo, contrapeso en su propio riel, máquina con
+ * tambor arriba y losas de cada piso sobre columnas, con baranda y puerta de
+ * piso de malla (se desliza en Z al abrir). Pozo: x 0..1.1, z −0.55..0.55;
+ * los pisos van a la derecha (x > 1.2).
+ */
 function buildLift(p) {
   const g = new THREE.Group();
   const n = Math.max(2, Math.min(6, Math.round(Number(p.pisos ?? 3))));
   const H = Math.max(0.5, Number(p.entrePisos ?? 3)) * LIFT_K;
   const top = (n - 1) * H;
   const tall = top + 1.6;
-  const post = mat(0x5b6470, { metalness: 0.4 });
+  const steel = mat(0x4c5561, { metalness: 0.55, roughness: 0.45 });
+  const yellow = mat(0xf2b705, { metalness: 0.2, roughness: 0.55 });
+  const concrete = mat(0xa9adb2, { roughness: 0.95, metalness: 0 });
+  const beamX = (len, y, z, m = steel) => {
+    const b = box(len, 0.05, 0.05, m);
+    b.position.set(0.55, y, z);
+    return b;
+  };
+  const beamZ = (len, x, y, m = steel) => {
+    const b = box(0.05, 0.05, len, m);
+    b.position.set(x, y, 0);
+    return b;
+  };
+  // Foso de concreto bajo el pozo.
+  const pit = box(1.4, 0.12, 1.4, concrete);
+  pit.position.set(0.55, 0.06, 0);
+  g.add(pit);
+  // Columnas, anillos en cada piso y a media altura, y malla atrás y a los lados.
   for (const [x, z] of [[0, -0.55], [1.1, -0.55], [0, 0.55], [1.1, 0.55]]) {
-    const pst = box(0.06, tall, 0.06, post);
+    const pst = box(0.08, tall, 0.08, steel);
     pst.position.set(x, tall / 2, z);
     g.add(pst);
   }
-  // Máquina: motor y tambor sobre el pozo.
-  const deck = box(1.3, 0.06, 1.3, mat(0x3a4048));
-  deck.position.set(0.55, tall, 0);
-  // Motor con aletas y su volante (el mismo del campo), acoplado al tambor.
+  const rings = [];
+  for (let i = 0; i < n; i++) rings.push(i * H + 0.02, i * H + H / 2);
+  rings.push(tall - 0.05);
+  for (const y of rings) {
+    if (y > tall) continue;
+    g.add(beamX(1.1, y, -0.55), beamX(1.1, y, 0.55), beamZ(1.1, 0, y));
+  }
+  const back = meshPanel(1.1, tall - 0.1);
+  back.position.set(0.0, tall / 2, 0);
+  const sideA = meshPanel(1.1, Math.min(2.0, tall - 0.1), true);
+  sideA.position.set(0.55, Math.min(2.0, tall - 0.1) / 2 + 0.05, 0.55);
+  const sideB = sideA.clone();
+  sideB.position.z = -0.55;
+  g.add(back, sideA, sideB);
+  // Arriostres en X en la cara de atrás, entre anillos de piso.
+  for (let i = 0; i < n - 1; i++) {
+    const y0 = i * H;
+    const y1 = (i + 1) * H;
+    const len = Math.hypot(1.1, y1 - y0);
+    const ang = Math.atan2(y1 - y0, 1.1);
+    for (const sgn of [1, -1]) {
+      const d = box(0.03, len, 0.03, steel);
+      d.position.set(-0.01, (y0 + y1) / 2, 0);
+      d.rotation.x = sgn * (Math.PI / 2 - ang);
+      g.add(d);
+    }
+  }
+  // Rieles guía de la cabina (perfil T) a los lados.
+  for (const z of [-0.5, 0.5]) {
+    const rail = box(0.04, tall - 0.1, 0.02, mat(0x9aa3ad, { metalness: 0.8, roughness: 0.25 }));
+    rail.position.set(0.55, (tall - 0.1) / 2 + 0.05, z);
+    g.add(rail);
+  }
+  // Contrapeso detrás del pozo, en su propio riel: baja cuando la cabina sube.
+  const cwRail = box(0.03, tall - 0.1, 0.03, steel);
+  cwRail.position.set(-0.22, (tall - 0.1) / 2 + 0.05, -0.2);
+  const cw = new THREE.Group();
+  const cwFrame = box(0.14, 0.7, 0.34, steel);
+  cwFrame.position.y = 0.35;
+  cw.add(cwFrame);
+  for (let i = 0; i < 6; i++) {
+    const blk = box(0.12, 0.09, 0.3, mat(0x2b2f35, { metalness: 0.3 }));
+    blk.position.y = 0.08 + i * 0.1;
+    cw.add(blk);
+  }
+  cw.position.set(-0.22, 0, 0);
+  g.add(cwRail, cw);
+
+  // Máquina: plataforma con baranda, motor, reductor y tambor sobre el pozo.
+  const deck = box(1.5, 0.07, 1.4, mat(0x3a4048, { metalness: 0.4 }));
+  deck.position.set(0.45, tall, 0);
+  g.add(deck);
+  for (const z of [-0.68, 0.68]) {
+    const rail = box(1.5, 0.03, 0.03, yellow);
+    rail.position.set(0.45, tall + 0.55, z);
+    g.add(rail);
+    for (const x of [-0.28, 0.45, 1.18]) {
+      const st = box(0.03, 0.55, 0.03, yellow);
+      st.position.set(x, tall + 0.28, z);
+      g.add(st);
+    }
+  }
   const fm = fieldMotor({ id: String(p.motor ?? "M").split(".")[0], type: "jwsim/motor-3ph" });
   const mot = fm.group;
   mot.scale.setScalar(0.75);
   mot.position.set(0.12, tall + 0.03 - 0.06, 0);
+  const gearbox = box(0.2, 0.22, 0.24, mat(0x2f6fb5, { metalness: 0.3 }));
+  gearbox.position.set(0.5, tall + 0.15, 0);
   const drum = new THREE.Group();
   const dr = cyl(0.11, 0.3, mat(0x9aa3ad, { metalness: 0.5 }), 20);
   dr.rotation.z = Math.PI / 2;
@@ -2689,19 +3008,71 @@ function buildLift(p) {
   mark.position.y = 0.11;
   drum.add(dr, mark);
   drum.position.set(0.72, tall + 0.14, 0);
-  g.add(deck, mot, drum);
-  // Losas y puertas de cada piso (a la derecha del pozo).
+  // Polea de desvío hacia el contrapeso.
+  const sheave = cyl(0.08, 0.04, mat(0x9aa3ad, { metalness: 0.6 }), 18);
+  sheave.rotation.x = Math.PI / 2;
+  sheave.position.set(-0.22, tall + 0.12, -0.2);
+  g.add(mot, gearbox, drum, sheave);
+
+  // Pisos: losa sobre columnas, borde amarillo junto al pozo, baranda en los
+  // otros tres lados y puerta de piso de malla con marco amarillo.
   const doors = [];
+  const slabM = mat(0xb4b8bd, { roughness: 0.9, metalness: 0 });
   for (let i = 0; i < n; i++) {
-    const slab = box(1.4, 0.08, 1.4, mat(0x9aa3ad, { roughness: 0.9 }));
-    slab.position.set(1.9, i * H - 0.04, 0);
-    const door = box(0.04, 0.95, 0.9, mat(0x8a939d, { metalness: 0.3, transparent: true, opacity: 0.85 }));
-    door.position.set(1.18, i * H + 0.48, 0);
-    const tag = label(i === 0 ? "PB" : `P${i}`);
-    tag.scale.set(0.5, 0.125, 1);
-    tag.position.set(2.4, i * H + 0.3, 0.6);
-    g.add(slab, door, tag);
+    const y = i * H;
+    if (i > 0) {
+      const slab = box(1.4, 0.1, 1.4, slabM);
+      slab.position.set(1.9, y - 0.05, 0);
+      g.add(slab);
+    } else {
+      const slab = box(1.4, 0.04, 1.4, slabM);
+      slab.position.set(1.9, 0.02, 0);
+      g.add(slab);
+    }
+    const edge = box(0.06, 0.02, 1.4, yellow);
+    edge.position.set(1.23, y + 0.01, 0);
+    g.add(edge);
+    if (i > 0) {
+      // Baranda: pasamanos, travesaño y rodapié en x = 2.58 y z = ±0.68.
+      const hr = (len, x, z, alongZ) => {
+        for (const [hy, th] of [[0.95, 0.035], [0.5, 0.025], [0.06, 0.12]]) {
+          const r = alongZ ? box(0.03, th, len, yellow) : box(len, th, 0.03, yellow);
+          r.position.set(x, y + hy, z);
+          g.add(r);
+        }
+      };
+      hr(1.4, 2.58, 0, true);
+      hr(1.3, 1.95, 0.68, false);
+      hr(1.3, 1.95, -0.68, false);
+    }
+    // Puerta de piso: marco amarillo con malla (0.9 × 0.95).
+    const door = new THREE.Group();
+    const dm = meshPanel(0.86, 0.92);
+    door.add(dm);
+    for (const [w, h, yy, zz] of [[0.04, 0.04, 0.47, 0], [0.04, 0.04, -0.47, 0]]) {
+      const f = box(w, h, 0.9, yellow);
+      f.position.set(0, yy, zz);
+      door.add(f);
+    }
+    for (const zz of [-0.45, 0.45]) {
+      const f = box(0.04, 0.98, 0.04, yellow);
+      f.position.set(0, 0, zz);
+      door.add(f);
+    }
+    door.position.set(1.18, y + 0.5, 0);
+    g.add(door);
     doors.push(door);
+    const tag = label(i === 0 ? "PB" : `P${i}`);
+    tag.position.set(2.4, y + 0.3, 0.6);
+    g.add(tag);
+  }
+  // Columnas que sostienen las losas.
+  if (n > 1) {
+    for (const [x, z] of [[1.25, -0.66], [2.55, -0.66], [1.25, 0.66], [2.55, 0.66]]) {
+      const c = box(0.12, top, 0.12, concrete);
+      c.position.set(x, top / 2, z);
+      g.add(c);
+    }
   }
   // Botonera de llamada en cada piso, junto a la puerta: un pulsador por
   // piso que se acciona con clic (el que nombra ese piso en su rótulo).
@@ -2715,36 +3086,44 @@ function buildLift(p) {
     ring.rotation.y = Math.PI / 2;
     ring.position.x = 0.012;
     const t = label(id);
-    t.scale.set(0.36, 0.09, 1);
     t.position.set(0.05, 0.17, 0);
     st.add(plateB, btn, ring, t);
     st.position.set(1.22, i * H + 0.55, 0.6);
     g.add(st);
     return { btn };
   };
-  // Cabina con la carga.
+  // Cabina: piso de plancha estriada, fondo de acero, lados de malla, techo y
+  // yugo con el enganche del cable; la carga adentro.
   const cab = new THREE.Group();
-  const floor = box(0.95, 0.05, 0.95, mat(0x3a4048));
-  floor.position.y = 0.025;
-  const roof = box(0.95, 0.04, 0.95, mat(0xc9cfd6));
+  const floor = box(0.95, 0.06, 0.95, mat(0x6b737d, { metalness: 0.6, roughness: 0.35 }));
+  floor.position.y = 0.03;
+  const roof = box(0.95, 0.04, 0.95, steel);
   roof.position.y = 1.0;
-  const back = box(0.03, 1.0, 0.95, mat(0xc9cfd6, { metalness: 0.4 }));
-  back.position.set(-0.46, 0.5, 0);
-  const side1 = box(0.95, 1.0, 0.03, mat(0xc9cfd6, { metalness: 0.4, transparent: true, opacity: 0.5 }));
+  const backW = box(0.03, 1.0, 0.95, mat(0xc9cfd6, { metalness: 0.4 }));
+  backW.position.set(-0.46, 0.5, 0);
+  const side1 = meshPanel(0.95, 0.96, true);
   side1.position.set(0, 0.5, 0.46);
   const side2 = side1.clone();
   side2.position.z = -0.46;
+  const yoke = box(0.06, 0.06, 1.0, yellow);
+  yoke.position.set(0, 1.12, 0);
+  const yokeL = box(0.05, 1.12, 0.05, yellow);
+  yokeL.position.set(0, 0.56, 0.49);
+  const yokeR = yokeL.clone();
+  yokeR.position.z = -0.49;
   const crate = box(0.4, 0.32, 0.4, mat(0xa87a3c));
-  crate.position.set(-0.1, 0.21, 0);
+  crate.position.set(-0.1, 0.22, 0);
   const extra = box(0.5, 0.36, 0.5, mat(0xd8282d));
-  extra.position.set(0.05, 0.55, 0.05);
+  extra.position.set(0.05, 0.56, 0.05);
   extra.visible = false;
-  cab.add(floor, roof, back, side1, side2, crate, extra);
+  cab.add(floor, roof, backW, side1, side2, yoke, yokeL, yokeR, crate, extra);
   cab.position.set(0.55, 0, 0);
   const rope = cyl(0.01, 1, mat(0x23272d), 6);
   rope.position.set(0.55, 0, 0);
-  g.add(cab, rope);
-  return { group: g, cab, rope, drum, doors, extra, tall, station, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
+  const cwRope = cyl(0.008, 1, mat(0x23272d), 6);
+  cwRope.position.set(-0.22, 0, -0.2);
+  g.add(cab, rope, cwRope);
+  return { group: g, cab, rope, cw, cwRope, drum, doors, extra, tall, station, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
 /** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
@@ -2799,11 +3178,38 @@ function buildChlorinator() {
 
 const outOf = (id) => V.snap?.devices.find((d) => d.id === id)?.outputs ?? {};
 
+/**
+ * Calidad adaptable: si tras unos segundos la vista no llega a 24 cuadros por
+ * segundo (GPU integrada, escritorio remoto, render por software), se quitan
+ * los reflejos del entorno, que son lo más caro por píxel. No vuelve atrás
+ * hasta reabrir la app.
+ */
+function checkQuality(now) {
+  if (V.lowQuality || !V.envMap) return;
+  V.qualityFrom ??= now;
+  if (now - V.qualityFrom < 3000) return;
+  if (V.frames.length >= 24) {
+    V.qualityFrom = now; // sigue midiendo: una escena más pesada puede bajar luego
+    return;
+  }
+  V.lowQuality = true;
+  V.scene.environment = null;
+  const p = V.palette(V.isDark());
+  V.scene.children.forEach((o) => {
+    if (o.isHemisphereLight) o.intensity = p.hemi * 1.6;
+  });
+  console.info(`[3D] ${V.frames.length} FPS: calidad reducida (sin reflejos del entorno)`);
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
-  if (!V.visible) return;
+  if (!V.visible) {
+    V.qualityFrom = null;
+    return;
+  }
   V.frames.push(now);
   while (V.frames.length && now - V.frames[0] > 1000) V.frames.shift();
+  checkQuality(now);
   const running = !!window.JwsimScene?.isRunning?.();
   // Tiempo simulado desde la última instantánea (extrapolación).
   const dt = running ? Math.min(0.2, ((performance.now() - V.snapWall) / 1000) * V.simRate) : 0;
@@ -2848,6 +3254,13 @@ function frame(now) {
       m.cab.position.y = y;
       m.rope.scale.y = Math.max(0.01, m.tall - y - 1.0);
       m.rope.position.y = (m.tall + y + 1.0) / 2;
+      // Contrapeso: recorre el pozo en sentido contrario a la cabina.
+      if (m.cw) {
+        const yc = Math.max(0.12, m.tall - 0.9 - y);
+        m.cw.position.y = yc;
+        m.cwRope.scale.y = Math.max(0.01, m.tall - yc - 0.7);
+        m.cwRope.position.y = (m.tall + yc + 0.7) / 2;
+      }
       const sp = valOf(outOf(String(o.motor ?? "")).speed);
       m.drum.rotation.x += sp * 0.3;
       m.motorRotor?.update({ speed: sp });
@@ -2977,5 +3390,13 @@ window.Jwsim3D = {
   },
   // Para las pruebas: cuadros por segundo del último segundo y objetos dibujados.
   fps: () => V.frames.length,
+  /** Para pruebas: true si la vista bajó la calidad por falta de cuadros. */
+  lowQuality: () => !!V.lowQuality,
+  /** Para pruebas: rótulos visibles y su escala en pantalla. */
+  labels: () => {
+    const out = [];
+    V.root?.traverse((o) => o.userData?.isLabel && out.push({ visible: o.visible, h: o.scale.y, att: o.material.sizeAttenuation }));
+    return out;
+  },
   objects: () => [...V.objects.entries()].map(([id, o]) => ({ id, type: o.type, beacons: o.beacons.length })),
 };
