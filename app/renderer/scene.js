@@ -3272,6 +3272,20 @@
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
     editCircuit: (op) => editCircuit(op),
+    // Un dato del equipo que no cambia su dibujo (p. ej. los bornes del PLC
+    // que se escriben en el plano IEC). value undefined lo quita. Ctrl+Z deshace.
+    setDeviceParam(id, key, value) {
+      if (S.running) return false;
+      const dev = S.spec.devices.find((d) => d.id === id);
+      if (!dev) return false;
+      pushHistory();
+      const params = { ...(dev.params ?? {}) };
+      if (value === undefined) delete params[key];
+      else params[key] = value;
+      dev.params = params;
+      changed();
+      return true;
+    },
     // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
     // ancho y del alto, y de qué lado sale) y el color de cada cable.
     terminalOf(end) {

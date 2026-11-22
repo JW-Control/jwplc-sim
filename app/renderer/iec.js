@@ -367,6 +367,8 @@
       r.cells.forEach((c, i) => {
         const last = i === r.cells.length - 1 && r.at;
         const cls = i === 0 ? "iec-io" : last ? "iec-ref" : "iec-tabc";
+        const ed = r.edit && r.edit.col === i ? r.edit : null;
+        if (ed) s += `<rect class="iec-cellhit" x="${xs[i]}" y="${y}" width="${t.cw[i]}" height="${t.rowH}" data-borne="${esc(ed.ch ?? "")}" data-dev="${esc(ed.dev)}" data-value="${esc(ed.value)}"><title>Clic: escribir el borne</title></rect>`;
         s += T(xs[i] + 4, y + t.rowH - 4, fit(String(c), t.cw[i]), `${cls}${r.free && !last ? " iec-free" : ""}`, "start", last ? ` data-goto="${r.at}"` : "");
       });
     });
@@ -560,6 +562,41 @@
     box.style.top = `${Math.max(48, y)}px`;
     draw();
   }
+  // Borne de un canal del PLC (hoja de bornes): se guarda en el equipo.
+  function openBorne(ds, ev) {
+    if (window.JwsimScene?.isRunning?.()) return;
+    const box = $("iec-edit");
+    const view = $("iec-view").getBoundingClientRect();
+    S.edit = { sheet: S.model.sheets[S.sheet].n, borne: ds.borne, dev: ds.dev };
+    box.innerHTML =
+      `<div class="iec-edit-h">Borne de -${esc(ds.dev)} ${esc(ds.borne.replace("_", "."))}</div>` +
+      `<input id="iec-borne-in" class="iec-borne-in" maxlength="16" placeholder="p. ej. XI:00" value="${esc(ds.value ?? "")}">` +
+      `<button data-act="borne-ok">Guardar</button><button data-act="borne-auto">Usar el propuesto</button>` +
+      `<div class="iec-edit-foot">Se guarda en el proyecto · Ctrl+Z deshace</div>`;
+    box.hidden = false;
+    box.style.left = `${Math.max(8, Math.min(ev.clientX - view.left + 12, view.width - 250))}px`;
+    box.style.top = `${Math.max(48, Math.min(ev.clientY - view.top + 12, view.height - 160))}px`;
+    const inp = $("iec-borne-in");
+    inp.focus();
+    inp.select();
+    inp.addEventListener("keydown", (k) => {
+      if (k.key === "Enter") saveBorne(inp.value);
+      else if (k.key === "Escape") closeEdit();
+      k.stopPropagation();
+    });
+  }
+  function saveBorne(value) {
+    const ed = S.edit;
+    if (!ed?.borne) return;
+    const dev = (spec().devices ?? []).find((d) => d.id === ed.dev);
+    const cur = { ...(dev?.params?.bornes ?? {}) };
+    const v = value == null ? "" : String(value).trim();
+    if (v) cur[ed.borne] = v;
+    else delete cur[ed.borne];
+    window.JwsimScene?.setDeviceParam?.(ed.dev, "bornes", Object.keys(cur).length ? cur : undefined);
+    closeEdit();
+  }
+
   function doEdit(act, i) {
     const sh = S.model.sheets[S.sheet];
     const ed = S.edit;
@@ -616,7 +653,9 @@
       if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
       const el = d.target.closest?.(".iec-el[data-key]");
       const rail = d.target.closest?.("[data-rail]");
-      if (el) openEdit({ key: el.dataset.key }, e);
+      const borne = d.target.closest?.("[data-borne]");
+      if (borne) openBorne(borne.dataset, e);
+      else if (el) openEdit({ key: el.dataset.key }, e);
       else if (rail) openEdit({ rail: rail.dataset.rail }, e);
       else closeEdit();
     });
@@ -635,7 +674,10 @@
     $("iec-pdf")?.addEventListener("click", () => exportPdf());
     $("iec-edit")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
-      if (b) doEdit(b.dataset.act, Number(b.dataset.i ?? 0));
+      if (!b) return;
+      if (b.dataset.act === "borne-ok") return saveBorne($("iec-borne-in")?.value);
+      if (b.dataset.act === "borne-auto") return saveBorne("");
+      doEdit(b.dataset.act, Number(b.dataset.i ?? 0));
     });
     window.addEventListener("keydown", (e) => e.key === "Escape" && S.edit && closeEdit());
     $("iec-sheets")?.addEventListener("click", (e) => {
@@ -690,6 +732,8 @@
       sheet: S.sheet,
       on: document.querySelectorAll("#iec-root .iec-w.on").length,
       error: S.model?.error ?? null,
+      // Celdas «Borne» de la hoja de bornes (E/S → texto).
+      bornes: Object.fromEntries((S.model?.sheets.at(-1)?.tables ?? []).flatMap((t) => t.rows.filter((r) => r.edit).map((r) => [r.cells[0], r.cells[1]]))),
     }),
     goto,
     exportPdf,
@@ -698,6 +742,11 @@
       const r = $("iec-view").getBoundingClientRect();
       openEdit(what, { clientX: r.left + 200, clientY: r.top + 200 });
       return S.edit ? doEdit(act, i) : { error: "sin menú" };
+    },
+    // Para las pruebas: escribe el borne de un canal como lo haría el usuario.
+    borne: (dev, ch, value) => {
+      S.edit = { borne: ch, dev };
+      saveBorne(value);
     },
     elems: () => (S.model?.sheets[S.sheet]?.elems ?? []).map((e) => ({ key: e.key, dev: e.dev, cid: e.cid, kind: e.kind, col: e.col })),
     free: () => S.model?.free ?? [],

@@ -161,6 +161,19 @@ try {
     menu, sId, sCol, hCol, pId, parCol: par?.col, q2Col: q2?.col, stillLamp, n0, n4,
   };
   log(`EDIT ${JSON.stringify(criteria.EDIT)}`);
+
+  // Bornes: el usuario escribe uno en la hoja de bornes; queda en el proyecto
+  // (params.bornes del PLC), sin «*», y Ctrl+Z lo devuelve al propuesto.
+  const b0 = (await t(() => window.JwsimIec.debug().bornes))["I0.0"];
+  await t(() => window.JwsimIec.borne("plc", "I0_0", "X1:01"));
+  await win.waitForFunction(() => window.JwsimIec.debug().bornes["I0.0"] === "X1:01", null, { timeout: 15000 }).catch(() => {});
+  const b1 = (await t(() => window.JwsimIec.debug().bornes))["I0.0"];
+  const saved = await t(() => window.jwsimTest.scene.spec().devices.find((d) => d.id === "plc")?.params?.bornes);
+  await t(() => window.JwsimScene.undo());
+  await win.waitForFunction((v) => window.JwsimIec.debug().bornes["I0.0"] === v, b0, { timeout: 15000 }).catch(() => {});
+  const b2 = (await t(() => window.JwsimIec.debug().bornes))["I0.0"];
+  criteria.BORNES = { ok: b0 === "XI:00*" && b1 === "X1:01" && saved?.I0_0 === "X1:01" && b2 === b0, b0, b1, saved, b2 };
+  log(`BORNES ${JSON.stringify(criteria.BORNES)}`);
   criteria.NO_ERRORS = { ok: errors.length === 0, errors };
 } catch (e) {
   criteria.ERROR = { ok: false, error: String(e?.stack ?? e) };
@@ -169,7 +182,7 @@ try {
   await app.close();
 }
 
-const ok = ["SHEETS", "CROSS_REF", "PDF", "ARRANGE", "REGENERATES", "EDIT", "NO_ERRORS"].every((k) => criteria[k]?.ok);
+const ok = ["SHEETS", "CROSS_REF", "PDF", "ARRANGE", "REGENERATES", "EDIT", "BORNES", "NO_ERRORS"].every((k) => criteria[k]?.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_IEC_E2E.json"), JSON.stringify({ ok, criteria }, null, 2));
 console.log(`JWSIM_IEC_E2E=${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

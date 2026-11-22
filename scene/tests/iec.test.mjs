@@ -88,9 +88,9 @@ test("iec: hojas A4 iguales con rejilla fija, módulo PLC con COM/NA, flechas y 
   const [ti, to] = lista.tables;
   assert.equal(ti.rows.length, 8);
   assert.equal(to.rows.length, 8);
-  assert.deepEqual(ti.rows[3].cells, ["I0.3", "XI:03", "Llamar PB", "-SB0 13-14", "COM M1", `/${refOf(ent, ins[3])}`]);
+  assert.deepEqual(ti.rows[3].cells, ["I0.3", "XI:03*", "Llamar PB", "-SB0 13-14", "COM M1", `/${refOf(ent, ins[3])}`]);
   assert.equal(to.rows[2].cells[2], "En movimiento");
-  assert.deepEqual(to.rows.filter((r) => r.free).map((r) => r.cells[1]), ["XQ:04", "XQ:05", "XQ:06", "XQ:07"]);
+  assert.deepEqual(to.rows.filter((r) => r.free).map((r) => r.cells[1]), ["XQ:04*", "XQ:05*", "XQ:06*", "XQ:07*"]);
   // Hoja del PLC: módulo con bornes; cada flecha remite a su circuito y vuelve.
   assert.equal(sup.kind, "plc");
   const p = sup.plc;
@@ -106,6 +106,18 @@ test("iec: hojas A4 iguales con rejilla fija, módulo PLC con COM/NA, flechas y 
   // COM y alimentación llegan a los rieles de la fuente.
   assert.equal(sup.dots.filter((d) => d.y === sup.rails.top.y).length, 1);
   assert.equal(sup.dots.filter((d) => d.y === sup.rails.bot.y).length, 2);
+});
+
+test("iec: los bornes escritos por el usuario (params.bornes del PLC) reemplazan a los propuestos", () => {
+  const sc = montacargas();
+  const plc = sc.devices.find((d) => d.id === "plc");
+  plc.params = { ...(plc.params ?? {}), bornes: { I0_0: "X1:01", Q0_2: " X2:05 " } };
+  const lista = iecModel(new Scene(sc)).sheets.at(-1);
+  const [ti, to] = lista.tables;
+  assert.equal(ti.rows[0].cells[1], "X1:01");
+  assert.equal(ti.rows[1].cells[1], "XI:01*", "los demás siguen propuestos");
+  assert.equal(to.rows[2].cells[1], "X2:05");
+  assert.deepEqual(ti.rows[0].edit, { col: 1, dev: "plc", ch: "I0_0", value: "X1:01" });
 });
 
 test("iec: marcha con autorretención → contactos en paralelo sobre una sola bobina", () => {

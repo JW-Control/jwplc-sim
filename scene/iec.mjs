@@ -41,9 +41,9 @@ const MAX_DEPTH = 16;
  *   label: string, text?: string, nc?: boolean, act?: string, col?: number,
  *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string, arrow?: boolean, ref2?: string,
  * }} Elem
- * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean, com?: string, borne?: string, sheet?: number, x?: number, y?: number }} IoRow
+ * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean, com?: string, borne?: string, sheet?: number, x?: number, y?: number, ch?: string, auto?: boolean }} IoRow
  * @typedef {{ x0: number, colW: number, cols: number, y0: number, rowH: number, rows: number }} Grid
- * @typedef {{ title: string, x: number, y: number, cw: number[], head: string[], rows: { cells: string[], free: boolean, at: string }[], rowH: number, note?: string }} Table
+ * @typedef {{ title: string, x: number, y: number, cw: number[], head: string[], rows: { cells: string[], free: boolean, at: string, edit?: { col: number, dev: string, ch?: string, value: string } }[], rowH: number, note?: string }} Table
  * @typedef {{ x: number, side: "top" | "bot", label: string, kind: string, io?: string, free?: boolean }} PlcTerm
  * @typedef {{ x: number, y: number, dir: "up" | "down", key: string, part?: string, io?: string, at: string, desc: string }} PlcLink
  * @typedef {{ dev: string, label: string, name: string, x: number, y: number, w: number, h: number, terms: PlcTerm[], links: PlcLink[] }} PlcModule
@@ -575,10 +575,18 @@ function ioRows(sheets, devs, spec) {
   }
   const key = (r) => [/^I/.test(r.io) ? 0 : 1, ...r.io.replace(/^\D+/, "").split(".").map(Number)];
   rows.sort((a, b) => cmpArr(key(a), key(b)));
-  // Borne propuesto por canal: XI (entradas) y XQ (salidas), como regletas.
+  // Borne de cada canal: el que el usuario escribió (params.bornes del PLC)
+  // o uno propuesto, XI (entradas) y XQ (salidas), como regletas.
+  const given = (spec.devices ?? []).find((d) => d.id === plcDev)?.params?.bornes ?? {};
   for (const r of rows) {
+    const ch = r.io.replace(".", "_");
+    r.ch = ch;
     const [, g = "0", n = "0"] = /^\D+(\d+)\.(\d+)/.exec(r.io) ?? [];
-    r.borne = `${/^I/.test(r.io) ? "XI" : "XQ"}${g === "0" ? "" : g}:${n.padStart(2, "0")}`;
+    if (typeof given[ch] === "string" && given[ch].trim()) r.borne = given[ch].trim();
+    else {
+      r.borne = `${/^I/.test(r.io) ? "XI" : "XQ"}${g === "0" ? "" : g}:${n.padStart(2, "0")}`;
+      r.auto = true;
+    }
   }
   // Fuentes de mando: qué hojas alimenta cada una.
   /** @type {Map<string, Set<number>>} */
@@ -626,7 +634,7 @@ function ioSheet(io) {
 function ioTables(io) {
   const ins = io.rows.filter((r) => /^I/.test(r.io));
   const outs = io.rows.filter((r) => !/^I/.test(r.io));
-  const rowOf = (r) => ({ cells: [r.io, r.borne ?? "", r.desc, r.equip, r.com ?? "", r.at ? `/${r.at}` : ""], free: !!r.free, at: r.at });
+  const rowOf = (r) => ({ cells: [r.io, `${r.borne ?? ""}${r.auto ? "*" : ""}`, r.desc, r.equip, r.com ?? "", r.at ? `/${r.at}` : ""], free: !!r.free, at: r.at, edit: { col: 1, dev: io.plc, ch: r.ch, value: r.auto ? "" : r.borne } });
   /** @type {Table[]} */
   const out = [];
   let y = 74;
@@ -634,10 +642,10 @@ function ioTables(io) {
     out.push({ title, x: X0, y, cw, head, rows, rowH: 15 });
     y += 20 + 15 * (rows.length + 1) + 24;
   };
-  if (ins.length) add(`Entradas digitales ${desig(io.plc)}`, ["E/S", "Borne*", "Función / dispositivo", "Equipo / contacto", "Común", "Ref."], IO_CW, ins.map(rowOf));
-  if (outs.length) add(`Salidas digitales ${desig(io.plc)} (relé)`, ["E/S", "Borne*", "Función", "Destino / bornes", "Contacto", "Ref."], IO_CW, outs.map(rowOf));
+  if (ins.length) add(`Entradas digitales ${desig(io.plc)}`, ["E/S", "Borne", "Función / dispositivo", "Equipo / contacto", "Común", "Ref."], IO_CW, ins.map(rowOf));
+  if (outs.length) add(`Salidas digitales ${desig(io.plc)} (relé)`, ["E/S", "Borne", "Función", "Destino / bornes", "COM / NA", "Ref."], IO_CW, outs.map(rowOf));
   if (io.sources.length) add("Fuentes de mando", ["Fuente", "Hojas"], SRC_CW, io.sources.map((c) => ({ cells: c, free: false, at: "" })));
-  out.push({ title: "", x: X0, y: y - 12, cw: [], head: [], rows: [], rowH: 15, note: "* Borne propuesto: numeración automática por canal (XI entradas, XQ salidas). Revisar antes de fabricar." });
+  out.push({ title: "", x: X0, y: y - 12, cw: [], head: [], rows: [], rowH: 15, note: "Clic en un borne para escribirlo. * = propuesto automáticamente por canal (XI entradas, XQ salidas): revisar antes de fabricar." });
   return out;
 }
 
