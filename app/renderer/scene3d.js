@@ -908,8 +908,10 @@ function probeTerm(end) {
 /** Puntas del multímetro y pinza dibujadas sobre los bornes del tablero 3D. */
 function diagMarks() {
   const group = new THREE.Group();
-  // Puntas grandes y siempre por encima: se ven aunque el borne quede tapado.
-  const basic = (hex) => new THREE.MeshBasicMaterial({ color: hex, depthTest: false });
+  // Puntas grandes y siempre por encima: van en una escena aparte que se
+  // dibuja después de la planta con la profundidad limpia (se ven aunque el
+  // borne quede tapado y sus piezas se tapan bien entre sí).
+  const basic = (hex) => new THREE.MeshBasicMaterial({ color: hex });
   const probe = (hex, tilt) => {
     const p = new THREE.Group();
     const tip = new THREE.Mesh(new THREE.ConeGeometry(0.0045, 0.05, 12), basic(0xd5dade));
@@ -919,21 +921,21 @@ function diagMarks() {
     guard.position.y = 0.056;
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.16, 16), basic(hex));
     grip.position.y = 0.142;
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0135, 0.0135, 0.01, 16), basic(0xf2f3f4));
+    // Aro blanco alrededor del mango.
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.0122, 0.0022, 8, 24), basic(0xf2f3f4));
+    band.rotation.x = Math.PI / 2;
     band.position.y = 0.2;
     const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.18, 8), basic(hex));
     cable.position.y = 0.31;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0028, 8, 24), basic(hex));
     ring.rotation.x = Math.PI / 2;
     p.add(tip, guard, grip, band, cable, ring);
-    p.traverse((o) => (o.renderOrder = 6));
     p.rotation.set(0.55, 0, tilt);
     p.visible = false;
     group.add(p);
     return p;
   };
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.006, 10, 28), basic(0xf2cf1d));
-  ring.renderOrder = 6;
   ring.visible = false;
   group.add(ring);
   return { group, red: probe(0xd8282d, 0.35), black: probe(0x1a1d21, -0.35), ring };
@@ -1380,8 +1382,10 @@ function rebuild(spec) {
   }
   processPipes(plant);
   for (const h of V.panel?.hits ?? []) V.hits.push(h);
+  V.overlay ??= new THREE.Scene();
+  V.overlay.clear();
   V.diagMarks = diagMarks();
-  V.root.add(V.diagMarks.group);
+  V.overlay.add(V.diagMarks.group);
   paintDiag();
   // Piezas de ambiente de la planta armada a mano (sin E/S).
   const pieces = spec.plant3d?.pieces ?? [];
@@ -3717,6 +3721,14 @@ function frame(now) {
   orientProbes();
   V.controls.update();
   V.renderer.render(V.scene, V.camera);
+  // Puntas del multímetro: encima de todo, con su propia profundidad.
+  if (V.overlay && V.diagMarks && (V.diagMarks.red.visible || V.diagMarks.black.visible || V.diagMarks.ring.visible)) {
+    const auto = V.renderer.autoClear;
+    V.renderer.autoClear = false;
+    V.renderer.clearDepth();
+    V.renderer.render(V.overlay, V.camera);
+    V.renderer.autoClear = auto;
+  }
 }
 
 window.Jwsim3D = {
