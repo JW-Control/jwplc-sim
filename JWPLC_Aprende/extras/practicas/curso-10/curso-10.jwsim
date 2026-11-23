@@ -1,0 +1,160 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 10 · Contadores",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Contadores/Contadores.ino"
+  },
+  "exercise": {
+    "lesson": "curso-10",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Contadores",
+    "brief": {
+      "goal": "Cajas de 24 piezas y la cuenta de cajas llenas en el Monitor Serie.",
+      "steps": [
+        "Ejecuta el ejemplo: cada toque a B1 es una pieza.",
+        "Cambia la meta a 24 piezas.",
+        "Cuenta las cajas llenas y muéstralas: «Cajas llenas: N».",
+        "RESET (S1) empieza una caja nueva."
+      ],
+      "uses": [
+        "I0_0 · B1, sensor de piezas",
+        "I0_1 · S1, RESET",
+        "Q0_0 · KM1, motor de la cinta",
+        "Q0_1 · H1, caja llena"
+      ],
+      "teaches": "Un contador suma en el flanco de cada pieza y compara con la meta; otro contador puede contar lo que cuenta el primero."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "negro",
+          "label": "Pieza"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "azul",
+          "label": "Reset"
+        },
+        "x": 220,
+        "y": 600
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 760,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Caja llena"
+        },
+        "x": 440,
+        "y": 600
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

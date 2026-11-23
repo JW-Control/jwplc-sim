@@ -1697,10 +1697,11 @@ function buildGoals() {
       .join("");
     // La expresión regular no se muestra: la descripción dice qué se espera.
     if (g.console !== undefined) sigs += `<span class="goal-sig goal-console" data-sig="consola"><code>Monitor Serie</code> <span class="goal-read"></span></span>`;
+    if (g.delay !== undefined) sigs += `<span class="goal-sig" data-sig="retardo"><code>${esc(Object.keys(g.delay.to).join(" "))}</code> <span class="goal-read"></span><small>→ ${esc(`${g.delay_ms[0]}–${g.delay_ms[1]} ms después`)}</small></span>`;
     if (g.period !== undefined) sigs += `<span class="goal-sig" data-sig="ritmo"><code>${esc(typeof g.period === "string" ? g.period : "Monitor Serie")}</code> <span class="goal-read"></span><small>→ ${esc(fmtPeriod(g))}</small></span>`;
     html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
     html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
-    if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined || (g.delay !== undefined && (g.cycles ?? 1) > 1)) html += `<div class="goal-hold"><i></i><small></small></div>`;
     if (g.hint) html += `<details class="goal-hint"><summary>Pista</summary>${esc(g.hint)}</details>`;
     if (g.why) html += `<div class="goal-why" hidden>${esc(g.why)}</div>`;
     html += `</div></li>`;
@@ -1738,7 +1739,7 @@ function renderGoals() {
       el.querySelector(".goal-read").textContent = st === "done" ? "" : fmtReading(k, s?.reading?.[k]);
       el.classList.toggle("ok", st === "done" || (!!s && st !== "blocked" && window.JwsimGoalMatch(s.reading[k], w)));
     }
-    for (const k of ["consola", "ritmo"]) {
+    for (const k of ["consola", "ritmo", "retardo"]) {
       const el = li.querySelector(`[data-sig="${k}"]`);
       if (!el) continue;
       const r = s?.reading?.[k];
@@ -1750,7 +1751,14 @@ function renderGoals() {
     const why = li.querySelector(".goal-why");
     if (why) why.hidden = st !== "done";
     const hold = Number(g.hold_ms ?? 0);
-    if (g.period !== undefined) {
+    if (g.delay !== undefined) {
+      const n = g.cycles ?? 1;
+      const bar = li.querySelector(".goal-hold");
+      if (bar) {
+        bar.querySelector("i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+        bar.querySelector("small").textContent = `${Math.round((s?.fraction ?? 0) * n)} / ${n} veces`;
+      }
+    } else if (g.period !== undefined) {
       const n = g.cycles ?? 3;
       li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
       li.querySelector(".goal-hold small").textContent = `${Math.round((s?.fraction ?? 0) * n)} / ${n} ciclos`;

@@ -155,8 +155,33 @@ test("period de consola: un número cada medio segundo", () => {
 
 test("checkGoals: console y period", () => {
   checkGoals([{ id: "a", description: "x", console: "hola" }, { id: "b", description: "y", period: "Q0_0", cycle_ms: [1, 2] }]);
-  assert.throws(() => checkGoals([{ id: "a", description: "x" }]), /falta 'when', 'console' o 'period'/);
+  assert.throws(() => checkGoals([{ id: "a", description: "x" }]), /falta 'when', 'console', 'period' o 'delay'/);
   assert.throws(() => checkGoals([{ id: "a", description: "x", console: "(" }]), /expresión regular válida/);
   assert.throws(() => checkGoals([{ id: "a", description: "x", period: "Q0_0" }]), /cycle_ms, on_ms u off_ms/);
   assert.throws(() => checkGoals([{ id: "a", description: "x", when: { I0_0: 1 }, hint: 3 }]), /'hint' es texto/);
+});
+
+test("delay: mide el retardo desde la condición hasta la respuesta", () => {
+  const g = { id: "ton", description: "arranca a los 2 s", delay: { from: { I0_0: 1 }, to: { Q0_0: 1 } }, delay_ms: [1900, 2100] };
+  checkGoals([g]);
+  // Temporizador de 3 s: no cumple.
+  let tr = new GoalTracker([g]);
+  let p;
+  const run = (delay) => {
+    tr = new GoalTracker([g]);
+    for (let t = 0; t <= 6000; t += 50) p = tr.update(snap(t, { i0: t >= 1000 ? 1 : 0, q0: t >= 1000 + delay }));
+    return p.goals[0];
+  };
+  const slow = run(3000);
+  assert.notEqual(slow.state, "done");
+  assert.equal(slow.reading.retardo, "3000 ms");
+  const good = run(2000);
+  assert.equal(good.state, "done", JSON.stringify(good));
+  assert.equal(good.reading.retardo, "2000 ms");
+  // Si se suelta antes de tiempo no se mide nada.
+  tr = new GoalTracker([g]);
+  for (let t = 0; t <= 3000; t += 50) p = tr.update(snap(t, { i0: t >= 1000 && t < 1500 ? 1 : 0 }));
+  assert.equal(p.goals[0].reading.retardo, "");
+  assert.throws(() => checkGoals([{ ...g, delay_ms: undefined }]), /delay_ms/);
+  assert.throws(() => checkGoals([{ ...g, delay: { from: {} , to: { Q0_0: 1 } } }]), /'delay' es/);
 });

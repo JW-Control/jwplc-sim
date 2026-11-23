@@ -397,7 +397,7 @@
         "cycles": {
           "type": "integer",
           "minimum": 1,
-          "default": 3
+          "description": "Ciclos (period, 3 por defecto) o veces seguidas (delay, 1 por defecto)"
         },
         "hint": {
           "type": "string",
@@ -406,6 +406,72 @@
         "why": {
           "type": "string",
           "description": "Qué enseña; se muestra al lograrlo."
+        },
+        "delay": {
+          "type": "object",
+          "required": [
+            "from",
+            "to"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "Señal → valor (igualdad) o [min, max] (rango cerrado). Claves: I0_k, Q0_k, <equipo>.<salida>.",
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": [
+                      "boolean",
+                      "number"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                ]
+              }
+            },
+            "to": {
+              "description": "Señal → valor (igualdad) o [min, max] (rango cerrado). Claves: I0_k, Q0_k, <equipo>.<salida>.",
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": [
+                      "boolean",
+                      "number"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Retardo: desde que 'from' empieza a cumplirse hasta que se cumple 'to' (temporizadores); con delay_ms."
+        },
+        "delay_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms del retardo"
         }
       },
       "anyOf": [
@@ -422,6 +488,11 @@
         {
           "required": [
             "period"
+          ]
+        },
+        {
+          "required": [
+            "delay"
           ]
         }
       ]

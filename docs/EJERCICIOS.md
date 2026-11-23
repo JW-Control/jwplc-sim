@@ -205,15 +205,17 @@ copien plantillas, soluciones y rúbricas.
 ## Prácticas evaluadas del curso
 
 Cada lección del Curso JWPLC Basic puede traer una práctica evaluada en
-`JWPLC_Aprende/extras/practicas/curso-NN/` (hoy, la Unidad 1: lecciones
-01 a 05). Tiene el mismo formato que un reto, con dos diferencias:
+`JWPLC_Aprende/extras/practicas/curso-NN/` (hoy, las 11 lecciones de las
+Unidades 1 y 2). Tiene el mismo formato que un reto, con dos diferencias:
 
 - El `.jwsim` es un **banco** pequeño (placa, fuente y los pulsadores,
   selectores y pilotos que usa la lección) y su `exercise` trae
   `"lesson": "curso-NN"`.
 - El sketch de partida (`sketch/`) es el ejemplo de la lección tal cual
   (lo comprueba `tests/app/aprende_test.mjs`). Las tareas de «Para
-  practicar» son los objetivos en vivo de `rubrica.json`.
+  practicar» son los objetivos en vivo de `rubrica.json`. Para temporizadores hay
+  objetivos de retardo (`delay` + `delay_ms`): miden cuánto tarda una salida
+  desde que se cumple una condición.
 
 En la app, la lección se abre con su banco: la **guía** de la lección (su
 `README.md`: qué vas a aprender, qué conectar, cómo probarlo) a la izquierda

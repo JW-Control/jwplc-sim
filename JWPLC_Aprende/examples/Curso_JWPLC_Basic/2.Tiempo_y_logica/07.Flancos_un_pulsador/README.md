@@ -25,5 +25,6 @@
 
 ## Para practicar
 
-- Muestra cuántas veces se apretó el pulsador desde el arranque.
+- Muestra en el Monitor Serie cuántas veces se apretó el pulsador desde el
+  arranque, como «Pulsaciones: 3».
 - Haz que Q0.1 cambie al SOLTAR el pulsador, en lugar de al apretarlo.

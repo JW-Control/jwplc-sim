@@ -20,6 +20,10 @@
 //   "period": "Q0_0" | { "console": "expresión" }, con "cycle_ms",
 //     "on_ms" u "off_ms" ([min, max]) y "cycles" (3 por defecto): la señal
 //     o la línea se repite con ese ritmo; la barra cuenta los ciclos buenos.
+//   "delay": { "from": { "I0_0": 1 }, "to": { "Q0_0": 1 } }, con "delay_ms"
+//     [min, max] y "cycles" (1 por defecto): cada vez que "from" empieza a
+//     cumplirse se mide cuánto tarda "to" (mientras "from" siga); la barra
+//     cuenta las veces seguidas dentro del rango (temporizadores).
 // "hint" (pista si cuesta) y "why" (qué enseña, al lograrlo) son texto.
 
 const num = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
@@ -68,7 +72,7 @@ export function checkGoals(goals, file = "rubrica.json") {
     if (ids.has(g.id)) throw bad(`'${g.id}' repetido`);
     if (typeof g.description !== "string" || !g.description) throw bad(`'${g.id}': falta 'description'`);
     const hasWhen = g.when !== undefined;
-    if (!hasWhen && g.console === undefined && g.period === undefined) throw bad(`'${g.id}': falta 'when', 'console' o 'period'`);
+    if (!hasWhen && g.console === undefined && g.period === undefined && g.delay === undefined) throw bad(`'${g.id}': falta 'when', 'console', 'period' o 'delay'`);
     if (hasWhen && (!g.when || typeof g.when !== "object" || !Object.keys(g.when).length)) throw bad(`'${g.id}': 'when' debe tener al menos una señal`);
     if (g.console !== undefined) {
       if (typeof g.console !== "string" || !g.console) throw bad(`'${g.id}': 'console' es una expresión regular`);
@@ -79,6 +83,7 @@ export function checkGoals(goals, file = "rubrica.json") {
       }
     }
     if (g.period !== undefined) checkPeriodGoal(g, bad);
+    if (g.delay !== undefined) checkDelayGoal(g, bad);
     for (const x of ["hint", "why"]) if (g[x] !== undefined && typeof g[x] !== "string") throw bad(`'${g.id}': '${x}' es texto`);
     for (const [k, v] of Object.entries(g.when ?? {})) {
       if (Array.isArray(v) && (v.length !== 2 || !(num(v[0]) <= num(v[1])))) throw bad(`'${g.id}': rango de ${k} debe ser [min, max]`);
@@ -99,6 +104,14 @@ function checkPeriodGoal(g, bad) {
   if (!PERIOD_KEYS.some((x) => x in g)) throw bad(`'${g.id}': 'period' requiere cycle_ms, on_ms u off_ms`);
   for (const x of PERIOD_KEYS) if (x in g && !isRange(g[x])) throw bad(`'${g.id}': '${x}' debe ser [min, max]`);
   if (typeof p !== "string" && ("on_ms" in g || "off_ms" in g)) throw bad(`'${g.id}': on_ms y off_ms solo valen para una señal`);
+  if (g.cycles !== undefined && !(Number.isInteger(g.cycles) && g.cycles >= 1)) throw bad(`'${g.id}': 'cycles' debe ser un entero >= 1`);
+}
+
+function checkDelayGoal(g, bad) {
+  const d = g.delay;
+  const cond = (c) => c && typeof c === "object" && !Array.isArray(c) && Object.keys(c).length > 0;
+  if (!d || !cond(d.from) || !cond(d.to)) throw bad(`'${g.id}': 'delay' es { "from": {…}, "to": {…} }`);
+  if (!isRange(g.delay_ms)) throw bad(`'${g.id}': 'delay' requiere 'delay_ms' [min, max]`);
   if (g.cycles !== undefined && !(Number.isInteger(g.cycles) && g.cycles >= 1)) throw bad(`'${g.id}': 'cycles' debe ser un entero >= 1`);
 }
 
@@ -161,6 +174,12 @@ export class GoalTracker {
         fraction = p.fraction;
         ok = ok && !blocked && p.ok;
       }
+      if (g.delay !== undefined) {
+        const d = delayStep(g, s, snap, t, blocked);
+        reading.retardo = d.reading;
+        fraction = d.fraction;
+        ok = ok && !blocked && d.ok;
+      }
       if (!s.done) {
         if (ok) {
           s.since ??= t;
@@ -179,6 +198,7 @@ export class GoalTracker {
         when,
         ...(g.console !== undefined ? { console: g.console } : {}),
         ...(g.period !== undefined ? { period: periodLabel(g) } : {}),
+        ...(g.delay !== undefined ? { delay: g.delay, delay_ms: g.delay_ms, cycles: g.cycles ?? 1 } : {}),
         ...(g.hint ? { hint: g.hint } : {}),
         ...(g.why ? { why: g.why } : {}),
         reading,
@@ -242,4 +262,27 @@ function periodStep(g, s, snap, t, lines, blocked) {
   }
   good = Number.isFinite(good) ? good : 0;
   return { ok: good >= need, fraction: Math.min(1, good / need), reading: last === null ? "—" : `${last} ms` };
+}
+
+/**
+ * Avance de un objetivo de retardo: mide desde que "from" empieza a cumplirse
+ * hasta que "to" se cumple (con "from" todavía cumplido).
+ */
+function delayStep(g, s, snap, t, blocked) {
+  const need = g.cycles ?? 1;
+  const all = (c) => Object.entries(c).every(([k, want]) => matches(readSignal(snap, k), want));
+  const from = !blocked && all(g.delay.from);
+  s.good ??= 0;
+  if (!from) s.start = null;
+  else if (s.prevFrom === false && s.start == null && !s.measured) s.start = t;
+  if (!from) s.measured = false;
+  if (from && s.start != null && all(g.delay.to)) {
+    const d = t - s.start;
+    s.last = Math.round(d);
+    s.good = matches(d, g.delay_ms) ? s.good + 1 : 0;
+    s.start = null;
+    s.measured = true;
+  }
+  s.prevFrom = from;
+  return { ok: s.good >= need, fraction: Math.min(1, s.good / need), reading: s.last === undefined ? (s.start != null ? "midiendo…" : "") : `${s.last} ms` };
 }

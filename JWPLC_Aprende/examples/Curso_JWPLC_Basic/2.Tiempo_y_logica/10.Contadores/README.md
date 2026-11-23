@@ -32,4 +32,5 @@
 ## Para practicar
 
 - Cambia la meta a 24 piezas.
-- Cuenta también las cajas llenas y muéstralas en el Monitor Serie.
+- Cuenta también las cajas llenas y muéstralas en el Monitor Serie, como
+  «Cajas llenas: 2».

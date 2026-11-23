@@ -31,7 +31,7 @@
 
 ## Para practicar
 
-- Agrega un estado "ROJO PARPADEANDO" para los peatones en los últimos
-  3 segundos de su verde.
+- Agrega un estado "ROJO PARPADEANDO" para los peatones: su verde
+  parpadea cada medio segundo en los últimos 3 segundos.
 - Que una entrada I0.1 ponga el semáforo en amarillo intermitente (modo
-  noche) mientras esté activa.
+  noche, cada medio segundo) mientras esté activa.

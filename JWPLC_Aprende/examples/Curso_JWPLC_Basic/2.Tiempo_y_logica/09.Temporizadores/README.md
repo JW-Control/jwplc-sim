@@ -32,6 +32,7 @@
 
 ## Para practicar
 
-- Cambia los tiempos.
+- Cambia los tiempos: el arranque a 2 segundos y la luz del pasillo a
+  5 segundos.
 - Agrega un tercer temporizador: una bocina en Q0.2 que suene si la
   presencia de I0.1 dura más de 30 segundos.
