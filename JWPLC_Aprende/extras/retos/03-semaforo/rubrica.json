@@ -1,6 +1,63 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "03-semaforo",
+  "goals": [
+    {
+      "id": "verde",
+      "description": "Pulsa S1: el semáforo arranca en verde",
+      "when": {
+        "H1.lit": false,
+        "H2.lit": false,
+        "H3.lit": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "ambar",
+      "description": "Después del verde viene el ámbar, solo",
+      "when": {
+        "H1.lit": false,
+        "H2.lit": true,
+        "H3.lit": false
+      },
+      "after": "verde",
+      "hold_ms": 800,
+      "hint": "Verde 4 s, ámbar 1 s, rojo 4 s: una máquina de estados con millis()."
+    },
+    {
+      "id": "rojo",
+      "description": "Después del ámbar, rojo durante 4 s",
+      "when": {
+        "H1.lit": true,
+        "H2.lit": false,
+        "H3.lit": false
+      },
+      "after": "ambar",
+      "hold_ms": 3500
+    },
+    {
+      "id": "ciclo",
+      "description": "Vuelve a verde: el ciclo se repite",
+      "when": {
+        "H1.lit": false,
+        "H2.lit": false,
+        "H3.lit": true
+      },
+      "after": "rojo",
+      "hold_ms": 1000
+    },
+    {
+      "id": "parada",
+      "description": "Pulsa S0: se apagan las tres luces",
+      "when": {
+        "H1.lit": false,
+        "H2.lit": false,
+        "H3.lit": false
+      },
+      "after": "ciclo",
+      "hold_ms": 1000
+    }
+  ],
   "cases": [
     {
       "name": "Ciclo verde, ámbar, rojo",
@@ -186,6 +243,38 @@
             "H2.lit": 0,
             "H3.lit": 0
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Un ciclo y parada",
+      "until_ms": 14500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12100,
+          "device": "S0",
+          "action": "press",
+          "value": false
         }
       ]
     }

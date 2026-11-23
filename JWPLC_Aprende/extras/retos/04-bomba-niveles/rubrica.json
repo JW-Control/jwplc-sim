@@ -1,6 +1,62 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "04-bomba-niveles",
+  "goals": [
+    {
+      "id": "vacio",
+      "description": "Tanque vacío: la bomba arranca y H1 avisa nivel bajo",
+      "when": {
+        "B1.actuated": false,
+        "KM1.closed": true,
+        "H1.lit": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "sobre_b1",
+      "description": "Acciona B1 (el agua lo pasa): la bomba sigue llenando",
+      "when": {
+        "B1.actuated": true,
+        "B2.actuated": false,
+        "KM1.closed": true,
+        "H1.lit": false
+      },
+      "after": "vacio",
+      "hold_ms": 800,
+      "hint": "Entre B1 y B2 la bomba conserva lo que estaba haciendo: histéresis."
+    },
+    {
+      "id": "lleno",
+      "description": "Acciona B2: la bomba para",
+      "when": {
+        "B2.actuated": true,
+        "KM1.closed": false
+      },
+      "after": "sobre_b1",
+      "hold_ms": 800
+    },
+    {
+      "id": "bajando",
+      "description": "Suelta B2: entre B2 y B1 la bomba no arranca",
+      "when": {
+        "B1.actuated": true,
+        "B2.actuated": false,
+        "KM1.closed": false
+      },
+      "after": "lleno",
+      "hold_ms": 800
+    },
+    {
+      "id": "rearranca",
+      "description": "Suelta B1: bajo B1 vuelve a llenar",
+      "when": {
+        "B1.actuated": false,
+        "KM1.closed": true
+      },
+      "after": "bajando",
+      "hold_ms": 800
+    }
+  ],
   "cases": [
     {
       "name": "Llenado desde vacío",
@@ -127,6 +183,38 @@
           "expect": {
             "H1.lit": true
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Llena, para y vuelve a llenar",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "B2",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 5500,
+          "device": "B2",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
         }
       ]
     }

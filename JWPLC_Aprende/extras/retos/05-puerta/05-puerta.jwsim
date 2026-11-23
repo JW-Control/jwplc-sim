@@ -23,7 +23,7 @@
       "steps": [
         "S1 abre hasta B1; S2 cierra hasta B2; cada final detiene el motor.",
         "S0 detiene el portón donde esté.",
-        "Si B3 detecta un obstáculo al cerrar, pare y vuelva a abrir.",
+        "Si B3 detecta un obstáculo al cerrar, para y vuelve a abrir.",
         "Nunca KM1 y KM2 a la vez; baliza H1 mientras se mueve."
       ],
       "teaches": "Máquina de estados, finales de carrera y sensor de seguridad.",

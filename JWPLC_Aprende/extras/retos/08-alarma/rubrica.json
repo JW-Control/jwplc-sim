@@ -1,6 +1,54 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "08-alarma",
+  "goals": [
+    {
+      "id": "suena",
+      "description": "Acciona B1: suena la bocina HA1",
+      "when": {
+        "B1.actuated": true,
+        "HA1.sounding": true
+      },
+      "hold_ms": 500
+    },
+    {
+      "id": "parpadea",
+      "description": "H1 parpadea: 0,5 s encendido y 0,5 s apagado",
+      "period": "H1.lit",
+      "on_ms": [
+        400,
+        600
+      ],
+      "off_ms": [
+        400,
+        600
+      ],
+      "cycles": 2
+    },
+    {
+      "id": "reconoce",
+      "description": "Pulsa S1 con la alarma presente: la bocina calla y H1 queda fijo",
+      "when": {
+        "B1.actuated": true,
+        "HA1.sounding": false,
+        "H1.lit": true
+      },
+      "after": "suena",
+      "hold_ms": 1000,
+      "hint": "Una variable «reconocida» que pone S1 y borra la alarma al desaparecer."
+    },
+    {
+      "id": "normal",
+      "description": "Suelta B1: todo se apaga",
+      "when": {
+        "B1.actuated": false,
+        "HA1.sounding": false,
+        "H1.lit": false
+      },
+      "after": "reconoce",
+      "hold_ms": 800
+    }
+  ],
   "cases": [
     {
       "name": "Aparece la alarma",
@@ -182,6 +230,38 @@
             "H1.lit": false,
             "HA1.sounding": false
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Alarma, reconocimiento y vuelta a la normalidad",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
         }
       ]
     }

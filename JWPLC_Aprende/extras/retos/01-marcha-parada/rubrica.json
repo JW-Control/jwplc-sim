@@ -4,7 +4,7 @@
   "goals": [
     {
       "id": "arranca",
-      "description": "Pulse S1: el motor arranca y sigue en marcha al soltarlo",
+      "description": "Pulsa S1: el motor arranca y sigue en marcha al soltarlo",
       "when": {
         "KM1.closed": true,
         "M1.running": true
@@ -22,7 +22,7 @@
     },
     {
       "id": "para",
-      "description": "Pulse S0: el motor se detiene y queda detenido",
+      "description": "Pulsa S0: el motor se detiene y queda detenido",
       "when": {
         "KM1.closed": false,
         "M1.running": false,
@@ -270,6 +270,50 @@
           "never": {
             "KM1.closed": true
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Arranca, para y vuelve a arrancar",
+      "until_ms": 10000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8200,
+          "device": "S1",
+          "action": "press",
+          "value": false
         }
       ]
     }

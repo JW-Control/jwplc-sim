@@ -1,6 +1,51 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "06-estrella-triangulo",
+  "goals": [
+    {
+      "id": "estrella",
+      "description": "Pulsa S1: arranca en estrella (KM1 y KM2)",
+      "when": {
+        "KM1.closed": true,
+        "KM2.closed": true,
+        "KM3.closed": false
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "triangulo",
+      "description": "A los 3 s pasa a triángulo (KM1 y KM3)",
+      "when": {
+        "KM1.closed": true,
+        "KM2.closed": false,
+        "KM3.closed": true
+      },
+      "after": "estrella",
+      "hold_ms": 1000,
+      "hint": "Un TON de 3 s; al vencer, abre KM2 y espera un instante antes de cerrar KM3.",
+      "why": "KM2 y KM3 a la vez son un cortocircuito entre fases."
+    },
+    {
+      "id": "piloto",
+      "description": "El piloto H1 encendido en marcha",
+      "when": {
+        "H1.lit": true,
+        "KM1.closed": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "parada",
+      "description": "Pulsa S0: abren los tres contactores",
+      "when": {
+        "KM1.closed": false,
+        "KM2.closed": false,
+        "KM3.closed": false
+      },
+      "after": "triangulo",
+      "hold_ms": 1000
+    }
+  ],
   "cases": [
     {
       "name": "Secuencia de arranque",
@@ -140,6 +185,38 @@
             "KM2.closed": false,
             "KM3.closed": false
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Arranque completo y parada",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7100,
+          "device": "S0",
+          "action": "press",
+          "value": false
         }
       ]
     }

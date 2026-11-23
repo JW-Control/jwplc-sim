@@ -1,6 +1,58 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "10-secuencia-neumatica",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "Pulsa OK: arranca el ciclo y se enciende H1",
+      "when": {
+        "H1.lit": true
+      },
+      "hold_ms": 500
+    },
+    {
+      "id": "ab",
+      "description": "A+ y luego B+: B sale solo con A afuera",
+      "when": {
+        "Y1.extended": true,
+        "Y2.retracted": false
+      },
+      "after": "marcha",
+      "hold_ms": 200
+    },
+    {
+      "id": "cd",
+      "description": "B− y A−; con A y B adentro, C+",
+      "when": {
+        "Y1.retracted": true,
+        "Y2.retracted": true,
+        "Y3.extended": true
+      },
+      "after": "ab",
+      "hold_ms": 200,
+      "hint": "Cada paso espera el final de carrera del paso anterior."
+    },
+    {
+      "id": "continuo",
+      "description": "Termina el ciclo y A vuelve a salir sin pulsar OK",
+      "when": {
+        "Y1.extended": true,
+        "Y3.retracted": true
+      },
+      "after": "cd",
+      "hold_ms": 200
+    },
+    {
+      "id": "pausa",
+      "description": "Pulsa ESC: pausa con H2 encendido y H1 apagado",
+      "when": {
+        "H2.lit": true,
+        "H1.lit": false
+      },
+      "after": "continuo",
+      "hold_ms": 800
+    }
+  ],
   "cases": [
     {
       "name": "Secuencia A+ B+ B− A− C+ D+ D− C− en ciclo continuo",
@@ -237,6 +289,18 @@
             "Q0_1": true
           }
         }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Dos ciclos y pausa",
+      "until_ms": 13000,
+      "stim": [
+        "1000 BTN_OK=1",
+        "1100 BTN_OK=0",
+        "10500 BTN_ESC=1",
+        "10600 BTN_ESC=0"
       ]
     }
   ]

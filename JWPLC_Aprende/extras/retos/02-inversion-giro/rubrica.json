@@ -1,6 +1,64 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "02-inversion-giro",
+  "goals": [
+    {
+      "id": "izquierda",
+      "description": "Pulsa S1: el motor gira a la izquierda y sigue al soltar",
+      "when": {
+        "KM1.closed": true,
+        "KM2.closed": false,
+        "M1.direction": 1
+      },
+      "hold_ms": 1500,
+      "hint": "Enclava KM1 con S1, igual que un marcha-parada."
+    },
+    {
+      "id": "piloto",
+      "description": "El piloto H1 acompaña al motor",
+      "when": {
+        "M1.running": true,
+        "H1.lit": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "parada",
+      "description": "Pulsa S0: el motor se detiene",
+      "when": {
+        "KM1.closed": false,
+        "KM2.closed": false,
+        "M1.running": false
+      },
+      "after": "izquierda",
+      "hold_ms": 1000
+    },
+    {
+      "id": "derecha",
+      "description": "Pulsa S2: el motor gira a la derecha",
+      "when": {
+        "KM2.closed": true,
+        "KM1.closed": false,
+        "M1.direction": -1
+      },
+      "after": "parada",
+      "hold_ms": 1500
+    },
+    {
+      "id": "enclavamiento",
+      "description": "Girando a la derecha, S1 no cambia el sentido",
+      "when": {
+        "S1.pressed": true,
+        "KM2.closed": true,
+        "KM1.closed": false
+      },
+      "after": "derecha",
+      "hold_ms": 300,
+      "extra": "merit",
+      "hint": "KM1 solo puede cerrar con KM2 abierto (y al revés).",
+      "why": "Si cierran los dos contactores a la vez, las fases quedan en cortocircuito."
+    }
+  ],
   "cases": [
     {
       "name": "Giro a la izquierda",
@@ -254,6 +312,62 @@
           "expect": {
             "KM2.closed": true
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Izquierda, parada, derecha y S1 de más",
+      "until_ms": 10500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S0",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "S0",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8600,
+          "device": "S1",
+          "action": "press",
+          "value": false
         }
       ]
     }

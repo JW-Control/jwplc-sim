@@ -31,6 +31,36 @@
       "items": {
         "$ref": "#/$defs/case"
       }
+    },
+    "goal_runs": {
+      "description": "Corridas de demostración para comprobar que la solución cumple los objetivos en vivo (scripts/gate-objetivos.mjs): como un caso, pero sin verificaciones. Cada una empieza con los objetivos en cero.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "until_ms"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "until_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "actions": {
+            "type": "array"
+          },
+          "faults": {},
+          "stim": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "$defs": {

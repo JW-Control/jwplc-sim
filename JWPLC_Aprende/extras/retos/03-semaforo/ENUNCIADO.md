@@ -1,6 +1,6 @@
 # Ejercicio 3 · Semáforo
 
-**Nivel 1.** Un semáforo de una vía con tres pilotos. Es el primer ejercicio con tiempos: use `millis()`, no `delay()`, para que el programa siga atendiendo los pulsadores.
+**Nivel 1.** Un semáforo de una vía con tres pilotos. Es el primer ejercicio con tiempos: usa `millis()`, no `delay()`, para que el programa siga atendiendo los pulsadores.
 
 ## Escena
 
@@ -22,4 +22,4 @@ El tablero ya está cableado. Solo hay que programar el JWPLC Basic.
 
 ## Cómo se califica
 
-`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/03-semaforo` (o el botón **Calificar** de la app) corre su programa con la escena en varios casos y comprueba, en instantes precisos, el estado de las salidas y de los equipos. La nota va de 0 a 20; el detalle dice qué verificación falló y en qué instante.
+`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/03-semaforo` (o el botón **Calificar** de la app) corre tu programa con la escena en varios casos y comprueba, en instantes precisos, el estado de las salidas y de los equipos. La nota va de 0 a 20; el detalle dice qué verificación falló y en qué instante.

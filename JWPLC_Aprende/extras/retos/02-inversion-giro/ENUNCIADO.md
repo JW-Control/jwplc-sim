@@ -24,4 +24,4 @@ El tablero ya está cableado. Solo hay que programar el JWPLC Basic.
 
 ## Cómo se califica
 
-`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/02-inversion-giro` (o el botón **Calificar** de la app) corre su programa con la escena en varios casos y comprueba, en instantes precisos, el estado de las salidas y de los equipos. La nota va de 0 a 20; el detalle dice qué verificación falló y en qué instante.
+`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/02-inversion-giro` (o el botón **Calificar** de la app) corre tu programa con la escena en varios casos y comprueba, en instantes precisos, el estado de las salidas y de los equipos. La nota va de 0 a 20; el detalle dice qué verificación falló y en qué instante.

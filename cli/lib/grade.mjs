@@ -42,6 +42,7 @@ import { buildSketch, ROOT } from "./build.mjs";
 import { cosim } from "./cosim.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./openplc.mjs";
 import { loadProject } from "./project.mjs";
+import { GoalTracker } from "../../app/lib/goals.mjs";
 import { expandFaults } from "./test.mjs";
 
 /** Carga un ejercicio desde su .jwsim o su carpeta. */
@@ -266,7 +267,7 @@ const round1 = (x) => Math.round(x * 10) / 10;
  * Califica un sketch con la rúbrica del ejercicio. Nunca lanza por fallas
  * del sketch: si no compila, la nota es 0 con los errores.
  */
-export async function gradeSketch(ex, sketchDir, { pkg, target = "native", buildRoot = join(ROOT, "build", "grade"), log = () => {} }) {
+export async function gradeSketch(ex, sketchDir, { pkg, target = "native", buildRoot = join(ROOT, "build", "grade"), log = () => {}, goals = false }) {
   const t0 = Date.now();
   const max = ex.rubric.cases.reduce((s, c) => s + c.checks.reduce((x, k) => x + (k.points ?? 1), 0), 0);
   const out = { exercise: ex.id, title: ex.title, sketch: sketchDir, ok: false, score: 0, max, grade: 0, cases: [] };
@@ -284,7 +285,13 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
   const work = join(buildRoot, "work", ex.id.replace(/[^\w.-]/g, "_"));
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
-  for (const [i, c] of ex.rubric.cases.entries()) {
+  // Con goals: los objetivos en vivo se siguen en cada caso y en las corridas
+  // de demostración (goal_runs); cada corrida empieza con los objetivos en cero.
+  const goalDefs = goals ? (ex.rubric.goals ?? []) : [];
+  const goalsDone = new Set();
+  const runs = [...ex.rubric.cases.map((c) => ({ c, graded: true })), ...(goals ? (ex.rubric.goal_runs ?? []).map((c) => ({ c, graded: false })) : [])];
+  for (const [i, { c, graded }] of runs.entries()) {
+    const tracker = goalDefs.length ? new GoalTracker(goalDefs) : null;
     const fx = expandFaults(c.faults, true);
     const args = [...fx.args];
     // Estímulos de la placa: los de las fallas y los del caso (botones del frente).
@@ -307,16 +314,25 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
         untilNs: ns(c.until_ms),
         actions: [...(c.actions ?? []), ...fx.actions].map((a) => ({ ...a, at_ns: ns(a.at_ms) })),
         maxStepNs: 5_000_000n,
+        onStep: tracker
+          ? (scene, t) => {
+              const snap = scene.snapshot();
+              for (const g of tracker.update({ ...snap, t_ms: Number(t) / 1e6 }).goals) if (g.state === "done") goalsDone.add(g.id);
+            }
+          : undefined,
         onSerial: (port, text, t) => {
+          if (port === 0) tracker?.serial(text, Number(t) / 1e6);
           const parts = (partial[port] + text).split(/\r?\n/);
           partial[port] = parts.pop();
           for (const l of parts) consoleLines.push([BigInt(t), l]);
         },
       });
     } catch (err) {
+      if (!graded) continue;
       out.cases.push({ name: c.name, score: 0, max: c.checks.reduce((x, k) => x + (k.points ?? 1), 0), error: err.message, checks: [] });
       continue;
     }
+    if (!graded) continue;
     const tl = timeline(res);
     const checks = c.checks.map((k) => {
       const r = res.exit && res.exit.code !== 0 ? { ok: false, detail: `el firmware terminó (código ${res.exit.code})` } : evalCheck(k, tl, res, consoleLines);
@@ -329,6 +345,10 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
     }
     const score = checks.reduce((s, k) => s + (k.ok ? k.points : 0), 0);
     out.cases.push({ name: c.name, score, max: checks.reduce((s, k) => s + k.points, 0), trace_hash: res.hash, checks });
+  }
+  if (goals) {
+    const need = goalDefs.filter((g) => !g.extra).map((g) => g.id);
+    out.goals = { done: [...goalsDone], missing: need.filter((id) => !goalsDone.has(id)), extra: goalDefs.filter((g) => g.extra && !goalsDone.has(g.id)).map((g) => g.id) };
   }
   out.score = out.cases.reduce((s, c) => s + c.score, 0);
   out.grade = round1((20 * out.score) / max);

@@ -1879,14 +1879,19 @@ async function showExercise(file) {
   $("tab-exercise").hidden = !info;
   $("scene-tab-reto").hidden = !info;
   $("ex-reto-hint").hidden = !info;
-  renderTheory(info?.lesson ?? null);
+  // Un reto también trae su clase en Teoría: su enunciado, sin la parte de
+  // cómo se califica desde la línea de comandos.
+  const reto = info && !info.lesson && info.statement
+    ? { id: info.id, eyebrow: `Reto · Nivel ${info.level}`, title: info.title, readme: dropSection(info.statement.replace(/^#\s+[^\n]*\n/, ""), "Cómo se califica"), card: false }
+    : null;
+  renderTheory(info?.lesson ?? reto);
   const doneMsg = $("ex-goals").querySelector(".goals-done b");
   if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
   mandosSig = "";
   placeReto();
   if (info) window.JwsimShowReto?.();
-  // Una lección se hace en Programa: teoría a la izquierda, reto a la derecha.
-  if (info?.lesson) window.JwsimTabs?.select("program");
+  // Lecciones y retos se hacen en Programa: teoría a la izquierda, reto a la derecha.
+  if (info) window.JwsimTabs?.select("program");
   if (!info && document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
@@ -1929,7 +1934,7 @@ function simGuide(md, l) {
 }
 
 function guideHtml(l, graded) {
-  const head = `<small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>`;
+  const head = `<small class="th-eyebrow">${esc(l.eyebrow ?? `Lección ${l.num}`)}</small><h3>${esc(l.title)}</h3>`;
   if (l.guia) {
     let md = l.guia.replace(/^<!--[\s\S]*?-->\s*/, "").replace(/^#\s+[^\n]*\n/, "");
     md = simGuide(md, l);
@@ -1963,6 +1968,7 @@ function renderTheory(l, graded = !!l) {
     showGuide();
     return;
   }
+  $("guide-card").hidden = l.card === false;
   const html = guideHtml(l, graded);
   pane.innerHTML = `<div class="side-title">Teoría${READ_SIZE_HTML}</div>${html}`;
   $("guide-body").innerHTML = html;
@@ -1970,7 +1976,7 @@ function renderTheory(l, graded = !!l) {
   for (const box of [pane, $("guide-body")]) markGuideSnippets(box);
   showGuide();
   // La ficha se abre al entrar a la lección, no cuando el proyecto se recarga.
-  if (prev?.id !== l.id) openLessonCard(l, graded);
+  if (prev?.id !== l.id && l.card !== false) openLessonCard(l, graded);
 }
 window.showLessonGuide = (l) => renderTheory(l, false);
 function showGuide() {

@@ -21,11 +21,11 @@
     "brief": {
       "goal": "Un motor que arranca con S1, sigue en marcha al soltarlo y se detiene con S0.",
       "steps": [
-        "Lea las entradas S1 (marcha) y S0 (parada, NC).",
-        "Enclave KM1 al pulsar S1 (autorretención).",
-        "Abra KM1 con S0; si se pulsan los dos, gana la parada.",
-        "Encienda H1 mientras el motor gira.",
-        "Ejecute y pruébelo con los pulsadores de la escena."
+        "Lee las entradas S1 (marcha) y S0 (parada, NC).",
+        "Enclava KM1 al pulsar S1 (autorretención).",
+        "Abre KM1 con S0; si se pulsan los dos, gana la parada.",
+        "Enciende H1 mientras el motor gira.",
+        "Ejecuta y pruébalo con los pulsadores de la escena."
       ],
       "teaches": "Autorretención, prioridad de la parada y por qué la parada es NC (falla segura).",
       "uses": [

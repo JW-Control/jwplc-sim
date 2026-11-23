@@ -97,5 +97,31 @@
         }
       ]
     }
+  ],
+  "goal_runs": [
+    {
+      "name": "Los dos cruces",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA8",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 3000,
+          "device": "SA8",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 3500,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
   ]
 }

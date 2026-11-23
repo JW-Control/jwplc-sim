@@ -160,5 +160,49 @@
         }
       ]
     }
+  ],
+  "goal_runs": [
+    {
+      "name": "Tres manos y Q0.4",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1000,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1000,
+          "device": "SA3",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2500,
+          "device": "SA3",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 3500,
+          "device": "SA2",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 4500,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
   ]
 }

@@ -21,9 +21,9 @@
     "brief": {
       "goal": "Mantener un tanque entre dos niveles: la bomba arranca bajo B1 y para en B2.",
       "steps": [
-        "Arranque la bomba cuando el agua baje de B1.",
-        "Manténgala hasta llegar a B2 (histéresis).",
-        "Con el tanque lleno vaciándose, no arranque hasta bajar de B1.",
+        "Arranca la bomba cuando el agua baje de B1.",
+        "Mantenla hasta llegar a B2 (histéresis).",
+        "Con el tanque lleno vaciándose, no arranques hasta bajar de B1.",
         "H1 encendido con el agua bajo B1."
       ],
       "teaches": "Histéresis entre dos sensores.",

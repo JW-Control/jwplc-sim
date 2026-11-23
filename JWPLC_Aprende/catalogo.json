@@ -785,11 +785,11 @@
       "objetivo": "Un motor que arranca con S1, sigue en marcha al soltarlo y se detiene con S0.",
       "ensena": "Autorretención, prioridad de la parada y por qué la parada es NC (falla segura).",
       "pasos": [
-        "Lea las entradas S1 (marcha) y S0 (parada, NC).",
-        "Enclave KM1 al pulsar S1 (autorretención).",
-        "Abra KM1 con S0; si se pulsan los dos, gana la parada.",
-        "Encienda H1 mientras el motor gira.",
-        "Ejecute y pruébelo con los pulsadores de la escena."
+        "Lee las entradas S1 (marcha) y S0 (parada, NC).",
+        "Enclava KM1 al pulsar S1 (autorretención).",
+        "Abre KM1 con S0; si se pulsan los dos, gana la parada.",
+        "Enciende H1 mientras el motor gira.",
+        "Ejecuta y pruébalo con los pulsadores de la escena."
       ],
       "en_la_mesa": [
         "I0_0 · S1, pulsador NA verde: Marcha",
@@ -800,7 +800,7 @@
       "objetivos_en_vivo": [
         {
           "id": "arranca",
-          "text": "Pulse S1: el motor arranca y sigue en marcha al soltarlo",
+          "text": "Pulsa S1: el motor arranca y sigue en marcha al soltarlo",
           "extra": false
         },
         {
@@ -810,7 +810,7 @@
         },
         {
           "id": "para",
-          "text": "Pulse S0: el motor se detiene y queda detenido",
+          "text": "Pulsa S0: el motor se detiene y queda detenido",
           "extra": false
         },
         {
@@ -830,7 +830,7 @@
       "objetivo": "Un motor que gira a la izquierda con S1 o a la derecha con S2, sin que KM1 y KM2 cierren juntos.",
       "ensena": "Enclavamiento entre contactores y paso obligado por parada.",
       "pasos": [
-        "Enclave KM1 con S1 y KM2 con S2.",
+        "Enclava KM1 con S1 y KM2 con S2.",
         "Para cambiar de sentido hay que pasar por parada (S0).",
         "Enclavamiento: nunca KM1 y KM2 a la vez; con S1 y S2 juntos, ninguno.",
         "H1 encendido mientras el motor gira."
@@ -843,7 +843,33 @@
         "Q0_1 · KM2, contactor: Motor a la derecha",
         "Q0_2 · H1, piloto amarillo: Motor en marcha"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "izquierda",
+          "text": "Pulsa S1: el motor gira a la izquierda y sigue al soltar",
+          "extra": false
+        },
+        {
+          "id": "piloto",
+          "text": "El piloto H1 acompaña al motor",
+          "extra": false
+        },
+        {
+          "id": "parada",
+          "text": "Pulsa S0: el motor se detiene",
+          "extra": false
+        },
+        {
+          "id": "derecha",
+          "text": "Pulsa S2: el motor gira a la derecha",
+          "extra": false
+        },
+        {
+          "id": "enclavamiento",
+          "text": "Girando a la derecha, S1 no cambia el sentido",
+          "extra": true
+        }
+      ]
     },
     {
       "id": "03-semaforo",
@@ -851,12 +877,12 @@
       "nivel": 1,
       "ruta": "extras/retos/03-semaforo",
       "imagen": "extras/imagenes/reto-03-semaforo.jpg",
-      "introduccion": "Un semáforo de una vía con tres pilotos. Es el primer ejercicio con tiempos: use `millis()`, no `delay()`, para que el programa siga atendiendo los pulsadores.",
+      "introduccion": "Un semáforo de una vía con tres pilotos. Es el primer ejercicio con tiempos: usa `millis()`, no `delay()`, para que el programa siga atendiendo los pulsadores.",
       "objetivo": "Un semáforo que repite verde 4 s, ámbar 1 s y rojo 4 s mientras está en marcha.",
       "ensena": "Tiempos con millis() sin bloquear el programa.",
       "pasos": [
-        "Arranque el ciclo con S1, empezando en verde.",
-        "Cambie de luz con temporizadores sin bloquear el programa (millis()).",
+        "Arranca el ciclo con S1, empezando en verde.",
+        "Cambia de luz con temporizadores sin bloquear el programa (millis()).",
         "Nunca dos luces a la vez.",
         "S0 apaga todo; marcha vuelve a empezar en verde."
       ],
@@ -867,7 +893,33 @@
         "Q0_1 · H2, piloto amarillo: Luz ámbar",
         "Q0_2 · H3, piloto verde: Luz verde"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "verde",
+          "text": "Pulsa S1: el semáforo arranca en verde",
+          "extra": false
+        },
+        {
+          "id": "ambar",
+          "text": "Después del verde viene el ámbar, solo",
+          "extra": false
+        },
+        {
+          "id": "rojo",
+          "text": "Después del ámbar, rojo durante 4 s",
+          "extra": false
+        },
+        {
+          "id": "ciclo",
+          "text": "Vuelve a verde: el ciclo se repite",
+          "extra": false
+        },
+        {
+          "id": "parada",
+          "text": "Pulsa S0: se apagan las tres luces",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "04-bomba-niveles",
@@ -879,9 +931,9 @@
       "objetivo": "Mantener un tanque entre dos niveles: la bomba arranca bajo B1 y para en B2.",
       "ensena": "Histéresis entre dos sensores.",
       "pasos": [
-        "Arranque la bomba cuando el agua baje de B1.",
-        "Manténgala hasta llegar a B2 (histéresis).",
-        "Con el tanque lleno vaciándose, no arranque hasta bajar de B1.",
+        "Arranca la bomba cuando el agua baje de B1.",
+        "Mantenla hasta llegar a B2 (histéresis).",
+        "Con el tanque lleno vaciándose, no arranques hasta bajar de B1.",
         "H1 encendido con el agua bajo B1."
       ],
       "en_la_mesa": [
@@ -890,7 +942,33 @@
         "Q0_0 · KM1, contactor: Bomba M1 (230 VAC)",
         "Q0_1 · H1, piloto rojo: Tanque bajo"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "vacio",
+          "text": "Tanque vacío: la bomba arranca y H1 avisa nivel bajo",
+          "extra": false
+        },
+        {
+          "id": "sobre_b1",
+          "text": "Acciona B1 (el agua lo pasa): la bomba sigue llenando",
+          "extra": false
+        },
+        {
+          "id": "lleno",
+          "text": "Acciona B2: la bomba para",
+          "extra": false
+        },
+        {
+          "id": "bajando",
+          "text": "Suelta B2: entre B2 y B1 la bomba no arranca",
+          "extra": false
+        },
+        {
+          "id": "rearranca",
+          "text": "Suelta B1: bajo B1 vuelve a llenar",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "05-puerta",
@@ -904,7 +982,7 @@
       "pasos": [
         "S1 abre hasta B1; S2 cierra hasta B2; cada final detiene el motor.",
         "S0 detiene el portón donde esté.",
-        "Si B3 detecta un obstáculo al cerrar, pare y vuelva a abrir.",
+        "Si B3 detecta un obstáculo al cerrar, para y vuelve a abrir.",
         "Nunca KM1 y KM2 a la vez; baliza H1 mientras se mueve."
       ],
       "en_la_mesa": [
@@ -918,7 +996,28 @@
         "Q0_1 · KM2, contactor: Motor: cerrar",
         "Q0_2 · H1, piloto amarillo: Baliza de movimiento"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "abre",
+          "text": "Pulsa S1: el portón abre (KM1) con la baliza encendida",
+          "extra": false
+        },
+        {
+          "id": "abierto",
+          "text": "Acciona B1 (abierto): el motor para y la baliza se apaga",
+          "extra": false
+        },
+        {
+          "id": "cierra",
+          "text": "Pulsa S2: el portón cierra (KM2)",
+          "extra": false
+        },
+        {
+          "id": "obstaculo",
+          "text": "Corta la fotocelda B3 mientras cierra: para y vuelve a abrir",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "06-estrella-triangulo",
@@ -930,8 +1029,8 @@
       "objetivo": "Arrancar un motor en estrella y pasar a triángulo a los 3 s, con la pausa obligatoria entre ambos.",
       "ensena": "Secuencia temporizada con pausa obligatoria entre contactores.",
       "pasos": [
-        "Con S1 cierre KM1 (línea) y KM2 (estrella).",
-        "A los 3 s abra KM2, espere 100 ms y cierre KM3 (triángulo).",
+        "Con S1 cierra KM1 (línea) y KM2 (estrella).",
+        "A los 3 s abre KM2, espera 100 ms y cierra KM3 (triángulo).",
         "KM2 y KM3 nunca juntos, ni un instante.",
         "S0 abre los tres; H1 encendido en marcha."
       ],
@@ -943,7 +1042,28 @@
         "Q0_2 · KM3, contactor: Triángulo",
         "Q0_3 · H1, piloto verde: En marcha"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "estrella",
+          "text": "Pulsa S1: arranca en estrella (KM1 y KM2)",
+          "extra": false
+        },
+        {
+          "id": "triangulo",
+          "text": "A los 3 s pasa a triángulo (KM1 y KM3)",
+          "extra": false
+        },
+        {
+          "id": "piloto",
+          "text": "El piloto H1 encendido en marcha",
+          "extra": false
+        },
+        {
+          "id": "parada",
+          "text": "Pulsa S0: abren los tres contactores",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "07-cinta-contador",
@@ -956,8 +1076,8 @@
       "ensena": "Detección de flanco y contador.",
       "pasos": [
         "S1 arranca la cinta (enclavada); S0 la detiene.",
-        "Cuente cada pieza en B1 una sola vez (flanco de subida).",
-        "Con 3 piezas pare la cinta y encienda H1.",
+        "Cuenta cada pieza en B1 una sola vez (flanco de subida).",
+        "Con 3 piezas para la cinta y enciende H1.",
         "Con el lote completo, S1 empieza un lote nuevo desde cero."
       ],
       "en_la_mesa": [
@@ -967,7 +1087,23 @@
         "Q0_0 · KM1, contactor: Motor de la cinta",
         "Q0_1 · H1, piloto azul: Lote completo"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "marcha",
+          "text": "Pulsa S1: la cinta arranca",
+          "extra": false
+        },
+        {
+          "id": "lote",
+          "text": "Pasa 3 piezas frente a B1: la cinta para y H1 avisa",
+          "extra": false
+        },
+        {
+          "id": "nuevo",
+          "text": "Pulsa S1: empieza un lote nuevo",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "08-alarma",
@@ -979,7 +1115,7 @@
       "objetivo": "Una alarma con bocina y piloto intermitente que el operador debe reconocer.",
       "ensena": "Secuencia de alarma: bocina, parpadeo, reconocimiento y memoria.",
       "pasos": [
-        "Con B1 cerrado suene HA1 y haga parpadear H1 (0,5 s / 0,5 s).",
+        "Con B1 cerrado, que suene HA1 y parpadee H1 (0,5 s / 0,5 s).",
         "S1 (reconocer) calla la bocina; con la alarma presente, H1 queda fijo.",
         "Si la alarma desaparece después de reconocerla, H1 se apaga.",
         "Si desaparece sin reconocerla, todo sigue hasta que se reconozca."
@@ -990,7 +1126,28 @@
         "Q0_0 · HA1, zumbador: Bocina",
         "Q0_1 · H1, piloto rojo: Alarma"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "suena",
+          "text": "Acciona B1: suena la bocina HA1",
+          "extra": false
+        },
+        {
+          "id": "parpadea",
+          "text": "H1 parpadea: 0,5 s encendido y 0,5 s apagado",
+          "extra": false
+        },
+        {
+          "id": "reconoce",
+          "text": "Pulsa S1 con la alarma presente: la bocina calla y H1 queda fijo",
+          "extra": false
+        },
+        {
+          "id": "normal",
+          "text": "Suelta B1: todo se apaga",
+          "extra": false
+        }
+      ]
     },
     {
       "id": "09-tolva-nivel",
@@ -1002,9 +1159,9 @@
       "objetivo": "Mantener una tolva con descarga por gravedad entre B1 (30 %) y B2 (80 %) mientras el proceso está habilitado.",
       "ensena": "Histéresis con un proceso continuo (tanque discretizado) y habilitación por selector.",
       "pasos": [
-        "Con S1 en 0 todo detenido; con S1 en I abra la descarga Y1.",
-        "Arranque la bomba bajo B1 y párela al llegar a B2 (histéresis).",
-        "Si S1 vuelve a 0, pare la bomba y cierre Y1.",
+        "Con S1 en 0 todo detenido; con S1 en I abre la descarga Y1.",
+        "Arranca la bomba bajo B1 y párala al llegar a B2 (histéresis).",
+        "Si S1 vuelve a 0, para la bomba y cierra Y1.",
         "H1 encendido con el agua bajo B1."
       ],
       "en_la_mesa": [
@@ -1018,7 +1175,7 @@
       "objetivos_en_vivo": [
         {
           "id": "habilita",
-          "text": "Ponga S1 en I: se abre la descarga Y1",
+          "text": "Pon S1 en I: se abre la descarga Y1",
           "extra": false
         },
         {
@@ -1081,7 +1238,33 @@
         "Q0_6 · H3, piloto rojo: falla",
         "Botones del frente: OK Arranque, ESC Pausa, LEFT Reset"
       ],
-      "objetivos_en_vivo": []
+      "objetivos_en_vivo": [
+        {
+          "id": "marcha",
+          "text": "Pulsa OK: arranca el ciclo y se enciende H1",
+          "extra": false
+        },
+        {
+          "id": "ab",
+          "text": "A+ y luego B+: B sale solo con A afuera",
+          "extra": false
+        },
+        {
+          "id": "cd",
+          "text": "B− y A−; con A y B adentro, C+",
+          "extra": false
+        },
+        {
+          "id": "continuo",
+          "text": "Termina el ciclo y A vuelve a salir sin pulsar OK",
+          "extra": false
+        },
+        {
+          "id": "pausa",
+          "text": "Pulsa ESC: pausa con H2 encendido y H1 apagado",
+          "extra": false
+        }
+      ]
     }
   ],
   "arquitecturas": [

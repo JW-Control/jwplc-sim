@@ -21,8 +21,8 @@
     "brief": {
       "goal": "Arrancar un motor en estrella y pasar a triángulo a los 3 s, con la pausa obligatoria entre ambos.",
       "steps": [
-        "Con S1 cierre KM1 (línea) y KM2 (estrella).",
-        "A los 3 s abra KM2, espere 100 ms y cierre KM3 (triángulo).",
+        "Con S1 cierra KM1 (línea) y KM2 (estrella).",
+        "A los 3 s abre KM2, espera 100 ms y cierra KM3 (triángulo).",
         "KM2 y KM3 nunca juntos, ni un instante.",
         "S0 abre los tres; H1 encendido en marcha."
       ],

@@ -32,6 +32,7 @@ export function watchedSignals(scene) {
  *   maxStepNs?: bigint, probes?: bigint[],
  *   onSerial?: (port: number, text: string, t_ns: number) => void,
  *   onStderr?: (text: string) => void,
+ *   onStep?: (scene: Scene, t_ns: bigint) => void,
  * }} o
  */
 export async function cosim(o) {
@@ -120,6 +121,7 @@ export async function cosim(o) {
     const reply = link?.poll(t) ?? [];
     if (reply.length) proc.send(uartRxMessage(2, reply));
     while (pi < probes.length && probes[pi] <= t) snapshots.set(probes[pi++], scene.snapshot());
+    o.onStep?.(scene, t);
     if (t >= o.untilNs) break;
     let h = o.untilNs;
     const ne = scene.nextEvent();

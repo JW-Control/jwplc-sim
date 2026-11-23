@@ -148,7 +148,7 @@ try {
   const next = await win.$eval("#ex-goals [data-next]", (b) => b.dataset.next).catch(() => null);
   await win.$eval("#ex-goals", (e) => e.scrollIntoView());
   await win.waitForTimeout(500);
-  await (await win.$("#scene-side")).screenshot({ path: join(OUT, "05-completado.png") });
+  await (await win.$("#prog-side")).screenshot({ path: join(OUT, "05-completado.png") });
   criteria.COMPLETE = { ok: /Qué enseña: Autorretención/.test(after || "") && next === "02-inversion-giro", next };
   log(`COMPLETE ${JSON.stringify(criteria.COMPLETE)}`);
 

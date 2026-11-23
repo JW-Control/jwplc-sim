@@ -139,5 +139,37 @@
         }
       ]
     }
+  ],
+  "goal_runs": [
+    {
+      "name": "S1 y S2",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5500,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
   ]
 }
