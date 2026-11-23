@@ -1,0 +1,160 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 14 · Temporizadores y flancos como clases",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Temporizadores_como_clases/Temporizadores_como_clases.ino"
+  },
+  "exercise": {
+    "lesson": "curso-14",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Temporizadores_como_clases",
+    "brief": {
+      "goal": "Un tiempo mínimo de parada: después de detenerse, el compresor no vuelve a arrancar hasta pasados 5 s, y H1 avisa que está esperando.",
+      "steps": [
+        "Ejecuta el ejemplo: pon P1 en I (presión baja) y KM1 arranca a los 2 s; vuelve a 0 y el ventilador KM2 sigue 5 s.",
+        "Agrega un TON nuevo que mida cuánto lleva detenido el compresor.",
+        "Deja arrancar solo si lleva 5 s detenido (al encender el PLC, también espera).",
+        "Enciende H1 (Q0.2) mientras la presión está baja pero el compresor espera ese tiempo."
+      ],
+      "uses": [
+        "I0_0 · P1, presostato (I = presión baja, pide aire)",
+        "Q0_0 · KM1, motor del compresor",
+        "Q0_1 · KM2, ventilador de enfriamiento",
+        "Q0_2 · H1, esperando"
+      ],
+      "teaches": "Un temporizador o un flanco es un objeto: uno por cada uso, cada uno con su propia memoria."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "P1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Presostato: presión baja"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 760,
+        "y": 0
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 1060,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Esperando"
+        },
+        "x": 220,
+        "y": 600
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "P1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "P1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

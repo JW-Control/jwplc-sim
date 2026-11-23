@@ -1,0 +1,113 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 18 · Encuentra el error: depurar un programa",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Encuentra_el_error/Encuentra_el_error.ino"
+  },
+  "exercise": {
+    "lesson": "curso-18",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Encuentra_el_error",
+    "brief": {
+      "goal": "Corrige los dos errores de la empacadora: cada botella cuenta una, y el empujador da un solo golpe por paquete. Después cuenta los paquetes.",
+      "steps": [
+        "Ejecuta, da 6 toques a B1 y mira Serie: el programa compila pero la cuenta sale mal.",
+        "Agrega botellas en E/S y variables y pon un breakpoint dentro del if que cuenta: encuentra el primer error y corrígelo.",
+        "Con 6 botellas, Y1 golpea una y otra vez: encuentra el segundo error.",
+        "Cuenta los paquetes y escribe «Paquetes: N» en cada golpe."
+      ],
+      "uses": [
+        "I0_0 · B1, sensor de botellas",
+        "Q0_0 · Y1, empujador"
+      ],
+      "teaches": "Depurar es observar antes de cambiar: mirar las variables y detener el programa justo donde se toma la decisión."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "negro",
+          "label": "Botella"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "Y1",
+        "type": "jwsim/solenoid-valve",
+        "x": 760,
+        "y": 440
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "Y1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "Y1.A2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

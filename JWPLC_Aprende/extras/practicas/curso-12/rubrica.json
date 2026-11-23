@@ -1,0 +1,358 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-12",
+  "goals": [
+    {
+      "id": "h1_b1",
+      "description": "H1 (Q0.2) encendida con la bomba 1 en marcha",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "hint": "Al final de loop(): digitalWrite(Q0_2, bomba1.estaEnMarcha() || bomba2.estaEnMarcha());"
+    },
+    {
+      "id": "h1_b2",
+      "description": "H1 sigue encendida con solo la bomba 2 en marcha",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "after": "h1_b1"
+    },
+    {
+      "id": "h1_off",
+      "description": "H1 se apaga con las dos bombas detenidas",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 0,
+        "Q0_2": 0
+      },
+      "hold_ms": 300,
+      "after": "h1_b2",
+      "why": "Preguntas a cada objeto por su estado con objeto.funcion(): no hace falta saber cómo lo guarda por dentro."
+    },
+    {
+      "id": "cuenta",
+      "description": "Arranca dos veces la bomba 1: «Bomba 1 en marcha (arranque 2)»",
+      "console": "Bomba 1 en marcha \\(arranque 2\\)",
+      "hint": "Un dato privado uint32_t arranques = 0; que arrancar() suma antes de escribir el mensaje."
+    },
+    {
+      "id": "propia",
+      "description": "Luego arranca la bomba 2: su cuenta empieza en 1",
+      "console": "Bomba 2 en marcha \\(arranque 1\\)",
+      "after": "cuenta",
+      "why": "Cada objeto lleva sus propios datos: la cuenta de la bomba 1 no se mezcla con la de la bomba 2."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lámpara «Bombeando»",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S4",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S4",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "H1 enciende con la bomba 1",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 sigue con solo la bomba 2",
+          "points": 3,
+          "from_ms": 5000,
+          "to_ms": 5600,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 se apaga con las dos detenidas",
+          "points": 2,
+          "from_ms": 6500,
+          "to_ms": 7100,
+          "eventually": {
+            "Q0_1": 0,
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Cada bomba cuenta sus arranques",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S4",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S4",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La bomba 1 sigue arrancando y parando",
+          "points": 2,
+          "from_ms": 3000,
+          "to_ms": 3600,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bomba 2 arranca con su pulsador",
+          "points": 2,
+          "from_ms": 4000,
+          "to_ms": 4600,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Segundo arranque de la bomba 1",
+          "points": 4,
+          "console": "Bomba 1 en marcha \\(arranque 2\\)"
+        },
+        {
+          "description": "Primer arranque de la bomba 2, con su propia cuenta",
+          "points": 4,
+          "console": "Bomba 2 en marcha \\(arranque 1\\)"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Dos bombas",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S4",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S4",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

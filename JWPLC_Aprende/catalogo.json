@@ -772,6 +772,546 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 3,
+      "nombre": "C++ para el tablero",
+      "lecciones": [
+        {
+          "id": "curso-12",
+          "numero": 12,
+          "titulo": "Clases: un motor con sus funciones",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/12.Clases_un_motor",
+          "aprende": [
+            "Qué es una clase: el plano de un equipo, con sus datos y lo que sabe hacer.",
+            "Crear objetos con ese plano y manejarlos con objeto.funcion(), como Serial.println().",
+            "Por qué los datos van en private: nadie los cambia sin pasar por las funciones de la clase."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: marcha de la bomba 1 (NA). I0.1: parada de la bomba 1 (NC).",
+                "I0.2: marcha de la bomba 2 (NA). I0.3: parada de la bomba 2 (NC).",
+                "Q0.0: bobina del contactor de la bomba 1.",
+                "Q0.1: bobina del contactor de la bomba 2."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. Las paradas **S2** y **S4** son NC: en reposo `I0.1` e `I0.3` ya están activas.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha B1**: `Q0.0` cierra **KM1** y se queda cerrado.",
+                "Da un toque a **S3 Marcha B2**: `Q0.1` cierra **KM2**. Las dos bombas funcionan a la vez, cada una con su estado.",
+                "**S2** detiene solo la bomba 1 y **S4** solo la bomba 2.",
+                "Lección 12: bomba 1 en I0.0/I0.1, bomba 2 en I0.2/I0.3\nBomba 1 en marcha\nBomba 2 en marcha\nBomba 1 detenida"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Un toque a la marcha de la bomba 1 cierra Q0.0 y se queda cerrado.",
+            "La bomba 2 funciona igual con sus pulsadores, sin tocar a la bomba 1.",
+            "Cada cambio se avisa por el Monitor Serie con el nombre de la bomba."
+          ],
+          "practica": [
+            "Agrega una lámpara «Bombeando» en Q0.2, encendida mientras al menos una bomba esté en marcha.",
+            "Agrega a la clase un contador de arranques y muéstralo en el mensaje: «Bomba 1 en marcha (arranque 2)»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-12",
+            "objetivos_en_vivo": [
+              {
+                "id": "h1_b1",
+                "text": "H1 (Q0.2) encendida con la bomba 1 en marcha",
+                "extra": false
+              },
+              {
+                "id": "h1_b2",
+                "text": "H1 sigue encendida con solo la bomba 2 en marcha",
+                "extra": false
+              },
+              {
+                "id": "h1_off",
+                "text": "H1 se apaga con las dos bombas detenidas",
+                "extra": false
+              },
+              {
+                "id": "cuenta",
+                "text": "Arranca dos veces la bomba 1: «Bomba 1 en marcha (arranque 2)»",
+                "extra": false
+              },
+              {
+                "id": "propia",
+                "text": "Luego arranca la bomba 2: su cuenta empieza en 1",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-13",
+          "numero": 13,
+          "titulo": "Arreglos de objetos: cuatro cintas",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/13.Arreglos_de_objetos",
+          "aprende": [
+            "Arreglos: muchos objetos iguales bajo un solo nombre, con un índice.",
+            "for: recorrer el arreglo sin escribir una línea por equipo.",
+            "Un arranque escalonado: un equipo tras otro, sin delay()."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: cuatro cintas en línea",
+              "items": [
+                "El material pasa de la cinta 1 a la 2, a la 3 y a la 4, que descarga.",
+                "Se arranca desde la última hacia la primera, una cada 2 segundos, para no echar material sobre una cinta detenida.",
+                "PARADA detiene todas a la vez."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA). I0.1: pulsador de PARADA (NC).",
+                "Q0.0 a Q0.3: bobinas de los contactores de las cintas 1 a 4."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. La parada **S2** es NC: en reposo `I0.1` ya está activa.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: se cierra **KM4** (`Q0.3`) y, cada 2 segundos, **KM3**, **KM2** y **KM1**.",
+                "Da un toque a **S2 Parada**: los cuatro contactores se abren a la vez.",
+                "Lección 13: marcha I0.0, parada NC I0.1, cintas en Q0.0 a Q0.3\nCinta 4 encendida\nCinta 3 encendida\nCinta 2 encendida\nCinta 1 encendida\nCinta 1 apagada"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Un toque a MARCHA: se cierra Q0.3 (cinta 4) y cada 2 segundos la anterior, hasta Q0.0.",
+            "PARADA abre los cuatro relés a la vez."
+          ],
+          "practica": [
+            "Cambia la parada para que vacíe las cintas: de la 1 a la 4, una por segundo.",
+            "Enciende una lámpara en Q0.4 mientras dure el arranque o la parada."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-13",
+            "objetivos_en_vivo": [
+              {
+                "id": "h1_arr",
+                "text": "H1 (Q0.4) encendida durante el arranque escalonado",
+                "extra": false
+              },
+              {
+                "id": "h1_todas",
+                "text": "Con las cuatro cintas en marcha, H1 se apaga",
+                "extra": false
+              },
+              {
+                "id": "vacia",
+                "text": "PARADA apaga primero la cinta 1 y la 4 sigue",
+                "extra": false
+              },
+              {
+                "id": "orden",
+                "text": "Luego la cinta 2, mientras la 3 sigue",
+                "extra": false
+              },
+              {
+                "id": "h1_fin",
+                "text": "Al final, las cuatro detenidas y H1 apagada",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-14",
+          "numero": 14,
+          "titulo": "Temporizadores y flancos como clases",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/14.Temporizadores_como_clases",
+          "aprende": [
+            "Armar tu caja de herramientas de PLC: TON, TOF y Flanco como clases.",
+            "Un objeto por cada uso: cada temporizador recuerda su propio tiempo.",
+            "Los mismos nombres que la pestaña K_Utilidades de la plantilla de proyecto JWPLC."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: un compresor de aire",
+              "items": [
+                "El presostato pide aire cuando la presión baja. Para no arrancar por un golpe de presión, tiene que pedirlo 2 segundos seguidos.",
+                "El ventilador de enfriamiento sigue 5 segundos después de parar.",
+                "Cada arranque se cuenta por el Monitor Serie."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: contacto del presostato, desde +24 V (cierra con presión baja).",
+                "Q0.0: contactor del motor del compresor.",
+                "Q0.1: contactor del ventilador."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) pon el presostato **P1** en **I** (presión baja): a los 2 segundos se cierran **KM1** (compresor) y **KM2** (ventilador).",
+                "Vuelve **P1** a **0**: **KM1** se abre enseguida y **KM2** sigue 5 segundos.",
+                "Pásalo a **I** y a **0** en menos de 2 segundos: el compresor no arranca.",
+                "Lección 14: presostato I0.0, compresor Q0.0, ventilador Q0.1\nArranques: 1"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Activa I0.0: a los 2 segundos se cierran Q0.0 y Q0.1.",
+            "Desactívalo: Q0.0 se abre enseguida y Q0.1, 5 segundos después."
+          ],
+          "practica": [
+            "Agrega un tiempo mínimo de parada: después de detenerse, el compresor no arranca hasta pasados 5 segundos (los motores grandes no aguantan arranques seguidos).",
+            "Enciende una lámpara en Q0.2 mientras el presostato pide aire pero el compresor espera ese tiempo."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-14",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha1",
+                "text": "Pon P1 en I: el compresor arranca",
+                "extra": false
+              },
+              {
+                "id": "espera",
+                "text": "Pásalo a 0 y otra vez a I: H1 (Q0.2) avisa que espera",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Recién detenido, no arranca aunque pida aire",
+                "extra": false
+              },
+              {
+                "id": "arranca",
+                "text": "Pasados los 5 s, arranca solo y H1 se apaga",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-15",
+          "numero": 15,
+          "titulo": "Modos de operación: manual y automático",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/15.Modos_de_operacion",
+          "aprende": [
+            "Los modos de una máquina: manual, apagado y automático, con un selector de tres posiciones.",
+            "Un enum para los modos y un switch con las reglas de cada uno.",
+            "Funciones que devuelven un enum: leerModo().",
+            "Por qué cambiar de modo siempre deja la máquina quieta."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: un agitador de mezcla",
+              "items": [
+                "MAN: el motor gira por impulsos, solo mientras se aprieta el pulsador. Sirve para pruebas y limpieza.",
+                "0: nada se mueve.",
+                "AUT: un toque a CICLO mezcla 8 segundos y se detiene solo."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "Selector MAN-0-AUT: el contacto de MAN a I0.0 y el de AUT a I0.1, los dos desde +24 V.",
+                "I0.2: pulsador de impulso (NA). I0.3: pulsador de CICLO (NA).",
+                "Q0.0: contactor del motor. Q0.1: lámpara de manual. Q0.2: lámpara de automático."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) pon el selector **SA1** en **I** (MAN): **H1** enciende. Mantén apretado **S1 Impulso**: **KM1** se cierra solo mientras lo aprietas.",
+                "Pon **SA1** en **II** (AUT): **H2** enciende. Da un toque a **S2 Ciclo**: **KM1** se cierra 8 segundos y se abre solo.",
+                "Empieza otro ciclo y pasa **SA1** a **0**: todo se detiene.",
+                "Lección 15: selector MAN I0.0 / AUT I0.1, impulso I0.2, ciclo I0.3\nModo: APAGADO\nModo: MANUAL\nModo: AUTOMATICO\nCiclo: mezclando\nCiclo terminado"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Selector en MAN: Q0.1 enciende y el motor gira solo mientras aprietas I0.2.",
+            "Selector en AUT: Q0.2 enciende. Un toque a I0.3 cierra Q0.0 durante 8 segundos.",
+            "Pasa el selector a 0 en mitad de un ciclo: el motor se detiene y el ciclo no sigue al volver a AUT."
+          ],
+          "practica": [
+            "Agrega la descarga: al terminar la mezcla, la válvula Q0.3 abre 3 segundos. Pista: cambia el bool ciclo por un enum con los pasos.",
+            "Haz que la lámpara de automático parpadee cada medio segundo mientras el ciclo está en curso."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-15",
+            "objetivos_en_vivo": [
+              {
+                "id": "man",
+                "text": "En MAN (H1), el impulso S1 mueve el motor",
+                "extra": false
+              },
+              {
+                "id": "parpadea",
+                "text": "En AUT, con el ciclo en curso, H2 (Q0.2) parpadea cada medio segundo",
+                "extra": false
+              },
+              {
+                "id": "descarga",
+                "text": "Al terminar la mezcla, el motor para y Y1 (Q0.3) descarga",
+                "extra": false
+              },
+              {
+                "id": "reposo",
+                "text": "A los 3 s la válvula cierra y H2 queda fija",
+                "extra": false
+              },
+              {
+                "id": "cero",
+                "text": "Arranca otro ciclo y pasa SA1 a 0: todo se detiene",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-16",
+          "numero": 16,
+          "titulo": "El programa en pestañas",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/16.Programa_en_pestanas",
+          "aprende": [
+            "Repartir un programa en pestañas (archivos), cada una con un solo trabajo, como la plantilla de proyecto JWPLC.",
+            "El ciclo de scan de un PLC: leer las entradas, decidir, escribir las salidas.",
+            "Archivos .h con #pragma once para los nombres y las herramientas.",
+            "Dónde va cada cambio: la tabla de E/S en B_Tags, los tiempos en A_Config, la lógica en D_Logica."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Las pestañas",
+              "items": [
+                "Principal: solo el orden del ciclo.",
+                "A_Config.h: nombre del proyecto y tiempos fijos.",
+                "B_Tags.h: qué bit usa cada equipo y las variables compartidas.",
+                "C_Entradas: lee los bornes y resuelve los contactos NC.",
+                "D_Logica: decide; no toca bornes.",
+                "F_Salidas: escribe los bornes una vez por ciclo.",
+                "J_Diagnostico: mensajes por el Monitor Serie.",
+                "K_Utilidades.h: TON, TOF y Flanco de la lección 14."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: MARCHA (NA). I0.1: PARO (NC). I0.2: contacto 95-96 del térmico (NC). Todos desde +24 V.",
+                "Q0.0: contactor del motor. Q0.1: lámpara de falla."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Mira la barra de pestañas sobre el código: cada archivo del sketch es una pestaña. Recórrelas antes de ejecutar.",
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. **S2** y **F1** son NC: en reposo `I0.1` e `I0.2` ya están activas.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra. Un toque a **S2 Paro** lo abre.",
+                "Arranca otra vez y aprieta **F1 Térmico**: **KM1** se abre y **H1** enciende.",
+                "Lección 16: motor en pestañas\nMotor en marcha\nMotor detenido\nMotor en marcha\nMotor detenido por el térmico"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "MARCHA arranca el motor; PARO lo detiene.",
+            "Con el motor en marcha, abre el térmico: se detiene y Q0.1 enciende."
+          ],
+          "practica": [
+            "Agrega un arranque con aviso: con MARCHA, una sirena en Q0.3 suena 2 segundos y recién ahí arranca el motor.",
+            "Agrega una lámpara de marcha en Q0.2.",
+            "Pon cada cambio en su pestaña: bits en B_Tags.h, el tiempo en A_Config.h, la decisión en D_Logica y la escritura en F_Salidas."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-16",
+            "objetivos_en_vivo": [
+              {
+                "id": "aviso",
+                "text": "Con MARCHA, la sirena HA1 (Q0.3) suena y el motor todavía no arranca",
+                "extra": false
+              },
+              {
+                "id": "arranca",
+                "text": "A los 2 s calla la sirena, arranca el motor y enciende H2 (Q0.2)",
+                "extra": false
+              },
+              {
+                "id": "paro",
+                "text": "PARO detiene el motor y apaga H2",
+                "extra": false
+              },
+              {
+                "id": "termico",
+                "text": "Arranca de nuevo y dispara el térmico F1: se detiene y enciende H1",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-17",
+          "numero": 17,
+          "titulo": "Mensajes para el operador: un horómetro",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/17.Mensajes_para_el_operador",
+          "aprende": [
+            "Serial.printf: armar un texto con números en una sola línea.",
+            "Formatos: %lu para enteros, %02lu con ceros a la izquierda, %s para textos y %.1f para un decimal.",
+            "Una función que convierte milisegundos en hh:mm:ss.",
+            "Un horómetro: el tiempo de marcha acumulado de un motor."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: MARCHA (NA). I0.1: PARO (NC). Los dos desde +24 V.",
+                "Q0.0: contactor del motor."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. **S2** es NC: en reposo `I0.1` ya está activa.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra y cada 5 segundos llega un reporte.",
+                "Da un toque a **S2 Paro**: el motor se detiene y el Monitor dice cuánto duró ese arranque.",
+                "Arranca otra vez: el total sigue desde donde quedó.",
+                "Lección 17: marcha I0.0, paro NC I0.1, motor Q0.0\nArranque 1\nEn marcha 00:00:05 | total 00:00:05\nEn marcha 00:00:10 | total 00:00:10\nDetenido tras 00:00:11\nArranque 2"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "MARCHA arranca el motor: cada 5 segundos llega un reporte con el tiempo de este arranque y el total.",
+            "PARO lo detiene y dice cuánto duró ese arranque.",
+            "Arranca otra vez: el total sigue sumando desde donde quedó."
+          ],
+          "practica": [
+            "Aviso de mantenimiento: al llegar a 30 segundos de marcha total (en una máquina real serían 500 horas), enciende una lámpara en Q0.1 y escribe una sola vez «Mantenimiento: 00:00:30 de marcha».",
+            "En cada parada, escribe el porcentaje de uso desde que se encendió el PLC, con un decimal: «Uso: 92.3 %»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-17",
+            "objetivos_en_vivo": [
+              {
+                "id": "reporte",
+                "text": "Arranca el motor: cada 5 s, «En marcha hh:mm:ss | total hh:mm:ss»",
+                "extra": false
+              },
+              {
+                "id": "mant",
+                "text": "A los 30 s de marcha total: «Mantenimiento: 00:00:30 de marcha»",
+                "extra": false
+              },
+              {
+                "id": "h1",
+                "text": "H1 (Q0.1) queda encendida desde el aviso",
+                "extra": false
+              },
+              {
+                "id": "uso",
+                "text": "Al parar, el uso con un decimal: «Uso: 92.3 %»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-18",
+          "numero": 18,
+          "titulo": "Encuentra el error: depurar un programa",
+          "ruta": "examples/Curso_JWPLC_Basic/3.CPP_para_el_tablero/18.Encuentra_el_error",
+          "aprende": [
+            "Un método para buscar errores: reproducir, observar, suponer y probar.",
+            "Mirar variables mientras el programa corre (E/S y variables, en JWPLC Sim) o con mensajes por el Monitor Serie (en la placa).",
+            "Detener el programa en una línea con un breakpoint, ver sus variables y avanzar paso a paso."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "El caso: una empacadora con dos errores",
+              "items": [
+                "Cada botella que pasa por el sensor se cuenta.",
+                "Cada 6 botellas, el empujador da un golpe de medio segundo.",
+                "El programa compila, pero tiene DOS errores a propósito. La lección te guía para encontrar el primero; el segundo es tu práctica."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: sensor de botellas (PNP o un pulsador que lo simule).",
+                "Q0.0: electroválvula del empujador."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) da UN toque a **B1 Botella**: **Y1** golpea enseguida y el mensaje dice que ya hay 6 botellas.",
+                "En la pestaña **E/S y variables**, escribe `botellas` en **Variables del sketch** y pulsa **Agregar**. Da otro toque a **B1** y mira cuánto sube.",
+                "En la misma pestaña, fuerza `I0.0` a **1** (columna **Forzar**): es como dejar una botella parada frente al sensor. Mira `botellas`: no deja de subir.",
+                "Haz clic en el margen, a la izquierda de la línea `botellas = botellas + 1;`: aparece un punto rojo (breakpoint). El programa se detiene en esa línea y la pestaña **Depuración** muestra las variables. Pulsa **Continuar** (F8): vuelve a detenerse en la vuelta siguiente, con la misma botella. Ahí está el primer error.",
+                "Quita el breakpoint (otro clic en el punto rojo) y pulsa **Liberar** en `I0.0`.",
+                "Lección 18: sensor de botellas I0.0, empujador Q0.0\nPaquete listo: 6 botellas"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Pasa UNA botella (un toque a I0.0): el empujador ya golpea y el mensaje dice «Paquete listo: 6 botellas».",
+            "Sigue la lección para encontrar por qué."
+          ],
+          "practica": [
+            "Corrige el segundo error: con 6 botellas, el empujador golpea una y otra vez hasta que pasa la séptima.",
+            "Cuenta los paquetes y escribe «Paquetes: N» en cada golpe."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-18",
+            "objetivos_en_vivo": [
+              {
+                "id": "cuenta",
+                "text": "Da 6 toques a B1: «Paquete listo: 6 botellas»",
+                "extra": false
+              },
+              {
+                "id": "golpe",
+                "text": "Y1 (Q0.0) da un golpe de medio segundo",
+                "extra": false
+              },
+              {
+                "id": "uno",
+                "text": "Y uno solo: Y1 queda quieto hasta la próxima botella",
+                "extra": false
+              },
+              {
+                "id": "paquetes",
+                "text": "Cuenta los paquetes: «Paquetes: 1»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "retos": [

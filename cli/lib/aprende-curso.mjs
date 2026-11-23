@@ -148,6 +148,7 @@ function readGuia(read, dir) {
 const UNIT_NAMES = {
   "Primeros pasos": "Primeros pasos",
   "Tiempo y logica": "El tiempo y la lógica",
+  "CPP para el tablero": "C++ para el tablero",
   "Pantalla y botonera": "Pantalla y botonera",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",
