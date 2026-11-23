@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E de la pantalla Inicio, la ruta de aprendizaje y la ficha del
 // reto (etapa 2 de docs/integration/PROPUESTA_EVALUACIONES.md):
-//   LEARN_CARD    Inicio muestra «Empieza aquí», el progreso (0 / 21: 11 lecciones
-//                 del curso y 10 retos) y la vitrina con las 3 arquitecturas
-//   LEARN_LEVELS  la ruta: 2 unidades del curso y 3 niveles de retos; el nivel 1
+//   LEARN_CARD    Inicio muestra «Empieza aquí», el progreso (0 / N: las lecciones
+//                 del curso y los retos de catalogo.json) y la vitrina con las 3 arquitecturas
+//   LEARN_LEVELS  la ruta: las unidades del curso y 3 niveles de retos; el nivel 1
 //                 abierto con «A continuación», el 2 y el 3 con candado (7 retos)
 //   LESSON        una lección con práctica evaluada abre su banco (teoría y
-//                 objetivos) y NO queda hecha solo por abrirla (sigue 0 / 21)
+//                 objetivos) y NO queda hecha solo por abrirla (sigue 0 / N)
 //   BRIEF         «Empezar reto» abre el reto con su ficha; Empezar la pliega y se vuelve a ver
 //   COMPLETE      con los objetivos cumplidos: «Qué enseña» y «Siguiente reto →»
 //   PROGRESS      el reto queda hecho y el siguiente pasa a «A continuación»
@@ -25,6 +25,10 @@ import { _electron as electron } from "playwright";
 
 const APP = resolve(import.meta.dirname, "..");
 const ROOT = resolve(APP, "..");
+// Pasos de la ruta: lecciones del curso más retos, según el catálogo de la librería.
+const CAT = JSON.parse(readFileSync(join(ROOT, "JWPLC_Aprende", "catalogo.json"), "utf8"));
+const UNITS = CAT.curso.length;
+const STEPS = CAT.curso.reduce((n, u) => n + u.lecciones.length, 0) + CAT.retos.length;
 const OUT = join(ROOT, "build", "gates", "aprender");
 mkdirSync(OUT, { recursive: true });
 const workspace = mkdtempSync(join(tmpdir(), "jwsim-ws-"));
@@ -70,10 +74,10 @@ try {
   // ---- LEARN_CARD
   const hero = await until(() => win.$eval("#start .ini-hero", (e) => e.textContent), 10000);
   await until(() => win.$$eval("#start .ini-thumb", (l) => l.length === 3), 10000);
-  const prog = await until(async () => ((await progress()) === "0/21" ? "0/21" : null), 10000);
+  const prog = await until(async () => ((await progress()) === `0/${STEPS}` ? `0/${STEPS}` : null), 10000);
   const thumbs = await win.$$eval("#start .ini-thumb", (l) => l.length);
   await win.screenshot({ path: join(OUT, "01-inicio.png") });
-  criteria.LEARN_CARD = { ok: /Empieza aquí/i.test(hero ?? "") && /Hola, JWPLC/.test(hero ?? "") && prog === "0/21" && thumbs === 3, prog, thumbs };
+  criteria.LEARN_CARD = { ok: /Empieza aquí/i.test(hero ?? "") && /Hola, JWPLC/.test(hero ?? "") && prog === `0/${STEPS}` && thumbs === 3, prog, thumbs };
   log(`LEARN_CARD ${JSON.stringify(criteria.LEARN_CARD)}`);
 
   // ---- LEARN_LEVELS
@@ -84,7 +88,7 @@ try {
   await win.click('#start [data-act="tier"][data-k="n1"]');
   await win.screenshot({ path: join(OUT, "02-ruta.png") });
   criteria.LEARN_LEVELS = {
-    ok: lv.length === 5 && /^Unidad 1/.test(lv[0]) && /^Nivel 1/.test(lv[2]) && !lv[2].includes("🔒") && lv[3].includes("🔒") && it[0] === "01-marcha-parada:next" && it.length === 10 && it.filter((x) => x.endsWith("locked!")).length === 7,
+    ok: lv.length === UNITS + 3 && /^Unidad 1/.test(lv[0]) && /^Nivel 1/.test(lv[UNITS]) && !lv[UNITS].includes("🔒") && lv[UNITS + 1].includes("🔒") && it[0] === "01-marcha-parada:next" && it.length === 10 && it.filter((x) => x.endsWith("locked!")).length === 7,
     levels: lv,
     items: it,
   };
@@ -106,7 +110,7 @@ try {
   await win.waitForTimeout(500);
   const prog2 = await progress();
   criteria.LESSON = {
-    ok: /Qué vas a aprender/i.test(lessonBrief) && /Objetivos que se evalúan/i.test(lessonBrief) && /[\\/]Curso[\\/]curso-02[\\/]/.test(lessonDir ?? "") && theory === "Encender un relé" && lessonCard === "Encender un relé" && prog2 === "0/21",
+    ok: /Qué vas a aprender/i.test(lessonBrief) && /Objetivos que se evalúan/i.test(lessonBrief) && /[\\/]Curso[\\/]curso-02[\\/]/.test(lessonDir ?? "") && theory === "Encender un relé" && lessonCard === "Encender un relé" && prog2 === `0/${STEPS}`,
     dir: lessonDir,
     lessonCard,
     theory,
@@ -156,11 +160,11 @@ try {
   await win.click("#btn-stop");
   await until(() => t(() => window.jwsimTest.status() !== "running"), 10000);
   await win.click("#btn-projects");
-  const prog3 = await until(async () => ((await progress()) === "1/21" ? "1/21" : null), 5000);
+  const prog3 = await until(async () => ((await progress()) === `1/${STEPS}` ? `1/${STEPS}` : null), 5000);
   await win.click('#start [data-act="route"]');
   await win.click('#start [data-act="tier"][data-k="n1"]');
   const it2 = await items();
-  criteria.PROGRESS = { ok: prog3 === "1/21" && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", prog: prog3, items: it2 };
+  criteria.PROGRESS = { ok: prog3 === `1/${STEPS}` && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", prog: prog3, items: it2 };
   log(`PROGRESS ${JSON.stringify(criteria.PROGRESS)}`);
 
   // ---- UNLOCK

@@ -48,13 +48,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "SA1",
@@ -62,8 +62,8 @@
         "params": {
           "label": "MAN / 0 / AUT"
         },
-        "x": 0,
-        "y": 600
+        "x": 300,
+        "y": 0
       },
       {
         "id": "S1",
@@ -72,8 +72,8 @@
           "color": "negro",
           "label": "Impulso"
         },
-        "x": 220,
-        "y": 600
+        "x": 500,
+        "y": 0
       },
       {
         "id": "S2",
@@ -82,14 +82,14 @@
           "color": "verde",
           "label": "Ciclo"
         },
-        "x": 440,
-        "y": 600
+        "x": 700,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 760,
-        "y": 0
+        "x": 280,
+        "y": 1060
       },
       {
         "id": "H1",
@@ -98,8 +98,8 @@
           "color": "blanco",
           "label": "Manual"
         },
-        "x": 0,
-        "y": 900
+        "x": 560,
+        "y": 1060
       },
       {
         "id": "H2",
@@ -108,14 +108,14 @@
           "color": "verde",
           "label": "Automático"
         },
-        "x": 220,
-        "y": 900
+        "x": 760,
+        "y": 1060
       },
       {
         "id": "Y1",
         "type": "jwsim/solenoid-valve",
-        "x": 760,
-        "y": 600
+        "x": 960,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -137,7 +137,8 @@
       {
         "from": "PS1.+V1",
         "to": "SA1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "SA1.14",
@@ -147,7 +148,8 @@
       {
         "from": "PS1.+V1",
         "to": "SA1.23",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "SA1.24",
@@ -157,7 +159,8 @@
       {
         "from": "PS1.+V1",
         "to": "S1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S1.14",
@@ -167,7 +170,8 @@
       {
         "from": "PS1.+V1",
         "to": "S2.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S2.14",
@@ -187,7 +191,8 @@
       {
         "from": "KM1.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -202,7 +207,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -217,7 +223,8 @@
       {
         "from": "H2.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -232,7 +239,8 @@
       {
         "from": "Y1.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }

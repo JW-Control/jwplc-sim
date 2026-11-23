@@ -47,13 +47,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "S1",
@@ -62,8 +62,8 @@
           "color": "verde",
           "label": "Marcha B1"
         },
-        "x": 0,
-        "y": 600
+        "x": 280,
+        "y": 0
       },
       {
         "id": "S2",
@@ -72,8 +72,8 @@
           "color": "rojo",
           "label": "Parada B1"
         },
-        "x": 220,
-        "y": 600
+        "x": 480,
+        "y": 0
       },
       {
         "id": "S3",
@@ -82,8 +82,8 @@
           "color": "verde",
           "label": "Marcha B2"
         },
-        "x": 440,
-        "y": 600
+        "x": 680,
+        "y": 0
       },
       {
         "id": "S4",
@@ -92,20 +92,20 @@
           "color": "rojo",
           "label": "Parada B2"
         },
-        "x": 0,
-        "y": 900
+        "x": 880,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 760,
-        "y": 0
+        "x": 280,
+        "y": 1060
       },
       {
         "id": "KM2",
         "type": "jwsim/contactor",
-        "x": 1060,
-        "y": 0
+        "x": 560,
+        "y": 1060
       },
       {
         "id": "H1",
@@ -114,8 +114,8 @@
           "color": "verde",
           "label": "Bombeando"
         },
-        "x": 220,
-        "y": 900
+        "x": 840,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -137,7 +137,8 @@
       {
         "from": "PS1.+V1",
         "to": "S1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S1.14",
@@ -147,7 +148,8 @@
       {
         "from": "PS1.+V1",
         "to": "S2.11",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S2.12",
@@ -157,7 +159,8 @@
       {
         "from": "PS1.+V1",
         "to": "S3.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S3.14",
@@ -167,7 +170,8 @@
       {
         "from": "PS1.+V1",
         "to": "S4.11",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S4.12",
@@ -187,7 +191,8 @@
       {
         "from": "KM1.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -202,7 +207,8 @@
       {
         "from": "KM2.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -217,7 +223,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }

@@ -42,13 +42,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "B1",
@@ -57,14 +57,14 @@
           "color": "negro",
           "label": "Botella"
         },
-        "x": 0,
-        "y": 600
+        "x": 460,
+        "y": 0
       },
       {
         "id": "Y1",
         "type": "jwsim/solenoid-valve",
-        "x": 760,
-        "y": 440
+        "x": 280,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -86,7 +86,8 @@
       {
         "from": "PS1.+V1",
         "to": "B1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "B1.14",
@@ -106,7 +107,8 @@
       {
         "from": "Y1.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }
