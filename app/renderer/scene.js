@@ -3285,6 +3285,7 @@
     document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
     window.JwsimTabs?.onView(view);
     window.Jwsim3D?.show(view === "3d");
+    window.JwsimDiag?.onView?.(view);
     // scene3d.js es un módulo: si no carga (falta three.js en la instalación),
     // el aviso de «escena sin planta» engañaba; se dice qué pasa.
     if (view === "3d" && !window.Jwsim3D) {

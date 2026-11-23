@@ -5992,55 +5992,179 @@ body[data-schem="iec"] .scene-float {
   padding-left: 16px;
   color: var(--err-text-2);
 }
-.diag-meter {
-  padding: 10px;
-  border-radius: 10px;
-  background: #1f2328;
+/* Multímetro de mano (original JW: cuerpo grafito con funda verde). */
+.dmm {
+  position: relative;
+  padding: 12px 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #2b3036, #1d2126);
+  border: 5px solid #1f8a46;
+  box-shadow: inset 0 0 0 1px #0d0f12, 0 4px 14px rgb(0 0 0 / 0.35);
   color: #e6edf3;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border: 2px solid #3a3f46;
+  gap: 10px;
 }
-.diag-meter.alarm {
+.dmm.alarm {
   border-color: var(--err);
+  animation: dmm-alarm 0.6s steps(2) infinite;
 }
-.diag-lcd {
-  font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 26px;
-  text-align: right;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: #b9c7a6;
-  color: #1d2414;
-  font-variant-numeric: tabular-nums;
+@keyframes dmm-alarm {
+  50% {
+    border-color: #1f8a46;
+  }
 }
-.diag-modes {
+.dmm-head {
   display: flex;
-  gap: 4px;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #9aa4af;
 }
-.diag-modes .seg {
-  flex: 1;
+.dmm-head b {
+  font-size: 15px;
+  color: #37d67a;
+  letter-spacing: 0.02em;
+}
+.dmm-lcd {
+  padding: 6px 10px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #c6d3b2, #aebd98);
+  color: #1b2213;
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.35);
+  border: 3px solid #0f1215;
+}
+.dmm-flags {
+  display: flex;
+  gap: 8px;
+  font: 700 9px system-ui, sans-serif;
+}
+.dmm-flags span {
+  opacity: 0.14;
+}
+.dmm-flags span.on {
+  opacity: 0.9;
+}
+.dmm-flags .dmm-hv {
+  margin-left: auto;
+  font-size: 11px;
+}
+.dmm-val {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 46px;
+}
+.dmm-val .diag-lcd {
+  font: 700 40px/1 "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  font-style: italic;
+}
+.dmm-val small {
+  font: 700 18px system-ui, sans-serif;
+  min-width: 30px;
+}
+.dmm-bar {
+  height: 5px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgb(27 34 19 / 0.15) 0 4px, transparent 4px 6px);
+}
+.dmm-bar i {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #1b2213 0 4px, transparent 4px 6px);
+}
+.dmm-dial {
+  position: relative;
+  height: 128px;
+}
+.dmm-knob {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  width: 74px;
+  height: 74px;
+  margin: -37px 0 0 -37px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a525c, #23272d 70%);
+  border: 3px solid #121518;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.5);
+  transition: transform 0.18s ease-out;
+  pointer-events: none;
+}
+.dmm-knob i {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 8px;
+  height: 30px;
+  margin-left: -4px;
+  border-radius: 4px;
+  background: #37d67a;
+}
+.dmm-pos {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: 6px;
   background: #2d333b;
   color: #e6edf3;
   border: 1px solid #444c56;
-  border-radius: 6px;
-  padding: 4px 0;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
 }
-.diag-modes .seg.on {
-  background: var(--ok);
-  border-color: var(--ok);
+.dmm-pos.on {
+  background: #37d67a;
+  border-color: #37d67a;
   color: #06130b;
 }
+.dmm-jacks {
+  display: flex;
+  justify-content: space-around;
+  font: 700 10px system-ui, sans-serif;
+  color: #9aa4af;
+}
+.dmm-jack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.dmm-jack i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0b0c0e 35%, #5b636d 38%, #3a4048 70%);
+  border: 2px solid #59616b;
+}
+.dmm-jack.v.on i {
+  border-color: #e5484d;
+}
+.dmm-jack.com.on i {
+  border-color: #0b0c0e;
+  box-shadow: 0 0 0 2px #8b949e;
+}
+.dmm-jack.a.on i {
+  border-color: #f2cf1d;
+}
+.dmm-jack.on {
+  color: #e6edf3;
+}
 .diag-probes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
-  color: #c9d1d9;
   word-break: break-all;
 }
-.diag-meter .link {
-  align-self: flex-end;
-  color: #9cc7ff;
+.diag-probes .link {
+  margin-left: auto;
 }
 .diag-red {
   color: #ff5d5d;
@@ -6099,27 +6223,49 @@ body[data-schem="iec"] .scene-float {
 #diag-probes {
   pointer-events: none;
 }
-.diag-tip circle {
+/* Puntas de prueba grandes sobre el esquema y el plano IEC. */
+.diag-tip .ring {
+  fill: none;
+  stroke-width: 3;
+}
+.diag-tip .needle {
+  fill: #d5dade;
+  stroke: #4a525c;
+  stroke-width: 0.8;
+}
+.diag-tip .body,
+.diag-tip .guard {
+  stroke: #ffffff;
+  stroke-width: 1.4;
+}
+.diag-tip .grip {
+  stroke: rgb(255 255 255 / 0.35);
+  stroke-width: 1.2;
+}
+.diag-tip .cable {
   fill: none;
   stroke-width: 4;
+  stroke-linecap: round;
 }
-.diag-tip.red circle,
-.diag-tip.red path {
+.diag-tip.red .ring,
+.diag-tip.red .cable {
   stroke: #e5484d;
 }
-.diag-tip.red path {
-  fill: #e5484d;
+.diag-tip.red .body,
+.diag-tip.red .guard {
+  fill: #d8282d;
 }
-.diag-tip.black circle,
-.diag-tip.black path {
-  stroke: #1f2328;
+.diag-tip.black .ring,
+.diag-tip.black .cable {
+  stroke: #1d2126;
 }
-.diag-tip.black path {
-  fill: #1f2328;
+.diag-tip.black .body,
+.diag-tip.black .guard {
+  fill: #1d2126;
 }
 .diag-tip text,
 .diag-clamp text {
-  font: 700 14px system-ui, sans-serif;
+  font: 700 16px system-ui, sans-serif;
   text-anchor: middle;
   fill: var(--text);
   paint-order: stroke;
@@ -6129,5 +6275,81 @@ body[data-schem="iec"] .scene-float {
 .diag-clamp circle {
   fill: none;
   stroke: #f0b429;
-  stroke-width: 5;
+  stroke-width: 6;
+}
+/* Bornes donde se puede apoyar una punta en el plano IEC. */
+.iec-probe {
+  fill: #37d67a;
+  fill-opacity: 0;
+  stroke: none;
+  cursor: crosshair;
+}
+.iec-probe:hover {
+  fill-opacity: 0.85;
+  stroke: #1f8a46;
+  stroke-width: 1;
+}
+/* Modo Diagnóstico en la Planta 3D: botón, tarjeta flotante y folio de planos. */
+.view3d-diag-btn {
+  position: absolute;
+  left: 168px;
+  top: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  opacity: 0.92;
+}
+.view3d-diag-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.view3d-diag {
+  position: absolute;
+  left: 12px;
+  top: 48px;
+  bottom: 12px;
+  width: 340px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--surface-scene);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  z-index: 3;
+}
+.view3d-diag[hidden],
+.view3d-folio[hidden] {
+  display: none;
+}
+.view3d-folio {
+  position: absolute;
+  inset: 24px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  background: #f4f1e6;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+  z-index: 4;
+}
+.view3d-folio header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1d21;
+  border-bottom: 1px solid #d6d0bd;
+}
+.view3d-folio .iec-view {
+  flex: 1;
+  position: relative;
+}
+/* Con la tarjeta del multímetro abierta, el folio deja libre su lado. */
+.view3d-diag:not([hidden]) ~ .view3d-folio {
+  left: 376px;
 }

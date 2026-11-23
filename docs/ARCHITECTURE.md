@@ -608,8 +608,18 @@ se generan del cableado de las E/S del PLC.
   cierra con la falla reparada y el bloqueo retirado.
 - La tabla de E/S dice qué equipo hay en cada entrada y salida siguiendo el
   cableado (`JwsimScene.ioMap`).
+- Dónde se apoyan las puntas: en los bornes del esquema a colores, en los
+  del plano normalizado IEC (`iec.js`, cada borne de elemento y el inicio de
+  cada riel) y en los del tablero 3D (`scene3d.js`: equipos del riel,
+  bloques de contacto de la puerta y bornera de salida, que lleva el borne
+  del equipo de campo). Con la pinza, clic en un borne abraza el cable que
+  sale de él (si llegan varios, cada clic pasa al siguiente).
+- En la Planta 3D el mismo panel flota en una tarjeta (botón «Diagnóstico»);
+  el bolsillo de la puerta del tablero abre los planos IEC como un folio, y
+  con la energía bloqueada el interruptor general lleva candado y tarjeta.
 
-Pruebas: `scene/tests/meter.test.mjs` y `app/tests/e2e-diagnostico.mjs`.
+Pruebas: `scene/tests/meter.test.mjs`, `app/tests/e2e-diagnostico.mjs` y
+`app/tests/e2e-diagnostico-3d.mjs`.
 
 
 ### 4.3 Ejercicios y calificación **[G9]**
