@@ -99,12 +99,16 @@ try {
   await win.waitForSelector("#start", { state: "hidden", timeout: 10000 });
   const lessonDir = await until(() => t(() => window.jwsimTest.sketchDir()).then((d) => (/Encender_un_rele/.test(d ?? "") ? d : null)), 10000);
   const theory = await until(() => win.$eval("#theory-pane h3", (e) => e.textContent), 5000);
+  // La ficha de la lección sale al centro: se cierra con Empezar.
+  const lessonCard = await until(() => win.$eval("#lesson-card h2", (e) => e.textContent), 5000);
+  await win.click("#lesson-card .lc-foot button");
   await win.click("#btn-projects");
   await win.waitForTimeout(500);
   const prog2 = await progress();
   criteria.LESSON = {
-    ok: /Qué vas a aprender/i.test(lessonBrief) && /Objetivos que se evalúan/i.test(lessonBrief) && /[\\/]Curso[\\/]curso-02[\\/]/.test(lessonDir ?? "") && theory === "Encender un relé" && prog2 === "0/21",
+    ok: /Qué vas a aprender/i.test(lessonBrief) && /Objetivos que se evalúan/i.test(lessonBrief) && /[\\/]Curso[\\/]curso-02[\\/]/.test(lessonDir ?? "") && theory === "Encender un relé" && lessonCard === "Encender un relé" && prog2 === "0/21",
     dir: lessonDir,
+    lessonCard,
     theory,
     prog: prog2,
   };

@@ -131,6 +131,15 @@ export function parseLessonMd(text) {
   return out;
 }
 
+/** La lección completa (GUIA.md, traída de la wiki), o "" si no hay. */
+function readGuia(read, dir) {
+  try {
+    return String(read(join(dir, "GUIA.md"))).replace(/\r\n/g, "\n");
+  } catch {
+    return "";
+  }
+}
+
 /** «2.Tiempo_y_logica» → { unit: 2, name: "Tiempo y lógica" } (tildes del README cuando las hay). */
 const UNIT_NAMES = {
   "Primeros pasos": "Primeros pasos",
@@ -185,6 +194,7 @@ export function buildCourse(examples, read = (f) => readFileSync(f, "utf8")) {
       practice: info.practice,
       sections: info.sections,
       readme: String(readme).replace(/\r\n/g, "\n"),
+      guia: readGuia(read, ex.dir),
     });
   }
   return [...units.values()].sort((a, b) => a.unit - b.unit).map((u) => ({ ...u, lessons: u.lessons.sort((a, b) => a.num - b.num) }));

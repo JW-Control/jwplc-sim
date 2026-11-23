@@ -6,9 +6,13 @@
 //                   lección) y objetivos a la derecha (saludo, medio)
 //   LESSON_CONSOLE  el objetivo de consola se cumple con el saludo nuevo
 //   LESSON_PERIOD   el objetivo de ritmo cuenta ciclos y se cumple
-//   LESSON_GUIDE    en Programa, la guía (README.md) a la izquierda del código:
-//                   sin «Para practicar» (son los objetivos), se pliega y se
-//                   vuelve a mostrar, y el sketch empieza sin la guía
+//   LESSON_CARD     al abrir la lección sale su ficha al centro y se cierra
+//   LESSON_GUIDE    en Programa, la clase (GUIA.md, de la wiki) a la
+//                   izquierda del código: sin «Para practicar» (son los
+//                   objetivos), se pliega y se vuelve a mostrar, y el sketch
+//                   empieza sin la guía
+//   LESSON_FOCUS    pulsar un trozo de código de la clase, o su título,
+//                   resalta esas líneas en el editor
 //   LESSON_DONE     con todo cumplido la lección queda hecha y ofrece la
 //                   siguiente; abrirla sin cumplir no la marca
 //   LESSON_PLAIN    una lección sin práctica también trae su guía, con
@@ -53,6 +57,12 @@ const state = async (id) => (await goal(id)).cls.split(" ").find((c) => ["done",
 try {
   await t(() => window.openLessonById("curso-01"));
   await until(() => win.$eval("#ex-goals", (e) => !e.hidden), 15000);
+  const card = await until(() => win.$eval("#lesson-card", (e) => ({ title: e.querySelector("h2")?.textContent, secs: [...e.querySelectorAll(".lc-k")].map((x) => x.textContent) })), 5000);
+  await win.screenshot({ path: join(OUT, "0-ficha.png") });
+  await win.click("#lesson-card .lc-foot button");
+  const cardGone = await t(() => !document.getElementById("lesson-card"));
+  criteria.LESSON_CARD = { ok: card?.title === "Hola, JWPLC" && card.secs.includes("Qué vas a aprender") && card.secs.includes("La práctica") && cardGone, card, cardGone };
+  log(`LESSON_CARD ${JSON.stringify(criteria.LESSON_CARD)}`);
   await t(() => window.JwsimScene?.setView("scene"));
   const ids = await win.$$eval("#ex-goals .goal", (l) => l.map((x) => x.dataset.goal));
   const theory = await win.$eval("#theory-pane", (e) => ({ hidden: e.hidden, title: e.querySelector("h3")?.textContent ?? "" }));
@@ -78,7 +88,7 @@ try {
   const unfolded = await guideOf();
   criteria.LESSON_GUIDE = {
     ok:
-      guide.visible && guide.title === "Hola, JWPLC" && guide.heads.includes("Cómo probarlo") && !guide.heads.includes("Para practicar") &&
+      guide.visible && guide.title === "Hola, JWPLC" && guide.heads.includes("Cómo funciona el programa") && !guide.heads.includes("Para practicar") &&
       !folded.visible && folded.open && unfolded.visible && !unfolded.open && /^\/\/ Curso JWPLC Basic · Lección 01/.test(firstLine),
     guide,
     folded,
@@ -86,6 +96,26 @@ try {
     firstLine,
   };
   log(`LESSON_GUIDE ${JSON.stringify(criteria.LESSON_GUIDE)}`);
+
+  // Clase interactiva: el trozo «uint32_t segundos = 0;» y la parte «Preparar todo, una sola vez».
+  const src = (await t(() => window.jwsimTest.getSource())).split("\n");
+  const lineOf = (x) => src.findIndex((l) => l.trim() === x) + 1;
+  await win.click('#guide-body pre.th-snippet:has-text("uint32_t segundos = 0;")');
+  const one = await t(() => window.jwsimTest.guideHighlight());
+  await win.screenshot({ path: join(OUT, "0-clase-resaltado.png") });
+  await win.click('#guide-body h5.th-part:has-text("Preparar todo")');
+  const part = await t(() => window.jwsimTest.guideHighlight());
+  await win.click('#guide-body h5.th-part:has-text("Preparar todo")');
+  const off = await t(() => window.jwsimTest.guideHighlight());
+  const begin = lineOf("Serial.begin(115200);");
+  criteria.LESSON_FOCUS = {
+    ok: one.length === 1 && one[0][0] === lineOf("uint32_t segundos = 0;") && part.length === 2 && part[0][0] === begin && off.length === 0,
+    one,
+    part,
+    off,
+    expect: { segundos: lineOf("uint32_t segundos = 0;"), begin },
+  };
+  log(`LESSON_FOCUS ${JSON.stringify(criteria.LESSON_FOCUS)}`);
   await t(() => window.JwsimScene?.setView("scene"));
 
   // Sin cambios: el ejemplo tal cual no cumple los objetivos.
@@ -118,6 +148,7 @@ try {
   const l06 = await t(async () => (await window.jwsim.courseList()).flatMap((u) => u.lessons).find((l) => l.id === "curso-06"));
   await t(async (dir) => window.loadSketch(await window.jwsim.openExample(dir)), l06.dir);
   await t((l) => window.showLessonGuide(l), l06);
+  await t(() => window.jwsimLessonCard.close());
   await t(() => window.JwsimTabs.select("program"));
   const plain = await guideOf();
   await win.screenshot({ path: join(OUT, "4-leccion-06.png") });
@@ -131,7 +162,7 @@ try {
 } finally {
   await app.close().catch(() => {});
 }
-const ok = Object.values(criteria).length >= 6 && Object.values(criteria).every((c) => c.ok);
+const ok = Object.values(criteria).length >= 8 && Object.values(criteria).every((c) => c.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_PRACTICAS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
 console.log(`JWSIM_PRACTICAS_E2E ${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

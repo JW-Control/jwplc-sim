@@ -6440,3 +6440,44 @@ body[data-schem="iec"] .scene-float {
 .theory-body code { font-family: var(--mono); font-size: 12px; }
 .theory-body pre { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; background: var(--strip); padding: 6px 8px; border-radius: 6px; margin: 6px 0; }
 .theory-body .th-tip { font-size: 12px; margin-top: 12px; }
+
+/* ---- La clase (GUIA.md) junto al código y ficha de la lección ---- */
+.theory-body .th-class { font-size: 13.5px; line-height: 1.55; }
+.theory-body h5 { margin: 14px 0 4px; font-size: 13px; }
+.theory-body h6 { margin: 10px 0 4px; font-size: 12.5px; }
+.theory-body .th-class h4 { text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--text); margin: 18px 0 6px; }
+.theory-body table { border-collapse: collapse; margin: 6px 0; font-size: 12.5px; }
+.theory-body th, .theory-body td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: left; vertical-align: top; }
+.theory-body a { color: var(--accent); }
+.theory-body .th-howto { font-size: 12px; margin: 0 0 8px; }
+.theory-body .md-alert { border-left: 3px solid var(--accent); background: var(--strip); padding: 6px 10px; border-radius: 6px; margin: 8px 0; }
+.theory-body .md-alert.warning, .theory-body .md-alert.caution { border-left-color: #d97706; }
+.theory-body .md-alert > b { display: block; margin-bottom: 2px; }
+.theory-body .md-alert p { margin: 2px 0; }
+.theory-body .th-snippet { cursor: pointer; border: 1px solid transparent; transition: border-color 0.12s, background 0.12s; }
+.theory-body .th-snippet:hover, .theory-body .th-snippet:focus-visible { border-color: var(--accent); }
+.theory-body .th-snippet.th-on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--strip)); }
+.theory-body .th-part { cursor: pointer; }
+.theory-body .th-part::after { content: " ⌖"; color: var(--accent); font-weight: 400; }
+.theory-body .th-part.th-on { color: var(--accent); }
+.theory-body .th-program { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 8px 10px; border: 1px dashed var(--accent); border-radius: 6px; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; }
+.guide-note { margin: 6px 8px 0; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, #d97706 15%, var(--panel)); font-size: 12px; }
+.guide-note[hidden] { display: none; }
+.guide-head .link.small { font-size: 12px; }
+.monaco-editor .guide-hl { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.monaco-editor .guide-hl-bar { background: var(--accent); width: 3px !important; margin-left: 3px; }
+
+.lesson-card-back { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; background: rgb(0 0 0 / 0.45); }
+.lesson-card { position: relative; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); overflow: auto; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px 18px; box-shadow: 0 18px 50px rgb(0 0 0 / 0.35); font-size: 14px; line-height: 1.5; }
+.lesson-card h2 { margin: 2px 0 12px; font-size: 22px; }
+.lesson-card .th-eyebrow { color: var(--accent); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; }
+.lesson-card .lc-sec { margin: 10px 0; }
+.lesson-card .lc-k { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lesson-card ul { margin: 4px 0 0; padding-left: 18px; }
+.lesson-card p { margin: 4px 0; }
+.lesson-card .lc-tip { font-size: 12.5px; margin-top: 12px; }
+.lesson-card .lc-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+.lesson-card .lc-close { position: absolute; top: 10px; right: 10px; }
+.theory-body .th-program { white-space: normal; }
+.guide-body { overflow-x: hidden; }
+.theory-body table { width: 100%; table-layout: auto; overflow-wrap: anywhere; }

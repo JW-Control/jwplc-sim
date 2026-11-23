@@ -435,6 +435,12 @@ function lessonBrief(id) {
     return null;
   }
 }
+// Enlaces de la guía de la lección (wiki de jw-control.com): solo https, en el navegador.
+ipcMain.handle("shell:openExternal", (_e, url) => {
+  if (!/^https:\/\//.test(String(url))) return false;
+  shell.openExternal(String(url));
+  return true;
+});
 ipcMain.handle("lessons:open", (_e, id) => {
   if (!/^curso-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
   const src = join(PRACTICAS, id);
