@@ -97,6 +97,12 @@ try {
   const m1 = await st();
   const probes = await t(() => window.Jwsim3D.probesAt());
   await shot("3d-medir-fuente.png");
+  // De costado: las puntas salen hacia el frente sin atravesar los equipos.
+  await t(([p, q]) => window.Jwsim3D.camera(p, q), [[x + 0.55, y + b + H * 0.75, z + 0.75], [x - 0.15, y + b + H * 0.68, z]]);
+  await sleep(700);
+  await shot("3d-puntas-costado.png");
+  await t(([p, q]) => window.Jwsim3D.camera(p, q), [[x - 0.35, y + b + H * 0.62, z + 1.25], [x - 0.35, y + b + H * 0.62, z]]);
+  await sleep(500);
   criteria.MEDIR_3D = { ok: m1.red === "PS1.+V1" && m1.black === "PS1.-V1" && m1.reading === "24.0 V" && probes.red && probes.black && probes.redDown && probes.uncrossed && probes.lit <= 1, red: m1.red, black: m1.black, reading: m1.reading, probes };
   log(`MEDIR_3D ${JSON.stringify(criteria.MEDIR_3D)}`);
 

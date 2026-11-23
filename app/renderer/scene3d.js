@@ -986,9 +986,11 @@ function orientProbes() {
     if (o.userData.key === key) continue;
     o.userData.key = key;
     o.userData.down = down;
-    // La inclinación en z lleva el mango hacia -x (izquierda) con signo +,
-    // también con el mango hacia abajo.
-    o.rotation.set(down ? Math.PI - 0.55 : 0.55, 0, left ? 0.35 : -0.35);
+    // Como las sostiene el técnico: el mango sale hacia el frente del tablero
+    // (casi perpendicular a él) y apenas se abre a su lado, así no atraviesa
+    // los equipos vecinos. La inclinación en z lleva el mango hacia -x
+    // (izquierda) con signo +, también con el mango hacia abajo.
+    o.rotation.set(down ? Math.PI - 1.15 : 1.15, 0, left ? 0.12 : -0.12);
   }
 }
 
