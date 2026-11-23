@@ -28,11 +28,13 @@ JWPLC_Aprende/
 
 ## Cómo se edita
 
-- **Lección del curso:** el `.ino` de su carpeta. La cabecera (el primer
-  comentario) es la ficha que muestra el Sim y la web; respete sus títulos:
-  `Curso JWPLC Basic · Lección NN · Título`, `Qué vas a aprender`,
-  `Qué necesitas`, `Qué conectar`, `Cómo probarlo`, `Para practicar`. Una
-  unidad nueva es otra carpeta `N.Nombre_de_unidad`.
+- **Lección del curso:** su carpeta tiene el sketch (`NN.Nombre.ino`, solo
+  el código con dos renglones de cabecera) y la guía en `README.md`, que es
+  lo que muestra el Sim (a la izquierda del código y en la pestaña Teoría) y
+  la web. Respete sus títulos: `# Curso JWPLC Basic · Lección NN · Título` y
+  las secciones `## Qué vas a aprender`, `## Qué necesitas`,
+  `## Qué conectar`, `## Cómo probarlo`, `## Para practicar` (y las propias
+  que hagan falta). Una unidad nueva es otra carpeta `N.Nombre_de_unidad`.
 - **Reto:** su carpeta en `extras/retos`. El nivel y la ficha van en
   `exercise` del `.jwsim`; los objetivos, en `rubrica.json`.
 - **Arquitectura:** su carpeta en `extras/arquitecturas`; la primera línea de

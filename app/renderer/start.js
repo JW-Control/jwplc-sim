@@ -583,6 +583,7 @@
       if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id);
       try {
         window.loadSketch(await api.openExample(hit.item.lesson.dir));
+        window.showLessonGuide?.(hit.item.lesson);
         st.lessons = await api.learnLessonSeen(hit.item.id);
         window.consoleWrite?.(`[jwsim] Curso JWPLC Basic · Lección ${hit.item.lesson.num}: ${hit.item.title}\n`, "sys");
       } catch (err) {

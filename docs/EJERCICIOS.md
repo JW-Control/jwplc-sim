@@ -215,9 +215,12 @@ Cada lección del Curso JWPLC Basic puede traer una práctica evaluada en
   (lo comprueba `tests/app/aprende_test.mjs`). Las tareas de «Para
   practicar» son los objetivos en vivo de `rubrica.json`.
 
-En la app, la lección se abre con su banco: la **teoría** de la lección
-(qué vas a aprender, qué conectar, cómo probarlo y el código del ejemplo) en
-el panel izquierdo del esquema y los **objetivos** en el derecho. La lección
+En la app, la lección se abre con su banco: la **guía** de la lección (su
+`README.md`: qué vas a aprender, qué conectar, cómo probarlo) a la izquierda
+del código en Programa y en la pestaña Teoría del esquema, y los
+**objetivos** en el panel derecho. «Para practicar» no se repite en la guía:
+son esos objetivos. Una lección sin práctica también muestra su guía junto
+al código. La lección
 queda hecha solo al cumplir sus objetivos en una corrida; Calificar sirve
 para ver el detalle, pero no la marca.
 

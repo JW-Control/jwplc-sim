@@ -400,8 +400,9 @@
               ]
             },
             {
-              "titulo": "motor = (marcha O motor) Y parada Y térmico",
+              "titulo": "La regla, como en un diagrama de escalera",
               "items": [
+                "motor = (marcha O motor) Y parada Y térmico",
                 "\"O motor\" es el sello: si el motor ya está en marcha, se mantiene aunque se suelte el pulsador de marcha."
               ]
             }

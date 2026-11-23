@@ -70,6 +70,18 @@
 
     <main class="workspace">
       <section class="pane code-pane">
+        <!-- Guía de la lección (su README.md) a la izquierda del código: se lee
+             mientras se edita el sketch. Solo aparece en lecciones del curso. -->
+        <aside class="guide-pane" id="guide-pane" hidden aria-label="Guía de la lección">
+          <div class="guide-head">
+            <span class="guide-title">Guía de la lección</span>
+            <button class="icon" id="guide-fold" title="Plegar la guía" aria-label="Plegar la guía">‹</button>
+          </div>
+          <div class="guide-body theory-body" id="guide-body"></div>
+          <div class="guide-grip" id="guide-grip" role="separator" aria-orientation="vertical" aria-label="Ancho de la guía" title="Arrastrar para cambiar el ancho de la guía"></div>
+        </aside>
+        <button class="guide-open" id="guide-open" hidden title="Mostrar la guía de la lección" aria-label="Mostrar la guía de la lección">Guía</button>
+        <div class="code-col">
         <div class="code-head">
           <div class="tabs" id="tabs"></div>
           <div class="group dbg" aria-label="Depuración">
@@ -81,6 +93,7 @@
           </div>
         </div>
         <div id="editor"></div>
+        </div>
       </section>
 
       <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Ancho del editor"
@@ -188,7 +201,7 @@
               </nav>
               <aside class="scene-left" id="scene-left">
                 <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
-                <section class="left-pane theory-pane" id="theory-pane" data-left-pane="teoria" hidden></section>
+                <section class="left-pane theory-pane theory-body" id="theory-pane" data-left-pane="teoria" hidden></section>
               </aside>
               <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
                 aria-label="Ancho del diagrama de estados"

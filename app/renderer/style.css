@@ -444,6 +444,77 @@ body.resizing #editor {
 }
 .code-pane {
   min-width: 0;
+  flex-direction: row;
+}
+.code-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Guía de la lección (README.md) a la izquierda del editor. */
+.guide-pane {
+  position: relative;
+  flex: 0 0 var(--guide-w, 300px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+.guide-pane[hidden],
+.guide-open[hidden] {
+  display: none;
+}
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-title {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.guide-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.guide-grip {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+.guide-grip:hover,
+.guide-grip.dragging {
+  background: var(--accent);
+  opacity: 0.5;
+}
+.guide-open {
+  flex: 0 0 auto;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 10px 4px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 .sim-pane {
   min-width: 0;
@@ -5742,11 +5813,13 @@ body[data-schem="iec"] .scene-float {
 
 /* Teoría de la lección (panel izquierdo del esquema). */
 .theory-pane { overflow: auto; height: 100%; }
-.theory-pane .th-body { padding: 10px 14px 16px; font-size: 13px; line-height: 1.45; }
-.theory-pane h3 { margin: 2px 0 10px; font-size: 17px; }
-.theory-pane .th-eyebrow { color: var(--accent); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; }
-.theory-pane .th-sec { margin: 10px 0; }
-.theory-pane ul, .theory-pane ol { margin: 4px 0 0; padding-left: 18px; }
-.theory-pane .th-code summary { cursor: pointer; color: var(--accent); font-weight: 600; margin-top: 8px; }
-.theory-pane .th-code pre { font-family: var(--mono); font-size: 11.5px; white-space: pre; overflow: auto; background: var(--strip); padding: 8px; border-radius: 6px; max-height: 50vh; }
-.theory-pane .th-tip { font-size: 12px; margin-top: 12px; }
+.theory-body .th-body { padding: 10px 14px 16px; font-size: 13px; line-height: 1.45; }
+.theory-body h3 { margin: 2px 0 10px; font-size: 17px; }
+.theory-body h4 { margin: 14px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.theory-body p { margin: 4px 0; }
+.theory-body .th-eyebrow { color: var(--accent); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; }
+.theory-body ul, .theory-body ol { margin: 4px 0 0; padding-left: 18px; }
+.theory-body li { margin: 2px 0; }
+.theory-body code { font-family: var(--mono); font-size: 12px; }
+.theory-body pre { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; background: var(--strip); padding: 6px 8px; border-radius: 6px; margin: 6px 0; }
+.theory-body .th-tip { font-size: 12px; margin-top: 12px; }

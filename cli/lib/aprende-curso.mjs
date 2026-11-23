@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Curso JWPLC Basic: las lecciones viven en la librería JWPLC_Aprende
-// (examples/Curso_JWPLC_Basic/<N.Unidad>/<NN.Leccion>) y cada una explica en
-// su comentario de cabecera qué se aprende, qué se necesita, cómo probarla y
-// un reto para practicar. Aquí solo se leen; si se suman unidades, aparecen
-// solas.
+// (examples/Curso_JWPLC_Basic/<N.Unidad>/<NN.Leccion>). Cada una trae su guía
+// en README.md (qué se aprende, qué se necesita, cómo probarla y un reto para
+// practicar) y el sketch queda solo con el código. Una lección sin README.md
+// todavía se lee de su comentario de cabecera, como antes. Aquí solo se leen;
+// si se suman unidades, aparecen solas.
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
@@ -68,6 +69,68 @@ export function parseLesson(text) {
   return out;
 }
 
+/**
+ * Lee la guía de una lección en Markdown (README.md): «# Curso JWPLC Basic ·
+ * Lección NN · Título», secciones «## …» con viñetas, pasos numerados,
+ * párrafos y bloques de código. Devuelve lo mismo que parseLesson().
+ * @param {string} text
+ */
+export function parseLessonMd(text) {
+  const out = { title: "", num: null, learn: [], need: [], steps: [], practice: [], sections: [] };
+  let list = null;
+  let last = null;
+  let fence = null;
+  for (const raw of String(text).replace(/\r\n/g, "\n").split("\n")) {
+    if (fence) {
+      if (/^\s*```/.test(raw)) {
+        if (list && fence.length) list.push(fence.join("\n"));
+        fence = null;
+      } else fence.push(raw);
+      continue;
+    }
+    if (/^\s*```/.test(raw)) {
+      fence = [];
+      last = null;
+      continue;
+    }
+    const line = raw.trim();
+    if (!line) {
+      last = null;
+      continue;
+    }
+    const h1 = /^#\s+Curso JWPLC Basic\s*·\s*Lecci[oó]n\s*(\d+)\s*·\s*(.+)$/i.exec(line);
+    if (h1) {
+      out.num = Number(h1[1]);
+      out.title = h1[2].trim();
+      continue;
+    }
+    const h2 = /^#{2,}\s+(.+)$/.exec(line);
+    if (h2) {
+      const title = h2[1].trim();
+      const key = Object.keys(SECTIONS).find((k) => SECTIONS[k].test(title));
+      if (key) list = out[key];
+      else {
+        const sec = { title, items: [] };
+        out.sections.push(sec);
+        list = sec.items;
+      }
+      last = null;
+      continue;
+    }
+    if (!list) continue;
+    const item = /^(?:-|\*|\d+\.)\s+(.*)$/.exec(line);
+    if (item) {
+      list.push(item[1]);
+      last = list.length - 1;
+    } else if (last !== null) list[last] += ` ${line}`;
+    else {
+      list.push(line);
+      last = list.length - 1;
+    }
+  }
+  return out;
+}
+
 /** «2.Tiempo_y_logica» → { unit: 2, name: "Tiempo y lógica" } (tildes del README cuando las hay). */
 const UNIT_NAMES = {
   "Primeros pasos": "Primeros pasos",
@@ -98,10 +161,16 @@ export function buildCourse(examples, read = (f) => readFileSync(f, "utf8")) {
     const u = unitOf(parts[1]);
     if (!u) continue;
     let info;
+    let readme = "";
     try {
-      info = parseLesson(read(join(ex.dir, `${basename(ex.dir)}.ino`)));
+      readme = read(join(ex.dir, "README.md"));
+      info = parseLessonMd(readme);
     } catch {
-      continue;
+      try {
+        info = parseLesson(read(join(ex.dir, `${basename(ex.dir)}.ino`)));
+      } catch {
+        continue;
+      }
     }
     const num = info.num ?? Number(/^(\d+)/.exec(parts[2])?.[1] ?? 0);
     if (!units.has(u.unit)) units.set(u.unit, { unit: u.unit, name: u.name, lessons: [] });
@@ -115,6 +184,7 @@ export function buildCourse(examples, read = (f) => readFileSync(f, "utf8")) {
       steps: info.steps,
       practice: info.practice,
       sections: info.sections,
+      readme: String(readme).replace(/\r\n/g, "\n"),
     });
   }
   return [...units.values()].sort((a, b) => a.unit - b.unit).map((u) => ({ ...u, lessons: u.lessons.sort((a, b) => a.num - b.num) }));

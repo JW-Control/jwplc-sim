@@ -643,6 +643,7 @@ function loadSketch(sketch) {
   state.saved.clear();
   state.naming = null;
   state.sketch = sketch;
+  if (state.guide) renderTheory(null); // la guía es de la lección abierta
   for (const f of sketch.files) addModel(f);
   state.exe = null;
   // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
@@ -1615,7 +1616,12 @@ function mdToHtml(text) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; ) {
     const l = lines[i];
-    if (/^#{1,3} /.test(l)) {
+    if (/^\s*```/.test(l)) {
+      const code = [];
+      for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) code.push(lines[i]);
+      i++;
+      out.push(`<pre><code>${esc(code.join("\n"))}</code></pre>`);
+    } else if (/^#{1,3} /.test(l)) {
       const n = l.match(/^#+/)[0].length;
       out.push(`<h${n + 2}>${inline(l.slice(n + 1))}</h${n + 2}>`);
       i++;
@@ -1628,11 +1634,16 @@ function mdToHtml(text) {
     } else if (/^(\d+\.|-) /.test(l)) {
       const ordered = /^\d/.test(l);
       const items = [];
-      while (i < lines.length && /^(\d+\.|-) /.test(lines[i])) items.push(lines[i++].replace(/^(\d+\.|-) /, ""));
+      while (i < lines.length && /^(\d+\.|-) /.test(lines[i])) {
+        let item = lines[i++].replace(/^(\d+\.|-) /, "");
+        // Renglones sangrados que siguen a la viñeta son su continuación.
+        while (i < lines.length && /^\s{2,}\S/.test(lines[i])) item += ` ${lines[i++].trim()}`;
+        items.push(item);
+      }
       out.push(`<${ordered ? "ol" : "ul"}>${items.map((x) => `<li>${inline(x)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`);
     } else if (l.trim()) {
       const para = [];
-      while (i < lines.length && lines[i].trim() && !/^(#|\||\d+\. |- )/.test(lines[i])) para.push(lines[i++]);
+      while (i < lines.length && lines[i].trim() && !/^(#|\||\d+\. |- |\s*```)/.test(lines[i])) para.push(lines[i++]);
       out.push(`<p>${inline(para.join(" "))}</p>`);
     } else i++;
   }
@@ -1791,26 +1802,86 @@ async function showExercise(file) {
   setView("exercise");
 }
 
-// ---- Teoría de la lección (panel izquierdo del esquema): lo que explica la
-// cabecera del ejemplo del curso y su código como referencia, mientras el
-// alumno resuelve la práctica con los objetivos del panel derecho.
-function renderTheory(l) {
+// ---- Guía de la lección: su README.md, en el panel izquierdo del esquema
+// (pestaña Teoría) y como columna a la izquierda del editor en Programa, para
+// leerla mientras se edita el sketch. En una práctica evaluada, «Para
+// practicar» no se repite: son los objetivos del panel derecho.
+const GUIDE_FOLD_KEY = "jwsim.guideFolded";
+const GUIDE_W_KEY = "jwsim.guideW";
+function guideHtml(l, graded) {
+  let md = String(l.readme ?? "").replace(/^#\s+Curso JWPLC Basic[^\n]*\n/, "");
+  if (graded) md = md.replace(/^##\s+Para practicar\s*\n[\s\S]*?(?=^##\s|(?![\s\S]))/m, "");
+  return (
+    `<div class="th-body"><small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>` +
+    mdToHtml(md) +
+    (graded
+      ? `<p class="muted th-tip">Tu programa empieza igual que el ejemplo: ejecútalo tal cual para verlo funcionar y luego cámbialo para cumplir los objetivos de la práctica.</p>`
+      : "") +
+    `</div>`
+  );
+}
+function renderTheory(l, graded = !!l) {
   const pane = $("theory-pane");
   window.JwsimScenePane?.setTheoryAvailable(!!l);
+  state.guide = l ?? null;
   if (!l) {
     pane.innerHTML = "";
+    $("guide-body").innerHTML = "";
+    showGuide();
     return;
   }
-  const ul = (xs) => (xs?.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
-  const sec = (t, body) => (body ? `<div class="th-sec"><div class="brief-k">${esc(t)}</div>${body}</div>` : "");
-  pane.innerHTML =
-    `<div class="side-title">Teoría</div><div class="th-body">` +
-    `<small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>` +
-    sec("Qué vas a aprender", ul(l.learn)) +
-    (l.sections ?? []).filter((x) => x.items.length).map((x) => sec(x.title, ul(x.items))).join("") +
-    sec("Cómo probarlo", l.steps?.length ? `<ol>${l.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : "") +
-    (l.code ? `<details class="th-code"><summary>Código del ejemplo</summary><pre>${esc(l.code)}</pre></details>` : "") +
-    `<p class="muted th-tip">Tu programa empieza igual que el ejemplo: ejecútalo tal cual para verlo funcionar y luego cámbialo para cumplir los objetivos de la derecha.</p></div>`;
+  const html = guideHtml(l, graded);
+  pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
+  $("guide-body").innerHTML = html;
+  $("guide-body").scrollTop = 0;
+  showGuide();
+}
+window.showLessonGuide = (l) => renderTheory(l, false);
+function showGuide() {
+  const has = !!state.guide;
+  const folded = storeGet(GUIDE_FOLD_KEY) === "1";
+  $("guide-pane").hidden = !has || folded;
+  $("guide-open").hidden = !has || !folded;
+}
+function wireGuide() {
+  const pane = $("guide-pane");
+  const saved = Number(storeGet(GUIDE_W_KEY));
+  if (saved > 0) pane.style.setProperty("--guide-w", `${saved}px`);
+  $("guide-fold").addEventListener("click", () => {
+    storeSet(GUIDE_FOLD_KEY, "1");
+    showGuide();
+  });
+  $("guide-open").addEventListener("click", () => {
+    storeSet(GUIDE_FOLD_KEY, null);
+    showGuide();
+  });
+  const grip = $("guide-grip");
+  grip.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    grip.classList.add("dragging");
+    document.body.classList.add("resizing");
+    const left = pane.getBoundingClientRect().left;
+    const total = document.querySelector(".code-pane").getBoundingClientRect().width;
+    const width = (x) => Math.round(Math.max(200, Math.min(x - left, total - 260)));
+    const move = (ev) => pane.style.setProperty("--guide-w", `${width(ev.clientX)}px`);
+    const up = (ev) => {
+      grip.removeEventListener("pointermove", move);
+      grip.removeEventListener("pointerup", up);
+      grip.removeEventListener("pointercancel", up);
+      grip.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      storeSet(GUIDE_W_KEY, String(width(ev.clientX)));
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up);
+    grip.addEventListener("pointercancel", up);
+  });
+  grip.addEventListener("dblclick", () => {
+    pane.style.removeProperty("--guide-w");
+    storeSet(GUIDE_W_KEY, null);
+  });
 }
 
 // ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
@@ -2357,6 +2428,7 @@ function statusbarH() {
 
 function wireUi() {
   wireSplitter();
+  wireGuide();
   wireDock();
   wireSceneSide();
   $("btn-save").addEventListener("click", saveSketch);
@@ -2779,6 +2851,7 @@ window.jwsimTest = {
   pickArch: (id) => window.openArchById(id),
   pickExercise: (id) => window.openExerciseById(id),
   setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
+  getSource: () => state.models.get(state.sketch.name + ".ino")?.getValue() ?? "",
   grade: () => gradeExercise(),
   sketchDir: () => state.sketch?.dir ?? null,
   // Archivos adicionales del sketch.

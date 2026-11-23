@@ -6,8 +6,13 @@
 //                   lección) y objetivos a la derecha (saludo, medio)
 //   LESSON_CONSOLE  el objetivo de consola se cumple con el saludo nuevo
 //   LESSON_PERIOD   el objetivo de ritmo cuenta ciclos y se cumple
+//   LESSON_GUIDE    en Programa, la guía (README.md) a la izquierda del código:
+//                   sin «Para practicar» (son los objetivos), se pliega y se
+//                   vuelve a mostrar, y el sketch empieza sin la guía
 //   LESSON_DONE     con todo cumplido la lección queda hecha y ofrece la
 //                   siguiente; abrirla sin cumplir no la marca
+//   LESSON_PLAIN    una lección sin práctica también trae su guía, con
+//                   «Para practicar», y un sketch cualquiera la quita
 // Informe en build/gates/JWSIM_PRACTICAS_E2E.json.
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -56,6 +61,33 @@ try {
   log(`LESSON_OPEN ${JSON.stringify(criteria.LESSON_OPEN)}`);
   await win.screenshot({ path: join(OUT, "1-abierta.png") });
 
+  await t(() => window.JwsimTabs.select("program"));
+  const guideOf = () =>
+    win.$eval("#guide-pane", (e) => ({
+      visible: !e.hidden && e.getBoundingClientRect().width > 100,
+      title: e.querySelector("h3")?.textContent ?? "",
+      heads: [...e.querySelectorAll("h4")].map((h) => h.textContent),
+      open: !document.getElementById("guide-open").hidden,
+    }));
+  const guide = await guideOf();
+  const firstLine = await t(() => window.jwsimTest.getSource().split("\n")[0]);
+  await win.screenshot({ path: join(OUT, "0-guia-programa.png") });
+  await win.click("#guide-fold");
+  const folded = await guideOf();
+  await win.click("#guide-open");
+  const unfolded = await guideOf();
+  criteria.LESSON_GUIDE = {
+    ok:
+      guide.visible && guide.title === "Hola, JWPLC" && guide.heads.includes("Cómo probarlo") && !guide.heads.includes("Para practicar") &&
+      !folded.visible && folded.open && unfolded.visible && !unfolded.open && /^\/\/ Curso JWPLC Basic · Lección 01/.test(firstLine),
+    guide,
+    folded,
+    unfolded,
+    firstLine,
+  };
+  log(`LESSON_GUIDE ${JSON.stringify(criteria.LESSON_GUIDE)}`);
+  await t(() => window.JwsimScene?.setView("scene"));
+
   // Sin cambios: el ejemplo tal cual no cumple los objetivos.
   const lessonsBefore = await t(() => window.jwsimApi?.learnLessons?.() ?? null);
 
@@ -81,13 +113,25 @@ try {
   await win.click("#btn-stop").catch(() => {});
   criteria.LESSON_DONE = { ok: !!complete && next === "curso-02", complete: !!complete, next, lessonsBefore };
   log(`LESSON_DONE ${JSON.stringify(criteria.LESSON_DONE)}`);
+
+  // Lección 06 (sin práctica evaluada): se abre el ejemplo con su guía.
+  const l06 = await t(async () => (await window.jwsim.courseList()).flatMap((u) => u.lessons).find((l) => l.id === "curso-06"));
+  await t(async (dir) => window.loadSketch(await window.jwsim.openExample(dir)), l06.dir);
+  await t((l) => window.showLessonGuide(l), l06);
+  await t(() => window.JwsimTabs.select("program"));
+  const plain = await guideOf();
+  await win.screenshot({ path: join(OUT, "4-leccion-06.png") });
+  await t((x) => window.loadSketch({ dir: "/tmp/x", name: "x", files: [{ name: "x.ino", path: "/tmp/x/x.ino", content: "void setup() {}\nvoid loop() {}\n" }] }));
+  const cleared = await guideOf();
+  criteria.LESSON_PLAIN = { ok: plain.visible && plain.title === l06.title && plain.heads.includes("Para practicar") && !cleared.visible && !cleared.open, plain, cleared };
+  log(`LESSON_PLAIN ${JSON.stringify(criteria.LESSON_PLAIN)}`);
 } catch (err) {
   criteria.ERROR = { ok: false, error: String(err?.stack ?? err) };
   log(String(err?.stack ?? err));
 } finally {
   await app.close().catch(() => {});
 }
-const ok = Object.values(criteria).length >= 4 && Object.values(criteria).every((c) => c.ok);
+const ok = Object.values(criteria).length >= 6 && Object.values(criteria).every((c) => c.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_PRACTICAS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
 console.log(`JWSIM_PRACTICAS_E2E ${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

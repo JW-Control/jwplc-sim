@@ -4,10 +4,10 @@
 // cada reto y arquitectura tiene su proyecto e imagen.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { test } from "node:test";
 
-import { APRENDE, buildCatalog, CATALOGO, listAprendeExamples } from "../../cli/lib/aprende.mjs";
+import { APRENDE, buildCatalog, CATALOGO, listAprendeExamples, listCurso } from "../../cli/lib/aprende.mjs";
 
 test("catalogo.json al día (node scripts/gen-catalogo.mjs)", () => {
   assert.equal(readFileSync(CATALOGO, "utf8").replace(/\r\n/g, "\n"), `${JSON.stringify(buildCatalog(), null, 2)}\n`);
@@ -25,6 +25,17 @@ test("curso, retos y arquitecturas con sus archivos", () => {
   for (const x of [...c.retos, ...c.arquitecturas]) {
     assert.ok(existsSync(join(APRENDE, x.ruta, `${x.id}.jwsim`)), x.ruta);
     assert.ok(x.imagen && existsSync(join(APRENDE, x.imagen)), `${x.id}: falta la imagen (node scripts/capturar-inicio.mjs)`);
+  }
+});
+
+test("cada lección del curso trae su guía en README.md y el sketch solo el código", () => {
+  for (const u of listCurso()) {
+    for (const l of u.lessons) {
+      assert.ok(l.readme.startsWith(`# Curso JWPLC Basic · Lección ${String(l.num).padStart(2, "0")} · `), `${l.id}: falta README.md con su título`);
+      assert.ok(l.learn.length && l.steps.length && l.practice.length, `${l.id}: la guía no tiene sus secciones`);
+      const ino = readFileSync(join(l.dir, `${basename(l.dir)}.ino`), "utf8");
+      assert.doesNotMatch(ino, /^\s*\/\*/, `${l.id}: la guía sigue en la cabecera del sketch`);
+    }
   }
 });
 
