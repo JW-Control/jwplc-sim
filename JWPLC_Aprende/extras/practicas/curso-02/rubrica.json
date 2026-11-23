@@ -1,0 +1,81 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-02",
+  "goals": [
+    {
+      "id": "ritmo",
+      "description": "H1 (Q0.0): 2 s encendido y 0,5 s apagado",
+      "period": "Q0_0",
+      "on_ms": [
+        1900,
+        2100
+      ],
+      "off_ms": [
+        400,
+        600
+      ],
+      "cycles": 2,
+      "hint": "Primer delay() = 2000; segundo delay() = 500."
+    },
+    {
+      "id": "alterna",
+      "description": "H2 (Q0.1) enciende justo cuando H1 se apaga",
+      "period": "Q0_1",
+      "on_ms": [
+        400,
+        600
+      ],
+      "off_ms": [
+        1900,
+        2100
+      ],
+      "cycles": 2,
+      "hint": "Junto a cada digitalWrite(Q0_0, …) escribe Q0_1 con el valor contrario.",
+      "why": "Dos salidas que se turnan: así empieza toda secuencia."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Secuencia",
+      "until_ms": 9500,
+      "checks": [
+        {
+          "description": "Q0.0: 2 s encendido",
+          "points": 2,
+          "from_ms": 500,
+          "to_ms": 9500,
+          "period": "Q0_0",
+          "on_ms": [
+            1900,
+            2100
+          ],
+          "cycles": 2
+        },
+        {
+          "description": "Q0.0: 0,5 s apagado",
+          "points": 2,
+          "from_ms": 500,
+          "to_ms": 9500,
+          "period": "Q0_0",
+          "off_ms": [
+            400,
+            600
+          ],
+          "cycles": 2
+        },
+        {
+          "description": "Q0.1 enciende mientras Q0.0 está apagado",
+          "points": 2,
+          "from_ms": 500,
+          "to_ms": 9500,
+          "period": "Q0_1",
+          "on_ms": [
+            400,
+            600
+          ],
+          "cycles": 2
+        }
+      ]
+    }
+  ]
+}

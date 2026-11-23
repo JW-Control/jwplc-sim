@@ -78,7 +78,7 @@
         "description"
       ],
       "additionalProperties": false,
-      "description": "Una sola de expect (con at_ms), always/never/eventually (con from_ms y to_ms), console o no_faults.",
+      "description": "Una sola de expect (con at_ms), always/never/eventually (con from_ms y to_ms), console, no_faults, period o responds.",
       "properties": {
         "description": {
           "type": "string"
@@ -160,6 +160,85 @@
         "no_faults": {
           "const": true,
           "description": "Sin fallas eléctricas de la escena (cortocircuito, sobretensión)."
+        },
+        "period": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Señal (Q0_k, I0_k, <equipo>.<salida>)"
+            },
+            {
+              "type": "object",
+              "required": [
+                "console"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "console": {
+                  "type": "string",
+                  "description": "Expresión regular sobre las líneas de la consola"
+                }
+              }
+            }
+          ],
+          "description": "La señal (o la línea de la consola) se repite con un ritmo: cycle_ms, on_ms y/o off_ms."
+        },
+        "cycle_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "on_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "off_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "cycles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Con period: cuántos ciclos seguidos (los últimos del intervalo)."
+        },
+        "responds": {
+          "type": "object",
+          "required": [
+            "when",
+            "expect"
+          ],
+          "additionalProperties": false,
+          "description": "Cada vez que 'when' pasa a cumplirse, 'expect' se cumple dentro de within_ms.",
+          "properties": {
+            "when": {
+              "type": "object",
+              "minProperties": 1
+            },
+            "expect": {
+              "type": "object",
+              "minProperties": 1
+            }
+          }
+        },
+        "within_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
         }
       },
       "oneOf": [
@@ -193,6 +272,17 @@
           "required": [
             "no_faults"
           ]
+        },
+        {
+          "required": [
+            "period"
+          ]
+        },
+        {
+          "required": [
+            "responds",
+            "within_ms"
+          ]
         }
       ]
     },
@@ -200,8 +290,7 @@
       "type": "object",
       "required": [
         "id",
-        "description",
-        "when"
+        "description"
       ],
       "additionalProperties": false,
       "properties": {
@@ -250,8 +339,92 @@
             "merit",
             "distinction"
           ]
+        },
+        "console": {
+          "type": "string",
+          "description": "Expresión regular: una línea del Monitor Serie que coincide."
+        },
+        "period": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Señal (Q0_k, I0_k, <equipo>.<salida>)"
+            },
+            {
+              "type": "object",
+              "required": [
+                "console"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "console": {
+                  "type": "string",
+                  "description": "Expresión regular sobre las líneas de la consola"
+                }
+              }
+            }
+          ],
+          "description": "Ritmo de una señal o de una línea de la consola; con cycle_ms, on_ms u off_ms."
+        },
+        "cycle_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "on_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "off_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "cycles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3
+        },
+        "hint": {
+          "type": "string",
+          "description": "Pista que el alumno puede abrir mientras no lo logra."
+        },
+        "why": {
+          "type": "string",
+          "description": "Qué enseña; se muestra al lograrlo."
         }
-      }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "when"
+          ]
+        },
+        {
+          "required": [
+            "console"
+          ]
+        },
+        {
+          "required": [
+            "period"
+          ]
+        }
+      ]
     }
   }
 }

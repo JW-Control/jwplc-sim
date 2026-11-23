@@ -1,0 +1,162 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 03 · Leer una entrada",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Leer_una_entrada/Leer_una_entrada.ino"
+  },
+  "exercise": {
+    "lesson": "curso-03",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Leer_una_entrada",
+    "brief": {
+      "goal": "Q0.0 cerrado mientras S1 NO esté apretado, y un segundo pulsador S2 que manda Q0.1.",
+      "steps": [
+        "Ejecuta el ejemplo y aprieta S1: H1 sigue al pulsador.",
+        "Invierte la lógica: H1 encendido con S1 suelto (operador !).",
+        "Lee S2 en I0_1 y manda con él el relé Q0_1.",
+        "Prueba los dos pulsadores en la escena."
+      ],
+      "uses": [
+        "I0_0 · S1, pulsador NA",
+        "I0_1 · S2, pulsador NA",
+        "Q0_0 · H1, piloto verde",
+        "Q0_1 · H2, piloto amarillo"
+      ],
+      "teaches": "digitalRead() devuelve HIGH o LOW; el ! invierte un valor; cada entrada se lee por separado."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde"
+        },
+        "x": 220,
+        "y": 600
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 440,
+        "y": 600
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Q0.1"
+        },
+        "x": 0,
+        "y": 900
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.13",
+        "color": "rojo"
+      },
+      {
+        "from": "S2.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

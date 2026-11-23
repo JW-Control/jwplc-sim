@@ -90,3 +90,73 @@ test("acepta el snapshot de la sesión, con t_ms", () => {
   assert.equal(tr.update(s(500, true)).goals[0].fraction, 0.5);
   assert.equal(tr.update(s(1000, true)).goals[0].state, "done");
 });
+
+test("console: se cumple con una línea del Monitor Serie, aunque llegue en trozos", () => {
+  const tr = new GoalTracker([{ id: "hola", description: "saluda", console: "^Hola, .+", why: "Serial.println envía una línea" }]);
+  tr.update(snap(0));
+  tr.serial("Ho", 100);
+  assert.equal(tr.update(snap(150)).goals[0].state, "pending");
+  tr.serial("la, taller\r\n", 200);
+  const g = tr.update(snap(250)).goals[0];
+  assert.equal(g.state, "done");
+  assert.equal(g.reading.consola, "Hola, taller");
+  assert.equal(g.why, "Serial.println envía una línea");
+});
+
+test("console con after: no cuenta las líneas de antes", () => {
+  const tr = new GoalTracker([
+    { id: "a", description: "a", when: { "KM1.closed": true } },
+    { id: "b", description: "b", console: "listo", after: "a" },
+  ]);
+  tr.serial("listo\n", 10);
+  assert.equal(tr.update(snap(20)).goals[1].state, "blocked");
+  tr.update(snap(30, { km: true }));
+  tr.serial("listo\n", 40);
+  assert.equal(tr.update(snap(50, { km: true })).goals[1].state, "done");
+});
+
+test("period: la barra cuenta los ciclos buenos de una señal", () => {
+  const tr = new GoalTracker([{ id: "p", description: "parpadea", period: "Q0_0", on_ms: [1900, 2100], off_ms: [400, 600], cycles: 2 }]);
+  let t = 0;
+  let p;
+  const step = (q0, dt) => {
+    p = tr.update(snap(t, { q0 }));
+    t += dt;
+  };
+  step(false, 1000);
+  for (let i = 0; i < 3; i++) {
+    step(true, 2000);
+    step(false, 500);
+  }
+  step(true, 0);
+  const g = p.goals[0];
+  assert.equal(g.state, "done", JSON.stringify(g));
+  assert.equal(g.period, "Q0_0: encendido 1900–2100 ms, apagado 400–600 ms, 2 ciclos");
+});
+
+test("period: un ritmo equivocado no llena la barra", () => {
+  const tr = new GoalTracker([{ id: "p", description: "cada 500 ms", period: "Q0_0", cycle_ms: [450, 550], cycles: 3 }]);
+  let p;
+  for (let i = 0; i < 10; i++) p = tr.update(snap(i * 500, { q0: i % 2 === 1 }));
+  assert.notEqual(p.goals[0].state, "done");
+  assert.equal(p.goals[0].fraction, 0);
+  assert.equal(p.goals[0].reading.ritmo, "1000 ms");
+});
+
+test("period de consola: un número cada medio segundo", () => {
+  const tr = new GoalTracker([{ id: "p", description: "cuenta", period: { console: "^\\d+$" }, cycle_ms: [450, 550], cycles: 3 }]);
+  let p;
+  for (let i = 0; i < 5; i++) {
+    tr.serial(`${i}\n`, 1000 + i * 500);
+    p = tr.update(snap(1000 + i * 500));
+  }
+  assert.equal(p.goals[0].state, "done");
+});
+
+test("checkGoals: console y period", () => {
+  checkGoals([{ id: "a", description: "x", console: "hola" }, { id: "b", description: "y", period: "Q0_0", cycle_ms: [1, 2] }]);
+  assert.throws(() => checkGoals([{ id: "a", description: "x" }]), /falta 'when', 'console' o 'period'/);
+  assert.throws(() => checkGoals([{ id: "a", description: "x", console: "(" }]), /expresión regular válida/);
+  assert.throws(() => checkGoals([{ id: "a", description: "x", period: "Q0_0" }]), /cycle_ms, on_ms u off_ms/);
+  assert.throws(() => checkGoals([{ id: "a", description: "x", when: { I0_0: 1 }, hint: 3 }]), /'hint' es texto/);
+});

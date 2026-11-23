@@ -1,0 +1,66 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 01 · Hola, JWPLC",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Hola_JWPLC/Hola_JWPLC.ino"
+  },
+  "exercise": {
+    "lesson": "curso-01",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Hola_JWPLC",
+    "brief": {
+      "goal": "Cambia el saludo y haz que el contador avance cada medio segundo.",
+      "steps": [
+        "Ejecuta el ejemplo tal cual y mira el Monitor Serie.",
+        "Cambia el texto de Serial.println(\"Hola, JWPLC\") por tu propio saludo.",
+        "Cambia el delay() para que el número suba cada 500 ms.",
+        "Ejecuta de nuevo: los objetivos de la derecha se llenan solos."
+      ],
+      "uses": [
+        "Monitor Serie a 115200 baudios"
+      ],
+      "teaches": "setup() corre una vez y loop() se repite; Serial.println() envía una línea a la PC; delay() fija el ritmo del programa."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      }
+    ]
+  }
+}

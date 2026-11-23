@@ -178,9 +178,17 @@
                     <path d="M5 15h3l3-7h4l3 7h3"/>
                   </svg>
                 </button>
+                <button class="side-tab-left" data-left-pane="teoria" id="scene-tab-teoria"
+                  title="Teoría de la lección" aria-label="Teoría" aria-pressed="false" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/>
+                    <path d="M4 19a2 2 0 012-2h13M8 7h7M8 11h5"/>
+                  </svg>
+                </button>
               </nav>
               <aside class="scene-left" id="scene-left">
                 <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
+                <section class="left-pane theory-pane" id="theory-pane" data-left-pane="teoria" hidden></section>
               </aside>
               <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
                 aria-label="Ancho del diagrama de estados"

@@ -33,3 +33,21 @@ test("los ejemplos de la librería salen con su grupo y ruta", () => {
   assert.ok(ex.length >= 11);
   assert.ok(ex.every((e) => e.group === "JWPLC_Aprende" && e.label.startsWith("Curso_JWPLC_Basic / ")));
 });
+
+test("prácticas evaluadas del curso: banco, rúbrica y punto de partida = ejemplo de la lección", async () => {
+  const { checkGoals } = await import("../../app/lib/goals.mjs");
+  const { loadExercise } = await import("../../cli/lib/grade.mjs");
+  const { lessonById, listCurso } = await import("../../cli/lib/aprende.mjs");
+  const graded = listCurso().flatMap((u) => u.lessons.filter((l) => l.graded));
+  assert.ok(graded.length >= 5, "la Unidad 1 tiene práctica evaluada");
+  for (const l of graded) {
+    const ex = loadExercise(join(APRENDE, "extras", "practicas", l.id));
+    checkGoals(ex.rubric.goals, l.id);
+    assert.ok(ex.rubric.goals.filter((g) => !g.extra).length >= 1, `${l.id}: sin objetivos obligatorios`);
+    assert.ok(ex.solution && existsSync(ex.solution), `${l.id}: falta la solución`);
+    // El alumno empieza con el ejemplo de la lección, tal cual.
+    const name = ex.sketch.split(/[\\/]/).pop();
+    const start = readFileSync(join(ex.sketch, `${name}.ino`), "utf8").replace(/\r\n/g, "\n");
+    assert.equal(start, lessonById(l.id).code, `${l.id}: el sketch inicial difiere del ejemplo`);
+  }
+});

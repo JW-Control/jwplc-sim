@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-01",
+  "goals": [
+    {
+      "id": "saludo",
+      "description": "El Monitor Serie muestra un saludo distinto de «Hola, JWPLC»",
+      "console": "^(?!Hola, JWPLC$)(?!Segundos encendido)(?!Este mensaje).+",
+      "hint": "Cambia solo el texto entre comillas de la primera línea de setup().",
+      "why": "Lo que escribes en setup() sale una sola vez, al arrancar."
+    },
+    {
+      "id": "medio",
+      "description": "El número sube cada medio segundo",
+      "period": {
+        "console": "^Segundos encendido: \\d+$"
+      },
+      "cycle_ms": [
+        450,
+        550
+      ],
+      "cycles": 3,
+      "hint": "delay() recibe milisegundos: medio segundo son 500.",
+      "why": "loop() se repite sin parar; el delay() marca cada cuánto."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Saludo y ritmo",
+      "until_ms": 4500,
+      "checks": [
+        {
+          "description": "Saluda con un texto propio",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 2000,
+          "console": "^(?!Hola, JWPLC$)(?!Segundos encendido)(?!Este mensaje).+"
+        },
+        {
+          "description": "Cuenta cada 500 ms",
+          "points": 3,
+          "from_ms": 0,
+          "to_ms": 4500,
+          "period": {
+            "console": "^Segundos encendido: \\d+$"
+          },
+          "cycle_ms": [
+            450,
+            550
+          ],
+          "cycles": 4
+        }
+      ]
+    }
+  ]
+}

@@ -1656,6 +1656,16 @@ function fmtWant(key, w) {
   return typeof w === "boolean" ? (w ? "sí" : "no") : String(w);
 }
 
+/** Ritmo pedido por un objetivo "period", en palabras cortas. */
+function fmtPeriod(g) {
+  const r = (x) => `${x[0]}–${x[1]} ms`;
+  const parts = [];
+  if (g.cycle_ms) parts.push(`cada ${r(g.cycle_ms)}`);
+  if (g.on_ms) parts.push(`encendido ${r(g.on_ms)}`);
+  if (g.off_ms) parts.push(`apagado ${r(g.off_ms)}`);
+  return parts.join(", ");
+}
+
 // El panel se arma una vez por ejercicio (buildGoals) y cada snapshot solo
 // cambia clases, textos y anchos: las barras se deslizan y el aviso de reto
 // completado se anima una sola vez.
@@ -1671,12 +1681,17 @@ function buildGoals() {
   let html = `<div class="goals-head"><b>Objetivos en vivo</b><span class="goals-count"></span><span class="goals-time muted"></span></div>`;
   html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden><b>¡Reto completado!</b> Cumplió todos los objetivos en la misma corrida.<div class="learn-after"></div></div><ol class="goals">`;
   for (const g of goalUi.goals) {
-    const sigs = Object.entries(g.when)
+    let sigs = Object.entries(g.when ?? {})
       .map(([k, w]) => `<span class="goal-sig" data-sig="${esc(k)}"><code>${esc(k)}</code> <span class="goal-read"></span><small>→ ${esc(fmtWant(k, w))}</small></span>`)
       .join("");
+    // La expresión regular no se muestra: la descripción dice qué se espera.
+    if (g.console !== undefined) sigs += `<span class="goal-sig goal-console" data-sig="consola"><code>Monitor Serie</code> <span class="goal-read"></span></span>`;
+    if (g.period !== undefined) sigs += `<span class="goal-sig" data-sig="ritmo"><code>${esc(typeof g.period === "string" ? g.period : "Monitor Serie")}</code> <span class="goal-read"></span><small>→ ${esc(fmtPeriod(g))}</small></span>`;
     html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
     html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
-    if (Number(g.hold_ms ?? 0) > 0) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (g.hint) html += `<details class="goal-hint"><summary>Pista</summary>${esc(g.hint)}</details>`;
+    if (g.why) html += `<div class="goal-why" hidden>${esc(g.why)}</div>`;
     html += `</div></li>`;
   }
   box.innerHTML = html + `</ol>`;
@@ -1706,14 +1721,29 @@ function renderGoals() {
     li.classList.remove("done", "active", "pending", "blocked");
     li.classList.add(st);
     li.querySelector(".goal-icon").textContent = icon[st];
-    for (const [k, w] of Object.entries(g.when)) {
+    for (const [k, w] of Object.entries(g.when ?? {})) {
       const el = li.querySelector(`[data-sig="${CSS.escape(k)}"]`);
       // Cumplido: se deja la condición, no la lectura que siguió cambiando.
       el.querySelector(".goal-read").textContent = st === "done" ? "" : fmtReading(k, s?.reading?.[k]);
       el.classList.toggle("ok", st === "done" || (!!s && st !== "blocked" && window.JwsimGoalMatch(s.reading[k], w)));
     }
+    for (const k of ["consola", "ritmo"]) {
+      const el = li.querySelector(`[data-sig="${k}"]`);
+      if (!el) continue;
+      const r = s?.reading?.[k];
+      el.querySelector(".goal-read").textContent = st === "done" || r === undefined ? "" : k === "consola" ? `«${r}»` : r;
+      el.classList.toggle("ok", st === "done");
+    }
+    const hint = li.querySelector(".goal-hint");
+    if (hint) hint.hidden = st === "done";
+    const why = li.querySelector(".goal-why");
+    if (why) why.hidden = st !== "done";
     const hold = Number(g.hold_ms ?? 0);
-    if (hold > 0) {
+    if (g.period !== undefined) {
+      const n = g.cycles ?? 3;
+      li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+      li.querySelector(".goal-hold small").textContent = `${Math.round((s?.fraction ?? 0) * n)} / ${n} ciclos`;
+    } else if (hold > 0) {
       li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
       li.querySelector(".goal-hold small").textContent = `${((s?.held_ms ?? 0) / 1000).toFixed(1)} / ${(hold / 1000).toFixed(1)} s`;
     }
@@ -1740,12 +1770,15 @@ async function showExercise(file) {
   goalUi.progress = null;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
-  state.exercise = info ? { file, id: info.id, brief: info.brief } : null;
+  state.exercise = info ? { file, id: info.id, brief: info.brief, lesson: !!info.lesson } : null;
   goalUi.reported = false;
   renderBrief(true);
   $("tab-exercise").hidden = !info;
   $("scene-tab-reto").hidden = !info;
   $("ex-reto-hint").hidden = !info;
+  renderTheory(info?.lesson ?? null);
+  const doneMsg = $("ex-goals").querySelector(".goals-done b");
+  if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
   if (info) window.JwsimShowReto?.();
   else if (document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
@@ -1756,6 +1789,28 @@ async function showExercise(file) {
   }
   $("ex-statement").innerHTML = mdToHtml(info.statement);
   setView("exercise");
+}
+
+// ---- Teoría de la lección (panel izquierdo del esquema): lo que explica la
+// cabecera del ejemplo del curso y su código como referencia, mientras el
+// alumno resuelve la práctica con los objetivos del panel derecho.
+function renderTheory(l) {
+  const pane = $("theory-pane");
+  window.JwsimScenePane?.setTheoryAvailable(!!l);
+  if (!l) {
+    pane.innerHTML = "";
+    return;
+  }
+  const ul = (xs) => (xs?.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  const sec = (t, body) => (body ? `<div class="th-sec"><div class="brief-k">${esc(t)}</div>${body}</div>` : "");
+  pane.innerHTML =
+    `<div class="side-title">Teoría</div><div class="th-body">` +
+    `<small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>` +
+    sec("Qué vas a aprender", ul(l.learn)) +
+    (l.sections ?? []).filter((x) => x.items.length).map((x) => sec(x.title, ul(x.items))).join("") +
+    sec("Cómo probarlo", l.steps?.length ? `<ol>${l.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : "") +
+    (l.code ? `<details class="th-code"><summary>Código del ejemplo</summary><pre>${esc(l.code)}</pre></details>` : "") +
+    `<p class="muted th-tip">Tu programa empieza igual que el ejemplo: ejecútalo tal cual para verlo funcionar y luego cámbialo para cumplir los objetivos de la derecha.</p></div>`;
 }
 
 // ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
@@ -1790,8 +1845,22 @@ function fillAfter(el, r, lead = "") {
   el.innerHTML =
     (lead ? `<b>${esc(lead)}</b> ` : "") +
     (r.teaches ? `<span class="learn-teaches">Qué enseña: ${esc(r.teaches)}</span>` : "") +
-    (r.next ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>` : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
+    (r.lesson
+      ? r.next
+        ? ` <button class="primary small" data-next-lesson="${esc(r.next)}">Siguiente lección →</button>`
+        : ` <span class="muted">Terminó las prácticas de esta unidad.</span>`
+      : r.next
+        ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>`
+        : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
 }
+
+window.openLessonById = async (id) => {
+  try {
+    applyProject(await api.openLesson(id));
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+};
 
 window.openExerciseById = async (id) => {
   try {
@@ -1815,9 +1884,10 @@ window.openArchById = async (id) => {
 document.addEventListener("click", (e) => {
   if (e.target.closest("#scene-devmgr")) return window.JwsimDevices?.open();
   if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
-  const b = e.target.closest("[data-brief], [data-next]");
+  const b = e.target.closest("[data-brief], [data-next], [data-next-lesson]");
   if (!b) return;
   if (b.dataset.next) window.openExerciseById(b.dataset.next);
+  else if (b.dataset.nextLesson) window.openLessonById(b.dataset.nextLesson);
   else if (b.dataset.brief === "start") renderBrief(false);
   else renderBrief(true);
 });
@@ -1847,7 +1917,8 @@ async function gradeExercise() {
     const g = await api.gradeExercise(state.exercise.file, state.sketch.dir);
     $("grade-result").innerHTML = renderGrade(g);
     $("grade-note").textContent = g.ok ? `Calificado en ${(g.wall_ms / 1000).toFixed(1)} s` : "";
-    if (g.ok && g.grade >= 14 && state.exercise?.id) {
+    // Una lección solo se da por hecha con sus objetivos en vivo.
+    if (g.ok && g.grade >= 14 && state.exercise?.id && !state.exercise.lesson) {
       const box = document.createElement("div");
       box.className = "learn-after grade-pass";
       $("grade-result").prepend(box);
@@ -1999,7 +2070,9 @@ const SCENE_LEFT_MIN = 260;
 const SCENE_LEFT_MAX = 680;
 const SCENE_SIDE_MIN = 240;
 const SCENE_SIDE_MAX = 560;
-let leftAvail = false;
+// Paneles izquierdos disponibles: el diagrama de estados (escena con
+// cilindros) y la teoría de la lección abierta.
+const leftAvail = { states: false, teoria: false };
 const liveSideW = { left: null, right: null };
 
 function scenePaneWidth(side, fallback) {
@@ -2113,7 +2186,7 @@ function wireSceneSplitter(id, side) {
 }
 function setLeftPane(pane, save = true) {
   const main = document.querySelector(".scene-main");
-  const open = leftAvail ? pane : null;
+  const open = pane && leftAvail[pane] ? pane : null;
   main.classList.toggle("left-collapsed", !open);
   for (const t of document.querySelectorAll(".side-tab-left")) {
     const on = t.dataset.leftPane === open;
@@ -2124,19 +2197,21 @@ function setLeftPane(pane, save = true) {
   main.dataset.leftPane = open ?? "";
   if (save) storeSet(LEFT_KEY, pane || "none");
   clampSideWidths();
-  window.JwsimStateDiag?.setVisible?.(!!open);
+  window.JwsimStateDiag?.setVisible?.(open === "states");
 }
 function setLeftAvailability(hasPneu) {
-  leftAvail = !!hasPneu;
+  leftAvail.states = !!hasPneu;
   const btn = $("scene-tab-states");
   if (btn) {
-    btn.disabled = !leftAvail;
-    btn.title = leftAvail
+    btn.disabled = !leftAvail.states;
+    btn.title = leftAvail.states
       ? "Diagrama de estados en vivo (FluidSIM): cilindros, bobinas, sensores y presión"
       : "Diagrama de estados: la escena necesita una electroválvula con cilindro";
   }
   const saved = storeGet(LEFT_KEY);
-  setLeftPane(leftAvail && saved === "states" ? "states" : null, false);
+  // Con una lección abierta manda la teoría.
+  if (leftAvail.teoria) return;
+  setLeftPane(leftAvail.states && saved === "states" ? "states" : null, false);
 }
 function setScenePane(pane, save = true) {
   const main = document.querySelector(".scene-main");
@@ -2182,6 +2257,12 @@ function wireSceneSide() {
     showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false),
     setLeftAvailability,
     setLeftPane,
+    setTheoryAvailable(on) {
+      leftAvail.teoria = !!on;
+      $("scene-tab-teoria").hidden = !on;
+      if (on) setLeftPane("teoria", false);
+      else if (document.querySelector(".scene-main").dataset.leftPane === "teoria") setLeftPane(null, false);
+    },
     isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
   };
 }
