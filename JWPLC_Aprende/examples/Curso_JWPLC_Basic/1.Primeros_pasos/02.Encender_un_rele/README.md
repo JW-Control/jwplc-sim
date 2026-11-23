@@ -31,3 +31,11 @@
 
 - Haz que esté encendido 2 segundos y apagado medio segundo.
 - Agrega Q0_1 para que se encienda justo cuando Q0_0 se apaga.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar**.
+2. En la placa de la derecha, el indicador de `Q0.0` se enciende un segundo y se apaga un segundo; con el sonido activado oirás el «clic» del relé.
+3. En **Esquema eléctrico** está la lámpara H1 cableada a `Q0.0`: parpadea al mismo ritmo.

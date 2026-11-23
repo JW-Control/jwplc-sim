@@ -35,6 +35,9 @@ test("cada lección del curso trae su guía en README.md y el sketch solo el có
       assert.ok(l.learn.length && l.steps.length && l.practice.length, `${l.id}: la guía no tiene sus secciones`);
       const ino = readFileSync(join(l.dir, `${basename(l.dir)}.ino`), "utf8");
       assert.doesNotMatch(ino, /^\s*\/\*/, `${l.id}: la guía sigue en la cabecera del sketch`);
+      // La clase completa viene de la wiki (scripts/importar-wiki-curso.mjs).
+      assert.match(l.guia, /<!-- programa -->/, `${l.id}: falta GUIA.md (la clase de la wiki)`);
+      assert.match(l.guia, /^## Cómo funciona el programa$/m, `${l.id}: GUIA.md sin «Cómo funciona el programa»`);
     }
   }
 });

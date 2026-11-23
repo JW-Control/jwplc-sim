@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   listExercises: () => ipcRenderer.invoke("exercises:list"),
   openExercise: (id) => ipcRenderer.invoke("exercises:open", id),
   openLesson: (id) => ipcRenderer.invoke("lessons:open", id),
+  openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
   listArchs: () => ipcRenderer.invoke("archs:list"),
   openArch: (id) => ipcRenderer.invoke("archs:open", id),
   exerciseInfo: (file) => ipcRenderer.invoke("exercise:info", file),

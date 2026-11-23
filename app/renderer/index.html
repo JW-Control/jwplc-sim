@@ -72,15 +72,26 @@
       <section class="pane code-pane">
         <!-- Guía de la lección (su README.md) a la izquierda del código: se lee
              mientras se edita el sketch. Solo aparece en lecciones del curso. -->
+        <!-- Barra izquierda de Programa (como la del esquema): la teoría de la lección. -->
+        <nav class="prog-rail prog-rail-left" id="prog-rail-left" hidden aria-label="Paneles izquierdos de Programa">
+          <button class="rail-tab" id="guide-open" title="Teoría de la lección" aria-label="Teoría" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/>
+                    <path d="M4 19a2 2 0 012-2h13M8 7h7M8 11h5"/>
+                  </svg>
+          </button>
+        </nav>
         <aside class="guide-pane" id="guide-pane" hidden aria-label="Guía de la lección">
           <div class="guide-head">
-            <span class="guide-title">Guía de la lección</span>
+            <span class="guide-title">Teoría</span>
+            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+            <button class="link small" id="guide-card" title="Volver a ver la ficha de la lección">Ficha</button>
             <button class="icon" id="guide-fold" title="Plegar la guía" aria-label="Plegar la guía">‹</button>
           </div>
+          <div class="guide-note" id="guide-note" hidden></div>
           <div class="guide-body theory-body" id="guide-body"></div>
           <div class="guide-grip" id="guide-grip" role="separator" aria-orientation="vertical" aria-label="Ancho de la guía" title="Arrastrar para cambiar el ancho de la guía"></div>
         </aside>
-        <button class="guide-open" id="guide-open" hidden title="Mostrar la guía de la lección" aria-label="Mostrar la guía de la lección">Guía</button>
         <div class="code-col">
         <div class="code-head">
           <div class="tabs" id="tabs"></div>
@@ -280,9 +291,13 @@
                 </section>
                 <!-- Reto del ejercicio abierto: ficha y objetivos en vivo, junto a la simulación. -->
                 <section class="side-pane reto-pane" data-pane="reto" hidden>
-                  <div class="side-title">Reto</div>
-                  <section id="ex-brief" class="ex-brief" hidden></section>
-                  <section id="ex-goals" class="ex-goals" hidden aria-live="polite"></section>
+                  <div class="side-title">Reto<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span></div>
+                  <!-- Se muda a Programa (#prog-reto-slot) mientras esa pestaña está a la vista. -->
+                  <div class="reto-body" id="reto-body">
+                    <section id="ex-brief" class="ex-brief" hidden></section>
+                    <section id="ex-mandos" class="ex-mandos" hidden aria-label="Mandos del banco"></section>
+                    <section id="ex-goals" class="ex-goals" hidden aria-live="polite"></section>
+                  </div>
                 </section>
                 <!-- Modo Diagnóstico: orden de trabajo con falla oculta, multímetro, bloqueo y reparación. -->
                 <section class="side-pane diag-pane" data-pane="diag" hidden>
@@ -314,6 +329,18 @@
             </div>
           </div>
         </div>
+        <!-- Reto en Programa: el mismo panel del esquema (ficha, objetivos y mandos), al lado de la placa. -->
+        <aside class="prog-side" id="prog-side" hidden aria-label="Reto">
+          <div class="prog-side-head"><span class="guide-title">Reto</span>
+            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+          </div>
+          <div class="prog-side-body" id="prog-reto-slot"></div>
+        </aside>
+        <nav class="prog-rail prog-rail-right" id="prog-rail-right" hidden aria-label="Paneles derechos de Programa">
+          <button class="rail-tab" id="prog-tab-reto" title="Reto: ficha, objetivos en vivo y mandos del banco" aria-label="Reto" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+          </button>
+        </nav>
 
       </section>
     </main>
@@ -357,7 +384,7 @@
             <button id="btn-grade" title="Compila el sketch y lo corre con la escena en cada caso de la rúbrica">Calificar</button>
             <span id="grade-note" class="muted"></span>
           </div>
-          <p id="ex-reto-hint" class="ex-reto-hint" hidden>La ficha del reto y los objetivos en vivo están en el panel derecho del esquema eléctrico. <button class="link" data-reto="show">Ver el reto</button></p>
+          <p id="ex-reto-hint" class="ex-reto-hint" hidden>La ficha del reto, los objetivos en vivo y los mandos del banco están en el panel Reto, a la derecha de la placa. <button class="link" data-reto="show">Ver el reto</button></p>
           <div id="grade-result"></div>
           <div id="ex-statement" class="md"></div>
         </div>

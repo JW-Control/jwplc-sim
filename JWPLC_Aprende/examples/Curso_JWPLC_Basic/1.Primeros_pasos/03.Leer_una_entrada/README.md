@@ -30,3 +30,11 @@
 - Haz lo contrario: que Q0.0 esté cerrado mientras el pulsador NO esté
   apretado (pista: el operador ! invierte un valor, lo verás en la lección 04).
 - Conecta un segundo pulsador a I0.1 y haz que mande el relé Q0.1.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar** y mira la pestaña **Serie**: sin tocar nada sale `I0.0 inactiva` cada 200 ms.
+2. En **Mandos** (panel **Reto**, a la derecha) mantén apretado **S1**: `I0.0` se activa, `Q0.0` se cierra y el mensaje cambia a `I0.0 activa`. Al soltarlo, todo vuelve atrás.
+3. El banco ya está cableado como en la sección Conexiones: míralo en **Esquema eléctrico**.

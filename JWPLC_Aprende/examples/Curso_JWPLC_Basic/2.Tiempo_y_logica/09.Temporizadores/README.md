@@ -36,3 +36,12 @@
   5 segundos.
 - Agrega un tercer temporizador: una bocina en Q0.2 que suene si la
   presencia de I0.1 dura más de 30 segundos.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar**.
+2. En **Mandos** (panel **Reto**) da un toque corto a **S1 Arranque**: no pasa nada. Mantenlo apretado: a los 3 s se cierra `Q0.0`; al soltar, se abre.
+3. Gira **B1 Presencia** y vuelve a girarlo: `Q0.1` (pasillo) se enciende y se apaga 10 s después de que se va la presencia.
+4. Vuelve a activar **B1** antes de los 10 s: la cuenta empieza de nuevo.

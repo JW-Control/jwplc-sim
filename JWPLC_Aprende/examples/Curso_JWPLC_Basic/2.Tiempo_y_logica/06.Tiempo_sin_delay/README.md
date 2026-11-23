@@ -33,3 +33,11 @@
 
 - Haz que Q0.2 parpadee a otro ritmo (cada 2 segundos) con su propia
   variable de tiempo: verás dos intermitencias independientes.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar**: `Q0.0` parpadea cada medio segundo en la placa de la derecha.
+2. En **Mandos** (panel **Reto**) aprieta y suelta **S1** varias veces, rápido: `Q0.1` responde en el momento, mientras `Q0.0` sigue con su ritmo.
+3. Compáralo con la lección 05, donde la salida tardaba en responder.

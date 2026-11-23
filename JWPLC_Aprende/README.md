@@ -35,6 +35,17 @@ JWPLC_Aprende/
   las secciones `## Qué vas a aprender`, `## Qué necesitas`,
   `## Qué conectar`, `## Cómo probarlo`, `## Para practicar` (y las propias
   que hagan falta). Una unidad nueva es otra carpeta `N.Nombre_de_unidad`.
+  El README.md es la **ficha** corta que el Sim muestra al abrir la lección.
+- **Clase de la lección:** `GUIA.md`, junto al sketch, es la lección
+  completa de la wiki de jw-control.com (repositorio JW-Page). Se edita en la
+  wiki y se trae con `node scripts/importar-wiki-curso.mjs <carpeta de
+  JW-Page>`. El Sim la muestra a la izquierda del código y cada trozo de
+  código de la clase resalta sus líneas en el editor.
+- **La clase dentro del Sim:** la wiki está escrita para el equipo físico.
+  El Sim quita «Lo que necesitas» y los consejos de cable y puerto de «Si
+  algo no funciona», y cambia «Súbelo y pruébalo» por la sección
+  `## En JWPLC Sim` del README.md de la lección (Ejecutar, pestaña Serie,
+  Mandos del panel Reto). Toda lección nueva trae esa sección.
 - **Reto:** su carpeta en `extras/retos`. El nivel y la ficha van en
   `exercise` del `.jwsim`; los objetivos, en `rubrica.json`.
 - **Arquitectura:** su carpeta en `extras/arquitecturas`; la primera línea de

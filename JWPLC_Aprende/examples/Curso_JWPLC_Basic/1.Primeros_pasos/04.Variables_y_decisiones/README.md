@@ -30,3 +30,17 @@
 
 - Agrega un tercer pulsador en I0.2 y haz una prensa a TRES manos.
 - Q0.4: que se encienda con I0.0 apretado pero I0.1 suelto.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar**. Al inicio, solo `Q0.2` está encendido.
+2. En **Mandos** (panel **Reto**, a la derecha) gira los selectores **SA1** (`I0.0`) y **SA2** (`I0.1`) para probar las cuatro combinaciones, y compara los indicadores de la placa con esta tabla:
+
+| `I0.0` | `I0.1` | `Q0.0` (Y) | `Q0.1` (O) | `Q0.2` (NO) | `Q0.3` (distinto) |
+|---|---|---|---|---|---|
+| suelto | suelto | apagado | apagado | **encendido** | apagado |
+| activo | suelto | apagado | **encendido** | apagado | **encendido** |
+| suelto | activo | apagado | **encendido** | **encendido** | **encendido** |
+| activo | activo | **encendido** | **encendido** | apagado | apagado |
