@@ -1110,6 +1110,8 @@
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
+    // La placa SVG carga aparte: hasta que llegue no se marca como dibujada.
+    if (sym.board && !S.boardSvg) return;
     S.rendered.set(dev.id, sig);
     if (sym.board) {
       if (!g.querySelector("svg")) {
@@ -2010,6 +2012,7 @@
     clearTimeout(S.analyzeTimer);
     S.analyzeTimer = setTimeout(analyze, 120);
     window.JwsimStateDiag?.onSpec?.();
+    window.Jwsim3D?.onSpec?.();
     render();
   }
 
@@ -2028,7 +2031,7 @@
 
   function cleanSpec() {
     return {
-      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}) })),
+      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount, p3 }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}), ...(p3 ? { p3 } : {}) })),
       wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
         from,
         to,
@@ -2039,7 +2042,16 @@
       })),
       // Cables multipolares (solo dibujo: el simulador usa from/to de cada hilo).
       ...(cablesOf().length ? { cables: cablesOf().map(({ id, label, ref }) => ({ id, ...(label ? { label } : {}), ...(ref ? { ref: true } : {}) })) } : {}),
+      // Planta 3D armada a mano: piezas de ambiente y lugar del tablero (la
+      // posición 3D de cada equipo va en su p3).
+      ...(plant3dOf() ? { plant3d: plant3dOf() } : {}),
     };
+  }
+  function plant3dOf() {
+    const p = S.spec.plant3d;
+    if (!p) return null;
+    const out = { ...(p.grid && p.grid !== 0.5 ? { grid: p.grid } : {}), ...(p.panel ? { panel: p.panel } : {}), ...(p.pieces?.length ? { pieces: p.pieces } : {}) };
+    return Object.keys(out).length ? out : null;
   }
 
   async function act(id, action, value) {
@@ -3224,7 +3236,7 @@
   const Scene = {
     // Escena del proyecto (campo "scene" del .jwsim).
     load(sc, { preserveView = false } = {}) {
-      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
+      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []), ...(sc?.plant3d ? { plant3d: structuredClone(sc.plant3d) } : {}) };
       normalizeCables();
       S.dirty = false;
       S.undoStack = [];
@@ -3319,12 +3331,57 @@
     removeSelected,
     // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
     // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
-    async addPlant(type) {
+    // Equipo nuevo de planta (o de campo). Desde el armado 3D llega con su
+    // lugar en la planta (p3); en el esquema queda a la derecha, sin cablear.
+    async addPlant(type, p3) {
       if (S.running) return null;
       await loadBoard();
       ensurePlc();
       const right = Math.max(0, ...S.spec.devices.map((d) => (d.x ?? 0) + 400));
-      return addDevice(type, right + 80, 0);
+      const id = addDevice(type, right + 80, 0);
+      if (id && p3) {
+        devById(id).p3 = { ...p3 };
+        changed();
+      }
+      return id;
+    },
+    // Armado 3D: lugar de un equipo en la planta { x, z, r } (m y grados);
+    // null lo devuelve al acomodo automático. Ctrl+Z deshace.
+    place3d(id, p3) {
+      if (S.running) return false;
+      const dev = devById(id);
+      if (!dev) return false;
+      pushHistory();
+      if (p3) dev.p3 = { x: p3.x, z: p3.z, ...(p3.r ? { r: p3.r } : {}) };
+      else delete dev.p3;
+      changed();
+      return true;
+    },
+    // Armado 3D: piezas de ambiente, lugar del tablero y rejilla. fn recibe
+    // una copia de scene.plant3d y la devuelve cambiada. Ctrl+Z deshace.
+    editPlant3d(fn) {
+      if (S.running) return false;
+      pushHistory();
+      S.spec.plant3d = fn(structuredClone(S.spec.plant3d ?? {})) ?? {};
+      changed();
+      return true;
+    },
+    // «Acomodo automático»: equipos y tablero vuelven a su lugar calculado
+    // (las piezas de ambiente se quedan). Un solo paso de Ctrl+Z.
+    resetPlant3d() {
+      if (S.running) return false;
+      pushHistory();
+      for (const d of S.spec.devices) delete d.p3;
+      if (S.spec.plant3d) delete S.spec.plant3d.panel;
+      changed();
+      return true;
+    },
+    // Quita un equipo (y sus cables), como Supr en el esquema.
+    removeDevice(id) {
+      if (S.running || !devById(id) || devById(id).type === "jwsim/jwplc-basic") return false;
+      S.sel = { kind: "device", id };
+      removeSelected();
+      return true;
     },
     isRunning: () => S.running,
     // Gestor de dispositivos: vuelve a leer definiciones y símbolos (sin reiniciar).

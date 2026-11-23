@@ -688,6 +688,23 @@ escala y los puntos A y B, el tanque con su nivel y la bomba, y la puerta
 con la hoja que corre y la persona. No representan un modelo comercial, así
 que quedan fuera de la regla de 4 px/mm de los símbolos de tablero.
 
+**Planta armable** (`app/renderer/scene3d-armar.js`, botón «Armar» de la
+vista 3D): sin armar, la planta se acomoda sola como antes. En modo Armar
+cada equipo, el tablero y las piezas de ambiente se arrastran sobre una
+rejilla (0,5 m; 0,25 m opcional), R gira 90°, Supr quita y Ctrl+Z deshace.
+El panel de piezas pone equipos con E/S (se crean también en el esquema,
+sin cablear) y piezas sin E/S (plataforma, escalera, baranda, cerco, poste,
+piso, franja, paso, caja, pallet). Lo armado se guarda en el `.jwsim`:
+
+- `devices[].p3 = {x, z, r}`: posición en metros sobre el piso y giro en
+  grados (0/90/180/270) del equipo; sin `p3` va donde lo acomoda la vista.
+- `scene.plant3d = {grid, panel, pieces}`: `grid` solo si no es 0,5;
+  `panel` es el `{x, z, r}` del tablero; `pieces[] = {id, kind, x, z, r,
+  params}` con ids `A1`, `A2`… y medidas en `params` (largo, ancho, alto…).
+
+«Acomodo automático» borra los `p3` y la posición del tablero en un solo
+paso de deshacer. Prueba: `app/tests/e2e-3d-armar.mjs`.
+
 Pruebas: `scene/tests/plant.test.mjs` y `app/tests/e2e-g8-3d.mjs` con el
 proyecto `tests/projects/planta-3d` (cinta con marcha y parada, cilindro al
 llegar la pieza, bomba entre nivel bajo y alto, puerta con fotocelda).

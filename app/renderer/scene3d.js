@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { buildPiece, setupArmar } from "./scene3d-armar.js";
 
 const COL = {
   frame: 0x5b6470, belt: 0x23272d, roller: 0x9aa3ad, piece: 0xf08a24, floor: 0x1b1f24, grid: 0x2c333b,
@@ -794,6 +795,7 @@ function init() {
   setLabels(V.labelsOn);
   new ResizeObserver(resize).observe(canvas.parentElement);
   setupPicking(canvas);
+  V.armarUi = setupArmar({ V, refresh: () => window.Jwsim3D.show(true) });
   V.ready = true;
   loadBoard();
   requestAnimationFrame(frame);
@@ -858,6 +860,16 @@ function setupPicking(canvas) {
 
 /** Cámara que encuadra toda la planta (ancho V.extent) desde arriba y adelante. */
 function fitView() {
+  if (V.fitBox) {
+    const c = V.fitBox.getCenter(new THREE.Vector3());
+    const sz = V.fitBox.getSize(new THREE.Vector3());
+    const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
+    const d = Math.max(4, (Math.max(sz.x, sz.z) / 2 + 1.2) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect)), (sz.y * 0.75) / Math.tan(halfFov));
+    V.controls.target.set(c.x, Math.max(0.8, sz.y * 0.4), c.z);
+    V.camera.position.set(c.x, Math.max(0.8, sz.y * 0.4) + d * 0.45, c.z + d * 0.9);
+    V.controls.update();
+    return;
+  }
   const w = V.extent ?? 4;
   const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
   const fitW = (w / 2 + 1.2) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
@@ -974,10 +986,13 @@ function rebuild(spec) {
   V.field = [];
   V.hits = [];
   V.zFront = 0;
+  V.armIndex = new Map();
   // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
   if (!plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
+    if (spec.plant3d?.panel) placeAt(panel.group, spec.plant3d.panel);
+    armTag(panel.group, "panel", "panel");
     const tag = label("Tablero");
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
@@ -1015,6 +1030,8 @@ function rebuild(spec) {
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
+    if (d.p3) placeAt(model.group, d.p3);
+    armTag(model.group, "dev", d.id);
     const tag = label(d.id);
     tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
@@ -1144,6 +1161,7 @@ function rebuild(spec) {
     const gx = o.model.group.position.x;
     return o.type === "jwsim/tank" ? gx : gx + o.model.size[0] / 2;
   };
+  const zOf = (id) => V.objects.get(id).model.group.position.z;
   const hosted = new Map();
   for (const it of items) {
     const d = spec.devices.find((q) => q.id === it.id);
@@ -1161,8 +1179,11 @@ function rebuild(spec) {
     items.forEach((it, k) => {
       const m = it.model;
       const px = it.host ? centerOf(it.host) + it.slot * 0.65 - 0.15 : fx;
-      const pz = it.host ? 1.05 : fz;
+      const pz = it.host ? zOf(it.host) + 1.05 : fz;
       m.group.position.set(px + 0.15, 0, pz);
+      const fd = spec.devices.find((q) => q.id === it.id);
+      if (fd?.p3) placeAt(m.group, fd.p3);
+      if (fd) armTag(m.group, "dev", fd.id);
       V.root.add(m.group);
       const tag = label(it.label);
       tag.position.set(0, it.id === "semaforo" ? 2.5 : 1.05, 0);
@@ -1174,9 +1195,11 @@ function rebuild(spec) {
         const P = V.panel;
         const gx = P.group.position.x + P.glandX(k, items.length);
         const gz = P.D / 2 - 0.08;
-        const ax = px + 0.15 + m.anchor[0];
-        const az = pz + m.anchor[2];
-        const lane = side ? fz + 0.55 + k * 0.05 : pz - 0.4 - k * 0.04;
+        // Entrada del equipo (girada con él si se armó a mano).
+        const ap = new THREE.Vector3(...m.anchor).applyAxisAngle(new THREE.Vector3(0, 1, 0), m.group.rotation.y).add(m.group.position);
+        const ax = ap.x;
+        const az = ap.z;
+        const lane = side ? fz + 0.55 + k * 0.05 : m.group.position.z - 0.4 - k * 0.04;
         V.root.add(run([[gx, P.bottom, gz], [gx, 0.03, gz], [gx, 0.03, lane], [ax, 0.03, lane], [ax, 0.03, az], [ax, m.anchor[1], az]], 0.016, conduitM));
       }
       if (!it.host) fx += it.w + 0.3;
@@ -1186,15 +1209,41 @@ function rebuild(spec) {
   }
   processPipes(plant);
   for (const h of V.panel?.hits ?? []) V.hits.push(h);
+  // Piezas de ambiente de la planta armada a mano (sin E/S).
+  const pieces = spec.plant3d?.pieces ?? [];
+  for (const pc of pieces) {
+    const g = buildPiece(pc.kind, pc.params, { mat, box, cyl, meshPanel });
+    placeAt(g, pc);
+    armTag(g, "piece", pc.id);
+    V.root.add(g);
+  }
   V.extent = Math.max(2, x - 1.2);
+  // Armada a mano: el encuadre sigue a lo que hay, no a la fila automática.
+  V.fitBox = null;
+  if (pieces.length || spec.plant3d?.panel || spec.devices.some((d) => d.p3)) {
+    const bb = new THREE.Box3().setFromObject(V.root);
+    if (!bb.isEmpty()) V.fitBox = bb;
+  }
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
   V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   contactShadows(V.root);
   normalizeLabels(V.root);
-  fitView();
+  if (!V.keepCamera) fitView();
+  V.armarUi?.afterRebuild();
   const empty = document.getElementById("view3d-empty");
-  if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0;
+  if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0 || pieces.length > 0;
+}
+
+/** Lugar armado a mano { x, z, r } (m y grados, giro en sentido antihorario visto desde arriba). */
+function placeAt(g, p) {
+  g.position.set(Number(p.x) || 0, g.position.y, Number(p.z) || 0);
+  g.rotation.y = THREE.MathUtils.degToRad(Number(p.r) || 0);
+}
+/** Marca un grupo como movible en el modo «Armar» (equipo, tablero o pieza). */
+function armTag(g, kind, id) {
+  g.userData.arm = { kind, id };
+  V.armIndex.set(`${kind}:${id}`, g);
 }
 
 /** Manómetro de frente: esfera blanca y aguja que gira con la presión. */
@@ -3483,7 +3532,7 @@ window.Jwsim3D = {
     if (visible) {
       const spec = window.JwsimScene?.specForView?.() ?? { devices: [] };
       // El tablero muestra todos los equipos eléctricos: cualquier alta o baja rearma la planta.
-      const sig = JSON.stringify(spec.devices.map((d) => (PLANT.has(d.type) || SENSORS.has(d.type) ? [d.id, d.type, d.x, d.params] : [d.id, d.type, d.params?.color, d.params?.label])));
+      const sig = JSON.stringify([spec.devices.map((d) => (PLANT.has(d.type) || SENSORS.has(d.type) ? [d.id, d.type, d.x, d.params, d.p3] : [d.id, d.type, d.params?.color, d.params?.label, d.p3])), spec.plant3d ?? null]);
       if (sig !== V.sig) {
         V.sig = sig;
         rebuild(spec);
@@ -3512,6 +3561,26 @@ window.Jwsim3D = {
     return out;
   },
   objects: () => [...V.objects.entries()].map(([id, o]) => ({ id, type: o.type, beacons: o.beacons.length })),
+  /** La escena cambió (esquema, Ctrl+Z, armado): si la vista está abierta, se vuelve a dibujar. */
+  onSpec() {
+    if (V.visible && V.ready) window.Jwsim3D.show(true);
+  },
+  /** Para pruebas: modo «Armar» (encender/apagar y su estado). */
+  armar(on) {
+    if (on !== undefined) V.armarUi?.setOn(!!on);
+    return V.armarUi ? { ...V.armarUi.state(), ids: [...(V.armIndex?.keys() ?? [])] } : null;
+  },
+  /** Para pruebas: punto de pantalla (px del cliente) de un punto del piso. */
+  groundScreen(x, z) {
+    const v = new THREE.Vector3(x, 0, z).project(V.camera);
+    const r = V.renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  },
+  /** Para pruebas: lugar { x, z, r } de un grupo movible («dev:M1», «piece:A1», «panel:panel»). */
+  armAt(key) {
+    const g = V.armIndex?.get(key);
+    return g ? { x: +g.position.x.toFixed(3), z: +g.position.z.toFixed(3), r: Math.round(THREE.MathUtils.radToDeg(g.rotation.y)) } : null;
+  },
   /** Para pruebas: posición en la escena del origen de un equipo de planta. */
   objectAt(id) {
     const g = V.objects.get(id)?.model.group;

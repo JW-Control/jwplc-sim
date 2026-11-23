@@ -2713,6 +2713,167 @@ body[data-tab="plant"] .view3d-empty {
 .view3d-add[hidden] {
   display: none;
 }
+/* Planta 3D armable: botón «Armar» y panel de piezas (scene3d-armar.js). */
+.view3d-armar {
+  position: absolute;
+  left: 96px;
+  top: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  opacity: 0.95;
+}
+.view3d-armar.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.view3d-armar:disabled {
+  opacity: 0.5;
+}
+.view3d-build {
+  position: absolute;
+  left: 12px;
+  top: 46px;
+  bottom: 12px;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+.view3d-build[hidden] {
+  display: none;
+}
+.view3d.armando .view3d-empty {
+  left: 272px;
+}
+.view3d.poniendo canvas {
+  cursor: crosshair;
+}
+.vb-head {
+  font-weight: 600;
+  font-size: 13px;
+}
+.vb-search,
+.vb-cat {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text);
+}
+.vb-count {
+  color: var(--muted);
+  font-size: 11px;
+}
+.vb-list {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+.vb-cat-name {
+  margin: 8px 0 2px;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.vb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  cursor: grab;
+}
+.vb-item:hover {
+  background: var(--surface-input);
+}
+.vb-item.armed {
+  outline: 1px solid var(--accent);
+  background: var(--surface-input);
+}
+.vb-item span {
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.vb-item span.vb-io {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.vb-item.soon {
+  color: var(--muted);
+  cursor: default;
+}
+.vb-empty,
+.vb-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+.vb-props {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vb-sel {
+  font-weight: 600;
+}
+.vb-sel small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.vb-dim {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vb-dim input {
+  width: 70px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text);
+}
+.vb-actions,
+.vb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.vb-foot {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  justify-content: space-between;
+}
+.vb-actions button,
+.vb-foot button,
+.vb-foot select {
+  font-size: 11px;
+  padding: 3px 8px;
+}
 /* Mini placa sobre la planta 3D: pantalla y LED. */
 .mini-plc {
   position: absolute;
