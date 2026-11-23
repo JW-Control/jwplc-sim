@@ -401,12 +401,27 @@ async function placeBoard() {
   svg.removeAttribute("width");
   svg.removeAttribute("height");
   // El mayor tamaño que entra en el panel sin deformar el dibujo.
+  // El alto libre es el del panel menos la fila de LEDs y la tira de
+  // salidas, que van pegadas arriba y abajo del frente; el conjunto queda
+  // centrado (ver .plc). La tira escala con el frente (--plc-w): los 8
+  // relés siempre en una fila.
   const fit = () => {
-    const box = $("plc-fit");
-    const w = Math.min(box.clientWidth, (box.clientHeight * vw) / vh, 900);
-    if (w > 0) Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
+    const plc = $("plc");
+    const cs = getComputedStyle(plc);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const leds = plc.querySelector(".plc-leds");
+    const strip = plc.querySelector(".out-strip");
+    const used = (leds?.offsetHeight ?? 0) + (strip?.offsetHeight ?? 0) + 8;
+    const availH = plc.clientHeight - padY - used;
+    const w = Math.min(plc.clientWidth - padX, (availH * vw) / vh, 900);
+    if (w > 0) {
+      Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
+      plc.style.setProperty("--plc-w", `${w}px`);
+      plc.style.setProperty("--plc-k", String(Math.round((w / 600) * 1000) / 1000));
+    }
   };
-  new ResizeObserver(fit).observe($("plc-fit"));
+  new ResizeObserver(fit).observe($("plc"));
   fit();
   // Nitidez de la pantalla según el tamaño con que quedó (ver fitTftRendering).
   new ResizeObserver(() => fitTftRendering($("tft"))).observe($("tft"));
@@ -2163,8 +2178,9 @@ function wireGuide() {
   });
 }
 
-// ---- Tamaño de letra de la teoría y del reto (A− / A+), el mismo en los
-// dos paneles y en las dos pestañas; se recuerda.
+// ---- Tamaño de letra de la teoría, del reto y del código (A− / A+), el
+// mismo en los paneles, en las dos pestañas y en el editor; se recuerda.
+// En el tamaño por defecto el código va a 13 px.
 const READ_KEY = "jwsim.readZoom";
 const READ_DEF = 0.9;
 const READ_SIZE_HTML =
@@ -2177,7 +2193,11 @@ function setReadZoom(z) {
   z = Math.round(Math.max(0.7, Math.min(1.5, z)) * 10) / 10;
   storeSet(READ_KEY, z === READ_DEF ? null : String(z));
   document.documentElement.style.setProperty("--read-zoom", String(z));
+  editor?.updateOptions({ fontSize: codeFontSize(z) });
   for (const b of document.querySelectorAll("[data-read-size]")) b.disabled = (b.dataset.readSize === "-1" && z <= 0.7) || (b.dataset.readSize === "1" && z >= 1.5);
+}
+function codeFontSize(z = readZoom()) {
+  return Math.round((13 * z) / READ_DEF);
 }
 function wireReadSize() {
   setReadZoom(readZoom());
@@ -3012,7 +3032,7 @@ function initMonaco() {
       editor = monacoRef.editor.create($("editor"), {
         theme: isDarkTheme() ? "jwsim-dark" : "jwsim-light",
         automaticLayout: true,
-        fontSize: 13,
+        fontSize: codeFontSize(),
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         // 4 espacios: el estilo de los ejemplos del package y del autoformato.

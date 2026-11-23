@@ -101,6 +101,13 @@ body.dock-collapsed #btn-view-clear,
 body.dock-collapsed #view-note {
   display: none;
 }
+/* Plegado no hay divisor: una línea separa la barra del área de trabajo. */
+body.dock-collapsed .dock {
+  border-top: 1px solid var(--border);
+}
+body.dock-collapsed .dock .panel-head {
+  border-bottom: 0;
+}
 body.dock-collapsed .dock .ptab.active {
   box-shadow: none;
 }
@@ -876,6 +883,9 @@ body.resizing-v {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
   padding: 4px 12px 10px;
 }
 .plc[hidden] {
@@ -883,10 +893,8 @@ body.resizing-v {
 }
 /* Tamaño en px que pone app.js (el mayor que entra sin deformar el dibujo). */
 .plc-fit {
-  flex: 1;
-  min-height: 0;
+  flex: none;
   display: flex;
-  align-items: flex-start;
   justify-content: center;
 }
 .plc-stage {
@@ -950,42 +958,60 @@ button.io.on {
   background: rgba(255, 176, 32, 0.08);
   border-color: rgba(255, 176, 32, 0.6);
 }
-/* Tira de salidas bajo el frente de la placa (vista Placa). */
+/* Tira de salidas pegada bajo el frente de la placa (vista Placa): del
+   ancho del frente (--plc-w, app.js) y escalada con él, los 8 en una fila. */
 .out-strip {
+  --k: var(--plc-k, 1);
+  flex: none;
+  width: var(--plc-w, 600px);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding-top: 8px;
-  font-size: 11px;
+  gap: calc(8px * var(--k));
+  padding-top: 6px;
+  font-size: clamp(8px, calc(11px * var(--k)), 15px);
   color: var(--muted);
 }
 .out-strip-title {
   font-weight: 600;
 }
 .out-strip .io-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: calc(5px * var(--k));
+  flex-wrap: nowrap;
 }
 .out-strip .io.output {
   position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 7px;
+  justify-content: center;
+  gap: calc(5px * var(--k));
+  padding: calc(3px * var(--k)) 2px;
   border-color: var(--border);
 }
 .out-strip .io.output .lamp {
   position: static;
-  width: 11px;
+  flex: none;
+  width: clamp(7px, calc(11px * var(--k)), 15px);
   transform: none;
+}
+.out-strip .io-label {
+  font-size: inherit;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 .io-label {
   font-family: var(--mono);
   font-size: 11px;
 }
 .plc-leds {
+  flex: none;
+  width: var(--plc-w, auto);
+  max-width: 100%;
   display: flex;
   justify-content: flex-end;
   align-items: center;
