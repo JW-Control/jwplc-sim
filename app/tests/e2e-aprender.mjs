@@ -6,7 +6,8 @@
 //                 del curso y 10 retos) y la vitrina con las 3 arquitecturas
 //   LEARN_LEVELS  la ruta: 2 unidades del curso y 3 niveles de retos; el nivel 1
 //                 abierto con «A continuación», el 2 y el 3 con candado (7 retos)
-//   LESSON        una lección del curso abre su ejemplo y queda vista (1 / 21)
+//   LESSON        una lección con práctica evaluada abre su banco (teoría y
+//                 objetivos) y NO queda hecha solo por abrirla (sigue 0 / 21)
 //   BRIEF         «Empezar reto» abre el reto con su ficha; Empezar la pliega y se vuelve a ver
 //   COMPLETE      con los objetivos cumplidos: «Qué enseña» y «Siguiente reto →»
 //   PROGRESS      el reto queda hecho y el siguiente pasa a «A continuación»
@@ -97,9 +98,16 @@ try {
   await win.click('#ini-brief [data-act="lesson"]');
   await win.waitForSelector("#start", { state: "hidden", timeout: 10000 });
   const lessonDir = await until(() => t(() => window.jwsimTest.sketchDir()).then((d) => (/Encender_un_rele/.test(d ?? "") ? d : null)), 10000);
+  const theory = await until(() => win.$eval("#theory-pane h3", (e) => e.textContent), 5000);
   await win.click("#btn-projects");
-  const prog2 = await until(async () => ((await progress()) === "1/21" ? "1/21" : null), 5000);
-  criteria.LESSON = { ok: /Qué vas a aprender/i.test(lessonBrief) && /Cómo probarlo/i.test(lessonBrief) && !!lessonDir && prog2 === "1/21", dir: lessonDir, prog: prog2 };
+  await win.waitForTimeout(500);
+  const prog2 = await progress();
+  criteria.LESSON = {
+    ok: /Qué vas a aprender/i.test(lessonBrief) && /Objetivos que se evalúan/i.test(lessonBrief) && /[\\/]Curso[\\/]curso-02[\\/]/.test(lessonDir ?? "") && theory === "Encender un relé" && prog2 === "0/21",
+    dir: lessonDir,
+    theory,
+    prog: prog2,
+  };
   log(`LESSON ${JSON.stringify(criteria.LESSON)}`);
 
   // ---- BRIEF
@@ -144,11 +152,11 @@ try {
   await win.click("#btn-stop");
   await until(() => t(() => window.jwsimTest.status() !== "running"), 10000);
   await win.click("#btn-projects");
-  const prog3 = await until(async () => ((await progress()) === "2/21" ? "2/21" : null), 5000);
+  const prog3 = await until(async () => ((await progress()) === "1/21" ? "1/21" : null), 5000);
   await win.click('#start [data-act="route"]');
   await win.click('#start [data-act="tier"][data-k="n1"]');
   const it2 = await items();
-  criteria.PROGRESS = { ok: prog3 === "2/21" && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", prog: prog3, items: it2 };
+  criteria.PROGRESS = { ok: prog3 === "1/21" && it2[0] === "01-marcha-parada:done" && it2[1] === "02-inversion-giro:next", prog: prog3, items: it2 };
   log(`PROGRESS ${JSON.stringify(criteria.PROGRESS)}`);
 
   // ---- UNLOCK

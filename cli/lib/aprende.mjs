@@ -3,6 +3,7 @@
 // @ts-check
 // Librería JWPLC_Aprende: única fuente del material de aprendizaje.
 //   examples/Curso_JWPLC_Basic/…   lecciones del curso (ejemplos de Arduino IDE)
+//   extras/practicas/curso-NN/     práctica evaluada de cada lección (banco .jwsim, rubrica.json, sketch = el ejemplo, solucion)
 //   extras/retos/<id>/             retos calificables (.jwsim, ENUNCIADO.md, rubrica.json, sketch, solucion)
 //   extras/arquitecturas/<id>/     casos de la vitrina (.jwsim, VITRINA.md, sketch)
 //   extras/imagenes/               miniaturas (reto-<id>.jpg, arq-<id>.jpg)
@@ -18,6 +19,7 @@ import { loadProject } from "./project.mjs";
 export const APRENDE = join(import.meta.dirname, "..", "..", "JWPLC_Aprende");
 export const APRENDE_NAME = "JWPLC_Aprende";
 export const RETOS = join(APRENDE, "extras", "retos");
+export const PRACTICAS = join(APRENDE, "extras", "practicas");
 export const ARQUITECTURAS = join(APRENDE, "extras", "arquitecturas");
 export const IMAGENES = join(APRENDE, "extras", "imagenes");
 export const CATALOGO = join(APRENDE, "catalogo.json");
@@ -51,23 +53,54 @@ export function listAprendeExamples(root = APRENDE) {
   return out;
 }
 
-/** Curso JWPLC Basic: unidades con sus lecciones. */
-export const listCurso = (root = APRENDE) => buildCourse(listAprendeExamples(root));
+/** Objetivos en vivo de una rúbrica, resumidos ([] si no hay). */
+function goalsOf(/** @type {string} */ dir) {
+  try {
+    const r = JSON.parse(readFileSync(join(dir, "rubrica.json"), "utf8"));
+    return (r.goals ?? []).map((/** @type {any} */ g) => ({ id: g.id, text: g.description ?? g.id, extra: g.extra === "merit" }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Curso JWPLC Basic: unidades con sus lecciones. Una lección con práctica
+ * evaluada (extras/practicas/<id>) trae `graded: true` y sus objetivos.
+ */
+export const listCurso = (root = APRENDE) =>
+  buildCourse(listAprendeExamples(root)).map((u) => ({
+    ...u,
+    lessons: u.lessons.map((l) => {
+      const dir = join(root, "extras", "practicas", l.id);
+      const has = existsSync(join(dir, `${l.id}.jwsim`));
+      return { ...l, graded: has, goals: has ? goalsOf(dir) : [] };
+    }),
+  }));
+
+/** Una lección del curso con el código de su ejemplo (o null). */
+export function lessonById(/** @type {string} */ id, root = APRENDE) {
+  for (const u of listCurso(root)) {
+    const l = u.lessons.find((x) => x.id === id);
+    if (!l) continue;
+    let code = "";
+    try {
+      code = readFileSync(join(l.dir, `${l.dir.split(sep).pop()}.ino`), "utf8").replace(/\r\n/g, "\n");
+    } catch {}
+    return { ...l, unit: u.unit, unitName: u.name, code };
+  }
+  return null;
+}
 
 // Para la ficha del reto: el primer párrafo del enunciado y los objetivos en
 // vivo de la rúbrica.
 function retoExtras(/** @type {string} */ dir) {
   let intro = "";
   /** @type {{ id: string, text: string, extra: boolean }[]} */
-  let goals = [];
+  let goals = goalsOf(dir);
   try {
     const md = readFileSync(join(dir, "ENUNCIADO.md"), "utf8").replace(/\r\n/g, "\n");
     const para = md.split(/\n\s*\n/).map((x) => x.trim()).find((x) => x && !x.startsWith("#"));
     intro = (para ?? "").replace(/^\*\*Nivel \d+\.\*\*\s*/, "").replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
-  } catch {}
-  try {
-    const r = JSON.parse(readFileSync(join(dir, "rubrica.json"), "utf8"));
-    goals = (r.goals ?? []).map((/** @type {any} */ g) => ({ id: g.id, text: g.description ?? g.id, extra: g.extra === "merit" }));
   } catch {}
   return { intro, goals };
 }
@@ -141,6 +174,7 @@ export function buildCatalog(root = APRENDE) {
         secciones: l.sections.filter((s) => s.items.length).map((s) => ({ titulo: s.title, items: s.items })),
         pasos: l.steps,
         practica: l.practice,
+        ...(l.graded ? { practica_evaluada: { ruta: `extras/practicas/${l.id}`, objetivos_en_vivo: l.goals } } : {}),
       })),
     })),
     retos: listRetos(join(root, "extras", "retos")).map((r) => ({

@@ -4,10 +4,10 @@
 // cada reto y arquitectura tiene su proyecto e imagen.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { test } from "node:test";
 
-import { APRENDE, buildCatalog, CATALOGO, listAprendeExamples } from "../../cli/lib/aprende.mjs";
+import { APRENDE, buildCatalog, CATALOGO, listAprendeExamples, listCurso } from "../../cli/lib/aprende.mjs";
 
 test("catalogo.json al día (node scripts/gen-catalogo.mjs)", () => {
   assert.equal(readFileSync(CATALOGO, "utf8").replace(/\r\n/g, "\n"), `${JSON.stringify(buildCatalog(), null, 2)}\n`);
@@ -28,8 +28,37 @@ test("curso, retos y arquitecturas con sus archivos", () => {
   }
 });
 
+test("cada lección del curso trae su guía en README.md y el sketch solo el código", () => {
+  for (const u of listCurso()) {
+    for (const l of u.lessons) {
+      assert.ok(l.readme.startsWith(`# Curso JWPLC Basic · Lección ${String(l.num).padStart(2, "0")} · `), `${l.id}: falta README.md con su título`);
+      assert.ok(l.learn.length && l.steps.length && l.practice.length, `${l.id}: la guía no tiene sus secciones`);
+      const ino = readFileSync(join(l.dir, `${basename(l.dir)}.ino`), "utf8");
+      assert.doesNotMatch(ino, /^\s*\/\*/, `${l.id}: la guía sigue en la cabecera del sketch`);
+    }
+  }
+});
+
 test("los ejemplos de la librería salen con su grupo y ruta", () => {
   const ex = listAprendeExamples();
   assert.ok(ex.length >= 11);
   assert.ok(ex.every((e) => e.group === "JWPLC_Aprende" && e.label.startsWith("Curso_JWPLC_Basic / ")));
+});
+
+test("prácticas evaluadas del curso: banco, rúbrica y punto de partida = ejemplo de la lección", async () => {
+  const { checkGoals } = await import("../../app/lib/goals.mjs");
+  const { loadExercise } = await import("../../cli/lib/grade.mjs");
+  const { lessonById, listCurso } = await import("../../cli/lib/aprende.mjs");
+  const graded = listCurso().flatMap((u) => u.lessons.filter((l) => l.graded));
+  assert.ok(graded.length >= 5, "la Unidad 1 tiene práctica evaluada");
+  for (const l of graded) {
+    const ex = loadExercise(join(APRENDE, "extras", "practicas", l.id));
+    checkGoals(ex.rubric.goals, l.id);
+    assert.ok(ex.rubric.goals.filter((g) => !g.extra).length >= 1, `${l.id}: sin objetivos obligatorios`);
+    assert.ok(ex.solution && existsSync(ex.solution), `${l.id}: falta la solución`);
+    // El alumno empieza con el ejemplo de la lección, tal cual.
+    const name = ex.sketch.split(/[\\/]/).pop();
+    const start = readFileSync(join(ex.sketch, `${name}.ino`), "utf8").replace(/\r\n/g, "\n");
+    assert.equal(start, lessonById(l.id).code, `${l.id}: el sketch inicial difiere del ejemplo`);
+  }
 });

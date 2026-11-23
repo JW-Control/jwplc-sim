@@ -1,37 +1,7 @@
-/*
-  Curso JWPLC Basic · Lección 09 · Temporizadores
-
-  Qué vas a aprender
-  - Los dos temporizadores más usados en un PLC:
-      Retardo a la conexión (TON): la salida se activa cuando la entrada
-        lleva cierto tiempo activa. Si la entrada se suelta antes, no pasa nada.
-      Retardo a la desconexión (TOF): la salida se activa con la entrada y
-        se queda activa cierto tiempo después de que la entrada se apaga.
-  - A agrupar datos y funciones con struct: cada temporizador guarda su
-    estado y sabe "ejecutarse" con temporizador.ejecutar(...).
-  - Son los mismos TON y TOF de la Plantilla de proyecto (K_Utilidades.h).
-
-  Qué conectar
-  - Borne 1M a 0 V.
-  - I0.0: pulsador. Hay que mantenerlo apretado 3 segundos para arrancar
-    (evita arranques por un toque accidental).
-  - I0.1: sensor de presencia de un pasillo.
-
-  Qué hace
-  - Q0.0 se cierra cuando I0.0 lleva 3 segundos apretado (TON).
-  - Q0.1, la luz del pasillo, se enciende con la presencia y se apaga
-    10 segundos después de la última detección (TOF).
-
-  Cómo probarlo
-  1. Toca I0.0 un segundo: no pasa nada. Mantenlo 3 segundos: cierra Q0.0.
-  2. Activa I0.1 y suéltalo: la luz sigue 10 segundos y se apaga. Si lo
-     activas otra vez antes, los 10 segundos empiezan de nuevo.
-
-  Para practicar
-  - Cambia los tiempos.
-  - Agrega un tercer temporizador: una bocina en Q0.2 que suene si la
-    presencia de I0.1 dura más de 30 segundos.
-*/
+// Curso JWPLC Basic · Lección 09 · Temporizadores
+// La guía de la lección (qué vas a aprender, qué conectar, cómo probarlo y
+// qué practicar) está en el README.md del ejemplo; en JWPLC Sim se ve a la
+// izquierda del código.
 
 // struct agrupa datos y funciones bajo un mismo nombre. Cada temporizador
 // guarda el momento en que empezó a contar y si su salida está activa, y su

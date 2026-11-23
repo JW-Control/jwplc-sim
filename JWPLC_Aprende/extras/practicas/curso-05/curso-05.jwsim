@@ -1,0 +1,425 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 05 · Las 8 entradas y las 8 salidas",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Las_8_entradas_y_salidas/Las_8_entradas_y_salidas.ino"
+  },
+  "exercise": {
+    "lesson": "curso-05",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Las_8_entradas_y_salidas",
+    "brief": {
+      "goal": "Cruza las salidas (I0.0 manda Q0.7 … I0.7 manda Q0.0) y muestra cuántas entradas están activas.",
+      "steps": [
+        "Ejecuta el ejemplo y mueve los selectores: cada piloto sigue a su entrada.",
+        "Cruza las salidas con un for y digitalWrite(Q0_X[7 - i], …).",
+        "Cuenta las entradas activas y escribe «Activas: N» en el Monitor Serie.",
+        "Prueba con varias entradas a la vez."
+      ],
+      "uses": [
+        "I0_0…I0_7 · SA1…SA8, selectores",
+        "Q0_0…Q0_7 · H1…H8, pilotos",
+        "Monitor Serie a 115200 baudios"
+      ],
+      "teaches": "Un byte guarda las 8 entradas; bitRead() saca cada bit; un for repite lo mismo para las 8 salidas."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "SA1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.0"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "SA2",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.1"
+        },
+        "x": 220,
+        "y": 600
+      },
+      {
+        "id": "SA3",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.2"
+        },
+        "x": 440,
+        "y": 600
+      },
+      {
+        "id": "SA4",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.3"
+        },
+        "x": 0,
+        "y": 900
+      },
+      {
+        "id": "SA5",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.4"
+        },
+        "x": 220,
+        "y": 900
+      },
+      {
+        "id": "SA6",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.5"
+        },
+        "x": 440,
+        "y": 900
+      },
+      {
+        "id": "SA7",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.6"
+        },
+        "x": 0,
+        "y": 1200
+      },
+      {
+        "id": "SA8",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "I0.7"
+        },
+        "x": 220,
+        "y": 1200
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 440,
+        "y": 1200
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.1"
+        },
+        "x": 0,
+        "y": 1500
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.2"
+        },
+        "x": 220,
+        "y": 1500
+      },
+      {
+        "id": "H4",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.3"
+        },
+        "x": 440,
+        "y": 1500
+      },
+      {
+        "id": "H5",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.4"
+        },
+        "x": 0,
+        "y": 1800
+      },
+      {
+        "id": "H6",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.5"
+        },
+        "x": 220,
+        "y": 1800
+      },
+      {
+        "id": "H7",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.6"
+        },
+        "x": 440,
+        "y": 1800
+      },
+      {
+        "id": "H8",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.7"
+        },
+        "x": 0,
+        "y": 2100
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA2.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA2.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA3.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA3.14",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA4.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA4.14",
+        "to": "plc.I0_3",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA5.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA5.14",
+        "to": "plc.I0_4",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA6.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA6.14",
+        "to": "plc.I0_5",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA7.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA7.14",
+        "to": "plc.I0_6",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA8.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA8.14",
+        "to": "plc.I0_7",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H4.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H4.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_4.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H5.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H5.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_5.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_5.2",
+        "to": "H6.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H6.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_6.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_6.2",
+        "to": "H7.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H7.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_7.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_7.2",
+        "to": "H8.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H8.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

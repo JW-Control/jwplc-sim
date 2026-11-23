@@ -643,6 +643,7 @@ function loadSketch(sketch) {
   state.saved.clear();
   state.naming = null;
   state.sketch = sketch;
+  if (state.guide) renderTheory(null); // la guía es de la lección abierta
   for (const f of sketch.files) addModel(f);
   state.exe = null;
   // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
@@ -1615,7 +1616,12 @@ function mdToHtml(text) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; ) {
     const l = lines[i];
-    if (/^#{1,3} /.test(l)) {
+    if (/^\s*```/.test(l)) {
+      const code = [];
+      for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) code.push(lines[i]);
+      i++;
+      out.push(`<pre><code>${esc(code.join("\n"))}</code></pre>`);
+    } else if (/^#{1,3} /.test(l)) {
       const n = l.match(/^#+/)[0].length;
       out.push(`<h${n + 2}>${inline(l.slice(n + 1))}</h${n + 2}>`);
       i++;
@@ -1628,11 +1634,16 @@ function mdToHtml(text) {
     } else if (/^(\d+\.|-) /.test(l)) {
       const ordered = /^\d/.test(l);
       const items = [];
-      while (i < lines.length && /^(\d+\.|-) /.test(lines[i])) items.push(lines[i++].replace(/^(\d+\.|-) /, ""));
+      while (i < lines.length && /^(\d+\.|-) /.test(lines[i])) {
+        let item = lines[i++].replace(/^(\d+\.|-) /, "");
+        // Renglones sangrados que siguen a la viñeta son su continuación.
+        while (i < lines.length && /^\s{2,}\S/.test(lines[i])) item += ` ${lines[i++].trim()}`;
+        items.push(item);
+      }
       out.push(`<${ordered ? "ol" : "ul"}>${items.map((x) => `<li>${inline(x)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`);
     } else if (l.trim()) {
       const para = [];
-      while (i < lines.length && lines[i].trim() && !/^(#|\||\d+\. |- )/.test(lines[i])) para.push(lines[i++]);
+      while (i < lines.length && lines[i].trim() && !/^(#|\||\d+\. |- |\s*```)/.test(lines[i])) para.push(lines[i++]);
       out.push(`<p>${inline(para.join(" "))}</p>`);
     } else i++;
   }
@@ -1656,6 +1667,16 @@ function fmtWant(key, w) {
   return typeof w === "boolean" ? (w ? "sí" : "no") : String(w);
 }
 
+/** Ritmo pedido por un objetivo "period", en palabras cortas. */
+function fmtPeriod(g) {
+  const r = (x) => `${x[0]}–${x[1]} ms`;
+  const parts = [];
+  if (g.cycle_ms) parts.push(`cada ${r(g.cycle_ms)}`);
+  if (g.on_ms) parts.push(`encendido ${r(g.on_ms)}`);
+  if (g.off_ms) parts.push(`apagado ${r(g.off_ms)}`);
+  return parts.join(", ");
+}
+
 // El panel se arma una vez por ejercicio (buildGoals) y cada snapshot solo
 // cambia clases, textos y anchos: las barras se deslizan y el aviso de reto
 // completado se anima una sola vez.
@@ -1671,12 +1692,18 @@ function buildGoals() {
   let html = `<div class="goals-head"><b>Objetivos en vivo</b><span class="goals-count"></span><span class="goals-time muted"></span></div>`;
   html += `<div class="goals-bar"><i></i></div><div class="goals-done" hidden><b>¡Reto completado!</b> Cumplió todos los objetivos en la misma corrida.<div class="learn-after"></div></div><ol class="goals">`;
   for (const g of goalUi.goals) {
-    const sigs = Object.entries(g.when)
+    let sigs = Object.entries(g.when ?? {})
       .map(([k, w]) => `<span class="goal-sig" data-sig="${esc(k)}"><code>${esc(k)}</code> <span class="goal-read"></span><small>→ ${esc(fmtWant(k, w))}</small></span>`)
       .join("");
+    // La expresión regular no se muestra: la descripción dice qué se espera.
+    if (g.console !== undefined) sigs += `<span class="goal-sig goal-console" data-sig="consola"><code>Monitor Serie</code> <span class="goal-read"></span></span>`;
+    if (g.delay !== undefined) sigs += `<span class="goal-sig" data-sig="retardo"><code>${esc(Object.keys(g.delay.to).join(" "))}</code> <span class="goal-read"></span><small>→ ${esc(`${g.delay_ms[0]}–${g.delay_ms[1]} ms después`)}</small></span>`;
+    if (g.period !== undefined) sigs += `<span class="goal-sig" data-sig="ritmo"><code>${esc(typeof g.period === "string" ? g.period : "Monitor Serie")}</code> <span class="goal-read"></span><small>→ ${esc(fmtPeriod(g))}</small></span>`;
     html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
     html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
-    if (Number(g.hold_ms ?? 0) > 0) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined || (g.delay !== undefined && (g.cycles ?? 1) > 1)) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (g.hint) html += `<details class="goal-hint"><summary>Pista</summary>${esc(g.hint)}</details>`;
+    if (g.why) html += `<div class="goal-why" hidden>${esc(g.why)}</div>`;
     html += `</div></li>`;
   }
   box.innerHTML = html + `</ol>`;
@@ -1706,14 +1733,36 @@ function renderGoals() {
     li.classList.remove("done", "active", "pending", "blocked");
     li.classList.add(st);
     li.querySelector(".goal-icon").textContent = icon[st];
-    for (const [k, w] of Object.entries(g.when)) {
+    for (const [k, w] of Object.entries(g.when ?? {})) {
       const el = li.querySelector(`[data-sig="${CSS.escape(k)}"]`);
       // Cumplido: se deja la condición, no la lectura que siguió cambiando.
       el.querySelector(".goal-read").textContent = st === "done" ? "" : fmtReading(k, s?.reading?.[k]);
       el.classList.toggle("ok", st === "done" || (!!s && st !== "blocked" && window.JwsimGoalMatch(s.reading[k], w)));
     }
+    for (const k of ["consola", "ritmo", "retardo"]) {
+      const el = li.querySelector(`[data-sig="${k}"]`);
+      if (!el) continue;
+      const r = s?.reading?.[k];
+      el.querySelector(".goal-read").textContent = st === "done" || r === undefined ? "" : k === "consola" ? `«${r}»` : r;
+      el.classList.toggle("ok", st === "done");
+    }
+    const hint = li.querySelector(".goal-hint");
+    if (hint) hint.hidden = st === "done";
+    const why = li.querySelector(".goal-why");
+    if (why) why.hidden = st !== "done";
     const hold = Number(g.hold_ms ?? 0);
-    if (hold > 0) {
+    if (g.delay !== undefined) {
+      const n = g.cycles ?? 1;
+      const bar = li.querySelector(".goal-hold");
+      if (bar) {
+        bar.querySelector("i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+        bar.querySelector("small").textContent = `${Math.round((s?.fraction ?? 0) * n)} / ${n} veces`;
+      }
+    } else if (g.period !== undefined) {
+      const n = g.cycles ?? 3;
+      li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
+      li.querySelector(".goal-hold small").textContent = `${Math.round((s?.fraction ?? 0) * n)} / ${n} ciclos`;
+    } else if (hold > 0) {
       li.querySelector(".goal-hold i").style.width = `${Math.round((s?.fraction ?? 0) * 100)}%`;
       li.querySelector(".goal-hold small").textContent = `${((s?.held_ms ?? 0) / 1000).toFixed(1)} / ${(hold / 1000).toFixed(1)} s`;
     }
@@ -1740,12 +1789,15 @@ async function showExercise(file) {
   goalUi.progress = null;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
-  state.exercise = info ? { file, id: info.id, brief: info.brief } : null;
+  state.exercise = info ? { file, id: info.id, brief: info.brief, lesson: !!info.lesson } : null;
   goalUi.reported = false;
   renderBrief(true);
   $("tab-exercise").hidden = !info;
   $("scene-tab-reto").hidden = !info;
   $("ex-reto-hint").hidden = !info;
+  renderTheory(info?.lesson ?? null);
+  const doneMsg = $("ex-goals").querySelector(".goals-done b");
+  if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
   if (info) window.JwsimShowReto?.();
   else if (document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
@@ -1756,6 +1808,88 @@ async function showExercise(file) {
   }
   $("ex-statement").innerHTML = mdToHtml(info.statement);
   setView("exercise");
+}
+
+// ---- Guía de la lección: su README.md, en el panel izquierdo del esquema
+// (pestaña Teoría) y como columna a la izquierda del editor en Programa, para
+// leerla mientras se edita el sketch. En una práctica evaluada, «Para
+// practicar» no se repite: son los objetivos del panel derecho.
+const GUIDE_FOLD_KEY = "jwsim.guideFolded";
+const GUIDE_W_KEY = "jwsim.guideW";
+function guideHtml(l, graded) {
+  let md = String(l.readme ?? "").replace(/^#\s+Curso JWPLC Basic[^\n]*\n/, "");
+  if (graded) md = md.replace(/^##\s+Para practicar\s*\n[\s\S]*?(?=^##\s|(?![\s\S]))/m, "");
+  return (
+    `<div class="th-body"><small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>` +
+    mdToHtml(md) +
+    (graded
+      ? `<p class="muted th-tip">Tu programa empieza igual que el ejemplo: ejecútalo tal cual para verlo funcionar y luego cámbialo para cumplir los objetivos de la práctica.</p>`
+      : "") +
+    `</div>`
+  );
+}
+function renderTheory(l, graded = !!l) {
+  const pane = $("theory-pane");
+  window.JwsimScenePane?.setTheoryAvailable(!!l);
+  state.guide = l ?? null;
+  if (!l) {
+    pane.innerHTML = "";
+    $("guide-body").innerHTML = "";
+    showGuide();
+    return;
+  }
+  const html = guideHtml(l, graded);
+  pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
+  $("guide-body").innerHTML = html;
+  $("guide-body").scrollTop = 0;
+  showGuide();
+}
+window.showLessonGuide = (l) => renderTheory(l, false);
+function showGuide() {
+  const has = !!state.guide;
+  const folded = storeGet(GUIDE_FOLD_KEY) === "1";
+  $("guide-pane").hidden = !has || folded;
+  $("guide-open").hidden = !has || !folded;
+}
+function wireGuide() {
+  const pane = $("guide-pane");
+  const saved = Number(storeGet(GUIDE_W_KEY));
+  if (saved > 0) pane.style.setProperty("--guide-w", `${saved}px`);
+  $("guide-fold").addEventListener("click", () => {
+    storeSet(GUIDE_FOLD_KEY, "1");
+    showGuide();
+  });
+  $("guide-open").addEventListener("click", () => {
+    storeSet(GUIDE_FOLD_KEY, null);
+    showGuide();
+  });
+  const grip = $("guide-grip");
+  grip.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    grip.classList.add("dragging");
+    document.body.classList.add("resizing");
+    const left = pane.getBoundingClientRect().left;
+    const total = document.querySelector(".code-pane").getBoundingClientRect().width;
+    const width = (x) => Math.round(Math.max(200, Math.min(x - left, total - 260)));
+    const move = (ev) => pane.style.setProperty("--guide-w", `${width(ev.clientX)}px`);
+    const up = (ev) => {
+      grip.removeEventListener("pointermove", move);
+      grip.removeEventListener("pointerup", up);
+      grip.removeEventListener("pointercancel", up);
+      grip.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      storeSet(GUIDE_W_KEY, String(width(ev.clientX)));
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up);
+    grip.addEventListener("pointercancel", up);
+  });
+  grip.addEventListener("dblclick", () => {
+    pane.style.removeProperty("--guide-w");
+    storeSet(GUIDE_W_KEY, null);
+  });
 }
 
 // ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
@@ -1790,8 +1924,22 @@ function fillAfter(el, r, lead = "") {
   el.innerHTML =
     (lead ? `<b>${esc(lead)}</b> ` : "") +
     (r.teaches ? `<span class="learn-teaches">Qué enseña: ${esc(r.teaches)}</span>` : "") +
-    (r.next ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>` : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
+    (r.lesson
+      ? r.next
+        ? ` <button class="primary small" data-next-lesson="${esc(r.next)}">Siguiente lección →</button>`
+        : ` <span class="muted">Terminó las prácticas de esta unidad.</span>`
+      : r.next
+        ? ` <button class="primary small" data-next="${esc(r.next)}">Siguiente reto →</button>`
+        : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
 }
+
+window.openLessonById = async (id) => {
+  try {
+    applyProject(await api.openLesson(id));
+  } catch (err) {
+    consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
+  }
+};
 
 window.openExerciseById = async (id) => {
   try {
@@ -1815,9 +1963,10 @@ window.openArchById = async (id) => {
 document.addEventListener("click", (e) => {
   if (e.target.closest("#scene-devmgr")) return window.JwsimDevices?.open();
   if (e.target.closest('[data-reto="show"]')) return window.JwsimShowReto?.();
-  const b = e.target.closest("[data-brief], [data-next]");
+  const b = e.target.closest("[data-brief], [data-next], [data-next-lesson]");
   if (!b) return;
   if (b.dataset.next) window.openExerciseById(b.dataset.next);
+  else if (b.dataset.nextLesson) window.openLessonById(b.dataset.nextLesson);
   else if (b.dataset.brief === "start") renderBrief(false);
   else renderBrief(true);
 });
@@ -1847,7 +1996,8 @@ async function gradeExercise() {
     const g = await api.gradeExercise(state.exercise.file, state.sketch.dir);
     $("grade-result").innerHTML = renderGrade(g);
     $("grade-note").textContent = g.ok ? `Calificado en ${(g.wall_ms / 1000).toFixed(1)} s` : "";
-    if (g.ok && g.grade >= 14 && state.exercise?.id) {
+    // Una lección solo se da por hecha con sus objetivos en vivo.
+    if (g.ok && g.grade >= 14 && state.exercise?.id && !state.exercise.lesson) {
       const box = document.createElement("div");
       box.className = "learn-after grade-pass";
       $("grade-result").prepend(box);
@@ -1999,7 +2149,9 @@ const SCENE_LEFT_MIN = 260;
 const SCENE_LEFT_MAX = 680;
 const SCENE_SIDE_MIN = 240;
 const SCENE_SIDE_MAX = 560;
-let leftAvail = false;
+// Paneles izquierdos disponibles: el diagrama de estados (escena con
+// cilindros) y la teoría de la lección abierta.
+const leftAvail = { states: false, teoria: false };
 const liveSideW = { left: null, right: null };
 
 function scenePaneWidth(side, fallback) {
@@ -2113,7 +2265,7 @@ function wireSceneSplitter(id, side) {
 }
 function setLeftPane(pane, save = true) {
   const main = document.querySelector(".scene-main");
-  const open = leftAvail ? pane : null;
+  const open = pane && leftAvail[pane] ? pane : null;
   main.classList.toggle("left-collapsed", !open);
   for (const t of document.querySelectorAll(".side-tab-left")) {
     const on = t.dataset.leftPane === open;
@@ -2124,19 +2276,21 @@ function setLeftPane(pane, save = true) {
   main.dataset.leftPane = open ?? "";
   if (save) storeSet(LEFT_KEY, pane || "none");
   clampSideWidths();
-  window.JwsimStateDiag?.setVisible?.(!!open);
+  window.JwsimStateDiag?.setVisible?.(open === "states");
 }
 function setLeftAvailability(hasPneu) {
-  leftAvail = !!hasPneu;
+  leftAvail.states = !!hasPneu;
   const btn = $("scene-tab-states");
   if (btn) {
-    btn.disabled = !leftAvail;
-    btn.title = leftAvail
+    btn.disabled = !leftAvail.states;
+    btn.title = leftAvail.states
       ? "Diagrama de estados en vivo (FluidSIM): cilindros, bobinas, sensores y presión"
       : "Diagrama de estados: la escena necesita una electroválvula con cilindro";
   }
   const saved = storeGet(LEFT_KEY);
-  setLeftPane(leftAvail && saved === "states" ? "states" : null, false);
+  // Con una lección abierta manda la teoría.
+  if (leftAvail.teoria) return;
+  setLeftPane(leftAvail.states && saved === "states" ? "states" : null, false);
 }
 function setScenePane(pane, save = true) {
   const main = document.querySelector(".scene-main");
@@ -2182,6 +2336,12 @@ function wireSceneSide() {
     showProps: () => !["", "reto"].includes(document.querySelector(".scene-main").dataset.pane ?? "") && setScenePane("props", false),
     setLeftAvailability,
     setLeftPane,
+    setTheoryAvailable(on) {
+      leftAvail.teoria = !!on;
+      $("scene-tab-teoria").hidden = !on;
+      if (on) setLeftPane("teoria", false);
+      else if (document.querySelector(".scene-main").dataset.leftPane === "teoria") setLeftPane(null, false);
+    },
     isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
   };
 }
@@ -2276,6 +2436,7 @@ function statusbarH() {
 
 function wireUi() {
   wireSplitter();
+  wireGuide();
   wireDock();
   wireSceneSide();
   $("btn-save").addEventListener("click", saveSketch);
@@ -2444,18 +2605,8 @@ function initMonaco() {
     window.require.config({ paths: { vs: `${base}vs` } });
     window.require(["vs/editor/editor.main"], () => {
       monacoRef = window.monaco;
-      monacoRef.editor.defineTheme("jwsim-dark", {
-        base: "vs-dark",
-        inherit: true,
-        rules: [],
-        colors: { "editor.background": "#14171b", "editorGutter.background": "#14171b" },
-      });
-      monacoRef.editor.defineTheme("jwsim-light", {
-        base: "vs",
-        inherit: true,
-        rules: [],
-        colors: { "editor.background": "#f5f7fa", "editorGutter.background": "#f5f7fa" },
-      });
+      // Colores del código como en Arduino IDE 2 (claro y oscuro).
+      window.JwsimEditorSyntax.install(monacoRef);
       editor = monacoRef.editor.create($("editor"), {
         theme: isDarkTheme() ? "jwsim-dark" : "jwsim-light",
         automaticLayout: true,
@@ -2467,6 +2618,8 @@ function initMonaco() {
         insertSpaces: true,
         detectIndentation: false,
         glyphMargin: true,
+        // Como Arduino IDE: llaves y paréntesis del color del texto.
+        bracketPairColorization: { enabled: false },
         // Autocompletado propio (completion.js): sin la lista de palabras de
         // Monaco, que mezcla todo lo que aparece en el archivo.
         wordBasedSuggestions: "off",
@@ -2698,6 +2851,7 @@ window.jwsimTest = {
   pickArch: (id) => window.openArchById(id),
   pickExercise: (id) => window.openExerciseById(id),
   setSource: (text) => state.models.get(state.sketch.name + ".ino")?.setValue(text),
+  getSource: () => state.models.get(state.sketch.name + ".ino")?.getValue() ?? "",
   grade: () => gradeExercise(),
   sketchDir: () => state.sketch?.dir ?? null,
   // Archivos adicionales del sketch.

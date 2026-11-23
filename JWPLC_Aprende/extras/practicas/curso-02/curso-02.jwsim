@@ -1,0 +1,117 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 02 · Encender un relé",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Encender_un_rele/Encender_un_rele.ino"
+  },
+  "exercise": {
+    "lesson": "curso-02",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Encender_un_rele",
+    "brief": {
+      "goal": "Q0.0 encendido 2 s y apagado medio segundo; Q0.1 enciende justo cuando Q0.0 se apaga.",
+      "steps": [
+        "Ejecuta el ejemplo: H1 parpadea cada segundo.",
+        "Cambia los delay() para 2 s encendido y 0,5 s apagado.",
+        "Agrega Q0_1: que se encienda cuando Q0_0 se apaga y al revés.",
+        "Mira las barras de la derecha: cuentan ciclos buenos seguidos."
+      ],
+      "uses": [
+        "Q0_0 · H1, piloto verde",
+        "Q0_1 · H2, piloto amarillo"
+      ],
+      "teaches": "digitalWrite() abre y cierra un relé; el orden de las instrucciones y los delay() arman una secuencia."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Q0.1"
+        },
+        "x": 220,
+        "y": 600
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-08",
+  "goals": [
+    {
+      "id": "lampara",
+      "description": "H2 (Q0.2) encendida con el motor en marcha",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "hint": "digitalWrite(Q0_2, motor);"
+    },
+    {
+      "id": "lampara_off",
+      "description": "H2 se apaga al detener el motor",
+      "when": {
+        "Q0_0": 0,
+        "Q0_2": 0
+      },
+      "hold_ms": 300,
+      "after": "lampara"
+    },
+    {
+      "id": "disparo",
+      "description": "Dispara el térmico (aprieta F1): el motor se detiene",
+      "when": {
+        "I0_2": 0,
+        "Q0_0": 0
+      },
+      "hold_ms": 300,
+      "after": "lampara_off"
+    },
+    {
+      "id": "bloqueo",
+      "description": "Con el térmico ya normal, MARCHA no arranca sin reconocer la falla",
+      "when": {
+        "I0_2": 1,
+        "I0_0": 1,
+        "Q0_0": 0
+      },
+      "hold_ms": 500,
+      "after": "disparo",
+      "hint": "Una variable falla que se pone en true cuando el térmico abre y vuelve a false solo con PARADA; el motor pide !falla."
+    },
+    {
+      "id": "reconoce",
+      "description": "Tras apretar PARADA, MARCHA arranca de nuevo",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 500,
+      "after": "bloqueo",
+      "why": "La falla queda memorizada: alguien tiene que verla y reconocerla antes de volver a arrancar."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lámpara de marcha",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.2 se enciende con el motor",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Q0.2 se apaga con PARADA",
+          "points": 2,
+          "from_ms": 2200,
+          "to_ms": 2700,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Reconocimiento de la falla",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3800,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4900,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca con MARCHA",
+          "points": 1,
+          "from_ms": 800,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "El térmico detiene el motor",
+          "points": 2,
+          "from_ms": 1800,
+          "to_ms": 2100,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Sin reconocer, MARCHA no arranca",
+          "points": 5,
+          "from_ms": 2800,
+          "to_ms": 3700,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Tras PARADA, MARCHA arranca",
+          "points": 4,
+          "from_ms": 4600,
+          "to_ms": 5100,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ]
+}

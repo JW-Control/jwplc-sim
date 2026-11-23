@@ -23,7 +23,7 @@ import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
 import { levels, loadProgress, markDone, markLesson, nextAfter, saveProgress } from "./lib/learning.mjs";
-import { APRENDE, ARQUITECTURAS, imageOf, listAprendeExamples, listArquitecturas, listCurso, listRetos, RETOS } from "../cli/lib/aprende.mjs";
+import { APRENDE, ARQUITECTURAS, imageOf, lessonById, listAprendeExamples, listArquitecturas, listCurso, listRetos, PRACTICAS, RETOS } from "../cli/lib/aprende.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -370,8 +370,25 @@ ipcMain.handle("learn:state", () => {
   const p = loadProgress(progressFile());
   return withImages(levels(listExercises(), p, unlockOpts(p)));
 });
+// Lecciones con práctica evaluada, en el orden del curso.
+const gradedLessons = () => {
+  try {
+    return listCurso().flatMap((u) => u.lessons.filter((l) => l.graded));
+  } catch {
+    return [];
+  }
+};
 ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   const p = loadProgress(progressFile());
+  // Una lección del curso solo queda hecha al cumplir sus objetivos en vivo.
+  if (/^curso-\d+$/.test(String(id))) {
+    const changed = via === "goals" && markLesson(p, String(id));
+    if (changed) saveProgress(progressFile(), p);
+    const list = gradedLessons();
+    const i = list.findIndex((l) => l.id === id);
+    const next = [...list.slice(i + 1), ...list.slice(0, Math.max(0, i))].find((l) => !p.lessons?.[l.id])?.id ?? null;
+    return { lesson: true, changed, done: !!p.lessons?.[id], next, teaches: lessonBrief(String(id))?.teaches ?? "" };
+  }
   const changed = markDone(p, String(id), via === "grade" ? "grade" : "goals", grade);
   if (changed) saveProgress(progressFile(), p);
   const ex = listExercises();
@@ -404,6 +421,25 @@ ipcMain.handle("exercises:open", (_e, id) => {
   if (!/^[\w.-]+$/.test(id)) throw new Error(`ejercicio inválido: ${id}`);
   const src = join(EXERCISES, id);
   const dst = join(workspaceDir(), "Ejercicios", id);
+  syncExercise(src, dst);
+  return openProject(join(dst, `${id}.jwsim`));
+});
+
+// Práctica evaluada de una lección del curso (JWPLC_Aprende/extras/practicas/
+// curso-NN): banco propio, el ejemplo de la lección como punto de partida y
+// sus objetivos. Se abre como copia en la carpeta de trabajo (Curso/<id>).
+function lessonBrief(id) {
+  try {
+    return loadProject(join(PRACTICAS, id, `${id}.jwsim`)).project.exercise?.brief ?? null;
+  } catch {
+    return null;
+  }
+}
+ipcMain.handle("lessons:open", (_e, id) => {
+  if (!/^curso-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
+  const src = join(PRACTICAS, id);
+  if (!existsSync(src)) throw new Error(`la lección ${id} no tiene práctica evaluada`);
+  const dst = join(workspaceDir(), "Curso", id);
   syncExercise(src, dst);
   return openProject(join(dst, `${id}.jwsim`));
 });
@@ -451,7 +487,9 @@ ipcMain.handle("exercise:info", (_e, file) => {
       goalsError = err.message;
     }
     // id: carpeta del ejercicio (la copia de trabajo se llama igual).
-    return { id: basename(dirname(file)), title: project.name, level: ex.level ?? 1, brief: ex.brief ?? null, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError };
+    // Práctica de una lección: la teoría va al panel izquierdo.
+    const lesson = typeof ex.lesson === "string" ? lessonById(ex.lesson) : null;
+    return { id: basename(dirname(file)), title: project.name, level: ex.level ?? 1, brief: ex.brief ?? null, statement: st && existsSync(st) ? readFileSync(st, "utf8") : "", goals, goalsError, lesson };
   } catch {
     return null;
   }
@@ -898,7 +936,11 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   runnerExe = exe;
   // Los horizontes de la escena (cientos por segundo) y los bytes del enlace
   // Modbus son de SceneSession: no van a la interfaz.
-  r.on("message", (m) => m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out" && forward("sim:message", m));
+  r.on("message", (m) => {
+    // Monitor Serie (puerto 0) para los objetivos de consola y de ritmo.
+    if (m.type === "serial" && !m.port && goalTracker) goalTracker.serial(m.text, m.t_ns !== undefined ? Number(m.t_ns) / 1e6 : undefined);
+    if (m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out") forward("sim:message", m);
+  });
   if (sceneObj) {
     sceneSession = new SceneSession(r, sceneObj);
     goalTracker = activeGoals?.length ? new GoalTracker(activeGoals) : null;

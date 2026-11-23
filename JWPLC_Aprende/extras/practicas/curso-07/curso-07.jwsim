@@ -1,0 +1,141 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 07 · Flancos: encender y apagar con un pulsador",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Flancos_un_pulsador/Flancos_un_pulsador.ino"
+  },
+  "exercise": {
+    "lesson": "curso-07",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Flancos_un_pulsador",
+    "brief": {
+      "goal": "Contar las pulsaciones en el Monitor Serie y que Q0.1 cambie al SOLTAR el pulsador.",
+      "steps": [
+        "Ejecuta el ejemplo: cada toque a S1 cambia H1.",
+        "Cuenta las pulsaciones y muéstralas: «Pulsaciones: N».",
+        "Usa el flanco de bajada para que H2 (Q0.1) cambie al soltar."
+      ],
+      "uses": [
+        "I0_0 · S1, pulsador NA",
+        "Q0_0 · H1, piloto verde",
+        "Q0_1 · H2, piloto amarillo"
+      ],
+      "teaches": "Flanco de subida (apretar) y de bajada (soltar): un solo evento por pulsación."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 220,
+        "y": 600
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Q0.1"
+        },
+        "x": 440,
+        "y": 600
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

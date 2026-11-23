@@ -30,7 +30,22 @@
           "practica": [
             "Cambia el texto del saludo y vuelve a subir el programa.",
             "Haz que el número suba cada medio segundo (500 milisegundos)."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-01",
+            "objetivos_en_vivo": [
+              {
+                "id": "saludo",
+                "text": "El Monitor Serie muestra un saludo distinto de «Hola, JWPLC»",
+                "extra": false
+              },
+              {
+                "id": "medio",
+                "text": "El número sube cada medio segundo",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-02",
@@ -64,7 +79,22 @@
           "practica": [
             "Haz que esté encendido 2 segundos y apagado medio segundo.",
             "Agrega Q0_1 para que se encienda justo cuando Q0_0 se apaga."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-02",
+            "objetivos_en_vivo": [
+              {
+                "id": "ritmo",
+                "text": "H1 (Q0.0): 2 s encendido y 0,5 s apagado",
+                "extra": false
+              },
+              {
+                "id": "alterna",
+                "text": "H2 (Q0.1) enciende justo cuando H1 se apaga",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-03",
@@ -101,7 +131,32 @@
           "practica": [
             "Haz lo contrario: que Q0.0 esté cerrado mientras el pulsador NO esté apretado (pista: el operador ! invierte un valor, lo verás en la lección 04).",
             "Conecta un segundo pulsador a I0.1 y haz que mande el relé Q0.1."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-03",
+            "objetivos_en_vivo": [
+              {
+                "id": "invertida",
+                "text": "H1 (Q0.0) encendido mientras S1 NO está apretado",
+                "extra": false
+              },
+              {
+                "id": "invertida_pulsado",
+                "text": "Al apretar S1, H1 se apaga",
+                "extra": false
+              },
+              {
+                "id": "segundo",
+                "text": "S2 (I0.1) enciende H2 (Q0.1)",
+                "extra": false
+              },
+              {
+                "id": "mensaje",
+                "text": "El Monitor Serie avisa «I0.1 activa»",
+                "extra": true
+              }
+            ]
+          }
         },
         {
           "id": "curso-04",
@@ -138,7 +193,32 @@
           "practica": [
             "Agrega un tercer pulsador en I0.2 y haz una prensa a TRES manos.",
             "Q0.4: que se encienda con I0.0 apretado pero I0.1 suelto."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-04",
+            "objetivos_en_vivo": [
+              {
+                "id": "tres",
+                "text": "Con las tres manos, H1 (Q0.0) enciende",
+                "extra": false
+              },
+              {
+                "id": "dos_no",
+                "text": "Con dos manos, H1 queda apagado",
+                "extra": false
+              },
+              {
+                "id": "q4",
+                "text": "H5 (Q0.4) enciende con I0.0 activa e I0.1 inactiva",
+                "extra": false
+              },
+              {
+                "id": "q4_no",
+                "text": "Con I0.1 activa, H5 se apaga",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-05",
@@ -184,7 +264,27 @@
           "practica": [
             "Cruza las salidas: I0.0 manda Q0.7, I0.1 manda Q0.6 ... (pista: un for con digitalWrite(Q0_X[7 - i], ...)).",
             "Cuenta cuántas entradas están activas y muestra el total."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-05",
+            "objetivos_en_vivo": [
+              {
+                "id": "cruce_a",
+                "text": "I0.0 manda Q0.7 (y no Q0.0)",
+                "extra": false
+              },
+              {
+                "id": "cruce_b",
+                "text": "I0.7 manda Q0.0 (y no Q0.7)",
+                "extra": false
+              },
+              {
+                "id": "cuenta",
+                "text": "El Monitor Serie muestra «Activas: N»",
+                "extra": false
+              }
+            ]
+          }
         }
       ]
     },
@@ -232,7 +332,27 @@
           ],
           "practica": [
             "Haz que Q0.2 parpadee a otro ritmo (cada 2 segundos) con su propia variable de tiempo: verás dos intermitencias independientes."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-06",
+            "objetivos_en_vivo": [
+              {
+                "id": "q2",
+                "text": "H3 (Q0.2) parpadea: 2 s encendido y 2 s apagado",
+                "extra": false
+              },
+              {
+                "id": "q0",
+                "text": "H1 (Q0.0) sigue parpadeando cada medio segundo",
+                "extra": false
+              },
+              {
+                "id": "q1",
+                "text": "H2 (Q0.1) se enciende al apretar S1, aunque todo parpadee",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-07",
@@ -266,9 +386,34 @@
             "El Monitor Serie avisa solo cuando algo cambia, sin repetir mensajes."
           ],
           "practica": [
-            "Muestra cuántas veces se apretó el pulsador desde el arranque.",
+            "Muestra en el Monitor Serie cuántas veces se apretó el pulsador desde el arranque, como «Pulsaciones: 3».",
             "Haz que Q0.1 cambie al SOLTAR el pulsador, en lugar de al apretarlo."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-07",
+            "objetivos_en_vivo": [
+              {
+                "id": "cuenta",
+                "text": "El Monitor Serie muestra «Pulsaciones: N» (aprieta al menos 2 veces)",
+                "extra": false
+              },
+              {
+                "id": "suelta",
+                "text": "H2 (Q0.1) se enciende al SOLTAR S1",
+                "extra": false
+              },
+              {
+                "id": "apretado",
+                "text": "Al volver a apretar S1, H2 sigue encendida",
+                "extra": false
+              },
+              {
+                "id": "suelta_apaga",
+                "text": "… y se apaga recién al soltar",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-08",
@@ -300,8 +445,9 @@
               ]
             },
             {
-              "titulo": "motor = (marcha O motor) Y parada Y térmico",
+              "titulo": "La regla, como en un diagrama de escalera",
               "items": [
+                "motor = (marcha O motor) Y parada Y térmico",
                 "\"O motor\" es el sello: si el motor ya está en marcha, se mantiene aunque se suelte el pulsador de marcha."
               ]
             }
@@ -314,7 +460,37 @@
           "practica": [
             "Agrega una lámpara de marcha en Q0.2.",
             "Haz que con el térmico disparado no se pueda arrancar hasta que se apriete PARADA (un \"reconocimiento\" de la falla)."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-08",
+            "objetivos_en_vivo": [
+              {
+                "id": "lampara",
+                "text": "H2 (Q0.2) encendida con el motor en marcha",
+                "extra": false
+              },
+              {
+                "id": "lampara_off",
+                "text": "H2 se apaga al detener el motor",
+                "extra": false
+              },
+              {
+                "id": "disparo",
+                "text": "Dispara el térmico (aprieta F1): el motor se detiene",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Con el térmico ya normal, MARCHA no arranca sin reconocer la falla",
+                "extra": false
+              },
+              {
+                "id": "reconoce",
+                "text": "Tras apretar PARADA, MARCHA arranca de nuevo",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-09",
@@ -349,9 +525,29 @@
             "Activa I0.1 y suéltalo: la luz sigue 10 segundos y se apaga. Si lo activas otra vez antes, los 10 segundos empiezan de nuevo."
           ],
           "practica": [
-            "Cambia los tiempos.",
+            "Cambia los tiempos: el arranque a 2 segundos y la luz del pasillo a 5 segundos.",
             "Agrega un tercer temporizador: una bocina en Q0.2 que suene si la presencia de I0.1 dura más de 30 segundos."
-          ]
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-09",
+            "objetivos_en_vivo": [
+              {
+                "id": "arranque",
+                "text": "Q0.0 se cierra a los 2 s de mantener S1",
+                "extra": false
+              },
+              {
+                "id": "pasillo",
+                "text": "La luz del pasillo se apaga 5 s después de la última presencia",
+                "extra": false
+              },
+              {
+                "id": "bocina",
+                "text": "HA1 (Q0.2) suena si la presencia dura más de 30 s",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-10",
@@ -391,8 +587,28 @@
           ],
           "practica": [
             "Cambia la meta a 24 piezas.",
-            "Cuenta también las cajas llenas y muéstralas en el Monitor Serie."
-          ]
+            "Cuenta también las cajas llenas y muéstralas en el Monitor Serie, como «Cajas llenas: 2»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-10",
+            "objetivos_en_vivo": [
+              {
+                "id": "meta",
+                "text": "Cuenta hasta 24 piezas («Piezas: 24»)",
+                "extra": false
+              },
+              {
+                "id": "llena",
+                "text": "Con 24 piezas la cinta para y H1 avisa «caja llena»",
+                "extra": false
+              },
+              {
+                "id": "cajas",
+                "text": "El Monitor Serie muestra las cajas llenas («Cajas llenas: 1»)",
+                "extra": false
+              }
+            ]
+          }
         },
         {
           "id": "curso-11",
@@ -431,9 +647,29 @@
             "Aprieta el botón: después de los 10 segundos mínimos de verde, cambia."
           ],
           "practica": [
-            "Agrega un estado \"ROJO PARPADEANDO\" para los peatones en los últimos 3 segundos de su verde.",
-            "Que una entrada I0.1 ponga el semáforo en amarillo intermitente (modo noche) mientras esté activa."
-          ]
+            "Agrega un estado \"ROJO PARPADEANDO\" para los peatones: su verde parpadea cada medio segundo en los últimos 3 segundos.",
+            "Que una entrada I0.1 ponga el semáforo en amarillo intermitente (modo noche, cada medio segundo) mientras esté activa."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-11",
+            "objetivos_en_vivo": [
+              {
+                "id": "peaton",
+                "text": "El verde peatonal parpadea cada medio segundo en sus últimos 3 s",
+                "extra": false
+              },
+              {
+                "id": "noche",
+                "text": "Modo noche (SA1): el amarillo parpadea cada medio segundo",
+                "extra": false
+              },
+              {
+                "id": "noche_solo",
+                "text": "En modo noche, el rojo y los verdes quedan apagados",
+                "extra": false
+              }
+            ]
+          }
         }
       ]
     }
