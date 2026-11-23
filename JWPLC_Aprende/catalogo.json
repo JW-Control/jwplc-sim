@@ -20,7 +20,18 @@
             "El JWPLC Basic alimentado con 24 V DC.",
             "Un cable USB-C con datos entre el JWPLC y la PC."
           ],
-          "secciones": [],
+          "secciones": [
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: el Sim compila el programa y enciende el JWPLC virtual. No hay cable, puerto ni placa que elegir.",
+                "Abajo, la pestaña **Serie** hace de Monitor Serie (ya está a 115200 baudios).",
+                "Verás el saludo una sola vez y, debajo, un número que sube cada segundo:",
+                "Hola, JWPLC\nEste mensaje sale una sola vez, desde setup().\nSegundos encendido: 0\nSegundos encendido: 1\nSegundos encendido: 2",
+                "**Detener** y otra vez **Ejecutar** es como desconectar y volver a encender el equipo: el saludo sale de nuevo y la cuenta vuelve a 0."
+              ]
+            }
+          ],
           "pasos": [
             "Elige la placa JWPLC Basic y su puerto en el menú Herramientas.",
             "Pulsa Subir (el botón con la flecha).",
@@ -69,6 +80,14 @@
                 "Con la salida en HIGH el relé cierra y une COM con NO; con LOW los separa.",
                 "Es un contacto seco: el relé no entrega voltaje, solo deja pasar el de tu circuito. Admite hasta 5 A con 250 V AC o 30 V DC.",
                 "En el programa la salida Q0.0 se escribe Q0_0 (con guion bajo)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**.",
+                "En la placa de la derecha, el indicador de `Q0.0` se enciende un segundo y se apaga un segundo; con el sonido activado oirás el «clic» del relé.",
+                "En **Esquema eléctrico** está la lámpara H1 cableada a `Q0.0`: parpadea al mismo ritmo."
               ]
             }
           ],
@@ -121,6 +140,14 @@
               "items": [
                 "Borne 1M a 0 V de la fuente de 24 V.",
                 "Un pulsador entre +24 V y la entrada I0.0. Sirve también un sensor PNP: marrón a +24 V, azul a 0 V y negro (la señal) a I0.0."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**: sin tocar nada sale `I0.0 inactiva` cada 200 ms.",
+                "En **Mandos** (panel **Reto**, a la derecha) mantén apretado **S1**: `I0.0` se activa, `Q0.0` se cierra y el mensaje cambia a `I0.0 activa`. Al soltarlo, todo vuelve atrás.",
+                "El banco ya está cableado como en la sección Conexiones: míralo en **Esquema eléctrico**."
               ]
             }
           ],
@@ -183,6 +210,14 @@
                 "Q0.1 = I0.0 O I0.1   Timbre con dos pulsadores: suena con cualquiera.",
                 "Q0.2 = NO I0.0       Luz de \"listo\": encendida mientras I0.0 esté suelto.",
                 "Q0.3 = I0.0 distinto de I0.1   Luz de escalera con dos interruptores: cambiar cualquiera de los dos la enciende o la apaga."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. Al inicio, solo `Q0.2` está encendido.",
+                "En **Mandos** (panel **Reto**, a la derecha) gira los selectores **SA1** (`I0.0`) y **SA2** (`I0.1`) para probar las cuatro combinaciones, y compara los indicadores de la placa con esta tabla:",
+                "| `I0.0` | `I0.1` | `Q0.0` (Y) | `Q0.1` (O) | `Q0.2` (NO) | `Q0.3` (distinto) | |---|---|---|---|---|---| | suelto | suelto | apagado | apagado | **encendido** | apagado | | activo | suelto | apagado | **encendido** | apagado | **encendido** | | suelto | activo | apagado | **encendido** | **encendido** | **encendido** | | activo | activo | **encendido** | **encendido** | apagado | apagado |"
               ]
             }
           ],
@@ -254,6 +289,15 @@
               "items": [
                 "Borne 1M a 0 V y pulsadores o sensores en las entradas que quieras usar."
               ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**, a la derecha) gira cualquiera de los selectores **SA1** a **SA8**: el relé de su mismo número se cierra.",
+                "Cada medio segundo verás una línea con el estado de las 8 entradas:",
+                "Lección 05: las 8 entradas y los 8 relés en un byte\nEntradas: 0 0 0 0 0 0 0 0\nEntradas: 1 0 0 0 0 0 0 0\nEntradas: 1 0 0 1 0 0 0 0"
+              ]
             }
           ],
           "pasos": [
@@ -323,6 +367,14 @@
                 "Q0.0 parpadea cada medio segundo, sin parar.",
                 "Q0.1 sigue al pulsador de I0.0 al instante, aunque Q0.0 esté parpadeando."
               ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: `Q0.0` parpadea cada medio segundo en la placa de la derecha.",
+                "En **Mandos** (panel **Reto**) aprieta y suelta **S1** varias veces, rápido: `Q0.1` responde en el momento, mientras `Q0.0` sigue con su ritmo.",
+                "Compáralo con la lección 05, donde la salida tardaba en responder."
+              ]
             }
           ],
           "pasos": [
@@ -377,6 +429,16 @@
               "titulo": "Qué conectar",
               "items": [
                 "Borne 1M a 0 V y un pulsador entre +24 V e I0.0."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) aprieta **S1**: `Q0.0` se enciende. Suéltalo: sigue encendido.",
+                "Apriétalo otra vez: `Q0.0` se apaga.",
+                "Mantén **S1** apretado varios segundos: no pasa nada más, porque solo cuenta el flanco.",
+                "Lección 07: cada pulsación en I0.0 cambia Q0.0\nPulsación: Q0.0 encendida\nPulsador suelto\nPulsación: Q0.0 apagada"
               ]
             }
           ],
@@ -450,6 +512,17 @@
                 "motor = (marcha O motor) Y parada Y térmico",
                 "\"O motor\" es el sello: si el motor ya está en marcha, se mantiene aunque se suelte el pulsador de marcha."
               ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. En el banco, la parada **S2** y el térmico **F1** son NC: en reposo `I0.1` e `I0.2` ya están activas.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: `Q0.0` cierra el contactor **KM1** y se queda cerrado al soltar.",
+                "Un toque a **S2 Parada**: `Q0.0` se abre.",
+                "Arranca otra vez y aprieta **F1 Térmico**: `Q0.0` se abre y `Q0.1` enciende la lámpara de falla.",
+                "Lección 08: marcha I0.0, parada NC I0.1, térmico NC I0.2\nMotor en marcha\nMotor detenido",
+                "Para ver un cable cortado de verdad, en **Esquema eléctrico** selecciona el cable de la parada y usa sus fallas: el motor no debe arrancar."
+              ]
             }
           ],
           "pasos": [
@@ -518,6 +591,15 @@
                 "Q0.0 se cierra cuando I0.0 lleva 3 segundos apretado (TON).",
                 "Q0.1, la luz del pasillo, se enciende con la presencia y se apaga 10 segundos después de la última detección (TOF)."
               ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**.",
+                "En **Mandos** (panel **Reto**) da un toque corto a **S1 Arranque**: no pasa nada. Mantenlo apretado: a los 3 s se cierra `Q0.0`; al soltar, se abre.",
+                "Gira **B1 Presencia** y vuelve a girarlo: `Q0.1` (pasillo) se enciende y se apaga 10 s después de que se va la presencia.",
+                "Vuelve a activar **B1** antes de los 10 s: la cuenta empieza de nuevo."
+              ]
             }
           ],
           "pasos": [
@@ -576,6 +658,15 @@
                 "I0.1: pulsador RESET.",
                 "Q0.0: contactor del motor de la cinta.",
                 "Q0.1: lámpara \"caja llena\"."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. `Q0.0` está cerrado: la cinta (contactor **KM1**) avanza.",
+                "En **Mandos** (panel **Reto**) da diez toques a **B1 Pieza**. En el décimo, `Q0.0` se abre y `Q0.1` enciende **H1 Caja llena**.",
+                "Da un toque a **S1 Reset**: la cuenta vuelve a 0 y `Q0.0` se cierra otra vez.",
+                "Lección 10: piezas en I0.0, RESET en I0.1\nPiezas: 1\n...\nPiezas: 10\nCaja llena: cambia la caja y aprieta RESET\nRESET: caja nueva"
               ]
             }
           ],
@@ -638,6 +729,15 @@
                 "I0.0: botón del peatón.",
                 "Q0.0 rojo, Q0.1 amarillo, Q0.2 verde de los autos.",
                 "Q0.3 verde de los peatones."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "Sin tocar nada, el semáforo (**H1** a **H3** en **Esquema eléctrico**, `Q0.0` a `Q0.2` en la placa) se queda 30 s en verde, 3 s en amarillo y 8 s en rojo. Si no quieres esperar, pon la simulación a ×10 (arriba a la derecha).",
+                "Con el semáforo en verde, aprieta **S1 Peatón** en **Mandos** (panel **Reto**). Si el verde ya lleva 10 s, cambia enseguida; si no, cambia cuando se cumplen los 10 s.",
+                "Estado: VERDE\nEstado: AMARILLO\nEstado: ROJO"
               ]
             }
           ],

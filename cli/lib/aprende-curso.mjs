@@ -33,6 +33,8 @@ export function parseLesson(text) {
   let last = null;
   for (const raw of m[1].split("\n")) {
     const line = raw.trim();
+    // Notas para quien edita (<!-- … -->, en un renglón): no son contenido.
+    if (/^<!--.*-->$/.test(line)) continue;
     if (!line) {
       last = null;
       continue;
@@ -94,6 +96,8 @@ export function parseLessonMd(text) {
       continue;
     }
     const line = raw.trim();
+    // Notas para quien edita (<!-- … -->, en un renglón): no son contenido.
+    if (/^<!--.*-->$/.test(line)) continue;
     if (!line) {
       last = null;
       continue;

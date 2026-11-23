@@ -22,3 +22,21 @@
 
 - Cambia el texto del saludo y vuelve a subir el programa.
 - Haz que el número suba cada medio segundo (500 milisegundos).
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar**: el Sim compila el programa y enciende el JWPLC virtual. No hay cable, puerto ni placa que elegir.
+2. Abajo, la pestaña **Serie** hace de Monitor Serie (ya está a 115200 baudios).
+3. Verás el saludo una sola vez y, debajo, un número que sube cada segundo:
+
+```text
+Hola, JWPLC
+Este mensaje sale una sola vez, desde setup().
+Segundos encendido: 0
+Segundos encendido: 1
+Segundos encendido: 2
+```
+
+4. **Detener** y otra vez **Ejecutar** es como desconectar y volver a encender el equipo: el saludo sale de nuevo y la cuenta vuelve a 0.

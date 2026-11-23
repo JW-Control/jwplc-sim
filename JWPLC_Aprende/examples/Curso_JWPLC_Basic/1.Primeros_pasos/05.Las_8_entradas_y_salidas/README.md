@@ -37,3 +37,18 @@
 - Cruza las salidas: I0.0 manda Q0.7, I0.1 manda Q0.6 ... (pista: un for
   con digitalWrite(Q0_X[7 - i], ...)).
 - Cuenta cuántas entradas están activas y muestra el total.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar** y mira la pestaña **Serie**.
+2. En **Mandos** (panel **Reto**, a la derecha) gira cualquiera de los selectores **SA1** a **SA8**: el relé de su mismo número se cierra.
+3. Cada medio segundo verás una línea con el estado de las 8 entradas:
+
+```text
+Lección 05: las 8 entradas y los 8 relés en un byte
+Entradas: 0 0 0 0 0 0 0 0
+Entradas: 1 0 0 0 0 0 0 0
+Entradas: 1 0 0 1 0 0 0 0
+```

@@ -28,3 +28,19 @@
 - Muestra en el Monitor Serie cuántas veces se apretó el pulsador desde el
   arranque, como «Pulsaciones: 3».
 - Haz que Q0.1 cambie al SOLTAR el pulsador, en lugar de al apretarlo.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar** y mira la pestaña **Serie**.
+2. En **Mandos** (panel **Reto**) aprieta **S1**: `Q0.0` se enciende. Suéltalo: sigue encendido.
+3. Apriétalo otra vez: `Q0.0` se apaga.
+4. Mantén **S1** apretado varios segundos: no pasa nada más, porque solo cuenta el flanco.
+
+```text
+Lección 07: cada pulsación en I0.0 cambia Q0.0
+Pulsación: Q0.0 encendida
+Pulsador suelto
+Pulsación: Q0.0 apagada
+```

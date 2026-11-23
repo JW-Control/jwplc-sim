@@ -464,7 +464,8 @@ body.resizing #editor {
   border-right: 1px solid var(--border);
 }
 .guide-pane[hidden],
-.guide-open[hidden] {
+.prog-rail[hidden],
+.prog-side[hidden] {
   display: none;
 }
 .guide-head {
@@ -500,21 +501,6 @@ body.resizing #editor {
 .guide-grip.dragging {
   background: var(--accent);
   opacity: 0.5;
-}
-.guide-open {
-  flex: 0 0 auto;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  padding: 10px 4px;
-  border: 0;
-  border-left: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
 }
 .sim-pane {
   min-width: 0;
@@ -6480,4 +6466,94 @@ body[data-schem="iec"] .scene-float {
 .lesson-card .lc-close { position: absolute; top: 10px; right: 10px; }
 .theory-body .th-program { white-space: normal; }
 .guide-body { overflow-x: hidden; }
-.theory-body table { width: 100%; table-layout: auto; overflow-wrap: anywhere; }
+
+/* ---- Programa con lección: barra izquierda (Teoría) y derecha (Reto), como
+   las del esquema eléctrico. */
+.prog-rail {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: var(--panel-2);
+}
+.prog-rail-left { border-right: 1px solid var(--border); }
+.prog-rail-right { border-left: 1px solid var(--border); }
+.rail-tab {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.rail-tab svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rail-tab:hover { color: var(--text); }
+.rail-tab.active { color: var(--text-strong); border-color: var(--accent); background: var(--accent-soft); }
+body[data-tab="program"] .sim-pane { flex-direction: row; }
+body[data-tab="program"] .sim-pane > .board-card { flex: 1; min-width: 0; }
+body:not([data-tab="program"]) .prog-side,
+body:not([data-tab="program"]) .prog-rail-right { display: none; }
+.prog-side {
+  flex: 0 0 clamp(240px, 34%, 360px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+}
+.prog-side-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.prog-side-body { flex: 1; min-height: 0; overflow: auto; padding: 10px; }
+/* El panel del reto se ve igual en Programa que en el esquema. */
+.prog-side .ex-brief { margin: 0 0 10px; padding: 10px; font-size: 12px; }
+.prog-side .ex-brief.collapsed { white-space: normal; }
+.prog-side .brief-sec p { font-size: 13px; }
+.prog-side .brief-nav { flex-wrap: wrap; gap: 6px; }
+.prog-side .ex-goals { margin: 0; padding: 10px; }
+.prog-side .goals-head { flex-wrap: wrap; }
+.prog-side .goal { padding: 7px 8px; gap: 8px; }
+.prog-side .goal-title { font-size: 12.5px; }
+.prog-side .goal-sigs { font-size: 11px; }
+.prog-side .goals-done { font-size: 12.5px; }
+.prog-side .learn-after { font-size: 12px; }
+.prog-side .brief-uses { gap: 4px; }
+.prog-side .brief-uses li { padding: 1px 7px; font-size: 11px; }
+
+/* Tamaño de letra (A− / A+) de la teoría y del reto. */
+.theory-body .th-body,
+.reto-body { zoom: var(--read-zoom, 0.9); }
+.read-size { display: inline-flex; gap: 2px; margin-left: auto; }
+.side-title .read-size { float: right; margin-top: -2px; text-transform: none; }
+.read-size .icon { min-width: 26px; height: 22px; padding: 0 4px; font-size: 11.5px; font-weight: 700; }
+.read-size .icon:disabled { opacity: 0.4; }
+.guide-head .guide-title, .prog-side-head .guide-title { flex: 0 1 auto; margin-right: auto; }
+.guide-head .read-size { margin-left: 0; }
+/* Tablas de la clase: el código no se corta (setup() entero); si no cabe,
+   la tabla se desliza de lado. */
+.theory-body table { display: block; max-width: 100%; overflow-x: auto; }
+.theory-body td code, .theory-body th code { white-space: nowrap; }
+
+/* Mandos del banco (en el panel Reto). */
+.ex-mandos { margin: 0 0 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.ex-mandos[hidden] { display: none; }
+.mandos-head { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.mandos-off { font-size: 12px; margin: 0 0 6px; display: none; }
+.ex-mandos.off .mandos-off { display: block; }
+.mandos { display: flex; flex-wrap: wrap; gap: 6px; }
+.mando { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-input, var(--panel-2)); color: var(--text); font-size: 12.5px; cursor: pointer; touch-action: none; user-select: none; }
+.mando:hover:not(:disabled) { border-color: var(--accent); }
+.mando.on { border-color: var(--accent); background: var(--accent-soft); color: var(--text-strong); }
+.mando:disabled { opacity: 0.55; cursor: default; }
+.mando small { color: var(--muted); }
+.theory-body .th-figure { margin: 8px 0; }
+.theory-body .th-figure svg { display: block; width: 100%; height: auto; color: var(--text); }
+.theory-body .th-figure figcaption { font-size: 0.92em; color: var(--muted); margin-top: 4px; }

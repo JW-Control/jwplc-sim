@@ -1633,6 +1633,19 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 // código, enlaces y alertas de GitHub («> [!TIP] Título»). Opciones:
 //   comment(texto) → html para un comentario <!-- … --> (por defecto, nada)
 //   skipAlert(título) → true para no mostrar esa alerta
+/** Un <figure> de la clase (SVG y pie), sin scripts, eventos ni enlaces externos. */
+function safeFigure(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  for (const el of tpl.content.querySelectorAll("script, foreignObject, iframe, object, embed, use, image, a, style")) el.remove();
+  for (const el of tpl.content.querySelectorAll("*"))
+    for (const a of [...el.attributes]) if (/^on/i.test(a.name) || /href$/i.test(a.name) || /url\(|expression/i.test(a.value)) el.removeAttribute(a.name);
+  const fig = tpl.content.querySelector("figure");
+  if (!fig) return "";
+  fig.classList.add("th-figure");
+  return fig.outerHTML;
+}
+
 function mdToHtml(text, opts = {}) {
   const inline = (t) =>
     esc(t)
@@ -1642,10 +1655,19 @@ function mdToHtml(text, opts = {}) {
       .replace(/`([^`]+)`/g, "<code>$1</code>");
   const out = [];
   const lines = String(text).split(/\r?\n/);
-  const special = /^(#|\||\d+\. |- |\s*```|>|<!--)/;
+  const special = /^(#|\||\d+\. |- |\s*```|>|<!--|<figure)/;
   for (let i = 0; i < lines.length; ) {
     const l = lines[i];
-    if (/^\s*```/.test(l)) {
+    if (/^<figure/.test(l)) {
+      // Esquemas de la wiki: <figure> con un SVG dibujado a mano.
+      const fig = [];
+      for (; i < lines.length; i++) {
+        fig.push(lines[i]);
+        if (lines[i].includes("</figure>")) break;
+      }
+      i++;
+      out.push(safeFigure(fig.join("\n")));
+    } else if (/^\s*```/.test(l)) {
       const lang = l.trim().slice(3).trim();
       const code = [];
       for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) code.push(lines[i]);
@@ -1684,7 +1706,9 @@ function mdToHtml(text, opts = {}) {
         while (i < lines.length && /^\s{2,}\S/.test(lines[i])) item += ` ${lines[i++].trim()}`;
         items.push(item);
       }
-      out.push(`<${ordered ? "ol" : "ul"}>${items.map((x) => `<li>${inline(x)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`);
+      // Una lista numerada cortada por un bloque de código sigue en su número.
+      const start = ordered ? Number(/^\d+/.exec(l)[0]) : 1;
+      out.push(`<${ordered ? `ol${start > 1 ? ` start="${start}"` : ""}` : "ul"}>${items.map((x) => `<li>${inline(x)}</li>`).join("")}</${ordered ? "ol" : "ul"}>`);
     } else if (l.trim()) {
       const para = [];
       while (i < lines.length && lines[i].trim() && !special.test(lines[i])) para.push(lines[i++]);
@@ -1764,7 +1788,7 @@ function renderGoals() {
   const done = required.filter((g) => byId.get(g.id)?.state === "done").length;
   const icon = { done: "✓", active: "◔", pending: "○", blocked: "🔒" };
   box.querySelector(".goals-count").textContent = `${done}/${required.length}`;
-  box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Corra la simulación y opere la escena";
+  box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Pulse Ejecutar para empezar";
   box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
   box.querySelector(".goals-done").hidden = !p?.complete;
   if (p?.complete && !goalUi.reported && state.exercise?.id) {
@@ -1843,8 +1867,12 @@ async function showExercise(file) {
   renderTheory(info?.lesson ?? null);
   const doneMsg = $("ex-goals").querySelector(".goals-done b");
   if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
+  mandosSig = "";
+  placeReto();
   if (info) window.JwsimShowReto?.();
-  else if (document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
+  // Una lección se hace en Programa: teoría a la izquierda, reto a la derecha.
+  if (info?.lesson) window.JwsimTabs?.select("program");
+  if (!info && document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
   if (!info) {
@@ -1863,12 +1891,33 @@ async function showExercise(file) {
 // práctica evaluada, «Para practicar» no se repite: son los objetivos.
 const GUIDE_FOLD_KEY = "jwsim.guideFolded";
 const GUIDE_W_KEY = "jwsim.guideW";
-const dropSection = (md, title) => md.replace(new RegExp(`^##\\s+${title}\\s*\\n[\\s\\S]*?(?=^##\\s|(?![\\s\\S]))`, "m"), "");
+const sectionRe = (title) => new RegExp(`^##\\s+${title}\\s*\\n([\\s\\S]*?)(?=^##\\s|(?![\\s\\S]))`, "m");
+const dropSection = (md, title) => md.replace(sectionRe(title), "");
+
+// La clase de la wiki está escrita para el equipo físico (cable USB-C, puerto,
+// Subir, Monitor Serie). Dentro del Sim se adapta: sin «Lo que necesitas»;
+// «Súbelo y pruébalo» pasa a ser la sección «En JWPLC Sim» del README de la
+// lección; de «Si algo no funciona» quedan solo los consejos del programa.
+const PHYSICAL = /puerto|cable|USB|baudios|Monitor Serie|símbolos raros|\b1M\b|NPN|\+24 V|bornes|cablead|fuente|etiqueta del sensor|placa elegida/i;
+function simGuide(md, l) {
+  md = dropSection(md, "Lo que necesitas");
+  const sim = sectionRe("En JWPLC Sim").exec(String(l.readme ?? ""))?.[1]?.replace(/<!--[\s\S]*?-->\s*/g, "").trim();
+  md = md.replace(sectionRe("Súbelo y pruébalo"), sim ? `## Pruébalo aquí\n\n${sim}\n\n` : "");
+  md = md.replace(sectionRe("Si algo no funciona"), (_m, body) => {
+    const keep = body.split("\n").filter((x) => /^- /.test(x) && !PHYSICAL.test(x));
+    return keep.length ? `## Si algo no funciona\n\n${keep.join("\n")}\n\n` : "";
+  });
+  md = md.replace(/^## Conexiones\s*\n/m, "## Conexiones\n\n> [!NOTE] En el simulador\n> El banco de esta lección ya viene cableado así. Míralo en **Esquema eléctrico**.\n\n");
+  const intro =
+    "> [!NOTE] Esta clase, en el simulador\n> Es la clase de la wiki, hecha para el equipo real. Aquí el JWPLC es virtual: **Ejecutar** hace lo que «Subir» en Arduino IDE, la pestaña **Serie** de abajo es el Monitor Serie, y los pulsadores del banco están en **Mandos**, dentro del panel **Reto**.\n\n";
+  return intro + md;
+}
 
 function guideHtml(l, graded) {
   const head = `<small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>`;
   if (l.guia) {
     let md = l.guia.replace(/^<!--[\s\S]*?-->\s*/, "").replace(/^#\s+[^\n]*\n/, "");
+    md = simGuide(md, l);
     if (graded) md = dropSection(md, "Para practicar");
     const body = mdToHtml(md, {
       comment: (c) =>
@@ -1900,7 +1949,7 @@ function renderTheory(l, graded = !!l) {
     return;
   }
   const html = guideHtml(l, graded);
-  pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
+  pane.innerHTML = `<div class="side-title">Teoría${READ_SIZE_HTML}</div>${html}`;
   $("guide-body").innerHTML = html;
   $("guide-body").scrollTop = 0;
   for (const box of [pane, $("guide-body")]) markGuideSnippets(box);
@@ -1913,7 +1962,10 @@ function showGuide() {
   const has = !!state.guide;
   const folded = storeGet(GUIDE_FOLD_KEY) === "1";
   $("guide-pane").hidden = !has || folded;
-  $("guide-open").hidden = !has || !folded;
+  $("prog-rail-left").hidden = !has;
+  $("guide-open").classList.toggle("active", has && !folded);
+  $("guide-open").setAttribute("aria-pressed", String(has && !folded));
+  window.dispatchEvent(new Event("resize"));
 }
 
 // Trozos de código C++ de la clase: se pueden pulsar. Un título que tiene
@@ -2077,8 +2129,9 @@ function wireGuide() {
     storeSet(GUIDE_FOLD_KEY, "1");
     showGuide();
   });
+  // Botón «Teoría» de la barra izquierda de Programa: abre y pliega la clase.
   $("guide-open").addEventListener("click", () => {
-    storeSet(GUIDE_FOLD_KEY, null);
+    storeSet(GUIDE_FOLD_KEY, $("guide-pane").hidden ? null : "1");
     showGuide();
   });
   const grip = $("guide-grip");
@@ -2110,6 +2163,131 @@ function wireGuide() {
   });
 }
 
+// ---- Tamaño de letra de la teoría y del reto (A− / A+), el mismo en los
+// dos paneles y en las dos pestañas; se recuerda.
+const READ_KEY = "jwsim.readZoom";
+const READ_DEF = 0.9;
+const READ_SIZE_HTML =
+  '<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>';
+function readZoom() {
+  const z = Number(storeGet(READ_KEY));
+  return z >= 0.7 && z <= 1.5 ? z : READ_DEF;
+}
+function setReadZoom(z) {
+  z = Math.round(Math.max(0.7, Math.min(1.5, z)) * 10) / 10;
+  storeSet(READ_KEY, z === READ_DEF ? null : String(z));
+  document.documentElement.style.setProperty("--read-zoom", String(z));
+  for (const b of document.querySelectorAll("[data-read-size]")) b.disabled = (b.dataset.readSize === "-1" && z <= 0.7) || (b.dataset.readSize === "1" && z >= 1.5);
+}
+function wireReadSize() {
+  setReadZoom(readZoom());
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-read-size]");
+    if (b) setReadZoom(readZoom() + 0.1 * Number(b.dataset.readSize));
+  });
+}
+
+// ---- Reto en Programa: el panel del esquema (ficha, objetivos, mandos) se
+// muda al lado de la placa mientras Programa está a la vista, para no tener
+// que ir y venir entre pestañas. Se abre y se pliega con su botón.
+const PROG_RETO_KEY = "jwsim.progReto";
+function placeReto() {
+  const body = $("reto-body");
+  const prog = mainTab() === "program";
+  const dest = prog ? $("prog-reto-slot") : document.querySelector(".reto-pane");
+  if (body.parentElement !== dest) dest.appendChild(body);
+  const has = !!state.exercise;
+  const open = has && storeGet(PROG_RETO_KEY) !== "0";
+  $("prog-rail-right").hidden = !has;
+  $("prog-side").hidden = !open;
+  const t = $("prog-tab-reto");
+  t.classList.toggle("active", open);
+  t.setAttribute("aria-pressed", String(open));
+}
+function setProgReto(open) {
+  storeSet(PROG_RETO_KEY, open ? null : "0");
+  placeReto();
+  window.dispatchEvent(new Event("resize"));
+}
+function wireProgReto() {
+  $("prog-tab-reto").addEventListener("click", () => setProgReto($("prog-side").hidden));
+  new MutationObserver(placeReto).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+  placeReto();
+  setInterval(refreshMandos, 250);
+}
+
+// Mandos del banco: los pulsadores, selectores y demás equipos accionables de
+// la escena, como botones (lo mismo que un clic en el esquema o en la planta).
+let mandosSig = "";
+function mandosDevices() {
+  const Sc = window.JwsimScene;
+  if (!Sc || !state.exercise) return [];
+  const out = [];
+  for (const d of Sc.specForView()?.devices ?? []) {
+    const acts = (Sc.actionsOf(d.id) ?? []).filter((a) => a.kind !== "value");
+    if (acts.length) out.push({ id: d.id, label: d.params?.label ?? "", name: Sc.deviceName(d.id), acts });
+  }
+  return out;
+}
+function buildMandos(devs) {
+  const box = $("ex-mandos");
+  box.hidden = !devs.length;
+  if (!devs.length) return (box.innerHTML = "");
+  const btn = (d, a) => {
+    const kind = a.kind === "momentary" ? "mantén apretado" : a.kind === "toggle" ? "clic: cambia" : "clic: siguiente posición";
+    const what = devs.filter((x) => x.id === d.id)[0].acts.length > 1 ? ` · ${esc(a.label ?? a.id)}` : "";
+    return `<button class="mando" data-dev="${esc(d.id)}" data-act="${esc(a.id)}" data-kind="${esc(a.kind ?? "")}" title="${esc(`${d.name}: ${a.label ?? a.id} (${kind})`)}"><b>${esc(d.id)}</b>${d.label ? ` ${esc(d.label)}` : ""}${what}<small></small></button>`;
+  };
+  box.innerHTML =
+    `<div class="mandos-head">Mandos del banco</div><p class="mandos-off muted">Pulsa <b>Ejecutar</b> para accionarlos.</p>` +
+    `<div class="mandos">${devs.flatMap((d) => d.acts.map((a) => btn(d, a))).join("")}</div>`;
+}
+function refreshMandos() {
+  const devs = mandosDevices();
+  const sig = JSON.stringify(devs.map((d) => [d.id, d.label, d.acts.map((a) => a.id)]));
+  if (sig !== mandosSig) {
+    mandosSig = sig;
+    buildMandos(devs);
+  }
+  const Sc = window.JwsimScene;
+  if (!devs.length || !Sc) return;
+  const run = !!Sc.running?.();
+  $("ex-mandos").classList.toggle("off", !run);
+  for (const b of $("ex-mandos").querySelectorAll(".mando")) {
+    b.disabled = !run;
+    const v = run ? Sc.actionState(b.dataset.dev, b.dataset.act) : undefined;
+    b.classList.toggle("on", v === true || (typeof v === "number" && v > 0));
+    b.querySelector("small").textContent = typeof v === "number" ? ` · ${v}` : "";
+  }
+}
+function wireMandos() {
+  const box = $("ex-mandos");
+  const act = (b, v) => window.JwsimScene?.act(b.dataset.dev, b.dataset.act, v);
+  box.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest(".mando");
+    if (!b || b.disabled || e.button !== 0) return;
+    const Sc = window.JwsimScene;
+    const kind = b.dataset.kind;
+    if (kind === "momentary") {
+      act(b, true);
+      b.setPointerCapture(e.pointerId);
+      const up = () => {
+        act(b, false);
+        b.removeEventListener("pointerup", up);
+        b.removeEventListener("pointercancel", up);
+      };
+      b.addEventListener("pointerup", up);
+      b.addEventListener("pointercancel", up);
+    } else if (kind === "toggle") act(b, !Sc.actionState(b.dataset.dev, b.dataset.act));
+    else {
+      const a = Sc.actionsOf(b.dataset.dev).find((x) => x.id === b.dataset.act);
+      const opts = (a?.options ?? []).map(Number);
+      if (opts.length) act(b, opts[(opts.indexOf(Number(Sc.actionState(b.dataset.dev, b.dataset.act) ?? opts[0])) + 1) % opts.length]);
+    }
+    refreshMandos();
+  });
+}
+
 // ---- Ficha del reto (exercise.brief) y paso al siguiente (centro de aprendizaje).
 function renderBrief(expanded) {
   const box = $("ex-brief");
@@ -2123,7 +2301,7 @@ function renderBrief(expanded) {
     ? `<div class="brief-sec"><div class="brief-k">El objetivo</div><p>${esc(b.goal ?? "")}</p></div>` +
       `<div class="brief-sec"><div class="brief-k">Pasos</div><ol>${list(b.steps)}</ol></div>` +
       `<div class="brief-sec"><div class="brief-k">Con qué trabaja</div><ul class="brief-uses">${list(b.uses)}</ul></div>` +
-      `<div class="brief-nav"><button class="primary" data-brief="start">Empezar</button><span class="muted">Programe, pulse ▶ Ejecutar y opere la escena: los objetivos se marcan en vivo.</span></div>`
+      `<div class="brief-nav"><button class="primary" data-brief="start">Empezar</button><span class="muted">Programe y pulse ▶ Ejecutar; los pulsadores del banco están en Mandos. Los objetivos se marcan en vivo.</span></div>`
     : `<button class="link" data-brief="show">Ver ficha del reto</button><span class="muted"> · ${esc(b.goal ?? "")}</span>`;
 }
 
@@ -2537,9 +2715,12 @@ function wireSceneSide() {
     window.JwsimStateDiag?.resize?.();
   });
   // Ir al reto: la vista del esquema con su pestaña abierta.
+  // Ir al reto: en Programa, su panel al lado de la placa; en el esquema, su
+  // pestaña del panel derecho; desde la planta o la placa, se va a Programa.
   window.JwsimShowReto = () => {
-    window.JwsimScene?.setView("scene");
     setScenePane("reto", false);
+    if (!["program", "schematic"].includes(mainTab())) window.JwsimTabs?.select("program");
+    setProgReto(true);
   };
   for (const t of document.querySelectorAll(".side-tab"))
     t.addEventListener("click", () => setScenePane(document.querySelector(".scene-main").dataset.pane === t.dataset.pane ? null : t.dataset.pane));
@@ -2657,6 +2838,9 @@ function wireUi() {
   wireGuide();
   wireDock();
   wireSceneSide();
+  wireReadSize();
+  wireProgReto();
+  wireMandos();
   $("btn-save").addEventListener("click", saveSketch);
   $("btn-grade").addEventListener("click", gradeExercise);
   $("btn-run").addEventListener("click", buildAndRun);

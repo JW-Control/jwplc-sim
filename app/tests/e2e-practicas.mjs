@@ -17,6 +17,13 @@
 //                   siguiente; abrirla sin cumplir no la marca
 //   LESSON_PLAIN    una lección sin práctica también trae su guía, con
 //                   «Para practicar», y un sketch cualquiera la quita
+//   LESSON_PROGRAM  la lección se abre en Programa: botón Teoría a la
+//                   izquierda y panel Reto (objetivos) a la derecha de la placa
+//   LESSON_SIM      la clase está adaptada al simulador: sin «Lo que
+//                   necesitas» ni «Súbelo y pruébalo», con «Pruébalo aquí»
+//   LESSON_SIZE     A+ / A− cambian el tamaño de letra de la clase
+//   LESSON_MANDOS   en la lección 08, los mandos del reto accionan el banco
+//                   (S1 Marcha cierra Q0.0) sin salir de Programa
 // Informe en build/gates/JWSIM_PRACTICAS_E2E.json.
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -63,6 +70,18 @@ try {
   const cardGone = await t(() => !document.getElementById("lesson-card"));
   criteria.LESSON_CARD = { ok: card?.title === "Hola, JWPLC" && card.secs.includes("Qué vas a aprender") && card.secs.includes("La práctica") && cardGone, card, cardGone };
   log(`LESSON_CARD ${JSON.stringify(criteria.LESSON_CARD)}`);
+  const prog = await until(() =>
+    t(() => {
+      const side = document.getElementById("prog-side");
+      const r = side.getBoundingClientRect();
+      return document.body.dataset.tab === "program" && !side.hidden && r.width > 200 && !!side.querySelector("#ex-goals .goal") && !document.getElementById("prog-rail-left").hidden
+        ? { tab: document.body.dataset.tab, w: Math.round(r.width), teoria: document.getElementById("guide-open").getAttribute("aria-pressed") }
+        : null;
+    }),
+  );
+  await win.screenshot({ path: join(OUT, "0-programa-reto.png") });
+  criteria.LESSON_PROGRAM = { ok: !!prog && prog.teoria === "true", prog };
+  log(`LESSON_PROGRAM ${JSON.stringify(criteria.LESSON_PROGRAM)}`);
   await t(() => window.JwsimScene?.setView("scene"));
   const ids = await win.$$eval("#ex-goals .goal", (l) => l.map((x) => x.dataset.goal));
   const theory = await win.$eval("#theory-pane", (e) => ({ hidden: e.hidden, title: e.querySelector("h3")?.textContent ?? "" }));
@@ -77,7 +96,8 @@ try {
       visible: !e.hidden && e.getBoundingClientRect().width > 100,
       title: e.querySelector("h3")?.textContent ?? "",
       heads: [...e.querySelectorAll("h4")].map((h) => h.textContent),
-      open: !document.getElementById("guide-open").hidden,
+      open: document.getElementById("guide-open").getAttribute("aria-pressed") === "true",
+      zoom: Number(getComputedStyle(e.querySelector(".th-body") ?? e).zoom),
     }));
   const guide = await guideOf();
   const firstLine = await t(() => window.jwsimTest.getSource().split("\n")[0]);
@@ -89,13 +109,26 @@ try {
   criteria.LESSON_GUIDE = {
     ok:
       guide.visible && guide.title === "Hola, JWPLC" && guide.heads.includes("Cómo funciona el programa") && !guide.heads.includes("Para practicar") &&
-      !folded.visible && folded.open && unfolded.visible && !unfolded.open && /^\/\/ Curso JWPLC Basic · Lección 01/.test(firstLine),
+      guide.open && !folded.visible && !folded.open && unfolded.visible && unfolded.open && /^\/\/ Curso JWPLC Basic · Lección 01/.test(firstLine),
     guide,
     folded,
     unfolded,
     firstLine,
   };
   log(`LESSON_GUIDE ${JSON.stringify(criteria.LESSON_GUIDE)}`);
+  criteria.LESSON_SIM = {
+    ok: guide.heads.includes("Pruébalo aquí") && !guide.heads.includes("Súbelo y pruébalo") && !guide.heads.includes("Lo que necesitas") && !guide.heads.includes("Si algo no funciona"),
+    heads: guide.heads,
+  };
+  log(`LESSON_SIM ${JSON.stringify(criteria.LESSON_SIM)}`);
+  await win.click('#guide-pane [data-read-size="1"]');
+  const bigger = await guideOf();
+  await win.click('#guide-pane [data-read-size="-1"]');
+  await win.click('#guide-pane [data-read-size="-1"]');
+  const smaller = await guideOf();
+  await win.click('#guide-pane [data-read-size="1"]');
+  criteria.LESSON_SIZE = { ok: bigger.zoom > guide.zoom && smaller.zoom < guide.zoom, before: guide.zoom, bigger: bigger.zoom, smaller: smaller.zoom };
+  log(`LESSON_SIZE ${JSON.stringify(criteria.LESSON_SIZE)}`);
 
   // Clase interactiva: el trozo «uint32_t segundos = 0;» y la parte «Preparar todo, una sola vez».
   const src = (await t(() => window.jwsimTest.getSource())).split("\n");
@@ -156,13 +189,49 @@ try {
   const cleared = await guideOf();
   criteria.LESSON_PLAIN = { ok: plain.visible && plain.title === l06.title && plain.heads.includes("Para practicar") && !cleared.visible && !cleared.open, plain, cleared };
   log(`LESSON_PLAIN ${JSON.stringify(criteria.LESSON_PLAIN)}`);
+
+  // Lección 08: el reto en Programa, con los mandos del banco.
+  await t(() => window.openLessonById("curso-08"));
+  await until(() => t(() => !!document.getElementById("lesson-card")), 5000);
+  await t(() => window.jwsimLessonCard.close());
+  const sol08 = readFileSync(join(ROOT, "JWPLC_Aprende", "extras", "practicas", "curso-08", "solucion", "Marcha_y_parada", "Marcha_y_parada.ino"), "utf8");
+  await t((x) => window.jwsimTest.setSource(x), sol08);
+  const mandos = await until(() => win.$$eval("#prog-side #ex-mandos .mando", (l) => l.map((b) => b.dataset.dev)), 5000);
+  await win.click("#btn-run");
+  await until(() => t(() => window.jwsimTest.status() === "running"), 240000);
+  await until(() => t(() => !document.querySelector('#ex-mandos .mando[data-dev="S1"]').disabled), 10000);
+  // La parada y el térmico (NC) ya llegan a la placa: el banco está en reposo.
+  await until(() => t(() => document.querySelector('.io[data-signal="I0_1"]').classList.contains("on") && document.querySelector('.io[data-signal="I0_2"]').classList.contains("on")), 10000);
+  await win.waitForTimeout(500);
+  const q0 = () => t(() => document.querySelector('#outputs .io[data-signal="Q0_0"]').classList.contains("on"));
+  const s1 = await win.$('#ex-mandos .mando[data-dev="S1"]');
+  await s1.scrollIntoViewIfNeeded();
+  const box = await s1.boundingBox();
+  await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await win.mouse.down();
+  await win.waitForTimeout(400);
+  await win.mouse.up();
+  const marcha = await until(q0, 5000);
+  await win.screenshot({ path: join(OUT, "5-leccion-08-mandos.png") });
+  const s2 = await win.$('#ex-mandos .mando[data-dev="S2"]');
+  await s2.scrollIntoViewIfNeeded();
+  const b2 = await s2.boundingBox();
+  await win.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+  await win.mouse.down();
+  await win.waitForTimeout(400);
+  await win.mouse.up();
+  const parada = await until(async () => !(await q0()), 5000);
+  await win.click("#btn-stop").catch(() => {});
+  const tab = await t(() => document.body.dataset.tab);
+  criteria.LESSON_MANDOS = { ok: !!mandos && ["S1", "S2", "F1"].every((x) => mandos.includes(x)) && !!marcha && !!parada && tab === "program", mandos, marcha, parada, tab };
+  log(`LESSON_MANDOS ${JSON.stringify(criteria.LESSON_MANDOS)}`);
 } catch (err) {
   criteria.ERROR = { ok: false, error: String(err?.stack ?? err) };
   log(String(err?.stack ?? err));
 } finally {
   await app.close().catch(() => {});
 }
-const ok = Object.values(criteria).length >= 8 && Object.values(criteria).every((c) => c.ok);
+const ok = Object.values(criteria).length >= 12 && Object.values(criteria).every((c) => c.ok);
 writeFileSync(join(ROOT, "build", "gates", "JWSIM_PRACTICAS_E2E.json"), JSON.stringify({ ok, criteria }, null, 2) + "\n");
 console.log(`JWSIM_PRACTICAS_E2E ${ok ? "PASS" : "FAIL"}`);
 process.exit(ok ? 0 : 1);

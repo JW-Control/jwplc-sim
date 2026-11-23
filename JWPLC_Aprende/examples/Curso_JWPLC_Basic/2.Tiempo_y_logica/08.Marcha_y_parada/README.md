@@ -46,3 +46,20 @@ se suelte el pulsador de marcha.
 - Agrega una lámpara de marcha en Q0.2.
 - Haz que con el térmico disparado no se pueda arrancar hasta que se
   apriete PARADA (un "reconocimiento" de la falla).
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar** y mira la pestaña **Serie**. En el banco, la parada **S2** y el térmico **F1** son NC: en reposo `I0.1` e `I0.2` ya están activas.
+2. En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: `Q0.0` cierra el contactor **KM1** y se queda cerrado al soltar.
+3. Un toque a **S2 Parada**: `Q0.0` se abre.
+4. Arranca otra vez y aprieta **F1 Térmico**: `Q0.0` se abre y `Q0.1` enciende la lámpara de falla.
+
+```text
+Lección 08: marcha I0.0, parada NC I0.1, térmico NC I0.2
+Motor en marcha
+Motor detenido
+```
+
+5. Para ver un cable cortado de verdad, en **Esquema eléctrico** selecciona el cable de la parada y usa sus fallas: el motor no debe arrancar.

@@ -41,6 +41,11 @@ JWPLC_Aprende/
   wiki y se trae con `node scripts/importar-wiki-curso.mjs <carpeta de
   JW-Page>`. El Sim la muestra a la izquierda del código y cada trozo de
   código de la clase resalta sus líneas en el editor.
+- **La clase dentro del Sim:** la wiki está escrita para el equipo físico.
+  El Sim quita «Lo que necesitas» y los consejos de cable y puerto de «Si
+  algo no funciona», y cambia «Súbelo y pruébalo» por la sección
+  `## En JWPLC Sim` del README.md de la lección (Ejecutar, pestaña Serie,
+  Mandos del panel Reto). Toda lección nueva trae esa sección.
 - **Reto:** su carpeta en `extras/retos`. El nivel y la ficha van en
   `exercise` del `.jwsim`; los objetivos, en `rubrica.json`.
 - **Arquitectura:** su carpeta en `extras/arquitecturas`; la primera línea de
