@@ -8,7 +8,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const S = { colors: "iec", shown: false, model: null, key: "", sheet: 0, snap: null, vb: null, drag: null, loading: null, flash: null };
+  const S = { colors: "iec", shown: false, model: null, key: "", sheet: 0, snap: null, vb: null, drag: null, loading: null, flash: null, forceDev: new Map(), press: null, force: null };
   const SYM = 18;
 
   const spec = () => window.JwsimScene?.specForSave?.() ?? { devices: [], wiring: [] };
@@ -148,7 +148,8 @@
   const wrapEl = (sh, e, inner) => {
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
     const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
-    return `<g class="iec-el${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hitOf(e)}${inner}</g>`;
+    const fz = forcedOf(sh, e);
+    return `<g class="iec-el${flash}${sel}${fz ? " iec-forced" : ""}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hitOf(e)}${inner}${forceTag(e, fz)}</g>`;
   };
 
   // Entrada del PLC en su circuito: el cable termina en una flecha hacia el
@@ -194,7 +195,8 @@
     const flash = S.flash && S.flash.dev === e.dev ? " flash" : "";
     const sel = S.edit?.key === e.key && S.edit?.sheet === sh.n ? " sel" : "";
     const hit = `<rect class="iec-hitbox" x="${e.x - 26}" y="${e.y - SYM - 4}" width="52" height="${2 * SYM + 8}"/>`;
-    return `<g class="iec-el ${cls}${flash}${sel}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hit}${s}${lab}${plcBox || e.act === "plc" ? "" : tt}</g>`;
+    const fz = forcedOf(sh, e);
+    return `<g class="iec-el ${cls}${flash}${sel}${fz ? " iec-forced" : ""}" data-dev="${esc(e.dev)}" data-cid="${esc(e.cid)}" data-key="${esc(e.key)}">${hit}${s}${lab}${plcBox || e.act === "plc" ? "" : tt}${forceTag(e, fz)}</g>`;
   }
 
   // Tabla de referencias bajo la bobina: dónde están sus contactos.
@@ -437,8 +439,82 @@
     return s;
   }
 
+  // ---- En marcha: accionar los mandos y forzar entradas desde el plano.
+  // Pulsadores, selectores y demás equipos con acción se accionan con un
+  // clic (el pulsador, mientras se mantiene apretado). Clic derecho: forzar
+  // como en OpenPLC (Force True / Force False / Release). Un pulsador
+  // forzado queda apretado o suelto; un sensor no se puede accionar desde
+  // el plano, así que se fuerza la entrada del PLC que alimenta.
+  const running = () => !!window.JwsimScene?.isRunning?.();
+  // Solo los equipos de campo: el PLC (sus entradas ▽, sus salidas) no se acciona desde aquí.
+  const actionOf = (dev) => (dev === plcId() ? null : (window.JwsimScene?.actionsOf?.(dev) ?? []).find((a) => a.kind !== "value"));
+  const plcId = () => (window.JwsimScene?.specForView?.()?.devices ?? []).find((d) => d.type === "jwsim/jwplc-basic")?.id;
+  /** Entrada del PLC que alimenta el elemento (o la suya, si es la entrada). */
+  function ioOf(sh, e) {
+    const norm = (x) => String(x.io ?? x.cid ?? "").replace(".", "_");
+    if (e.kind === "plcin") return norm(e);
+    if (e.kind !== "contact" || e.act === "plc") return null;
+    const f = sh.elems.filter((x) => x.kind === "plcin" && x.col === e.col && x.y > e.y).sort((a, b) => a.y - b.y)[0];
+    return f ? norm(f) : null;
+  }
+  /** Forzado que se ve en el elemento: del equipo (pulsador) o de su entrada. */
+  function forcedOf(sh, e) {
+    if (S.forceDev.has(e.dev)) return S.forceDev.get(e.dev) ? "ON" : "OFF";
+    const io = ioOf(sh, e);
+    const v = io ? window.JwsimForce?.get(io) : undefined;
+    return v === undefined ? "" : v ? "ON" : "OFF";
+  }
+  const forceTag = (e, fz) => (fz ? T(e.x + 14, e.y - SYM - 4, `F:${fz}`, `iec-forcetag ${fz === "ON" ? "on" : "off"}`, "start") : "");
+  function actDev(dev, a, v) {
+    window.JwsimScene?.act(dev, a.id, v);
+  }
+  function openForce(key, ev) {
+    const sh = S.model.sheets[S.sheet];
+    const e = sh.elems.find((x) => x.key === key);
+    if (!e) return;
+    const a = actionOf(e.dev);
+    const io = ioOf(sh, e);
+    if (!(a && (a.kind === "momentary" || a.kind === "toggle")) && !io) return;
+    S.force = { dev: e.dev, a, io: a && (a.kind === "momentary" || a.kind === "toggle") ? null : io };
+    const name = S.force.io ? `Entrada ${S.force.io.replace("_", ".")}` : `${e.label}`;
+    const now = S.force.io ? window.JwsimForce?.get(S.force.io) : S.forceDev.get(e.dev);
+    const st = now === undefined ? "libre" : now ? "forzada a 1" : "forzada a 0";
+    const box = $("iec-edit");
+    box.innerHTML =
+      `<div class="iec-edit-h">Forzar ${esc(name)} <span class="muted">(${st})</span></div>` +
+      `<button data-act="force-1">Force True${S.force.io ? "" : " (apretado)"}</button>` +
+      `<button data-act="force-0">Force False${S.force.io ? "" : " (suelto)"}</button>` +
+      `<button data-act="force-x"${now === undefined ? " disabled" : ""}>Release (liberar)</button>` +
+      `<div class="iec-edit-foot">${S.force.io ? "Fuerza la entrada del PLC, como en OpenPLC" : "Queda así hasta liberarlo"}</div>`;
+    box.hidden = false;
+    placeMenu(box, ev);
+  }
+  function doForce(v) {
+    const f = S.force;
+    if (!f) return;
+    if (f.io) window.JwsimForce?.set(f.io, v === null ? null : v);
+    else if (v === null) {
+      S.forceDev.delete(f.dev);
+      actDev(f.dev, f.a, false);
+    } else {
+      S.forceDev.set(f.dev, !!v);
+      actDev(f.dev, f.a, !!v);
+    }
+    S.force = null;
+    $("iec-edit").hidden = true;
+    draw();
+  }
+  function placeMenu(box, ev) {
+    const view = $("iec-view").getBoundingClientRect();
+    const x = Math.min(ev.clientX - view.left + 12, view.width - 250);
+    const y = Math.min(ev.clientY - view.top + 12, view.height - box.offsetHeight - 10);
+    box.style.left = `${Math.max(8, x)}px`;
+    box.style.top = `${Math.max(48, y)}px`;
+  }
+
   function draw() {
     if (!S.shown) return;
+    if (!running() && S.forceDev.size) S.forceDev.clear();
     const svg = $("iec-svg");
     const tabs = $("iec-sheets");
     const m = S.model;
@@ -727,12 +803,47 @@
     svg.addEventListener("pointerdown", (e) => {
       const g = e.target.closest?.("[data-goto]");
       if (g) return goto(g.dataset.goto, g.dataset.pt);
-      if (!S.vb) return;
+      const el = e.button === 0 && running() ? e.target.closest?.(".iec-el[data-dev]") : null;
+      const a = el && !S.forceDev.has(el.dataset.dev) ? actionOf(el.dataset.dev) : null;
+      if (a) {
+        e.stopPropagation();
+        const dev = el.dataset.dev;
+        const Sc = window.JwsimScene;
+        if (a.kind === "momentary") {
+          actDev(dev, a, true);
+          S.press = { dev, a };
+          svg.setPointerCapture(e.pointerId);
+        } else if (a.kind === "toggle") actDev(dev, a, !Sc.actionState(dev, a.id));
+        else if (a.options?.length) {
+          const opts = a.options.map(Number);
+          actDev(dev, a, opts[(opts.indexOf(Number(Sc.actionState(dev, a.id) ?? opts[0])) + 1) % opts.length]);
+        }
+        return;
+      }
+      // Solo el botón izquierdo arrastra: con el derecho, la captura del
+      // puntero se llevaría el clic del menú de forzar.
+      if (!S.vb || e.button !== 0) return;
       S.drag = { x: e.clientX, y: e.clientY, box: [...S.vb.box], target: e.target, moved: false };
       svg.setPointerCapture(e.pointerId);
     });
     // Clic sin arrastrar: sobre un elemento o sobre el riel +, el menú de edición.
+    const release = () => {
+      if (!S.press) return;
+      actDev(S.press.dev, S.press.a, false);
+      S.press = null;
+    };
+    svg.addEventListener("pointercancel", release);
+    svg.addEventListener("contextmenu", (e) => {
+      if (!running()) return;
+      const el = e.target.closest?.(".iec-el[data-key]");
+      if (!el) return;
+      e.preventDefault();
+      openForce(el.dataset.key, e);
+    });
     svg.addEventListener("pointerup", (e) => {
+      if (S.press) return release();
+      // El botón derecho es del menú de forzar (contextmenu), no del de edición.
+      if (e.button !== 0) return;
       const d = S.drag;
       if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
       const pr = d.target.closest?.("[data-probe]");
@@ -779,6 +890,7 @@
     $("iec-edit")?.addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) return;
+      if (b.dataset.act.startsWith("force-")) return doForce(b.dataset.act === "force-x" ? null : Number(b.dataset.act.slice(6)));
       if (b.dataset.act === "borne-ok") return saveBorne($("iec-borne-in")?.value);
       if (b.dataset.act === "borne-auto") return saveBorne("");
       doEdit(b.dataset.act, Number(b.dataset.i ?? 0));

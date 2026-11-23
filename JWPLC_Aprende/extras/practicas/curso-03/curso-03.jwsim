@@ -44,13 +44,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "S1",
@@ -58,8 +58,8 @@
         "params": {
           "color": "verde"
         },
-        "x": 0,
-        "y": 600
+        "x": 380,
+        "y": 0
       },
       {
         "id": "S2",
@@ -67,8 +67,8 @@
         "params": {
           "color": "verde"
         },
-        "x": 220,
-        "y": 600
+        "x": 580,
+        "y": 0
       },
       {
         "id": "H1",
@@ -77,8 +77,8 @@
           "color": "verde",
           "label": "Q0.0"
         },
-        "x": 440,
-        "y": 600
+        "x": 280,
+        "y": 1060
       },
       {
         "id": "H2",
@@ -87,8 +87,8 @@
           "color": "amarillo",
           "label": "Q0.1"
         },
-        "x": 0,
-        "y": 900
+        "x": 480,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -110,7 +110,8 @@
       {
         "from": "PS1.+V1",
         "to": "S1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S1.14",
@@ -120,7 +121,8 @@
       {
         "from": "PS1.+V1",
         "to": "S2.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S2.14",
@@ -140,7 +142,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -155,7 +158,8 @@
       {
         "from": "H2.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }

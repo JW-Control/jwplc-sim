@@ -45,6 +45,8 @@
           title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
           <span class="com-dot" aria-hidden="true"></span><span id="com-label">Sin COM</span>
         </button>
+        <span class="read-size tb-read-size" role="group" aria-label="Tamaño de letra de la clase, el reto y el código"
+          title="Tamaño de letra de la clase, el reto y el código"><button class="icon" data-read-size="-1" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" aria-label="Letra más grande">A+</button></span>
         <button id="btn-theme" class="theme-btn" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar tema"></button>
       </div>
     </header>
@@ -84,7 +86,7 @@
         <aside class="guide-pane" id="guide-pane" hidden aria-label="Guía de la lección">
           <div class="guide-head">
             <span class="guide-title">Teoría</span>
-            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+            
             <button class="link small" id="guide-card" title="Volver a ver la ficha de la lección">Ficha</button>
             <button class="icon" id="guide-fold" title="Plegar la guía" aria-label="Plegar la guía">‹</button>
           </div>
@@ -291,7 +293,7 @@
                 </section>
                 <!-- Reto del ejercicio abierto: ficha y objetivos en vivo, junto a la simulación. -->
                 <section class="side-pane reto-pane" data-pane="reto" hidden>
-                  <div class="side-title">Reto<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span></div>
+                  <div class="side-title">Reto</div>
                   <!-- Se muda a Programa (#prog-reto-slot) mientras esa pestaña está a la vista. -->
                   <div class="reto-body" id="reto-body">
                     <section id="ex-brief" class="ex-brief" hidden></section>
@@ -332,7 +334,7 @@
         <!-- Reto en Programa: el mismo panel del esquema (ficha, objetivos y mandos), al lado de la placa. -->
         <aside class="prog-side" id="prog-side" hidden aria-label="Reto">
           <div class="prog-side-head"><span class="guide-title">Reto</span>
-            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+            
           </div>
           <div class="prog-side-body" id="prog-reto-slot"></div>
         </aside>

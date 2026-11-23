@@ -6561,6 +6561,9 @@ body:not([data-tab="program"]) .prog-rail-right { display: none; }
 .side-title .read-size { float: right; margin-top: -2px; text-transform: none; }
 .read-size .icon { min-width: 26px; height: 22px; padding: 0 4px; font-size: 11.5px; font-weight: 700; }
 .read-size .icon:disabled { opacity: 0.4; }
+/* Un solo A−/A+ en la barra de arriba: vale para la clase, el reto y el código. */
+.tb-read-size { margin-left: 0; }
+.tb-read-size .icon { height: 28px; min-width: 30px; font-size: 13px; }
 .guide-head .guide-title, .prog-side-head .guide-title { flex: 0 1 auto; margin-right: auto; }
 .guide-head .read-size { margin-left: 0; }
 /* Tablas de la clase: el código no se corta (setup() entero); si no cabe,
@@ -6583,3 +6586,10 @@ body:not([data-tab="program"]) .prog-rail-right { display: none; }
 .theory-body .th-figure { margin: 8px 0; }
 .theory-body .th-figure svg { display: block; width: 100%; height: auto; color: var(--text); }
 .theory-body .th-figure figcaption { font-size: 0.92em; color: var(--muted); margin-top: 4px; }
+
+/* Plano IEC en marcha: los mandos se accionan con clic y se fuerzan con
+   clic derecho; lo forzado lleva su marca F:ON / F:OFF (como en OpenPLC). */
+.iec-t.iec-forcetag { font-size: 8px; font-weight: 700; fill: #b45309; }
+.iec-t.iec-forcetag.on { fill: #15803d; }
+.iec-el.iec-forced .iec-hitbox { fill: rgba(245, 158, 11, 0.12); stroke: #f59e0b; stroke-dasharray: 3 2; }
+.iec-edit button:disabled { opacity: 0.45; }

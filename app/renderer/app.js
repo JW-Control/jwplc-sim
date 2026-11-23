@@ -1254,6 +1254,9 @@ function setForce(signal, value) {
   updateWatchSignal(signal);
 }
 
+// Forzado de E/S para el plano IEC (clic derecho: Force True/False/Release).
+window.JwsimForce = { set: (signal, value) => setForce(signal, value), get: (signal) => state.forced.get(signal) };
+
 function setWatchValues(values) {
   if (!values) return;
   for (const [expr, v] of Object.entries(values)) {
@@ -1805,8 +1808,10 @@ function renderGoals() {
   box.querySelector(".goals-count").textContent = `${done}/${required.length}`;
   box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Pulse Ejecutar para empezar";
   box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
-  box.querySelector(".goals-done").hidden = !p?.complete;
-  if (p?.complete && !goalUi.reported && state.exercise?.id) {
+  // Lograda solo si están cumplidos los objetivos de ESTE ejercicio.
+  const complete = !!p && required.length > 0 && done === required.length;
+  box.querySelector(".goals-done").hidden = !complete;
+  if (complete && !goalUi.reported && state.exercise?.id) {
     goalUi.reported = true;
     reportDone("goals").then((r) => fillAfter(box.querySelector(".learn-after"), r));
   }
@@ -1860,6 +1865,17 @@ window.JwsimGoalMatch = (got, want) => {
 };
 
 api.onGoalsProgress((p) => {
+  // Un avance de otros objetivos (los del ejercicio anterior, que seguían
+  // en el proceso principal) no cuenta: se descarta y se vuelven a mandar
+  // los de este ejercicio.
+  const mine = new Set(goalUi.goals.map((g) => g.id));
+  if (!p?.goals?.length || p.goals.some((g) => !mine.has(g.id))) {
+    if (goalUi.goals.length && !goalUi.resent) {
+      goalUi.resent = true;
+      api.setGoals(goalUi.goals);
+    }
+    return;
+  }
   // Al empezar a correr, la ficha se pliega para que se vean los objetivos.
   if (!goalUi.progress && !$("ex-brief").classList.contains("collapsed")) renderBrief(false);
   goalUi.progress = p;
@@ -1871,6 +1887,7 @@ async function showExercise(file) {
   goalUi.goals = info?.goals ?? [];
   goalUi.error = info?.goalsError ?? null;
   goalUi.progress = null;
+  goalUi.resent = false;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
   state.exercise = info ? { file, id: info.id, brief: info.brief, lesson: !!info.lesson } : null;
@@ -1970,7 +1987,7 @@ function renderTheory(l, graded = !!l) {
   }
   $("guide-card").hidden = l.card === false;
   const html = guideHtml(l, graded);
-  pane.innerHTML = `<div class="side-title">Teoría${READ_SIZE_HTML}</div>${html}`;
+  pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
   $("guide-body").innerHTML = html;
   $("guide-body").scrollTop = 0;
   for (const box of [pane, $("guide-body")]) markGuideSnippets(box);
@@ -2189,8 +2206,6 @@ function wireGuide() {
 // En el tamaño por defecto el código va a 13 px.
 const READ_KEY = "jwsim.readZoom";
 const READ_DEF = 0.9;
-const READ_SIZE_HTML =
-  '<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>';
 function readZoom() {
   const z = Number(storeGet(READ_KEY));
   return z >= 0.7 && z <= 1.5 ? z : READ_DEF;
@@ -2239,7 +2254,7 @@ function wireProgReto() {
   $("prog-tab-reto").addEventListener("click", () => setProgReto($("prog-side").hidden));
   new MutationObserver(placeReto).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
   placeReto();
-  setInterval(refreshMandos, 250);
+  setInterval(refreshMandos, 100);
 }
 
 // Mandos del banco: los pulsadores, selectores y demás equipos accionables de
@@ -2282,6 +2297,13 @@ function refreshMandos() {
   for (const b of $("ex-mandos").querySelectorAll(".mando")) {
     b.disabled = !run;
     const v = run ? Sc.actionState(b.dataset.dev, b.dataset.act) : undefined;
+    // Mientras se mantiene apretado, o hasta que la simulación confirme el
+    // cambio de un interruptor, manda lo que hizo el alumno.
+    if (b.classList.contains("held")) continue;
+    if (b.dataset.pending !== undefined) {
+      if (String(!!v) !== b.dataset.pending && run) continue;
+      delete b.dataset.pending;
+    }
     b.classList.toggle("on", v === true || (typeof v === "number" && v > 0));
     b.querySelector("small").textContent = typeof v === "number" ? ` · ${v}` : "";
   }
@@ -2295,22 +2317,29 @@ function wireMandos() {
     const Sc = window.JwsimScene;
     const kind = b.dataset.kind;
     if (kind === "momentary") {
+      // Se ve apretado al instante; la lectura real llega con la simulación.
+      b.classList.add("on", "held");
       act(b, true);
       b.setPointerCapture(e.pointerId);
       const up = () => {
+        b.classList.remove("on", "held");
         act(b, false);
         b.removeEventListener("pointerup", up);
         b.removeEventListener("pointercancel", up);
       };
       b.addEventListener("pointerup", up);
       b.addEventListener("pointercancel", up);
-    } else if (kind === "toggle") act(b, !Sc.actionState(b.dataset.dev, b.dataset.act));
+    } else if (kind === "toggle") {
+      const v = !Sc.actionState(b.dataset.dev, b.dataset.act);
+      b.classList.toggle("on", v);
+      b.dataset.pending = String(v);
+      act(b, v);
+    }
     else {
       const a = Sc.actionsOf(b.dataset.dev).find((x) => x.id === b.dataset.act);
       const opts = (a?.options ?? []).map(Number);
       if (opts.length) act(b, opts[(opts.indexOf(Number(Sc.actionState(b.dataset.dev, b.dataset.act) ?? opts[0])) + 1) % opts.length]);
     }
-    refreshMandos();
   });
 }
 

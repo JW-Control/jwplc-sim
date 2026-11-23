@@ -44,13 +44,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "B1",
@@ -59,8 +59,8 @@
           "color": "negro",
           "label": "Pieza"
         },
-        "x": 0,
-        "y": 600
+        "x": 380,
+        "y": 0
       },
       {
         "id": "S1",
@@ -69,14 +69,14 @@
           "color": "azul",
           "label": "Reset"
         },
-        "x": 220,
-        "y": 600
+        "x": 580,
+        "y": 0
       },
       {
         "id": "KM1",
         "type": "jwsim/contactor",
-        "x": 760,
-        "y": 0
+        "x": 280,
+        "y": 1060
       },
       {
         "id": "H1",
@@ -85,8 +85,8 @@
           "color": "amarillo",
           "label": "Caja llena"
         },
-        "x": 440,
-        "y": 600
+        "x": 560,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -108,7 +108,8 @@
       {
         "from": "PS1.+V1",
         "to": "B1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "B1.14",
@@ -118,7 +119,8 @@
       {
         "from": "PS1.+V1",
         "to": "S1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "S1.14",
@@ -138,7 +140,8 @@
       {
         "from": "KM1.A2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -153,7 +156,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }
