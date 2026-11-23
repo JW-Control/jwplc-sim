@@ -454,5 +454,71 @@
         "to": "M1.W1"
       }
     ]
+  },
+  "diagnostico": {
+    "ordenes": [
+      {
+        "id": "sq1-cable",
+        "titulo": "La cabina no para en el piso 1",
+        "sintoma": "Llamo la cabina al piso 1 y se pasa de largo.",
+        "falla": {
+          "kind": "open",
+          "wire": "SQ1.14 plc.I0_1"
+        },
+        "causa": "Cable cortado entre SQ1.14 y la entrada I0.1 del PLC: el final del piso 1 cierra, pero la señal no llega."
+      },
+      {
+        "id": "sb2-pulsador",
+        "titulo": "No se puede llamar desde el piso 2",
+        "sintoma": "En el piso 2 aprieto el botón de llamada y no pasa nada; desde los otros pisos sí funciona.",
+        "falla": {
+          "kind": "stuck",
+          "device": "SB2",
+          "value": false
+        },
+        "causa": "Pulsador SB2 dañado: su contacto NA no cierra al pulsarlo."
+      },
+      {
+        "id": "sp1-sensor",
+        "titulo": "El montacargas no arranca",
+        "sintoma": "Todas las puertas están cerradas, pero el montacargas no se mueve cuando lo llamo.",
+        "falla": {
+          "kind": "stuck",
+          "device": "SP1",
+          "value": false
+        },
+        "causa": "Final de puerta SP1 dañado: no detecta la puerta del piso 1 cerrada y abre la cadena de seguridad de puertas (I0.6)."
+      },
+      {
+        "id": "km1-bobina",
+        "titulo": "La cabina no sube",
+        "sintoma": "La cabina baja bien, pero cuando la llamo a un piso de arriba no se mueve.",
+        "falla": {
+          "kind": "burnt",
+          "device": "KM1"
+        },
+        "causa": "Bobina de KM1 (subir) quemada: le llegan los 24 V pero no atrae."
+      },
+      {
+        "id": "km2-soldado",
+        "titulo": "La cabina no se detiene al bajar",
+        "sintoma": "Al bajar, la cabina no para en el piso y sigue bajando aunque nadie la llame.",
+        "falla": {
+          "kind": "welded",
+          "device": "KM2"
+        },
+        "causa": "Contactos de KM2 (bajar) soldados: el motor sigue alimentado aunque la bobina ya no tenga tensión."
+      },
+      {
+        "id": "h1-cable",
+        "titulo": "La baliza amarilla no prende",
+        "sintoma": "La cabina se mueve bien, pero la baliza amarilla de movimiento no se enciende.",
+        "falla": {
+          "kind": "open",
+          "wire": "plc.Q0_2.2 H1.X1"
+        },
+        "causa": "Cable cortado entre la salida Q0.2 y la baliza H1."
+      }
+    ]
   }
 }

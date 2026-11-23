@@ -1131,6 +1131,19 @@ const watchCells = new Map(); // señal o expresión -> celda de valor
 // Pestaña «E/S y variables»: entradas y salidas en tablas al estilo de la
 // tabla de forzado de un PLC (valor, estado y Forzar 0/1 · Liberar) y, al
 // lado, las variables del sketch que se observan.
+/** Descripción de cada E/S según la escena (SQ1 · Final de carrera, KM1 · Contactor…). */
+window.updateIoDescriptions = () => {
+  const map = window.JwsimScene?.ioMap?.() ?? {};
+  for (const td of document.querySelectorAll(".io-table td.io-desc")) {
+    const sig = td.parentElement.dataset.signal;
+    const text = map[sig]?.text ?? "";
+    if (td.textContent !== text) td.textContent = text;
+    td.title = text;
+  }
+};
+/** Proyecto abierto (para el modo Diagnóstico: órdenes de trabajo del .jwsim). */
+window.JwsimProject = () => state.project?.project ?? null;
+
 function renderWatch() {
   watchCells.clear();
   for (const id of ["io-in-rows", "io-out-rows"]) $(id).textContent = "";
@@ -1140,6 +1153,9 @@ function renderWatch() {
     const name = document.createElement("td");
     name.className = "sig";
     name.textContent = sig.replace("_", ".");
+    // Qué equipo está en esa E/S (siguiendo el cableado de la escena).
+    const desc = document.createElement("td");
+    desc.className = "io-desc";
     const val = document.createElement("td");
     val.className = "value";
     const st = document.createElement("td");
@@ -1154,11 +1170,12 @@ function renderWatch() {
       b.addEventListener("click", () => setForce(sig, v));
       f.appendChild(b);
     }
-    tr.append(name, val, st, f);
+    tr.append(name, desc, val, st, f);
     $(sig.startsWith("I") ? "io-in-rows" : "io-out-rows").appendChild(tr);
     watchCells.set(sig, val);
     updateWatchSignal(sig);
   }
+  window.updateIoDescriptions();
   const body = $("watch-rows");
   body.textContent = "";
   if (!state.watches.length) {
@@ -1453,6 +1470,8 @@ function applyProject(res, { keepSketch = false, preserveView = false } = {}) {
   state.pendingInputs = scene.inputs ?? null;
   for (const [signal, v] of Object.entries(state.pendingInputs ?? {})) renderSignal(signal, !!v);
   window.JwsimScene?.load(scene, { preserveView });
+  window.updateIoDescriptions?.();
+  window.JwsimDiag?.onProject?.();
   api.watchProject?.(res.file);
   showProjectStatus();
   showExercise(res.file);

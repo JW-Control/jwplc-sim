@@ -585,6 +585,42 @@ RTC sin batería (al iniciar) y el ruido en RS-485 (en vivo). Las fallas de
 la placa quedan en la grabación (`.stim`); las de la escena, como las
 acciones de escena, no se graban todavía.
 
+**Modo Diagnóstico** (`app/renderer/diagnostico.js`, pestaña lateral de la
+Escena): una orden de trabajo inyecta una de estas fallas sin marcarla (ni
+en el dibujo, ni en el inspector, ni en la lista de diagnóstico) y el alumno
+la halla midiendo. Las órdenes vienen del proyecto (`diagnostico.ordenes`
+en el `.jwsim`: título, síntoma del operador, falla y causa) o, si no trae,
+se generan del cableado de las E/S del PLC.
+
+- Multímetro (`scene/meter.mjs`, `Scene.measure`): V⎓ y V~ entre dos bornes
+  por la netlist; una carga sin corriente no hace caída, así que entre las
+  puntas de un contacto abierto, un cable cortado o una bobina quemada que
+  debería estar alimentada se leen los 24 V. Ω por el camino de menor
+  resistencia (cables y contactos cerrados 0 Ω, cada carga según su tensión
+  y una corriente típica, bobinados de motor 12 Ω; quemado o cortado = OL).
+  Pinza (`Scene.clamp`): la corriente que el equipo declara en el borne o la
+  suma de las cargas que se apagarían sin ese cable.
+- Bloqueo y etiquetado (`Scene.lockout`): ninguna fuente da tensión hasta
+  retirarlo. Probar 0 V entre los polos de la fuente cuenta como prueba de
+  ausencia de tensión.
+- Puntaje sobre 100: medir Ω con tensión −10, reparar sin bloqueo −30, sin
+  probar ausencia de tensión −10, cambiar una pieza sana −15. La orden se
+  cierra con la falla reparada y el bloqueo retirado.
+- La tabla de E/S dice qué equipo hay en cada entrada y salida siguiendo el
+  cableado (`JwsimScene.ioMap`).
+- Dónde se apoyan las puntas: en los bornes del esquema a colores, en los
+  del plano normalizado IEC (`iec.js`, cada borne de elemento y el inicio de
+  cada riel) y en los del tablero 3D (`scene3d.js`: equipos del riel,
+  bloques de contacto de la puerta y bornera de salida, que lleva el borne
+  del equipo de campo). Con la pinza, clic en un borne abraza el cable que
+  sale de él (si llegan varios, cada clic pasa al siguiente).
+- En la Planta 3D el mismo panel flota en una tarjeta (botón «Diagnóstico»);
+  el bolsillo de la puerta del tablero abre los planos IEC como un folio, y
+  con la energía bloqueada el interruptor general lleva candado y tarjeta.
+
+Pruebas: `scene/tests/meter.test.mjs`, `app/tests/e2e-diagnostico.mjs` y
+`app/tests/e2e-diagnostico-3d.mjs`.
+
 
 ### 4.3 Ejercicios y calificación **[G9]**
 
@@ -687,6 +723,30 @@ En la Escena 2D los tres equipos tienen un dibujo de proceso en código
 escala y los puntos A y B, el tanque con su nivel y la bomba, y la puerta
 con la hoja que corre y la persona. No representan un modelo comercial, así
 que quedan fuera de la regla de 4 px/mm de los símbolos de tablero.
+
+**Planta armable** (`app/renderer/scene3d-armar.js`, botón «Armar» de la
+vista 3D): sin armar, la planta se acomoda sola como antes. En modo Armar
+cada equipo, el tablero y las piezas de ambiente se arrastran sobre una
+rejilla (0,5 m; 0,25 m opcional), R gira 90°, Supr quita y Ctrl+Z deshace.
+El panel de piezas pone equipos con E/S (se crean también en el esquema,
+sin cablear) y piezas sin E/S (plataforma, escalera, baranda, cerco, poste,
+piso, franja, paso, caja, pallet). Lo armado se guarda en el `.jwsim`:
+
+- `devices[].p3 = {x, z, r}`: posición en metros sobre el piso y giro en
+  grados (0/90/180/270) del equipo; sin `p3` va donde lo acomoda la vista.
+- `scene.plant3d = {grid, panel, pieces}`: `grid` solo si no es 0,5;
+  `panel` es el `{x, z, r}` del tablero; `pieces[] = {id, kind, x, z, r,
+  params}` con ids `A1`, `A2`… y medidas en `params` (largo, ancho, alto…).
+
+Todo apoya en la rejilla del piso: la esquina de menor x y menor z de la
+huella de cada equipo, del tablero y de cada pieza cae en una línea (no el
+origen del modelo, que en unos es una esquina y en otros el centro), también
+en el acomodo automático. Las juntas de la losa van cada 2 m sobre las
+mismas líneas, y al armar se ve la rejilla fina. Los sensores pegados a un
+equipo sobresalen de su huella sin correrlo.
+
+«Acomodo automático» borra los `p3` y la posición del tablero en un solo
+paso de deshacer. Prueba: `app/tests/e2e-3d-armar.mjs`.
 
 Pruebas: `scene/tests/plant.test.mjs` y `app/tests/e2e-g8-3d.mjs` con el
 proyecto `tests/projects/planta-3d` (cinta con marcha y parada, cilindro al

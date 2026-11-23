@@ -39,17 +39,17 @@ const MAX_DEPTH = 16;
  *   key: string, kind: string, dev: string, cid: string, type: string,
  *   x: number, y: number, top: string, bot: string, tTop: string, tBot: string,
  *   label: string, text?: string, nc?: boolean, act?: string, col?: number,
- *   ref?: string, xref?: { cid: string, nc: boolean, at: string }[], io?: string, arrow?: boolean, ref2?: string,
+ *   ref?: string, refPt?: string, xref?: { cid: string, nc: boolean, at: string, pt?: string }[], io?: string, arrow?: boolean, ref2?: string, ref2Pt?: string,
  * }} Elem
- * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean, com?: string, borne?: string, sheet?: number, x?: number, y?: number, ch?: string, auto?: boolean }} IoRow
+ * @typedef {{ io: string, desc: string, equip: string, at: string, free?: boolean, com?: string, borne?: string, sheet?: number, x?: number, y?: number, pt?: string, ch?: string, auto?: boolean }} IoRow
  * @typedef {{ x0: number, colW: number, cols: number, y0: number, rowH: number, rows: number }} Grid
- * @typedef {{ title: string, x: number, y: number, cw: number[], head: string[], rows: { cells: string[], free: boolean, at: string, edit?: { col: number, dev: string, ch?: string, value: string } }[], rowH: number, note?: string }} Table
+ * @typedef {{ title: string, x: number, y: number, cw: number[], head: string[], rows: { cells: string[], free: boolean, at: string, pt?: string, edit?: { col: number, dev: string, ch?: string, value: string } }[], rowH: number, note?: string }} Table
  * @typedef {{ x: number, side: "top" | "bot", label: string, kind: string, io?: string, free?: boolean }} PlcTerm
- * @typedef {{ x: number, y: number, dir: "up" | "down", key: string, part?: string, io?: string, at: string, desc: string }} PlcLink
+ * @typedef {{ x: number, y: number, dir: "up" | "down", key: string, part?: string, io?: string, at: string, pt?: string, desc: string }} PlcLink
  * @typedef {{ dev: string, label: string, name: string, x: number, y: number, w: number, h: number, terms: PlcTerm[], links: PlcLink[] }} PlcModule
  * @typedef {{
  *   kind: string, dev: string, type: string, label: string, text?: string, x: number, y: number, w: number, h: number,
- *   poles: { x: number, cid: string, top: string, bot: string, tTop: string, tBot: string }[], ref?: string,
+ *   poles: { x: number, cid: string, top: string, bot: string, tTop: string, tBot: string }[], ref?: string, refPt?: string,
  * }} Block
  * @typedef {{
  *   n: number, id: string, kind: "power" | "control" | "plc" | "list", title: string, src: string, srcKind: string,
@@ -327,31 +327,45 @@ export function iecModel(scene, opts = {}) {
   toPaper(sheets);
   /** Referencia «hoja-FilaColumna» de un punto (como 4-C3), sobre la rejilla. */
   const at = (s, x, y) => `${s.n}-${String.fromCharCode(64 + gridRow(s, y))}${gridCol(s, x)}`;
-  /** @type {Map<string, { cid: string, nc: boolean, at: string }[]>} */
+  /** @type {Map<string, { cid: string, nc: boolean, at: string, pt: string }[]>} */
   const contactsOf = new Map();
-  /** @type {Map<string, string>} */
+  /** @type {Map<string, { at: string, pt: string }>} */
   const coilAt = new Map();
   for (const s of sheets) {
     for (const e of s.elems) {
       if (e.kind === "contact") {
         if (!contactsOf.has(e.dev)) contactsOf.set(e.dev, []);
-        contactsOf.get(e.dev)?.push({ cid: e.cid, nc: !!e.nc, at: at(s, e.x, e.y) });
-      } else if (/^coil/.test(e.kind) && !coilAt.has(e.dev)) coilAt.set(e.dev, at(s, e.x, e.y));
+        contactsOf.get(e.dev)?.push({ cid: e.cid, nc: !!e.nc, at: at(s, e.x, e.y), pt: ptOf(e.x, e.y) });
+      } else if (/^coil/.test(e.kind) && !coilAt.has(e.dev)) coilAt.set(e.dev, { at: at(s, e.x, e.y), pt: ptOf(e.x, e.y) });
     }
     for (const b of s.blocks) {
       if (!contactsOf.has(b.dev)) contactsOf.set(b.dev, []);
-      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: at(s, p.x, b.y + b.h / 2) });
+      for (const p of b.poles) contactsOf.get(b.dev)?.push({ cid: p.cid, nc: false, at: at(s, p.x, b.y + b.h / 2), pt: ptOf(p.x, b.y + b.h / 2) });
     }
   }
   for (const s of sheets) {
     for (const e of s.elems) {
-      if (e.kind === "contact" && coilAt.has(e.dev)) e.ref = coilAt.get(e.dev);
-      if (/^coil/.test(e.kind)) e.xref = (contactsOf.get(e.dev) ?? []).map(({ cid, nc, at }) => ({ cid, nc, at }));
+      const c = coilAt.get(e.dev);
+      if (e.kind === "contact" && c) {
+        e.ref = c.at;
+        e.refPt = c.pt;
+      }
+      if (/^coil/.test(e.kind)) e.xref = (contactsOf.get(e.dev) ?? []).map(({ cid, nc, at, pt }) => ({ cid, nc, at, pt }));
     }
-    for (const b of s.blocks) if (coilAt.has(b.dev)) b.ref = coilAt.get(b.dev);
+    for (const b of s.blocks) {
+      const c = coilAt.get(b.dev);
+      if (c) {
+        b.ref = c.at;
+        b.refPt = c.pt;
+      }
+    }
   }
   if (io) {
-    for (const r of io.rows) if (r.sheet) r.at = at(/** @type {Sheet} */ (sheets.find((x) => x.n === r.sheet)), r.x, r.y);
+    for (const r of io.rows) {
+      if (!r.sheet) continue;
+      r.at = at(/** @type {Sheet} */ (sheets.find((x) => x.n === r.sheet)), r.x, r.y);
+      r.pt = ptOf(Number(r.x), Number(r.y));
+    }
     sheets[sheets.length - 1].tables = ioTables(io);
     linkPlc(sheets, io.rows, at);
   }
@@ -498,10 +512,18 @@ function linkPlc(sheets, rows, at) {
       const e = s.elems.find((x) => x.key === ln.key);
       if (!e) continue;
       // La flecha apunta al punto del circuito; el circuito, al borne.
-      ln.at = at(s, e.x, ln.part === "no" ? e.y + SYM : ln.part === "com" ? e.y - SYM : e.y);
-      const back = at(ps, ln.x, ps.plc.y + (ln.dir === "up" ? 0 : ps.plc.h));
-      if (ln.part === "no") e.ref2 = back;
-      else e.ref = back;
+      const ty = ln.part === "no" ? e.y + SYM : ln.part === "com" ? e.y - SYM : e.y;
+      ln.at = at(s, e.x, ty);
+      ln.pt = ptOf(e.x, ty);
+      const by = ps.plc.y + (ln.dir === "up" ? 0 : ps.plc.h);
+      const back = at(ps, ln.x, by);
+      if (ln.part === "no") {
+        e.ref2 = back;
+        e.ref2Pt = ptOf(ln.x, by);
+      } else {
+        e.ref = back;
+        e.refPt = ptOf(ln.x, by);
+      }
       break;
     }
     const r = ln.io ? byIo.get(ln.io) : null;
@@ -514,6 +536,13 @@ function linkPlc(sheets, rows, at) {
  * A–F, igual en todas las hojas del documento. Ancho mínimo en unidades.
  */
 export const PAPER = { ratio: Math.SQRT2, minW: 1100, cols: 10, rows: 6, left: 34, top: 50, bottom: 78 };
+
+/**
+ * Punto exacto «x,y» al que apunta una referencia: con él la vista marca el
+ * elemento mismo y no solo su celda (en el módulo del PLC una celda guarda
+ * varios bornes).
+ */
+export const ptOf = (x, y) => `${Math.round(x)},${Math.round(y)}`;
 
 /** Columna (1…10) de la rejilla en la que cae x. */
 export function gridCol(s, x) {
@@ -634,7 +663,7 @@ function ioSheet(io) {
 function ioTables(io) {
   const ins = io.rows.filter((r) => /^I/.test(r.io));
   const outs = io.rows.filter((r) => !/^I/.test(r.io));
-  const rowOf = (r) => ({ cells: [r.io, `${r.borne ?? ""}${r.auto ? "*" : ""}`, r.desc, r.equip, r.com ?? "", r.at ? `/${r.at}` : ""], free: !!r.free, at: r.at, edit: { col: 1, dev: io.plc, ch: r.ch, value: r.auto ? "" : r.borne } });
+  const rowOf = (r) => ({ cells: [r.io, `${r.borne ?? ""}${r.auto ? "*" : ""}`, r.desc, r.equip, r.com ?? "", r.at ? `/${r.at}` : ""], free: !!r.free, at: r.at, pt: r.pt, edit: { col: 1, dev: io.plc, ch: r.ch, value: r.auto ? "" : r.borne } });
   /** @type {Table[]} */
   const out = [];
   let y = 74;

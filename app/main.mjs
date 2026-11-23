@@ -1317,6 +1317,31 @@ ipcMain.handle("scene:clearFault", (_e, key) => {
   return !!sceneSession;
 });
 
+// Modo Diagnóstico: bloqueo y etiquetado, multímetro y pinza (scene/meter.mjs).
+ipcMain.handle("scene:lockout", (_e, on) => {
+  sceneSession?.lockout(on);
+  return !!sceneSession;
+});
+
+ipcMain.handle("scene:measure", (_e, { red, black, mode }) => {
+  if (!sceneSession) return { error: "Inicie la simulación para medir" };
+  try {
+    const r = sceneSession.scene.measure(red, black, mode);
+    return { value: Number.isFinite(r.value) ? r.value : null, live: r.live };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle("scene:clamp", (_e, { a, b }) => {
+  if (!sceneSession) return { error: "Inicie la simulación para medir" };
+  try {
+    return { value: sceneSession.scene.clamp(a, b) };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
 ipcMain.handle("scene:rearm", () => {
   sceneSession?.rearm();
   return !!sceneSession;

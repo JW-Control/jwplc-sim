@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { buildPiece, footprint, gridAlign, setupArmar } from "./scene3d-armar.js";
 
 const COL = {
   frame: 0x5b6470, belt: 0x23272d, roller: 0x9aa3ad, piece: 0xf08a24, floor: 0x1b1f24, grid: 0x2c333b,
@@ -558,26 +559,37 @@ function buildCylinder(p) {
 /** Posición x de la cabeza del vástago para una posición 0..1. */
 const headX = (pos) => CYL.front + 0.03 + CYL.rodOut + pos * CYL.S;
 
-/** Final de carrera de rodillo (cuerpo negro sobre base azul) bajo el recorrido de la cabeza. */
+/**
+ * Final de carrera de rodillo (tipo XCK): cuerpo metálico con su tapa y
+ * piloto al frente, cabezal giratorio negro arriba y prensaestopa abajo. La
+ * palanca sale del eje del cabezal y apunta a +y con el rodillo en y = 0.05;
+ * el cuerpo queda debajo. Origen: a la altura del eje, detrás de la palanca.
+ */
 function rollerSwitch() {
   const g = new THREE.Group();
-  const base = cyl(0.045, 0.02, mat(0x1f6fd1), 24);
-  base.rotation.x = Math.PI / 2;
-  base.position.set(0, -0.06, -0.02);
-  const body = box(0.07, 0.11, 0.06, mat(0x1b1e22, { roughness: 0.5 }));
-  body.position.y = -0.055;
-  const plug = box(0.05, 0.03, 0.02, mat(0xd8323a));
-  plug.position.set(0, -0.06, 0.04);
+  const metal = mat(0x9aa3ad, { metalness: 0.6, roughness: 0.35 });
+  const body = box(0.06, 0.095, 0.05, metal);
+  body.position.y = -0.0825;
+  const cover = box(0.048, 0.072, 0.004, mat(0x5b6470, { metalness: 0.4, roughness: 0.4 }));
+  cover.position.set(0, -0.085, 0.026);
+  const head = box(0.046, 0.034, 0.046, mat(0x1b1e22, { roughness: 0.5 }));
+  head.position.y = -0.0175;
+  const shaft = cyl(0.008, 0.012, metal, 12);
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.set(0, -0.0175, 0.028);
+  const gland = cyl(0.011, 0.022, mat(0x1b1e22, { roughness: 0.6 }), 12);
+  gland.position.y = -0.141;
   const lever = new THREE.Group();
-  const arm = box(0.012, 0.05, 0.012, mat(0x9aa3ad, { metalness: 0.7 }));
-  arm.position.y = 0.025;
-  const roller = cyl(0.016, 0.02, mat(0x2a2e33), 16);
+  lever.position.set(0, -0.0175, 0.034);
+  const arm = box(0.012, 0.072, 0.006, metal);
+  arm.position.y = 0.032;
+  const roller = cyl(0.016, 0.014, mat(0x2a2e33), 16);
   roller.rotation.x = Math.PI / 2;
-  roller.position.y = 0.05;
+  roller.position.set(0, 0.0675, 0.004);
   lever.add(arm, roller);
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), mat(COL.off, { emissive: 0x000000 }));
-  lamp.position.set(0.022, -0.03, 0.031);
-  g.add(base, body, plug, lever, lamp);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), mat(COL.off, { emissive: 0x000000 }));
+  lamp.position.set(0.012, -0.06, 0.029);
+  g.add(body, cover, head, shaft, gland, lever, lamp);
   g.userData.lamp = lamp;
   g.userData.lever = lever;
   return g;
@@ -783,6 +795,7 @@ function init() {
   setLabels(V.labelsOn);
   new ResizeObserver(resize).observe(canvas.parentElement);
   setupPicking(canvas);
+  V.armarUi = setupArmar({ V, refresh: () => window.Jwsim3D.show(true) });
   V.ready = true;
   loadBoard();
   requestAnimationFrame(frame);
@@ -804,15 +817,53 @@ function setupPicking(canvas) {
     const hit = ray.intersectObjects(V.hits.map((h) => h.mesh), false)[0];
     return hit ? V.hits.find((h) => h.mesh === hit.object) : null;
   };
+  const pickIn = (e, meshes) => {
+    if (!meshes.length) return null;
+    const r = canvas.getBoundingClientRect();
+    ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, V.camera);
+    return ray.intersectObjects(meshes, false)[0]?.object ?? null;
+  };
+  // Bornes del tablero cuando el multímetro está abierto en la planta.
+  const termHit = (e) => {
+    const ts = (V.panel?.diagTerms ?? []).filter((t) => t.mesh.visible);
+    const o = pickIn(e, ts.map((t) => t.mesh));
+    return o ? ts.find((t) => t.mesh === o) : null;
+  };
+  const folioHit = (e) => !!pickIn(e, V.panel?.folio ?? []);
+  const hoverMat = new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.9, depthTest: false });
   canvas.addEventListener("pointermove", (e) => {
     if (e.buttons) return;
-    canvas.style.cursor = window.JwsimScene?.running?.() && pick(e) ? "pointer" : "";
+    const t = termHit(e);
+    // Solo se resalta el borne bajo el mouse.
+    if (V.hoverTerm && V.hoverTerm !== t?.mesh) {
+      V.hoverTerm.material = V.hoverTerm.userData.mat;
+      V.hoverTerm = null;
+    }
+    if (t && V.hoverTerm !== t.mesh) {
+      t.mesh.userData.mat ??= t.mesh.material;
+      t.mesh.material = hoverMat;
+      V.hoverTerm = t.mesh;
+    }
+    canvas.style.cursor = folioHit(e) || t || (window.JwsimScene?.running?.() && pick(e)) ? "pointer" : "";
   });
   canvas.addEventListener(
     "pointerdown",
     (e) => {
       const Sc = window.JwsimScene;
-      if (!Sc?.running?.() || e.button !== 0) return;
+      if (e.button !== 0) return;
+      if (folioHit(e) && !termHit(e)) {
+        e.stopImmediatePropagation();
+        openFolio(true);
+        return;
+      }
+      const t = termHit(e);
+      if (t) {
+        e.stopImmediatePropagation();
+        probeTerm(t.end);
+        return;
+      }
+      if (!Sc?.running?.()) return;
       const h = pick(e);
       if (!h) return;
       const a = (Sc.actionsOf(h.id) ?? []).find((x) => x.kind !== "value");
@@ -845,8 +896,144 @@ function setupPicking(canvas) {
   );
 }
 
+/**
+ * Clic en un borne con el multímetro abierto: en tensión u ohmios es una punta
+ * (roja y después negra); con la pinza, se abraza el cable que sale de ese
+ * borne (si llegan varios, cada clic pasa al siguiente).
+ */
+function probeTerm(end) {
+  window.JwsimDiag?.probe?.(end);
+}
+
+/** Puntas del multímetro y pinza dibujadas sobre los bornes del tablero 3D. */
+function diagMarks() {
+  const group = new THREE.Group();
+  // Puntas grandes y siempre por encima: van en una escena aparte que se
+  // dibuja después de la planta con la profundidad limpia (se ven aunque el
+  // borne quede tapado y sus piezas se tapan bien entre sí).
+  const basic = (hex) => new THREE.MeshBasicMaterial({ color: hex });
+  const probe = (hex, tilt) => {
+    const p = new THREE.Group();
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.0045, 0.05, 12), basic(0xd5dade));
+    tip.rotation.x = Math.PI;
+    tip.position.y = 0.025;
+    const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.012, 16), basic(hex));
+    guard.position.y = 0.056;
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.16, 16), basic(hex));
+    grip.position.y = 0.142;
+    // Aro blanco alrededor del mango.
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.0122, 0.0022, 8, 24), basic(0xf2f3f4));
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.2;
+    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.18, 8), basic(hex));
+    cable.position.y = 0.31;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0028, 8, 24), basic(hex));
+    ring.rotation.x = Math.PI / 2;
+    p.add(tip, guard, grip, band, cable, ring);
+    p.rotation.set(0.55, 0, tilt);
+    p.visible = false;
+    group.add(p);
+    return p;
+  };
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.006, 10, 28), basic(0xf2cf1d));
+  ring.visible = false;
+  group.add(ring);
+  return { group, red: probe(0xd8282d, 0.35), black: probe(0x1a1d21, -0.35), ring };
+}
+
+function paintDiag() {
+  const P = V.panel;
+  const M = V.diagMarks;
+  if (!P || !M) return;
+  const Dg = window.JwsimDiag;
+  const on = !!Dg?.in3d?.() && !!window.JwsimScene?.running?.();
+  for (const t of P.diagTerms ?? []) t.mesh.visible = on;
+  const st = on ? Dg.state() : {};
+  const byEnd = new Map((P.diagTerms ?? []).map((t) => [t.end, t.mesh]));
+  const v = new THREE.Vector3();
+  const place = (o, end) => {
+    const m = end && byEnd.get(end);
+    o.visible = !!m;
+    if (m) {
+      m.getWorldPosition(v);
+      o.position.copy(v);
+    }
+  };
+  place(M.red, st.mode !== "A" ? st.red : null);
+  place(M.black, st.mode !== "A" ? st.black : null);
+  orientProbes();
+  // Pinza: en el borne del tablero por donde sale el cable abrazado.
+  const w = st.mode === "A" && st.wire != null ? window.JwsimScene?.specForView?.()?.wiring?.[st.wire] : null;
+  place(M.ring, w ? [w.from, w.to].find((e) => byEnd.has(e)) : null);
+  if (M.ring.visible) M.ring.lookAt(V.camera.position);
+}
+
+/**
+ * Las puntas apuntan hacia el borde de la pantalla más lejano: con el borne
+ * en la mitad de arriba, el mango va hacia abajo, así no sale de la vista.
+ */
+function orientProbes() {
+  const M = V.diagMarks;
+  if (!M || !V.camera) return;
+  const sx = (o) => (o.visible ? new THREE.Vector3().copy(o.position).project(V.camera) : null);
+  const r = sx(M.red);
+  const b = sx(M.black);
+  // Cada punta se inclina hacia su lado (la de la izquierda a la izquierda):
+  // nunca se cruzan. Con una sola, o a la par, la roja va a la izquierda.
+  const redLeft = !r || !b || r.x <= b.x + 0.002;
+  for (const [o, p, left] of [[M.red, r, redLeft], [M.black, b, !redLeft]]) {
+    if (!p) continue;
+    const down = p.y > 0.1;
+    const key = `${down}|${left}`;
+    if (o.userData.key === key) continue;
+    o.userData.key = key;
+    o.userData.down = down;
+    // Como las sostiene el técnico: el mango sale hacia el frente del tablero
+    // (casi perpendicular a él) y apenas se abre a su lado, así no atraviesa
+    // los equipos vecinos. La inclinación en z lleva el mango hacia -x
+    // (izquierda) con signo +, también con el mango hacia abajo.
+    o.rotation.set(down ? Math.PI - 1.15 : 1.15, 0, left ? 0.12 : -0.12);
+  }
+}
+
+/**
+ * Folio de planos: clic en el bolsillo de la puerta abre el esquema normalizado
+ * (IEC) sobre la vista 3D, como el plano que se saca del tablero.
+ */
+function openFolio(on) {
+  const holder = document.getElementById("view3d-folio");
+  const view = document.getElementById("iec-view");
+  const iec = window.JwsimIec;
+  if (!holder || !view || !iec) return;
+  if (on && !iec.available()) return;
+  if (on) {
+    if (!V.folioHome) V.folioHome = { parent: view.parentElement, next: view.nextElementSibling };
+    holder.appendChild(view);
+    holder.hidden = false;
+    iec.show(true);
+    window.dispatchEvent(new Event("resize"));
+    document.getElementById("iec-fit")?.click();
+    return;
+  }
+  if (holder.hidden) return;
+  holder.hidden = true;
+  iec.show(false);
+  if (V.folioHome) V.folioHome.parent.insertBefore(view, V.folioHome.next);
+  window.JwsimTabs?.refreshSchem?.();
+}
+
 /** Cámara que encuadra toda la planta (ancho V.extent) desde arriba y adelante. */
 function fitView() {
+  if (V.fitBox) {
+    const c = V.fitBox.getCenter(new THREE.Vector3());
+    const sz = V.fitBox.getSize(new THREE.Vector3());
+    const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
+    const d = Math.max(4, (Math.max(sz.x, sz.z) / 2 + 1.2) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect)), (sz.y * 0.75) / Math.tan(halfFov));
+    V.controls.target.set(c.x, Math.max(0.8, sz.y * 0.4), c.z);
+    V.camera.position.set(c.x, Math.max(0.8, sz.y * 0.4) + d * 0.45, c.z + d * 0.9);
+    V.controls.update();
+    return;
+  }
   const w = V.extent ?? 4;
   const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
   const fitW = (w / 2 + 1.2) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect));
@@ -963,16 +1150,24 @@ function rebuild(spec) {
   V.field = [];
   V.hits = [];
   V.zFront = 0;
+  V.armIndex = new Map();
+  // Todo apoya en la rejilla del piso (0,5 m o 0,25 m): la esquina de cada
+  // huella cae en una línea, también en el acomodo automático.
+  const G = Number(spec.plant3d?.grid) || 0.5;
+  const align = (g, p3) => gridAlign(g, G, p3 ? "round" : "ceil");
   // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
   if (!plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
+    if (spec.plant3d?.panel) placeAt(panel.group, spec.plant3d.panel);
+    align(panel.group, spec.plant3d?.panel);
+    armTag(panel.group, "panel", "panel");
     const tag = label("Tablero");
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
     V.root.add(panel.group);
     V.panel = panel;
-    x = panel.W + 1.0;
+    x = panel.group.position.x + panel.W / 2 + 1.0;
   }
   for (const d of plant) {
     const p = d.params ?? {};
@@ -1004,6 +1199,10 @@ function rebuild(spec) {
     const [w] = model.size;
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
+    if (d.p3) placeAt(model.group, d.p3);
+    const sh = align(model.group, d.p3);
+    if (!d.p3) x += sh.dx;
+    armTag(model.group, "dev", d.id);
     const tag = label(d.id);
     tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
     model.group.add(tag);
@@ -1036,6 +1235,13 @@ function rebuild(spec) {
         model.cyl.add(b);
         beacons.push({ id: s.id, b });
         continue;
+      }
+      if (model.liftSwitch && s.type === "jwsim/limit-switch") {
+        const b = model.liftSwitch(s, key, LIFT_K);
+        if (b) {
+          beacons.push({ id: s.id, b });
+          continue;
+        }
       }
       if (model.sensor) {
         const b = model.sensor(key);
@@ -1126,6 +1332,7 @@ function rebuild(spec) {
     const gx = o.model.group.position.x;
     return o.type === "jwsim/tank" ? gx : gx + o.model.size[0] / 2;
   };
+  const zOf = (id) => V.objects.get(id).model.group.position.z;
   const hosted = new Map();
   for (const it of items) {
     const d = spec.devices.find((q) => q.id === it.id);
@@ -1142,9 +1349,14 @@ function rebuild(spec) {
     const conduitM = mat(0x5f6670, { roughness: 0.6 });
     items.forEach((it, k) => {
       const m = it.model;
-      const px = it.host ? centerOf(it.host) + it.slot * 0.65 - 0.15 : fx;
-      const pz = it.host ? 1.05 : fz;
+      const px = it.host ? centerOf(it.host) + it.slot * 1.0 - 0.15 : fx;
+      const pz = it.host ? zOf(it.host) + 1.05 : fz;
       m.group.position.set(px + 0.15, 0, pz);
+      const fd = spec.devices.find((q) => q.id === it.id);
+      if (fd?.p3) placeAt(m.group, fd.p3);
+      const sh = align(m.group, fd?.p3);
+      if (!it.host && !fd?.p3) fx += sh.dx;
+      if (fd) armTag(m.group, "dev", fd.id);
       V.root.add(m.group);
       const tag = label(it.label);
       tag.position.set(0, it.id === "semaforo" ? 2.5 : 1.05, 0);
@@ -1156,9 +1368,11 @@ function rebuild(spec) {
         const P = V.panel;
         const gx = P.group.position.x + P.glandX(k, items.length);
         const gz = P.D / 2 - 0.08;
-        const ax = px + 0.15 + m.anchor[0];
-        const az = pz + m.anchor[2];
-        const lane = side ? fz + 0.55 + k * 0.05 : pz - 0.4 - k * 0.04;
+        // Entrada del equipo (girada con él si se armó a mano).
+        const ap = new THREE.Vector3(...m.anchor).applyAxisAngle(new THREE.Vector3(0, 1, 0), m.group.rotation.y).add(m.group.position);
+        const ax = ap.x;
+        const az = ap.z;
+        const lane = side ? fz + 0.55 + k * 0.05 : m.group.position.z - 0.4 - k * 0.04;
         V.root.add(run([[gx, P.bottom, gz], [gx, 0.03, gz], [gx, 0.03, lane], [ax, 0.03, lane], [ax, 0.03, az], [ax, m.anchor[1], az]], 0.016, conduitM));
       }
       if (!it.host) fx += it.w + 0.3;
@@ -1168,15 +1382,47 @@ function rebuild(spec) {
   }
   processPipes(plant);
   for (const h of V.panel?.hits ?? []) V.hits.push(h);
+  V.overlay ??= new THREE.Scene();
+  V.overlay.clear();
+  V.diagMarks = diagMarks();
+  V.overlay.add(V.diagMarks.group);
+  paintDiag();
+  // Piezas de ambiente de la planta armada a mano (sin E/S).
+  const pieces = spec.plant3d?.pieces ?? [];
+  for (const pc of pieces) {
+    const g = buildPiece(pc.kind, pc.params, { mat, box, cyl, meshPanel });
+    placeAt(g, pc);
+    align(g, pc);
+    armTag(g, "piece", pc.id);
+    V.root.add(g);
+  }
   V.extent = Math.max(2, x - 1.2);
+  // Armada a mano: el encuadre sigue a lo que hay, no a la fila automática.
+  V.fitBox = null;
+  if (pieces.length || spec.plant3d?.panel || spec.devices.some((d) => d.p3)) {
+    const bb = new THREE.Box3().setFromObject(V.root);
+    if (!bb.isEmpty()) V.fitBox = bb;
+  }
   const roof = [...V.objects.values()].find((o) => o.model.roofY);
   V.focus = roof ? roof.model.roofY + 0.5 : null;
   V.height = Math.max(0, ...[...V.objects.values()].map((o) => o.model.height ?? 0));
   contactShadows(V.root);
   normalizeLabels(V.root);
-  fitView();
+  if (!V.keepCamera) fitView();
+  V.armarUi?.afterRebuild();
   const empty = document.getElementById("view3d-empty");
-  if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0;
+  if (empty) empty.hidden = plant.length > 0 || !!V.panel || items.length > 0 || pieces.length > 0;
+}
+
+/** Lugar armado a mano { x, z, r } (m y grados, giro en sentido antihorario visto desde arriba). */
+function placeAt(g, p) {
+  g.position.set(Number(p.x) || 0, g.position.y, Number(p.z) || 0);
+  g.rotation.y = THREE.MathUtils.degToRad(Number(p.r) || 0);
+}
+/** Marca un grupo como movible en el modo «Armar» (equipo, tablero o pieza). */
+function armTag(g, kind, id) {
+  g.userData.arm = { kind, id };
+  V.armIndex.set(`${kind}:${id}`, g);
 }
 
 /** Manómetro de frente: esfera blanca y aguja que gira con la presión. */
@@ -1352,6 +1598,24 @@ function plate(w, h, text, opts) {
   const sc = screen(w, h, opts);
   sc.paint(text);
   return sc.plane;
+}
+/** Candado de bloqueo con su tarjeta «PELIGRO · NO OPERAR» (bloqueo y etiquetado). */
+function padlock() {
+  const g = new THREE.Group();
+  const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0025, 8, 16, Math.PI), mat(0xc9ced4, { metalness: 0.8, roughness: 0.25 }));
+  shackle.position.y = 0.012;
+  const bodyL = box(0.03, 0.026, 0.014, mat(0xd8282d, { roughness: 0.45 }));
+  bodyL.position.y = -0.002;
+  const cord = box(0.002, 0.03, 0.002, PM.black);
+  cord.position.set(0, -0.028, 0);
+  const card = box(0.056, 0.074, 0.002, mat(0xd8282d, { roughness: 0.7 }));
+  card.position.set(0, -0.08, 0);
+  const t1 = plate(0.05, 0.016, "PELIGRO", { bg: "#d8282d", fg: "#ffffff", font: "bold 64px sans-serif" });
+  t1.position.set(0, -0.058, 0.0015);
+  const t2 = plate(0.05, 0.03, "NO OPERAR", { bg: "#ffffff", fg: "#1a1d21", font: "bold 56px sans-serif" });
+  t2.position.set(0, -0.085, 0.0015);
+  g.add(shackle, bodyL, cord, card, t1, t2);
+  return g;
 }
 /** Termomagnético o interruptor de entrada: un módulo de 0,036 por polo. */
 function dinBreaker(poles, label) {
@@ -2106,6 +2370,7 @@ function buildPanel(spec) {
   const base = (t) => t.split("/").pop();
   const devs = spec.devices ?? [];
   const of = (...types) => devs.filter((d) => types.includes(base(d.type)));
+  const devOfType = (id) => devs.find((d) => d.id === id)?.type ?? "";
   const mounted = new Set(devs.filter((d) => d.mount).map((d) => d.mount));
   const lift = devs.some((d) => d.type === "jwsim/lift");
   const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop").filter((d) => !(lift && callFloor(d) != null));
@@ -2321,7 +2586,30 @@ function buildPanel(spec) {
   hinge.add(brand);
   hinge.rotation.y = -1.7;
   g.add(hinge);
+  const termPts = new Map();
   wirePanel();
+  // Modo Diagnóstico: un punto por borne (se ven con el multímetro abierto),
+  // candado y tarjeta en el interruptor general cuando se bloquea la energía.
+  // Los puntos no se ven: solo el que está bajo el mouse (guía para apoyar la punta).
+  const termMat = new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
+  const diagTerms = [...termPts].map(([end, t]) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 8), termMat);
+    m.position.set(...t.pos);
+    m.renderOrder = 5;
+    m.visible = false;
+    t.parent.add(m);
+    return { end, mesh: m };
+  });
+  const main = row1.find((m) => /^(power-3ph|power-230vac|breaker)$/.test(base(devOfType(m.id)))) ?? row1[0];
+  let lock = null;
+  if (main) {
+    const a = at.get(main.id);
+    lock = padlock();
+    lock.position.set(a.cx - main.w / 2 + 0.018, a.y - 0.005, zf + 0.1);
+    lock.visible = false;
+    g.add(lock);
+  }
+  const folio = [pocket, docs];
   /**
    * Cableado real: cada cable del esquema se tiende de borne a borne. Dentro
    * del tablero sale del borne a la canaleta más cercana (por dentro de las
@@ -2346,6 +2634,10 @@ function buildPanel(spec) {
     };
     const R = 0.0032;
     const zIn = zf + 0.045; // los cables entran a la canaleta por su ranura
+    // Bornes donde se apoyan las puntas del multímetro (modo Diagnóstico).
+    const mark = (end, parent, x, y, z) => {
+      if (!termPts.has(end)) termPts.set(end, { parent, pos: [x, y, z] });
+    };
     // Borne de un equipo del riel: punto, y canaleta hacia la que sale.
     const railEnd = (end) => {
       const [id, tid] = split(end);
@@ -2399,6 +2691,7 @@ function buildPanel(spec) {
       const xe = 0.03 + (k % 6) * 0.004;
       const zb = -0.06 - (k % 3) * 0.003;
       hinge.add(run([[x, y, -0.05], [x, y2, zb], [xe, y2, zb], [xe, loomY, zb]], R * 0.85, wm(hex)));
+      mark(end, hinge, x, y, -0.058);
       return id;
     };
     for (const w of spec.wiring ?? []) {
@@ -2415,7 +2708,10 @@ function buildPanel(spec) {
       ends.forEach((e, i) => {
         if (kind[i] === "rail") {
           const p = railEnd(e);
-          if (p && !p.hidden) stub(p, hex);
+          if (p && !p.hidden) {
+            stub(p, hex);
+            mark(e, g, p.x, p.y, p.z + 0.006);
+          }
         } else if (kind[i] === "door") doorEnd(e, hex);
         else tbs[tbIdx(e)].hexes.push(hex);
       });
@@ -2435,6 +2731,8 @@ function buildPanel(spec) {
         g.add(st);
       }
       const hex = tb.hexes[0];
+      // La borna de salida lleva el borne del equipo de campo que alimenta.
+      mark(tb.end, g, x, yTb + 0.02, zf + 0.064);
       g.add(run([[x, yTb + 0.035, zf + 0.05], [x, yLow - 0.03, zIn]], R, wm(hex)));
       g.add(run([[x, yTb - 0.035, zf + 0.05], [x, y0 + 0.012, zf + 0.05]], R * 1.3, wm(hex)));
     });
@@ -2476,8 +2774,8 @@ function buildPanel(spec) {
     }
   }
   const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
-  bakeStatic(g, [...lamps.map((l) => l.lens), ...hits.map((h) => h.mesh), ...controls.map((c) => c.mesh), ...vfds.flatMap((v) => [v.led, v.plane]), ...plcs.flatMap((p) => [...p.leds.map((l) => l.mesh), p.tftMesh])]);
-  return { group: g, W, D, H, legH, vfds, plcs, lamps, hits, controls, glandX, bottom: y0 };
+  bakeStatic(g, [...folio, lock, ...lamps.map((l) => l.lens), ...hits.map((h) => h.mesh), ...controls.map((c) => c.mesh), ...vfds.flatMap((v) => [v.led, v.plane]), ...plcs.flatMap((p) => [...p.leds.map((l) => l.mesh), p.tftMesh])]);
+  return { group: g, W, D, H, legH, vfds, plcs, lamps, hits, controls, glandX, bottom: y0, diagTerms, lock, folio };
 }
 
 // Electrobomba y válvulas de la sala de bombas. Eje de la bomba a lo largo de z
@@ -2863,6 +3161,10 @@ function buildBuilding(p, spec = { devices: [] }) {
 
 /** Montacargas a escala 1:2: pozo de perfiles, cabina con su carga, losas y puertas de piso, máquina arriba. */
 const LIFT_K = 0.5;
+/** Leva de la cabina (altura local de su centro y media altura) y columnas de los finales de altura. */
+const CAM_Y = 0.55;
+const CAM_H = 0.06;
+const LIFT_SW = { x: [0.2, 0.4], z: 0.628 };
 let MESH_TEX = null;
 /** Malla metálica (rejilla de 10 cm) con fondo transparente, para el pozo y las puertas. */
 function meshTexture() {
@@ -3033,12 +3335,20 @@ function buildLift(p) {
     edge.position.set(1.23, y + 0.01, 0);
     g.add(edge);
     if (i > 0) {
-      // Baranda: pasamanos, travesaño y rodapié en x = 2.58 y z = ±0.68.
+      // Baranda: pasamanos, travesaño y rodapié en x = 2.58 y z = ±0.68,
+      // sobre parantes apoyados en la losa (a lo más cada 0.7 m).
       const hr = (len, x, z, alongZ) => {
         for (const [hy, th] of [[0.95, 0.035], [0.5, 0.025], [0.06, 0.12]]) {
           const r = alongZ ? box(0.03, th, len, yellow) : box(len, th, 0.03, yellow);
           r.position.set(x, y + hy, z);
           g.add(r);
+        }
+        const k = Math.max(1, Math.ceil(len / 0.7));
+        for (let j = 0; j <= k; j++) {
+          const u = -len / 2 + 0.02 + (j * (len - 0.04)) / k;
+          const pst = box(0.04, 0.97, 0.04, yellow);
+          pst.position.set(alongZ ? x : x + u, y + 0.485, alongZ ? u : z);
+          g.add(pst);
         }
       };
       hr(1.4, 2.58, 0, true);
@@ -3062,6 +3372,16 @@ function buildLift(p) {
     door.position.set(1.18, y + 0.5, 0);
     g.add(door);
     doors.push(door);
+    // Marco de la puerta del lado del piso: jambas y dintel (allí van el
+    // final de puerta y la botonera de llamada).
+    for (const zz of [-0.52, 0.52]) {
+      const jb = box(0.04, 1.32, 0.04, yellow);
+      jb.position.set(1.25, y + 0.66, zz);
+      g.add(jb);
+    }
+    const lintel = box(0.04, 0.05, 1.08, yellow);
+    lintel.position.set(1.25, y + 1.3, 0);
+    g.add(lintel);
     const tag = label(i === 0 ? "PB" : `P${i}`);
     tag.position.set(2.4, y + 0.3, 0.6);
     g.add(tag);
@@ -3074,21 +3394,24 @@ function buildLift(p) {
       g.add(c);
     }
   }
-  // Botonera de llamada en cada piso, junto a la puerta: un pulsador por
-  // piso que se acciona con clic (el que nombra ese piso en su rótulo).
+  // Botonera de llamada en cada piso: caja en la jamba del lado +z de la
+  // puerta, a la altura de la mano (1.2 m reales) y girada hacia el frente
+  // para verla y pulsarla con clic sin rodear el pozo.
   const station = (i, id) => {
     const st = new THREE.Group();
-    const plateB = box(0.02, 0.2, 0.12, mat(0xc9cfd6, { metalness: 0.5, roughness: 0.3 }));
-    const btn = cyl(0.03, 0.025, mat(0x2f8be0, { roughness: 0.4 }), 18);
+    const boxB = box(0.05, 0.26, 0.15, mat(0xc9cfd6, { metalness: 0.5, roughness: 0.3 }));
+    boxB.position.x = 0.025;
+    const btn = cyl(0.04, 0.03, mat(0x2f8be0, { roughness: 0.4 }), 20);
     btn.rotation.z = Math.PI / 2;
-    btn.position.x = 0.015;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.006, 6, 20), mat(0xb8c0c8, { metalness: 0.7 }));
+    btn.position.x = 0.065;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.047, 0.007, 6, 22), mat(0xb8c0c8, { metalness: 0.7 }));
     ring.rotation.y = Math.PI / 2;
-    ring.position.x = 0.012;
+    ring.position.x = 0.052;
     const t = label(id);
-    t.position.set(0.05, 0.17, 0);
-    st.add(plateB, btn, ring, t);
-    st.position.set(1.22, i * H + 0.55, 0.6);
+    t.position.set(0.06, 0.22, 0);
+    st.add(boxB, btn, ring, t);
+    st.position.set(1.27, i * H + 0.6, 0.56);
+    st.rotation.y = -Math.PI / 5;
     g.add(st);
     return { btn };
   };
@@ -3116,14 +3439,84 @@ function buildLift(p) {
   const extra = box(0.5, 0.36, 0.5, mat(0xd8282d));
   extra.position.set(0.05, 0.56, 0.05);
   extra.visible = false;
-  cab.add(floor, roof, backW, side1, side2, yoke, yokeL, yokeR, crate, extra);
+  // Leva (rampa naranja) en el costado +z de la cabina: al pasar empuja el
+  // rodillo de los finales de piso y, si se pasa de largo, los de seguridad.
+  const cam = box(0.34, 2 * CAM_H, 0.04, mat(0xff8a00, { roughness: 0.5 }));
+  // Cubre en x los rodillos de las dos columnas (x ≈ 0.26 y 0.46 en el pozo).
+  cam.position.set(0.36 - 0.55, CAM_Y, 0.505);
+  const camArm = box(0.04, 0.04, 0.03, steel);
+  camArm.position.set(0.36 - 0.55, CAM_Y, 0.47);
+  cab.add(floor, roof, backW, side1, side2, yoke, yokeL, yokeR, crate, extra, cam, camArm);
   cab.position.set(0.55, 0, 0);
   const rope = cyl(0.01, 1, mat(0x23272d), 6);
   rope.position.set(0.55, 0, 0);
   const cwRope = cyl(0.008, 1, mat(0x23272d), 6);
   cwRope.position.set(-0.22, 0, -0.2);
   g.add(cab, rope, cwRope);
-  return { group: g, cab, rope, cw, cwRope, drum, doors, extra, tall, station, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
+  /**
+   * Final de carrera del montacargas, montado donde lo acciona su pieza:
+   *  - altura (SQ de piso y de seguridad): por fuera del costado +z del pozo,
+   *    con la palanca hacia adentro; lo empuja la leva de la cabina. Los de
+   *    piso van en la columna A (rodillo a la mitad de la leva cuando la
+   *    cabina está en su cota); los de sobrerrecorrido en la B, con el
+   *    rodillo justo encima (o debajo) del borde de la leva: solo los toca
+   *    si la cabina se pasa.
+   *  - puertaN (SP): colgado del dintel de la puerta de ese piso, con el
+   *    rodillo sobre el larguero de arriba de la puerta: puerta cerrada =
+   *    palanca pisada.
+   *  - sobrecarga (BW): sobre el techo de la cabina, junto al enganche del
+   *    cable (viaja con la cabina).
+   * Devuelve el grupo ya ubicado, o null si la señal no es de este equipo.
+   */
+  const liftSwitch = (s, key, epK) => {
+    const b = rollerSwitch();
+    const min = Number(s.params?.min ?? 0);
+    const max = Number(s.params?.max ?? min);
+    let sc = 1.6;
+    let parent = g;
+    if (key === "altura") {
+      const up = max >= 50;
+      const down = min <= -50;
+      const col = up || down ? 1 : 0;
+      const k = (up ? min : down ? max : (min + max) / 2) * epK;
+      // Cuerpo vertical con el frente (y su piloto) hacia +x y la palanca
+      // horizontal hacia el pozo; el rodillo queda 0.028 m bajo el origen.
+      const y = k + CAM_Y + (up ? CAM_H + 0.03 : down ? -CAM_H - 0.03 : 0) + 0.028;
+      const x = LIFT_SW.x[col];
+      b.rotation.y = Math.PI / 2;
+      b.userData.leverRest = -Math.PI / 2;
+      b.userData.lever.rotation.z = -Math.PI / 2;
+      b.position.set(x, y, LIFT_SW.z);
+      // Ménsula: pletina detrás del cuerpo hasta la columna del pozo (x = 0).
+      const bar = box(x + 0.04, 0.03, 0.02, mat(0x5b6470, { metalness: 0.4 }));
+      bar.position.set((x + 0.04) / 2 - 0.015, y - 0.15, 0.688);
+      const leg = box(0.03, 0.03, 0.11, bar.material);
+      leg.position.set(0, y - 0.15, 0.64);
+      g.add(bar, leg);
+    } else if (/^puerta\d+$/.test(key)) {
+      const i = Number(key.slice(6));
+      if (i >= n) return null;
+      sc = 1.4;
+      const y = i * H;
+      b.setRotationFromMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, -1, 0), new THREE.Vector3(1, 0, 0)));
+      b.position.set(1.127, y + 1.082, -0.36);
+      const br = box(0.1, 0.03, 0.05, mat(0x5b6470, { metalness: 0.4 }));
+      br.position.set(1.19, y + 1.29, -0.36);
+      g.add(br);
+    } else if (key === "sobrecarga") {
+      sc = 1.2;
+      b.position.set(-0.2, 1.02 + 0.152 * sc, 0.25);
+      parent = cab;
+    } else return null;
+    b.scale.setScalar(sc);
+    parent.add(b);
+    // Rótulo arriba del interruptor, sea cual sea su giro.
+    const t = label(s.id);
+    t.position.copy(new THREE.Vector3(0, 0.16, 0).applyQuaternion(b.quaternion.clone().invert()).divideScalar(sc));
+    b.add(t);
+    return b;
+  };
+  return { group: g, cab, rope, cw, cwRope, drum, doors, extra, tall, station, liftSwitch, n, motorRotor: fm, height: tall + 0.6, size: [2.7, 1.4] };
 }
 
 /** Filtro de arena: tanque a presión con su lecho (se oscurece al colmatarse), válvulas y manómetro diferencial. */
@@ -3264,7 +3657,7 @@ function frame(now) {
       const sp = valOf(outOf(String(o.motor ?? "")).speed);
       m.drum.rotation.x += sp * 0.3;
       m.motorRotor?.update({ speed: sp });
-      for (const c of m.calls ?? []) c.btn.position.x = window.JwsimScene?.actionState?.(c.id, "press") ? 0.004 : 0.015;
+      for (const c of m.calls ?? []) c.btn.position.x = window.JwsimScene?.actionState?.(c.id, "press") ? 0.052 : 0.065;
       m.doors.forEach((dd, i) => {
         dd.position.z = out[`puerta${i}`] ? 0.8 : 0;
       });
@@ -3295,7 +3688,7 @@ function frame(now) {
       const so = outOf(sid);
       const on = !!(so.actuated ?? so.detecting);
       lightBeacon(b, on);
-      if (b.userData.lever) b.userData.lever.rotation.z = on ? 0.45 : 0;
+      if (b.userData.lever) b.userData.lever.rotation.z = (b.userData.leverRest ?? 0) + (on ? 0.45 : 0);
     }
   }
   for (const f of V.field ?? []) f.m.update(outOf(f.id));
@@ -3309,6 +3702,7 @@ function frame(now) {
       v.led.material.emissive.setHex(o.running ? 0x1f8a46 : 0x000000);
     }
     for (const l of V.panel.lamps) l.lens.material.emissive.setHex(outOf(l.id).lit ? l.hex : 0x000000);
+    if (V.panel.lock) V.panel.lock.visible = !!(running && V.snap?.lockedOut);
     for (const c of V.panel.controls ?? []) {
       const on = !!window.JwsimScene?.actionState?.(c.id, c.action);
       if (c.kind === "push") c.mesh.position.z = c.z0 - (on ? 0.012 : 0);
@@ -3324,8 +3718,17 @@ function frame(now) {
       if (pl.tft && TFT_TEX && running) TFT_TEX.needsUpdate = true;
     }
   }
+  orientProbes();
   V.controls.update();
   V.renderer.render(V.scene, V.camera);
+  // Puntas del multímetro: encima de todo, con su propia profundidad.
+  if (V.overlay && V.diagMarks && (V.diagMarks.red.visible || V.diagMarks.black.visible || V.diagMarks.ring.visible)) {
+    const auto = V.renderer.autoClear;
+    V.renderer.autoClear = false;
+    V.renderer.clearDepth();
+    V.renderer.render(V.overlay, V.camera);
+    V.renderer.autoClear = auto;
+  }
 }
 
 window.Jwsim3D = {
@@ -3364,13 +3767,14 @@ window.Jwsim3D = {
     return [v.x, v.y, v.z, V.panel.W, V.panel.H, V.panel.bottom ?? 0];
   },
   show(visible) {
+    if (!visible) openFolio(false);
     if (visible && !V.ready && !V.failed) init();
     if (V.failed) return;
     V.visible = visible;
     if (visible) {
       const spec = window.JwsimScene?.specForView?.() ?? { devices: [] };
       // El tablero muestra todos los equipos eléctricos: cualquier alta o baja rearma la planta.
-      const sig = JSON.stringify(spec.devices.map((d) => (PLANT.has(d.type) || SENSORS.has(d.type) ? [d.id, d.type, d.x, d.params] : [d.id, d.type, d.params?.color, d.params?.label])));
+      const sig = JSON.stringify([spec.devices.map((d) => (PLANT.has(d.type) || SENSORS.has(d.type) ? [d.id, d.type, d.x, d.params, d.p3] : [d.id, d.type, d.params?.color, d.params?.label, d.p3])), spec.plant3d ?? null]);
       if (sig !== V.sig) {
         V.sig = sig;
         rebuild(spec);
@@ -3399,4 +3803,81 @@ window.Jwsim3D = {
     return out;
   },
   objects: () => [...V.objects.entries()].map(([id, o]) => ({ id, type: o.type, beacons: o.beacons.length })),
+  /** La escena cambió (esquema, Ctrl+Z, armado): si la vista está abierta, se vuelve a dibujar. */
+  onSpec() {
+    if (V.visible && V.ready) window.Jwsim3D.show(true);
+  },
+  /** Para pruebas: modo «Armar» (encender/apagar y su estado). */
+  /** La simulación arrancó o se detuvo: el modo «Armar» solo va con ella detenida. */
+  onRun() {
+    V.armarUi?.syncRun();
+    paintDiag();
+  },
+  /** El multímetro cambió (puntas, pinza, modo) o se abrió/cerró en la planta. */
+  onDiag() {
+    paintDiag();
+  },
+  /** Folio de planos sobre la vista 3D (abrir/cerrar; sin argumento, su estado). */
+  folio(on) {
+    if (on !== undefined) openFolio(!!on);
+    return !document.getElementById("view3d-folio")?.hidden;
+  },
+  /** Para pruebas: bornes del tablero con punto de multímetro, y punto de pantalla de uno. */
+  diagTerms: () => (V.panel?.diagTerms ?? []).map((t) => t.end),
+  termScreen(end) {
+    const t = V.panel?.diagTerms?.find((q) => q.end === end);
+    if (!t) return null;
+    const v = new THREE.Vector3();
+    t.mesh.getWorldPosition(v);
+    v.project(V.camera);
+    const r = V.renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  },
+  /** Para pruebas: punto de pantalla del folio de planos y estado del candado. */
+  folioScreen() {
+    const m = V.panel?.folio?.[1];
+    if (!m) return null;
+    const v = new THREE.Vector3();
+    m.getWorldPosition(v);
+    v.project(V.camera);
+    const r = V.renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  },
+  lockShown: () => !!V.panel?.lock?.visible,
+  /** Para pruebas: dónde quedaron las puntas (nombre del borne de cada una). */
+  probesAt() {
+    const M = V.diagMarks;
+    const lit = (V.panel?.diagTerms ?? []).filter((t) => t.mesh.visible && t.mesh.material.opacity > 0).length;
+    // Sin cruzarse: el orden en x de los mangos es el mismo que el de las puntas.
+    const sx = (o, y) => o.localToWorld(new THREE.Vector3(0, y, 0)).project(V.camera).x;
+    const uncrossed = M && M.red.visible && M.black.visible ? Math.sign(sx(M.red, 0) - sx(M.black, 0)) === Math.sign(sx(M.red, 0.3) - sx(M.black, 0.3)) || Math.abs(sx(M.red, 0) - sx(M.black, 0)) < 0.002 : null;
+    return M ? { red: M.red.visible, black: M.black.visible, clamp: M.ring.visible, redDown: !!M.red.userData.down, lit, uncrossed } : null;
+  },
+  armar(on) {
+    if (on !== undefined) V.armarUi?.setOn(!!on);
+    return V.armarUi ? { ...V.armarUi.state(), ids: [...(V.armIndex?.keys() ?? [])] } : null;
+  },
+  /** Para pruebas: punto de pantalla (px del cliente) de un punto del piso. */
+  groundScreen(x, z) {
+    const v = new THREE.Vector3(x, 0, z).project(V.camera);
+    const r = V.renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  },
+  /** Para pruebas: lugar { x, z, r } de un grupo movible («dev:M1», «piece:A1», «panel:panel»). */
+  armAt(key) {
+    const g = V.armIndex?.get(key);
+    if (!g) return null;
+    const b = footprint(g);
+    return { x: +g.position.x.toFixed(3), z: +g.position.z.toFixed(3), r: Math.round(THREE.MathUtils.radToDeg(g.rotation.y)), fx: +b.min.x.toFixed(3), fz: +b.min.z.toFixed(3) };
+  },
+  /** Para pruebas: posición en la escena del origen de un equipo de planta. */
+  objectAt(id) {
+    const g = V.objects.get(id)?.model.group;
+    if (!g) return null;
+    const v = new THREE.Vector3();
+    g.getWorldPosition(v);
+    return [v.x, v.y, v.z];
+  },
 };
+
+document.getElementById("view3d-folio-close")?.addEventListener("click", () => openFolio(false));

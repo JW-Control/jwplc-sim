@@ -18,6 +18,7 @@
 
 import { mountLinks } from "./mount.mjs";
 import { crc16 } from "./modbus.mjs";
+import { loadAmps, ohmsBetween, voltsBetween, windings, WINDING_OHMS } from "./meter.mjs";
 import { analyze, solve } from "./netlist.mjs";
 import { Registry } from "./devices/index.mjs";
 
@@ -137,6 +138,8 @@ export class Scene {
   findings = [];
   /** @type {Map<string, InjectedFault & { latched?: Record<string, boolean> }>} fallas inyectadas (G9) */
   injected = new Map();
+  /** Energía bloqueada (bloqueo y etiquetado del modo Diagnóstico): ninguna fuente da tensión. */
+  lockedOut = false;
   t = 0n;
   #sent = {};
   /** @type {{ find: (x: string) => string } | null} conexiones por los cables activos (caché) */
@@ -239,6 +242,7 @@ export class Scene {
     for (const dev of this.devices.values()) {
       const g = (term) => `${dev.id}.${term}`;
       for (const s of dev.el.sources ?? []) {
+        if (this.lockedOut && !allContacts) continue;
         const id = s.id ? `${dev.id}.${s.id}` : dev.id;
         // Fuente controlada (salida de un variador): el dispositivo la
         // enciende, le da frecuencia e invierte la secuencia (L2 <-> L3).
@@ -583,6 +587,78 @@ export class Scene {
     this.evaluate(t);
   }
 
+  /**
+   * Bloqueo y etiquetado: con `on`, ninguna fuente da tensión (seccionador
+   * abierto y con candado) hasta que se retire.
+   * @param {boolean} on
+   * @param {bigint} t
+   */
+  lockout(on, t) {
+    if (t < this.t) t = this.t;
+    this.advanceTo(t);
+    this.lockedOut = !!on;
+    this.#log({ t, kind: "action", device: "", key: "lockout", value: !!on });
+    this.evaluate(t);
+  }
+
+  /**
+   * Lectura del multímetro entre dos bornes en el instante actual
+   * (scene/meter.mjs): "VDC" y "VAC" en voltios, "OHM" en ohmios (Infinity =
+   * OL). `live`: había tensión en la escena al medir (medir resistencia con
+   * tensión es una mala práctica y la lectura no vale).
+   * @param {string} red
+   * @param {string} black
+   * @param {"VDC" | "VAC" | "OHM"} mode
+   * @returns {{ value: number, live: boolean }}
+   */
+  measure(red, black, mode) {
+    this.#terminal(red);
+    this.#terminal(black);
+    const net = this.#netlist();
+    const live = !this.lockedOut && net.sources.some((s) => !this.tripped.has(s.id));
+    if (mode === "OHM") {
+      const extra = [];
+      for (const dev of this.devices.values()) {
+        if (this.injected.has(`burnt:${dev.id}`)) continue;
+        for (const pl of dev.el.phaseLoads ?? []) for (const [a, b] of windings(pl.terminals)) extra.push([`${dev.id}.${a}`, `${dev.id}.${b}`, WINDING_OHMS]);
+      }
+      return { value: ohmsBetween(net, extra, red, black), live };
+    }
+    if (mode !== "VDC" && mode !== "VAC") throw new Error(`modo de medición desconocido: ${mode} (VDC, VAC u OHM)`);
+    const states = this.#sol?.loads ?? new Map();
+    const disabled = new Set(this.tripped);
+    const v = voltsBetween(net, states, disabled, red, black, mode);
+    return { value: v, live };
+  }
+
+  /**
+   * Pinza amperimétrica en el cable entre `a` y `b` (A): la corriente que el
+   * equipo declara en ese borne (trifásico) o la suma de las cargas que
+   * dependen de ese cable.
+   * @param {string} a
+   * @param {string} b
+   */
+  clamp(a, b) {
+    const k = [a, b].sort().join(" ");
+    const i = this.wires.findIndex(([x, y]) => [x, y].sort().join(" ") === k);
+    if (i < 0) throw new Error(`no hay un cable entre ${a} y ${b}`);
+    if (this.injected.has(`open:${k}`) || this.lockedOut) return 0;
+    for (const term of [a, b]) {
+      const j = term.indexOf(".");
+      const amps = Number(this.devices.get(term.slice(0, j))?.step.currents?.[term.slice(j + 1)]);
+      if (Number.isFinite(amps) && amps) return Math.round(Math.abs(amps) * 1000) / 1000;
+    }
+    const net = this.#netlist();
+    const now = solve(net, new Set(this.tripped));
+    const without = solve({ ...net, wires: net.wires.filter(([x, y]) => [x, y].sort().join(" ") !== k) }, new Set(this.tripped));
+    let amps = 0;
+    for (const l of net.loads) {
+      const st = now.loads.get(l.id);
+      if (st?.on && !without.loads.get(l.id)?.on) amps += loadAmps(l, st.volts);
+    }
+    return Math.round(amps * 1000) / 1000;
+  }
+
   /** ¿Hay esclavos Modbus en la escena? (la co-simulación enlaza el bus RS-485) */
   hasModbus() {
     return [...this.devices.values()].some((d) => d.modbus);
@@ -795,6 +871,7 @@ export class Scene {
       findings: this.findings,
       faults: this.events.filter((e) => e.kind === "fault"),
       injected: [...this.injected.entries()].map(([key, f]) => ({ key, ...f, latched: undefined })),
+      lockedOut: this.lockedOut,
     };
   }
 

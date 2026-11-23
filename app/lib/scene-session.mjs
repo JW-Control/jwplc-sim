@@ -27,6 +27,7 @@ export function wireSnapshot(snap) {
     findings: snap.findings,
     faults: snap.faults.map((f) => ({ t_ms: ms(f.t), type: f.type, device: f.device, message: f.message })),
     injected: snap.injected ?? [],
+    lockedOut: !!snap.lockedOut,
   };
 }
 
@@ -82,6 +83,11 @@ export class SceneSession extends EventEmitter {
 
   clearFault(key) {
     this.#enqueue({ clear: key });
+  }
+
+  /** Bloqueo y etiquetado (modo Diagnóstico): ninguna fuente da tensión mientras dure. */
+  lockout(on) {
+    this.#enqueue({ lockout: !!on });
   }
 
   #enqueue(op) {
@@ -163,6 +169,7 @@ export class SceneSession extends EventEmitter {
         if (op.rearm) this.scene.rearm(at);
         else if (op.inject) this.scene.inject(op.inject, at);
         else if (op.clear) this.scene.clearFault(op.clear, at);
+        else if (op.lockout !== undefined) this.scene.lockout(op.lockout, at);
         else this.scene.act(op.device, op.action, op.value, at);
       } catch (err) {
         this.emit("error", err);
