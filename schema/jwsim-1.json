@@ -409,6 +409,69 @@
       "items": {
         "$ref": "#/$defs/relPath"
       }
+    },
+    "diagnostico": {
+      "type": "object",
+      "description": "Modo Diagnóstico: órdenes de trabajo con una falla oculta que el alumno halla midiendo y repara (app/renderer/diagnostico.js).",
+      "properties": {
+        "ordenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "titulo",
+              "sintoma",
+              "falla"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "titulo": {
+                "type": "string",
+                "description": "Lo que se ve en la orden (sin delatar la causa)."
+              },
+              "sintoma": {
+                "type": "string",
+                "description": "Lo que reporta el operador."
+              },
+              "falla": {
+                "type": "object",
+                "description": "Falla de la escena (Scene.inject): {kind: open, wire: \"A.x B.y\"} o {kind: stuck|burnt|welded, device, value?}.",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "open",
+                      "stuck",
+                      "burnt",
+                      "welded"
+                    ]
+                  },
+                  "wire": {
+                    "type": "string"
+                  },
+                  "device": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "causa": {
+                "type": "string",
+                "description": "Explicación que se muestra al cerrar la orden."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "allOf": [
