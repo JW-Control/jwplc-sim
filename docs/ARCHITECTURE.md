@@ -724,6 +724,17 @@ escala y los puntos A y B, el tanque con su nivel y la bomba, y la puerta
 con la hoja que corre y la persona. No representan un modelo comercial, así
 que quedan fuera de la regla de 4 px/mm de los símbolos de tablero.
 
+**Banco de trabajo** (prácticas del curso): un proyecto sin planta y solo
+con equipos de riel y de frente (fuente, PLC, contactores, relés, pilotos,
+pulsadores, selectores, zumbador) se dibuja en 3D como banco de trabajo y no
+como tablero de campo: tablero abierto, sin gabinete ni puerta, parado sobre
+una mesa, con los mandos y pilotos en filas al frente (hasta 8 por fila) y el
+zumbador entre ellos. Con un solo riel el banco es más bajo. La cámara lo
+mira de frente; con piloto rojo, amarillo y verde va un semáforo didáctico
+(60 %) al costado. `scene.plant3d.banco` (true/false) lo fuerza. Los bornes
+de diagnóstico del multímetro siguen igual. Prueba:
+`app/tests/e2e-banco-3d.mjs`.
+
 **Planta armable** (`app/renderer/scene3d-armar.js`, botón «Armar» de la
 vista 3D): sin armar, la planta se acomoda sola como antes. En modo Armar
 cada equipo, el tablero y las piezas de ambiente se arrastran sobre una
