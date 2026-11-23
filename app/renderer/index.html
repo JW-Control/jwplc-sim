@@ -256,6 +256,11 @@
                   <section id="ex-brief" class="ex-brief" hidden></section>
                   <section id="ex-goals" class="ex-goals" hidden aria-live="polite"></section>
                 </section>
+                <!-- Modo Diagnóstico: orden de trabajo con falla oculta, multímetro, bloqueo y reparación. -->
+                <section class="side-pane diag-pane" data-pane="diag" hidden>
+                  <div class="side-title">Diagnóstico</div>
+                  <div id="diag-root" class="diag-root"></div>
+                </section>
                 <section class="side-pane" data-pane="props">
                   <div class="side-title">Propiedades</div>
                   <div id="scene-inspector" class="scene-inspector"></div>
@@ -267,6 +272,9 @@
               <nav class="side-bar" aria-label="Paneles de la escena">
                 <button class="side-tab" data-pane="reto" id="scene-tab-reto" title="Reto: ficha y objetivos en vivo del ejercicio" aria-label="Reto" aria-pressed="false" hidden>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+                </button>
+                <button class="side-tab" data-pane="diag" id="scene-tab-diag" title="Diagnóstico: órdenes de trabajo con falla oculta, multímetro, bloqueo y reparación" aria-label="Diagnóstico" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8.5" y="4.5" width="7" height="4" rx="0.5"/><circle cx="12" cy="14" r="3"/><path d="M12 14l1.8-1.8"/></svg>
                 </button>
                 <button class="side-tab" data-pane="add" id="scene-tab-add" title="Agregar dispositivo" aria-label="Agregar dispositivo" aria-pressed="false">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14v7M14 17.5h7"/></svg>
@@ -348,14 +356,14 @@
           <div class="watch-col">
             <div class="watch-title">Entradas digitales</div>
             <table class="io-table">
-              <thead><tr><th>Señal</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
+              <thead><tr><th>Señal</th><th>Equipo</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
               <tbody id="io-in-rows"></tbody>
             </table>
           </div>
           <div class="watch-col">
             <div class="watch-title">Salidas a relé</div>
             <table class="io-table">
-              <thead><tr><th>Señal</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
+              <thead><tr><th>Señal</th><th>Equipo</th><th>Valor</th><th>Estado</th><th>Forzar</th></tr></thead>
               <tbody id="io-out-rows"></tbody>
             </table>
           </div>
@@ -444,6 +452,7 @@
     <script src="scene.js"></script>
     <script src="pneumatic.js"></script>
     <script src="iec.js"></script>
+    <script src="diagnostico.js"></script>
     <script src="../lib/state-diagram-core.cjs"></script>
     <script src="state-diagram.js"></script>
     <script src="tabs.js"></script>

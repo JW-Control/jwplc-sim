@@ -585,6 +585,32 @@ RTC sin batería (al iniciar) y el ruido en RS-485 (en vivo). Las fallas de
 la placa quedan en la grabación (`.stim`); las de la escena, como las
 acciones de escena, no se graban todavía.
 
+**Modo Diagnóstico** (`app/renderer/diagnostico.js`, pestaña lateral de la
+Escena): una orden de trabajo inyecta una de estas fallas sin marcarla (ni
+en el dibujo, ni en el inspector, ni en la lista de diagnóstico) y el alumno
+la halla midiendo. Las órdenes vienen del proyecto (`diagnostico.ordenes`
+en el `.jwsim`: título, síntoma del operador, falla y causa) o, si no trae,
+se generan del cableado de las E/S del PLC.
+
+- Multímetro (`scene/meter.mjs`, `Scene.measure`): V⎓ y V~ entre dos bornes
+  por la netlist; una carga sin corriente no hace caída, así que entre las
+  puntas de un contacto abierto, un cable cortado o una bobina quemada que
+  debería estar alimentada se leen los 24 V. Ω por el camino de menor
+  resistencia (cables y contactos cerrados 0 Ω, cada carga según su tensión
+  y una corriente típica, bobinados de motor 12 Ω; quemado o cortado = OL).
+  Pinza (`Scene.clamp`): la corriente que el equipo declara en el borne o la
+  suma de las cargas que se apagarían sin ese cable.
+- Bloqueo y etiquetado (`Scene.lockout`): ninguna fuente da tensión hasta
+  retirarlo. Probar 0 V entre los polos de la fuente cuenta como prueba de
+  ausencia de tensión.
+- Puntaje sobre 100: medir Ω con tensión −10, reparar sin bloqueo −30, sin
+  probar ausencia de tensión −10, cambiar una pieza sana −15. La orden se
+  cierra con la falla reparada y el bloqueo retirado.
+- La tabla de E/S dice qué equipo hay en cada entrada y salida siguiendo el
+  cableado (`JwsimScene.ioMap`).
+
+Pruebas: `scene/tests/meter.test.mjs` y `app/tests/e2e-diagnostico.mjs`.
+
 
 ### 4.3 Ejercicios y calificación **[G9]**
 

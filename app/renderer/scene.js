@@ -1292,7 +1292,7 @@
         html += `<div class="insp-head" title="${esc(def.type)}@${esc(def.version)}"><b>${esc(dev.id)}</b><span>${esc(def.name)}</span></div>`;
         html += `<div class="insp-meta">${esc(def.category ?? "Otros")} · ${terms.length} bornes</div>`;
         // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
-        const opts = dev.type === "jwsim/jwplc-basic" || !S.running ? [] : faultOptions(dev, def, st);
+        const opts = dev.type === "jwsim/jwplc-basic" || !S.running || window.JwsimDiag?.active?.() ? [] : faultOptions(dev, def, st);
         let fh = "";
         if (opts.length) {
           const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
@@ -2006,6 +2006,69 @@
     changed();
   }
 
+  /**
+   * Para cada entrada I0_k, los equipos cuyos contactos la alimentan (del
+   * borne hacia la fuente) y, para cada salida Q0_k, la carga que mueve y lo
+   * que hay en el camino. Se sigue el cableado y, dentro de cada equipo, el
+   * borne par (13-14, 21-22, 95-96, A1-A2, X1-X2).
+   */
+  function ioMap() {
+    const plc = S.spec.devices.find((d) => d.type === "jwsim/jwplc-basic");
+    if (!plc) return {};
+    const pair = (t) => {
+      const [id, term] = [t.slice(0, t.indexOf(".")), t.slice(t.indexOf(".") + 1)];
+      let m = /^(\d+)$/.exec(term);
+      if (m) return `${id}.${Number(m[1]) % 2 ? Number(m[1]) + 1 : Number(m[1]) - 1}`;
+      m = /^([A-Za-z]+)([12])$/.exec(term);
+      if (m) return `${id}.${m[1]}${m[2] === "1" ? 2 : 1}`;
+      return null;
+    };
+    const next = (t) => S.spec.wiring.flatMap((w) => (w.from === t ? [w.to] : w.to === t ? [w.from] : []));
+    const isSource = (id) => /power|supply|fuente/.test(devById(id)?.type ?? "");
+    const walk = (start, stopAtLoad) => {
+      const chain = [];
+      const seen = new Set([start]);
+      let frontier = next(start);
+      for (let hop = 0; hop < 12 && frontier.length; hop++) {
+        const t = frontier.find((x) => !seen.has(x));
+        if (!t) break;
+        seen.add(t);
+        const id = t.slice(0, t.indexOf("."));
+        if (id === plc.id || isSource(id)) break;
+        const term = t.slice(t.indexOf(".") + 1);
+        chain.push(id);
+        if (stopAtLoad && /^(A1|X1|\+)$/.test(term)) return { chain, load: id };
+        const p = pair(t);
+        if (!p) break;
+        seen.add(p);
+        frontier = next(p);
+      }
+      return { chain, load: null };
+    };
+    const label = (id) => {
+      const d = devById(id);
+      const l = d?.params?.label;
+      return l ? `${id} (${l})` : id;
+    };
+    /** @type {Record<string, { text: string, devices: string[] }>} */
+    const out = {};
+    for (let k = 0; k < 8; k++) {
+      const i = walk(`${plc.id}.I0_${k}`, false);
+      if (i.chain.length) {
+        const names = [...new Set(i.chain)];
+        const first = names[0];
+        out[`I0_${k}`] = { devices: names, text: names.length > 1 ? `${names.slice().reverse().map(label).join(" · ")} en serie` : `${label(first)} · ${S.defs.get(devById(first)?.type)?.name ?? ""}` };
+      }
+      const q = walk(`${plc.id}.Q0_${k}.2`, true);
+      if (q.chain.length) {
+        const ld = q.load ?? q.chain[q.chain.length - 1];
+        const via = q.chain.filter((x) => x !== ld);
+        out[`Q0_${k}`] = { devices: q.chain, text: `${label(ld)} · ${S.defs.get(devById(ld)?.type)?.name ?? ""}${via.length ? ` (por ${via.join(", ")})` : ""}` };
+      }
+    }
+    return out;
+  }
+
   function changed() {
     normalizeCables();
     S.dirty = true;
@@ -2013,6 +2076,7 @@
     S.analyzeTimer = setTimeout(analyze, 120);
     window.JwsimStateDiag?.onSpec?.();
     window.Jwsim3D?.onSpec?.();
+    window.updateIoDescriptions?.();
     render();
   }
 
@@ -2147,6 +2211,15 @@
           S.drag = { kind: "vertex", i: S.sel.id, k, moved: false };
           svg.setPointerCapture(e.pointerId);
         }
+        return;
+      }
+      // Modo Diagnóstico: el borne recibe la punta del multímetro.
+      if (term && window.JwsimDiag?.onTerm?.(term.dataset.term)) {
+        e.preventDefault();
+        return;
+      }
+      if (wireEl && window.JwsimDiag?.onWire?.(Number(wireEl.dataset.wire))) {
+        e.preventDefault();
         return;
       }
       if (term) {
@@ -3283,6 +3356,10 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    /** Nombre del tipo de un equipo («Contactor», «Final de carrera»…). */
+    deviceName: (id) => S.defs.get(devById(id)?.type)?.name ?? "",
+    /** Qué hay en cada E/S del PLC, siguiendo el cableado (tabla de E/S y modo Diagnóstico). */
+    ioMap: () => ioMap(),
     editCircuit: (op) => editCircuit(op),
     // Un dato del equipo que no cambia su dibujo (p. ej. los bornes del PLC
     // que se escriben en el plano IEC). value undefined lo quita. Ctrl+Z deshace.
@@ -3403,6 +3480,7 @@
       const run = kind === "running" || kind === "paused" || kind === "break";
       if (run === S.running) return;
       S.running = run;
+      if (!run) window.JwsimDiag?.onStop?.();
       updateUndoRedoButtons();
       window.Jwsim3D?.onRun?.();
       if (!run) analyze();
@@ -3532,7 +3610,10 @@
           S.dirty = true;
         }
       }
+      // Modo Diagnóstico: la falla de la orden de trabajo no se delata.
+      snap = window.JwsimDiag?.filter?.(snap) ?? snap;
       S.snap = snap;
+      window.JwsimDiag?.onSnapshot?.(snap);
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
       window.JwsimIec?.onSnapshot(snap);

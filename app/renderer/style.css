@@ -5920,3 +5920,214 @@ body[data-schem="iec"] .scene-float {
   font-size: 10.5px;
   margin-top: 6px;
 }
+
+/* ---------------------------------------------------------------- Modo Diagnóstico */
+.io-table td.io-desc {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+.diag-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+.diag-order {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.diag-order.done {
+  border-color: var(--ok-border);
+}
+.diag-order-h {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.diag-order-h span {
+  font-variant-numeric: tabular-nums;
+}
+.diag-title {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.diag-sym {
+  margin: 6px 0 8px;
+  line-height: 1.4;
+}
+.diag-hint,
+.diag-ok {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.diag-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.diag-score {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--ok);
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.diag-score small {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.diag-pens {
+  margin: 0 0 8px;
+  padding-left: 16px;
+  color: var(--err-text-2);
+}
+.diag-meter {
+  padding: 10px;
+  border-radius: 10px;
+  background: #1f2328;
+  color: #e6edf3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 2px solid #3a3f46;
+}
+.diag-meter.alarm {
+  border-color: var(--err);
+}
+.diag-lcd {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 26px;
+  text-align: right;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #b9c7a6;
+  color: #1d2414;
+  font-variant-numeric: tabular-nums;
+}
+.diag-modes {
+  display: flex;
+  gap: 4px;
+}
+.diag-modes .seg {
+  flex: 1;
+  background: #2d333b;
+  color: #e6edf3;
+  border: 1px solid #444c56;
+  border-radius: 6px;
+  padding: 4px 0;
+  font-weight: 600;
+}
+.diag-modes .seg.on {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #06130b;
+}
+.diag-probes {
+  font-size: 11px;
+  color: #c9d1d9;
+  word-break: break-all;
+}
+.diag-meter .link {
+  align-self: flex-end;
+  color: #9cc7ff;
+}
+.diag-red {
+  color: #ff5d5d;
+}
+.diag-black {
+  color: #8b949e;
+}
+.diag-lock {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--warn);
+  background: var(--panel);
+}
+.diag-lock.on {
+  border-color: var(--err);
+  background: var(--err-bg);
+}
+.diag-repair {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diag-repair select {
+  width: 100%;
+}
+.diag-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+}
+.diag-log li {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.diag-log li span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.diag-log li.bad {
+  color: var(--err-text-2);
+}
+.diag-log li.ok {
+  color: var(--ok-text);
+}
+.diag-log li.warn {
+  color: var(--warn-text);
+}
+#diag-probes {
+  pointer-events: none;
+}
+.diag-tip circle {
+  fill: none;
+  stroke-width: 4;
+}
+.diag-tip.red circle,
+.diag-tip.red path {
+  stroke: #e5484d;
+}
+.diag-tip.red path {
+  fill: #e5484d;
+}
+.diag-tip.black circle,
+.diag-tip.black path {
+  stroke: #1f2328;
+}
+.diag-tip.black path {
+  fill: #1f2328;
+}
+.diag-tip text,
+.diag-clamp text {
+  font: 700 14px system-ui, sans-serif;
+  text-anchor: middle;
+  fill: var(--text);
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 4px;
+}
+.diag-clamp circle {
+  fill: none;
+  stroke: #f0b429;
+  stroke-width: 5;
+}
