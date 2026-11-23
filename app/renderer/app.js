@@ -2597,18 +2597,8 @@ function initMonaco() {
     window.require.config({ paths: { vs: `${base}vs` } });
     window.require(["vs/editor/editor.main"], () => {
       monacoRef = window.monaco;
-      monacoRef.editor.defineTheme("jwsim-dark", {
-        base: "vs-dark",
-        inherit: true,
-        rules: [],
-        colors: { "editor.background": "#14171b", "editorGutter.background": "#14171b" },
-      });
-      monacoRef.editor.defineTheme("jwsim-light", {
-        base: "vs",
-        inherit: true,
-        rules: [],
-        colors: { "editor.background": "#f5f7fa", "editorGutter.background": "#f5f7fa" },
-      });
+      // Colores del código como en Arduino IDE 2 (claro y oscuro).
+      window.JwsimEditorSyntax.install(monacoRef);
       editor = monacoRef.editor.create($("editor"), {
         theme: isDarkTheme() ? "jwsim-dark" : "jwsim-light",
         automaticLayout: true,
@@ -2620,6 +2610,8 @@ function initMonaco() {
         insertSpaces: true,
         detectIndentation: false,
         glyphMargin: true,
+        // Como Arduino IDE: llaves y paréntesis del color del texto.
+        bracketPairColorization: { enabled: false },
         // Autocompletado propio (completion.js): sin la lista de palabras de
         // Monaco, que mezcla todo lo que aparece en el archivo.
         wordBasedSuggestions: "off",
