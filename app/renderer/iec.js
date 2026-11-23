@@ -495,7 +495,8 @@
     if (st.mode !== "A") {
       for (const [end, cls, txt] of [[st.red, "red", "+"], [st.black, "black", "COM"]]) {
         const p = end && at.get(end);
-        if (p) s += `<g transform="translate(${p.x} ${p.y})">${Dg.probeSvg(cls, txt, 0.8)}</g>`;
+        const vb = S.vb?.box ?? [0, 0, sh.w, sh.h];
+        if (p) s += `<g transform="translate(${p.x} ${p.y})">${Dg.probeSvg(cls, txt, 0.8, p.y < vb[1] + vb[3] * 0.35)}</g>`;
       }
     } else if (st.wire != null) {
       const w = window.JwsimScene?.specForView?.()?.wiring?.[st.wire];

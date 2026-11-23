@@ -831,9 +831,21 @@ function setupPicking(canvas) {
     return o ? ts.find((t) => t.mesh === o) : null;
   };
   const folioHit = (e) => !!pickIn(e, V.panel?.folio ?? []);
+  const hoverMat = new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.9, depthTest: false });
   canvas.addEventListener("pointermove", (e) => {
     if (e.buttons) return;
-    canvas.style.cursor = folioHit(e) || termHit(e) || (window.JwsimScene?.running?.() && pick(e)) ? "pointer" : "";
+    const t = termHit(e);
+    // Solo se resalta el borne bajo el mouse.
+    if (V.hoverTerm && V.hoverTerm !== t?.mesh) {
+      V.hoverTerm.material = V.hoverTerm.userData.mat;
+      V.hoverTerm = null;
+    }
+    if (t && V.hoverTerm !== t.mesh) {
+      t.mesh.userData.mat ??= t.mesh.material;
+      t.mesh.material = hoverMat;
+      V.hoverTerm = t.mesh;
+    }
+    canvas.style.cursor = folioHit(e) || t || (window.JwsimScene?.running?.() && pick(e)) ? "pointer" : "";
   });
   canvas.addEventListener(
     "pointerdown",
@@ -947,10 +959,29 @@ function paintDiag() {
   };
   place(M.red, st.mode !== "A" ? st.red : null);
   place(M.black, st.mode !== "A" ? st.black : null);
+  orientProbes();
   // Pinza: en el borne del tablero por donde sale el cable abrazado.
   const w = st.mode === "A" && st.wire != null ? window.JwsimScene?.specForView?.()?.wiring?.[st.wire] : null;
   place(M.ring, w ? [w.from, w.to].find((e) => byEnd.has(e)) : null);
   if (M.ring.visible) M.ring.lookAt(V.camera.position);
+}
+
+/**
+ * Las puntas apuntan hacia el borde de la pantalla más lejano: con el borne
+ * en la mitad de arriba, el mango va hacia abajo, así no sale de la vista.
+ */
+function orientProbes() {
+  const M = V.diagMarks;
+  if (!M || !V.camera) return;
+  const v = new THREE.Vector3();
+  for (const [o, tilt] of [[M.red, 0.35], [M.black, -0.35]]) {
+    if (!o.visible) continue;
+    v.copy(o.position).project(V.camera);
+    const down = v.y > 0.1;
+    if (o.userData.down === down) continue;
+    o.userData.down = down;
+    o.rotation.set(down ? Math.PI - 0.55 : 0.55, 0, down ? -tilt : tilt);
+  }
 }
 
 /**
@@ -2545,9 +2576,10 @@ function buildPanel(spec) {
   wirePanel();
   // Modo Diagnóstico: un punto por borne (se ven con el multímetro abierto),
   // candado y tarjeta en el interruptor general cuando se bloquea la energía.
-  const termMat = new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0.85, depthTest: false });
+  // Los puntos no se ven: solo el que está bajo el mouse (guía para apoyar la punta).
+  const termMat = new THREE.MeshBasicMaterial({ color: 0x37d67a, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
   const diagTerms = [...termPts].map(([end, t]) => {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 10, 8), termMat);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 8), termMat);
     m.position.set(...t.pos);
     m.renderOrder = 5;
     m.visible = false;
@@ -3672,6 +3704,7 @@ function frame(now) {
       if (pl.tft && TFT_TEX && running) TFT_TEX.needsUpdate = true;
     }
   }
+  orientProbes();
   V.controls.update();
   V.renderer.render(V.scene, V.camera);
 }
@@ -3792,7 +3825,8 @@ window.Jwsim3D = {
   /** Para pruebas: dónde quedaron las puntas (nombre del borne de cada una). */
   probesAt() {
     const M = V.diagMarks;
-    return M ? { red: M.red.visible, black: M.black.visible, clamp: M.ring.visible } : null;
+    const lit = (V.panel?.diagTerms ?? []).filter((t) => t.mesh.visible && t.mesh.material.opacity > 0).length;
+    return M ? { red: M.red.visible, black: M.black.visible, clamp: M.ring.visible, redDown: !!M.red.userData.down, lit } : null;
   },
   armar(on) {
     if (on !== undefined) V.armarUi?.setOn(!!on);

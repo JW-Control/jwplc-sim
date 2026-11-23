@@ -6280,13 +6280,14 @@ body[data-schem="iec"] .scene-float {
 /* Bornes donde se puede apoyar una punta en el plano IEC. */
 .iec-probe {
   fill: #37d67a;
-  fill-opacity: 0.35;
-  stroke: #1f8a46;
-  stroke-width: 1;
+  fill-opacity: 0;
+  stroke: none;
   cursor: crosshair;
 }
 .iec-probe:hover {
   fill-opacity: 0.85;
+  stroke: #1f8a46;
+  stroke-width: 1;
 }
 /* Modo Diagnóstico en la Planta 3D: botón, tarjeta flotante y folio de planos. */
 .view3d-diag-btn {

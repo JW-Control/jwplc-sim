@@ -5,6 +5,7 @@
 //   TARJETA     con el panel de diagnóstico abierto, la planta trae su tarjeta flotante
 //   BORNES      el tablero 3D tiene un punto por borne (riel, puerta y bornera de salida)
 //   MEDIR_3D    clic real en dos bornes del tablero 3D: 24 V en la fuente, puntas dibujadas
+//               hacia abajo (borne arriba en la vista) y solo el borne bajo el mouse resaltado
 //   PINZA_3D    con la pinza, clic en un borne abraza el cable que sale de él
 //   CANDADO     bloquear la energía pone candado y tarjeta en el interruptor general
 //   FOLIO       clic en el bolsillo de la puerta abre los planos IEC; ✕ los guarda
@@ -96,7 +97,7 @@ try {
   const m1 = await st();
   const probes = await t(() => window.Jwsim3D.probesAt());
   await shot("3d-medir-fuente.png");
-  criteria.MEDIR_3D = { ok: m1.red === "PS1.+V1" && m1.black === "PS1.-V1" && m1.reading === "24.0 V" && probes.red && probes.black, red: m1.red, black: m1.black, reading: m1.reading, probes };
+  criteria.MEDIR_3D = { ok: m1.red === "PS1.+V1" && m1.black === "PS1.-V1" && m1.reading === "24.0 V" && probes.red && probes.black && probes.redDown && probes.lit <= 1, red: m1.red, black: m1.black, reading: m1.reading, probes };
   log(`MEDIR_3D ${JSON.stringify(criteria.MEDIR_3D)}`);
 
   stage = "PINZA_3D";
