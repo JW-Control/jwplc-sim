@@ -97,7 +97,7 @@ try {
   const m1 = await st();
   const probes = await t(() => window.Jwsim3D.probesAt());
   await shot("3d-medir-fuente.png");
-  criteria.MEDIR_3D = { ok: m1.red === "PS1.+V1" && m1.black === "PS1.-V1" && m1.reading === "24.0 V" && probes.red && probes.black && probes.redDown && probes.lit <= 1, red: m1.red, black: m1.black, reading: m1.reading, probes };
+  criteria.MEDIR_3D = { ok: m1.red === "PS1.+V1" && m1.black === "PS1.-V1" && m1.reading === "24.0 V" && probes.red && probes.black && probes.redDown && probes.uncrossed && probes.lit <= 1, red: m1.red, black: m1.black, reading: m1.reading, probes };
   log(`MEDIR_3D ${JSON.stringify(criteria.MEDIR_3D)}`);
 
   stage = "PINZA_3D";

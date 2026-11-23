@@ -973,14 +973,22 @@ function paintDiag() {
 function orientProbes() {
   const M = V.diagMarks;
   if (!M || !V.camera) return;
-  const v = new THREE.Vector3();
-  for (const [o, tilt] of [[M.red, 0.35], [M.black, -0.35]]) {
-    if (!o.visible) continue;
-    v.copy(o.position).project(V.camera);
-    const down = v.y > 0.1;
-    if (o.userData.down === down) continue;
+  const sx = (o) => (o.visible ? new THREE.Vector3().copy(o.position).project(V.camera) : null);
+  const r = sx(M.red);
+  const b = sx(M.black);
+  // Cada punta se inclina hacia su lado (la de la izquierda a la izquierda):
+  // nunca se cruzan. Con una sola, o a la par, la roja va a la izquierda.
+  const redLeft = !r || !b || r.x <= b.x + 0.002;
+  for (const [o, p, left] of [[M.red, r, redLeft], [M.black, b, !redLeft]]) {
+    if (!p) continue;
+    const down = p.y > 0.1;
+    const key = `${down}|${left}`;
+    if (o.userData.key === key) continue;
+    o.userData.key = key;
     o.userData.down = down;
-    o.rotation.set(down ? Math.PI - 0.55 : 0.55, 0, down ? -tilt : tilt);
+    // La inclinación en z lleva el mango hacia -x (izquierda) con signo +,
+    // también con el mango hacia abajo.
+    o.rotation.set(down ? Math.PI - 0.55 : 0.55, 0, left ? 0.35 : -0.35);
   }
 }
 
@@ -3826,7 +3834,10 @@ window.Jwsim3D = {
   probesAt() {
     const M = V.diagMarks;
     const lit = (V.panel?.diagTerms ?? []).filter((t) => t.mesh.visible && t.mesh.material.opacity > 0).length;
-    return M ? { red: M.red.visible, black: M.black.visible, clamp: M.ring.visible, redDown: !!M.red.userData.down, lit } : null;
+    // Sin cruzarse: el orden en x de los mangos es el mismo que el de las puntas.
+    const sx = (o, y) => o.localToWorld(new THREE.Vector3(0, y, 0)).project(V.camera).x;
+    const uncrossed = M && M.red.visible && M.black.visible ? Math.sign(sx(M.red, 0) - sx(M.black, 0)) === Math.sign(sx(M.red, 0.3) - sx(M.black, 0.3)) || Math.abs(sx(M.red, 0) - sx(M.black, 0)) < 0.002 : null;
+    return M ? { red: M.red.visible, black: M.black.visible, clamp: M.ring.visible, redDown: !!M.red.userData.down, lit, uncrossed } : null;
   },
   armar(on) {
     if (on !== undefined) V.armarUi?.setOn(!!on);

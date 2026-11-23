@@ -301,15 +301,17 @@
    * Con `down` el mango va hacia abajo (borne en la parte de arriba de la
    * vista), así la punta no sale de lo visible.
    */
-  function probeSvg(cls, txt, k = 1, down = false) {
-    const rot = (cls === "red" ? -18 : 18) + (down ? 180 : 0);
+  function probeSvg(cls, txt, k = 1, down = false, left = cls === "red") {
+    // Mango hacia su lado: la punta de la izquierda se inclina a la izquierda.
+    const rot = down ? (left ? 198 : 162) : left ? -18 : 18;
+    const side = left ? -1 : 1;
     return `<g class="diag-tip ${cls}" pointer-events="none"><circle class="ring" r="${9 * k}"/><g transform="rotate(${rot}) scale(${k})">
-      <path class="cable" d="M0 -112 C0 -140 ${cls === "red" ? "-30" : "30"} -150 ${cls === "red" ? "-40" : "40"} -185"/>
+      <path class="cable" d="M0 -112 C0 -140 ${(down ? -30 : 30) * side} -150 ${(down ? -40 : 40) * side} -185"/>
       <path class="needle" d="M-2.2 -30 L2.2 -30 L2.2 -7 L0 0 L-2.2 -7 Z"/>
       <rect class="guard" x="-10" y="-38" width="20" height="8" rx="3"/>
       <rect class="body" x="-7.5" y="-112" width="15" height="76" rx="6"/>
       <path class="grip" d="M-7.5 -90h15M-7.5 -84h15M-7.5 -78h15M-7.5 -72h15"/>
-    </g><text y="${(down ? 140 : -128) * k}" x="${(cls === "red" ? -46 : 46) * (down ? -k : k)}" style="font-size:${16 * k}px">${txt}</text></g>`;
+    </g><text y="${(down ? 140 : -128) * k}" x="${46 * side * k}" style="font-size:${16 * k}px">${txt}</text></g>`;
   }
 
   /** Clic en un borne (esquema, plano IEC o tablero 3D): una punta, o la pinza en un cable que sale de él. */
@@ -395,18 +397,17 @@
     };
     let s = "";
     if (show && D.mode !== "A") {
-      for (const [term, cls, txt] of [[D.red, "red", "+"], [D.black, "black", "COM"]]) {
-        if (!term) continue;
-        const c = document.querySelector(`.term[data-term="${CSS.escape(term)}"] circle`);
-        if (!c) continue;
-        const p = at(c, Number(c.getAttribute("cx")), Number(c.getAttribute("cy")));
-        if (!p) continue;
+      const box = rootG.ownerSVGElement?.getBoundingClientRect();
+      const tips = [[D.red, "red", "+"], [D.black, "black", "COM"]].map(([term, cls, txt]) => {
+        const c = term && document.querySelector(`.term[data-term="${CSS.escape(term)}"] circle`);
+        const p = c && at(c, Number(c.getAttribute("cx")), Number(c.getAttribute("cy")));
+        if (!p) return null;
         // Borne en el tercio de arriba de la vista: la punta se dibuja hacia abajo.
         const r = c.getBoundingClientRect();
-        const box = rootG.ownerSVGElement?.getBoundingClientRect();
-        const down = !!box && r.top - box.top < box.height * 0.35;
-        s += `<g transform="translate(${p[0]} ${p[1]})">${probeSvg(cls, txt, 1, down)}</g>`;
-      }
+        return { p, cls, txt, down: !!box && r.top - box.top < box.height * 0.35 };
+      });
+      const redLeft = !tips[0] || !tips[1] || tips[0].p[0] <= tips[1].p[0];
+      for (const q of tips) if (q) s += `<g transform="translate(${q.p[0]} ${q.p[1]})">${probeSvg(q.cls, q.txt, 1, q.down, q.cls === "red" ? redLeft : !redLeft)}</g>`;
     }
     if (show && D.mode === "A" && D.wire != null) {
       const path = document.querySelector(`.wire[data-wire="${D.wire}"] .wire-hit`) ?? document.querySelector(`.wire[data-wire="${D.wire}"] path`);

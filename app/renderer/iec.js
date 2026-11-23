@@ -493,10 +493,13 @@
     for (const p of pts) if (!at.has(p.end)) at.set(p.end, p);
     let s = pts.map((p) => `<circle class="iec-probe" data-probe="${esc(p.end)}" cx="${p.x}" cy="${p.y}" r="4.5"><title>${esc(p.end)}</title></circle>`).join("");
     if (st.mode !== "A") {
-      for (const [end, cls, txt] of [[st.red, "red", "+"], [st.black, "black", "COM"]]) {
-        const p = end && at.get(end);
-        const vb = S.vb?.box ?? [0, 0, sh.w, sh.h];
-        if (p) s += `<g transform="translate(${p.x} ${p.y})">${Dg.probeSvg(cls, txt, 0.8, p.y < vb[1] + vb[3] * 0.35)}</g>`;
+      const vb = S.vb?.box ?? [0, 0, sh.w, sh.h];
+      const pr = st.red && at.get(st.red);
+      const pb = st.black && at.get(st.black);
+      // Cada punta hacia su lado: nunca se cruzan.
+      const redLeft = !pr || !pb || pr.x <= pb.x;
+      for (const [p, cls, txt, left] of [[pr, "red", "+", redLeft], [pb, "black", "COM", !redLeft]]) {
+        if (p) s += `<g transform="translate(${p.x} ${p.y})">${Dg.probeSvg(cls, txt, 0.8, p.y < vb[1] + vb[3] * 0.35, left)}</g>`;
       }
     } else if (st.wire != null) {
       const w = window.JwsimScene?.specForView?.()?.wiring?.[st.wire];
