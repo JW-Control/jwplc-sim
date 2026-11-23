@@ -1024,6 +1024,19 @@ function openFolio(on) {
 
 /** Cámara que encuadra toda la planta (ancho V.extent) desde arriba y adelante. */
 function fitView() {
+  // Banco de trabajo: se mira de frente a la altura del alumno sentado.
+  if (V.panel?.bench && !V.fitBox) {
+    const bb = new THREE.Box3().setFromObject(V.root);
+    const c = bb.getCenter(new THREE.Vector3());
+    const sz = bb.getSize(new THREE.Vector3());
+    const halfFov = THREE.MathUtils.degToRad(V.camera.fov / 2);
+    const d = Math.max(2.2, (sz.x / 2 + 0.6) / (Math.tan(halfFov) * Math.max(0.5, V.camera.aspect)), (sz.y * 0.62) / Math.tan(halfFov));
+    const ty = Math.min(c.y + 0.1, V.panel.bottom + V.panel.H * 0.55);
+    V.controls.target.set(c.x, ty, 0);
+    V.camera.position.set(c.x, ty + d * 0.22, d);
+    V.controls.update();
+    return;
+  }
   if (V.fitBox) {
     const c = V.fitBox.getCenter(new THREE.Vector3());
     const sz = V.fitBox.getSize(new THREE.Vector3());
@@ -1157,12 +1170,17 @@ function rebuild(spec) {
   const align = (g, p3) => gridAlign(g, G, p3 ? "round" : "ceil");
   // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
   if (!plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
-    const panel = buildPanel(spec);
+    // Sin planta y solo con equipos de riel y de frente (las prácticas del
+    // curso): banco de trabajo en vez de tablero. plant3d.banco lo fuerza.
+    const BENCH_OK = /\/(power-3ph|power-230vac|power-24vdc|breaker|motor-protector|jwplc-basic|contactor|overload-relay|relay|timer-relay|ssr|lamp|pushbutton-lit|pushbutton-no|pushbutton-nc|selector-2|selector-3|selector-key|emergency-stop|buzzer)$/;
+    const bench = spec.plant3d?.banco ?? (!plant.length && spec.devices.every((d) => BENCH_OK.test(d.type)));
+    const panel = buildPanel(spec, { bench });
+    panel.bench = bench;
     panel.group.position.set(panel.W / 2, 0, 0);
     if (spec.plant3d?.panel) placeAt(panel.group, spec.plant3d.panel);
     align(panel.group, spec.plant3d?.panel);
     armTag(panel.group, "panel", "panel");
-    const tag = label("Tablero");
+    const tag = label(bench ? "Banco de trabajo" : "Tablero");
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
     V.root.add(panel.group);
@@ -1309,6 +1327,7 @@ function rebuild(spec) {
   const building = plant.some((d) => d.type === "jwsim/building-water");
   const field = spec.devices.filter((d) => {
     if (!FIELD.kinds.has(d.type) || drawn.has(d.id)) return false;
+    if (V.panel?.bench && d.type === "jwsim/buzzer") return false; // va al frente del banco
     if (SENSORS.has(d.type) && plantIds.has(sourceOf(d).split(".")[0])) return false;
     if (building && (d.type === "jwsim/pressure-rs485" || d.type === "jwsim/float-switch")) return false;
     return true;
@@ -1352,6 +1371,8 @@ function rebuild(spec) {
       const px = it.host ? centerOf(it.host) + it.slot * 1.0 - 0.15 : fx;
       const pz = it.host ? zOf(it.host) + 1.05 : fz;
       m.group.position.set(px + 0.15, 0, pz);
+      // Banco de trabajo: el semáforo es un módulo didáctico, más chico.
+      if (V.panel?.bench && it.id === "semaforo") m.group.scale.setScalar(0.6);
       const fd = spec.devices.find((q) => q.id === it.id);
       if (fd?.p3) placeAt(m.group, fd.p3);
       const sh = align(m.group, fd?.p3);
@@ -1369,11 +1390,11 @@ function rebuild(spec) {
         const gx = P.group.position.x + P.glandX(k, items.length);
         const gz = P.D / 2 - 0.08;
         // Entrada del equipo (girada con él si se armó a mano).
-        const ap = new THREE.Vector3(...m.anchor).applyAxisAngle(new THREE.Vector3(0, 1, 0), m.group.rotation.y).add(m.group.position);
+        const ap = new THREE.Vector3(...m.anchor).multiplyScalar(m.group.scale.x).applyAxisAngle(new THREE.Vector3(0, 1, 0), m.group.rotation.y).add(m.group.position);
         const ax = ap.x;
         const az = ap.z;
         const lane = side ? fz + 0.55 + k * 0.05 : m.group.position.z - 0.4 - k * 0.04;
-        V.root.add(run([[gx, P.bottom, gz], [gx, 0.03, gz], [gx, 0.03, lane], [ax, 0.03, lane], [ax, 0.03, az], [ax, m.anchor[1], az]], 0.016, conduitM));
+        V.root.add(run([[gx, P.bottom, gz], [gx, 0.03, gz], [gx, 0.03, lane], [ax, 0.03, lane], [ax, 0.03, az], [ax, ap.y, az]], 0.016, conduitM));
       }
       if (!it.host) fx += it.w + 0.3;
     });
@@ -2365,7 +2386,12 @@ function bakeStatic(root, skip = [], keepMat = new Set()) {
  * burlete y manija) los pilotos, selectores y pulsadores. Frente hacia +z,
  * origen en el centro de la base del soporte.
  */
-function buildPanel(spec) {
+/**
+ * Tablero del proyecto. Con `bench` es un banco de trabajo (prácticas del
+ * curso): mesa con un tablero didáctico vertical, el riel arriba y los mandos
+ * y pilotos al frente, a la vista y al alcance.
+ */
+function buildPanel(spec, { bench = false } = {}) {
   const g = new THREE.Group();
   const base = (t) => t.split("/").pop();
   const devs = spec.devices ?? [];
@@ -2373,7 +2399,10 @@ function buildPanel(spec) {
   const devOfType = (id) => devs.find((d) => d.id === id)?.type ?? "";
   const mounted = new Set(devs.filter((d) => d.mount).map((d) => d.mount));
   const lift = devs.some((d) => d.type === "jwsim/lift");
-  const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop").filter((d) => !(lift && callFloor(d) != null));
+  const door = of("lamp", "pushbutton-lit", "selector-2", "selector-3", "selector-key", "pushbutton-no", "pushbutton-nc", "emergency-stop", ...(bench ? ["buzzer"] : [])).filter((d) => !(lift && callFloor(d) != null));
+  // Banco: los mandos van en filas de hasta 8 al frente del tablero didáctico.
+  const benchCols = Math.max(1, Math.min(8, door.length));
+  const benchRows = Math.max(1, Math.ceil(door.length / benchCols));
   // Modelos por fila (arriba: entrada y control; abajo: potencia).
   const vfds = [];
   const plcs = [];
@@ -2402,14 +2431,44 @@ function buildPanel(spec) {
   const row2 = [...of("vfd-el"), ...of("contactor"), ...of("relay", "timer-relay", "ssr", "level-relay")].map(withId);
   const gap = 0.025;
   const rowW = (r) => r.reduce((a, m) => a + m.w + gap, -gap);
-  const W = Math.max(0.6, Math.min(1.7, Math.max(rowW(row1), rowW(row2)) + 0.24));
-  const H = 1.25;
+  const W = Math.max(0.6, Math.min(1.7, Math.max(rowW(row1), rowW(row2), bench ? benchCols * 0.17 : 0) + 0.24));
+  // Banco sin segunda fila (sin contactores ni relés): un solo riel.
+  const oneRail = bench && !row2.length;
+  const H = bench ? (oneRail ? 0.6 : 1.05) + benchRows * 0.2 : 1.25;
   const D = 0.32;
-  const legH = 0.4;
+  const legH = bench ? 0.8 : 0.4;
   const y0 = legH;
   const body = mat(0xd5d9de, { roughness: 0.45, metalness: 0.25 });
+  if (bench) {
+    // Mesa de trabajo: tablero de madera clara, patas y travesaño; el tablero
+    // didáctico se apoya atrás, sujeto por dos perfiles de aluminio.
+    const TW = W + 0.5;
+    const TD = 0.8;
+    const tz = -D / 2 + TD / 2 - 0.05;
+    const top = box(TW, 0.04, TD, mat(0xc9a77c, { roughness: 0.7 }));
+    top.position.set(0, legH - 0.02, tz);
+    g.add(top);
+    for (const x of [-TW / 2 + 0.05, TW / 2 - 0.05])
+      for (const z of [tz - TD / 2 + 0.05, tz + TD / 2 - 0.05]) {
+        const leg = box(0.05, legH - 0.04, 0.05, mat(0x5b6470));
+        leg.position.set(x, (legH - 0.04) / 2, z);
+        g.add(leg);
+      }
+    const bar = box(TW - 0.1, 0.04, 0.03, mat(0x5b6470));
+    bar.position.set(0, 0.18, tz - TD / 2 + 0.05);
+    g.add(bar);
+    const alu = mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 });
+    for (const x of [-W / 2 - 0.02, W / 2 + 0.02]) {
+      const post = box(0.04, H + 0.04, 0.04, alu);
+      post.position.set(x, y0 + H / 2, -D / 2 + 0.02);
+      g.add(post);
+      const foot = box(0.06, 0.02, 0.2, alu);
+      foot.position.set(x, y0 + 0.01, -D / 2 + 0.08);
+      g.add(foot);
+    }
+  }
   // Gabinete con su visera contra la lluvia (va a la intemperie en la azotea).
-  for (const [w, h, d, x, y, z] of [
+  for (const [w, h, d, x, y, z] of bench ? [] : [
     [W, H, 0.02, 0, y0 + H / 2, -D / 2],
     [0.02, H, D, -W / 2, y0 + H / 2, 0],
     [0.02, H, D, W / 2, y0 + H / 2, 0],
@@ -2423,7 +2482,8 @@ function buildPanel(spec) {
   const visor = box(W + 0.08, 0.02, D + 0.1, body);
   visor.position.set(0, y0 + H + 0.05, 0.03);
   visor.rotation.x = 0.12;
-  g.add(visor);
+  if (!bench) g.add(visor);
+  if (!bench)
   for (const x of [-W / 2 + 0.05, W / 2 - 0.05])
     for (const z of [-D / 2 + 0.05, D / 2 - 0.05]) {
       const leg = box(0.04, legH, 0.04, mat(0x5b6470));
@@ -2464,12 +2524,12 @@ function buildPanel(spec) {
   const yR1 = y0 + H - 0.3;
   const yMid = y0 + H - 0.52;
   const yR2 = y0 + H - 0.75;
-  const yLow = y0 + 0.26;
+  const yLow = bench ? y0 + H - (oneRail ? 0.52 : 0.97) : y0 + 0.26;
   const yTb = y0 + 0.13;
   // Canaletas horizontales y una vertical a la izquierda (la que recibe el mazo de la puerta).
   const hx1 = -W / 2 + 0.085;
   const hx2 = W / 2 - 0.05;
-  for (const y of [yTop, yMid, yLow]) duct(y, hx2 - hx1, (hx1 + hx2) / 2);
+  for (const y of new Set([yTop, yMid, yLow])) duct(y, hx2 - hx1, (hx1 + hx2) / 2);
   const vdX = -W / 2 + 0.058;
   const vd = box(0.045, yTop - yLow + 0.06, 0.06, mat(0xa7adb4, { roughness: 0.7 }));
   vd.position.set(vdX, (yTop + yLow) / 2, zf + 0.03);
@@ -2492,40 +2552,44 @@ function buildPanel(spec) {
     g.add(rail);
   };
   place(row1, yR1, yTop, yMid);
-  place(row2, yR2, yMid, yLow);
+  if (!oneRail) place(row2, yR2, yMid, yLow);
   // Puerta con bisagras, burlete, manija y bolsillo de planos; mandos en su cara exterior.
   const hinge = new THREE.Group();
   hinge.position.set(-W / 2, y0, D / 2);
+  // Banco: no hay puerta; los mandos van al frente del tablero, bajo el riel.
+  if (bench) hinge.position.set(-W / 2, y0, zf + 0.05);
   const leaf = box(W, H, 0.022, body);
   leaf.position.set(W / 2, H / 2, 0);
   // Burlete: un marco negro alrededor de la cara interior (no toda la cara).
   for (const [gw, gh, gx, gy] of [[W - 0.04, 0.016, W / 2, 0.028], [W - 0.04, 0.016, W / 2, H - 0.028], [0.016, H - 0.04, 0.028, H / 2], [0.016, H - 0.04, W - 0.028, H / 2]]) {
     const gs = box(gw, gh, 0.006, PM.black);
     gs.position.set(gx, gy, -0.014);
-    hinge.add(gs);
+    if (!bench) hinge.add(gs);
   }
   // Bolsillo de planos con los planos asomando.
   const pocket = box(W * 0.5, 0.2, 0.016, mat(0x9aa1a9));
   pocket.position.set(W / 2, 0.26, -0.02);
   const docs = box(W * 0.44, 0.06, 0.008, mat(0xf4f1e6));
   docs.position.set(W / 2, 0.37, -0.018);
-  hinge.add(leaf, pocket, docs);
-  for (const y of [0.15, H - 0.15]) {
-    const hg = cyl(0.012, 0.08, PM.screw, 12);
-    hg.position.set(0, y, 0);
-    hinge.add(hg);
+  if (!bench) {
+    hinge.add(leaf, pocket, docs);
+    for (const y of [0.15, H - 0.15]) {
+      const hg = cyl(0.012, 0.08, PM.screw, 12);
+      hg.position.set(0, y, 0);
+      hinge.add(hg);
+    }
+    const handle = box(0.025, 0.12, 0.03, PM.black);
+    handle.position.set(W - 0.06, H / 2, 0.025);
+    hinge.add(handle);
   }
-  const handle = box(0.025, 0.12, 0.03, PM.black);
-  handle.position.set(W - 0.06, H / 2, 0.025);
-  hinge.add(handle);
   const lamps = [];
   const doorAt = new Map();
   const hits = [];
   const controls = [];
   door.forEach((d, i) => {
-    const cols = Math.max(1, Math.min(4, door.length));
+    const cols = bench ? benchCols : Math.max(1, Math.min(4, door.length));
     const cx = ((i % cols) + 0.5) * (W / cols);
-    const cy = H * 0.72 - Math.floor(i / cols) * 0.22;
+    const cy = bench ? yLow - y0 - 0.14 - Math.floor(i / cols) * 0.2 : H * 0.72 - Math.floor(i / cols) * 0.22;
     doorAt.set(d.id, { cx, cy });
     const t = base(d.type);
     const ring = cyl(0.036, 0.02, mat(0x8b929b, { metalness: 0.6, roughness: 0.3 }), 24);
@@ -2552,6 +2616,17 @@ function buildPanel(spec) {
       hinge.add(yb, mush);
       hits.push({ mesh: mush, id: d.id });
       controls.push({ id: d.id, action: "press", kind: "push", mesh: mush, z0: 0.035 });
+    } else if (t === "buzzer") {
+      // Zumbador: cuerpo negro con rejilla.
+      const bz = cyl(0.03, 0.03, PM.black, 20);
+      bz.rotation.x = Math.PI / 2;
+      bz.position.set(cx, cy, 0.03);
+      hinge.add(bz);
+      for (const r of [0.008, 0.016]) {
+        const gr = new THREE.Mesh(new THREE.TorusGeometry(r, 0.0018, 6, 20), PM.grey);
+        gr.position.set(cx, cy, 0.046);
+        hinge.add(gr);
+      }
     } else if (t.startsWith("selector")) {
       const knob = cyl(0.026, 0.02, PM.black, 20);
       knob.rotation.x = Math.PI / 2;
@@ -2583,8 +2658,8 @@ function buildPanel(spec) {
   });
   const brand = plate(0.24, 0.05, "JW CONTROL", { bg: "#23272d", fg: "#ffffff", font: "bold 60px sans-serif" });
   brand.position.set(W / 2, H - 0.08, 0.012);
-  hinge.add(brand);
-  hinge.rotation.y = -1.7;
+  if (!bench) hinge.add(brand);
+  hinge.rotation.y = bench ? 0 : -1.7;
   g.add(hinge);
   const termPts = new Map();
   wirePanel();
@@ -2609,7 +2684,7 @@ function buildPanel(spec) {
     lock.visible = false;
     g.add(lock);
   }
-  const folio = [pocket, docs];
+  const folio = bench ? [] : [pocket, docs];
   /**
    * Cableado real: cada cable del esquema se tiende de borne a borne. Dentro
    * del tablero sale del borne a la canaleta más cercana (por dentro de las
@@ -2690,8 +2765,10 @@ function buildPanel(spec) {
       const y2 = y + (up ? 1 : -1) * (k % 4) * 0.004;
       const xe = 0.03 + (k % 6) * 0.004;
       const zb = -0.06 - (k % 3) * 0.003;
-      hinge.add(run([[x, y, -0.05], [x, y2, zb], [xe, y2, zb], [xe, loomY, zb]], R * 0.85, wm(hex)));
-      mark(end, hinge, x, y, -0.058);
+      // Banco: el cable sube por detrás del mando hasta la canaleta de abajo del riel.
+      if (bench) hinge.add(run([[x, y, -0.03], [x, yLow - y0 - 0.03, -0.03]], R * 0.85, wm(hex)));
+      else hinge.add(run([[x, y, -0.05], [x, y2, zb], [xe, y2, zb], [xe, loomY, zb]], R * 0.85, wm(hex)));
+      mark(end, hinge, x, y, bench ? -0.012 : -0.058);
       return id;
     };
     for (const w of spec.wiring ?? []) {
@@ -2742,10 +2819,10 @@ function buildPanel(spec) {
     endStop2.position.x = hx1 + 0.02 + tbs.length * pitch;
     const tbRail = box(Math.max(0.05, tbs.length * pitch + 0.04), 0.035, 0.008, mat(0xb8c0c8, { metalness: 0.7, roughness: 0.3 }));
     tbRail.position.set(hx1 + 0.02 + (tbs.length * pitch) / 2 - pitch / 2, yTb, zf + 0.004);
-    g.add(endStop, endStop2, tbRail);
+    if (tbs.length || !bench) g.add(endStop, endStop2, tbRail);
     // Mazo de la puerta: manguera en espiral desde el borde de la bisagra
     // hasta la canaleta vertical.
-    if (doorWires) {
+    if (doorWires && !bench) {
       hinge.updateMatrix();
       const a = new THREE.Vector3(0.04, loomY, -0.065).applyMatrix4(hinge.matrix);
       const pts = [[a.x, a.y, a.z], [-W / 2 + 0.03, y0 + loomY, D / 2 - 0.04], [-W / 2 + 0.035, y0 + loomY, zf + 0.12], [vdX, y0 + loomY, zf + 0.07]];
@@ -3844,6 +3921,9 @@ window.Jwsim3D = {
     return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
   },
   lockShown: () => !!V.panel?.lock?.visible,
+  /** Para pruebas: si el tablero es un banco de trabajo y qué pilotos están encendidos en 3D. */
+  bench: () => !!V.panel?.bench,
+  lampsLit: () => (V.panel?.lamps ?? []).filter((l) => l.lens.material.emissive.getHex() !== 0).map((l) => l.id),
   /** Para pruebas: dónde quedaron las puntas (nombre del borne de cada una). */
   probesAt() {
     const M = V.diagMarks;
