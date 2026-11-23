@@ -1986,6 +1986,7 @@ function renderTheory(l, graded = !!l) {
     return;
   }
   $("guide-card").hidden = l.card === false;
+  $("guide-reset").hidden = !state.exercise;
   const html = guideHtml(l, graded);
   pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
   $("guide-body").innerHTML = html;
@@ -2043,8 +2044,10 @@ function snippetsOf(target) {
  */
 function findSnippetLines(code, snippet) {
   const clean = (x) => x.replace(/\/\/.*$/, "").trim();
-  const want = snippet.split("\n").map(clean).filter(Boolean);
-  const lines = code.split("\n").map(clean);
+  // \r\n en Windows: «.» no abarca \r, así que un comentario al final de un
+  // renglón con \r no se quitaba y el trozo «no estaba» en el programa.
+  const want = snippet.split(/\r?\n/).map(clean).filter(Boolean);
+  const lines = code.split(/\r?\n/).map(clean);
   if (!want.length) return null;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i] !== want[0]) continue;
@@ -2094,6 +2097,30 @@ function highlightFromGuide(target) {
   );
   state.guideHl = { name: main, ids };
   editor.revealLinesInCenterIfOutsideViewport(ranges[0][0], ranges[0][1]);
+}
+
+// «Reiniciar código»: vuelve cada archivo del sketch al código de partida del
+// ejercicio (el ejemplo de la lección o el .ino inicial del reto). Es una
+// edición más del editor: Ctrl+Z la deshace y queda sin guardar.
+async function resetToStarter() {
+  const ex = state.exercise;
+  if (!ex) return;
+  try {
+    const files = await api.exerciseStarter(ex.id, ex.lesson);
+    let n = 0;
+    for (const f of files) {
+      const model = state.models.get(f.name);
+      if (!model || model.getValue() === f.content) continue;
+      model.pushStackElement();
+      model.pushEditOperations([], [{ range: model.getFullModelRange(), text: f.content }], () => null);
+      model.pushStackElement();
+      n++;
+    }
+    clearGuideHighlight();
+    guideNote(n ? "Volviste al código de partida. Ctrl+Z lo deshace; guarda para quedarte con él." : "Tu programa ya es el código de partida.");
+  } catch (err) {
+    guideNote(`No se pudo reiniciar: ${cleanError(err)}`);
+  }
 }
 
 function guideNote(text) {
@@ -2158,6 +2185,7 @@ function wireGuide() {
       if (t) highlightFromGuide(t);
     });
   $("guide-card").addEventListener("click", () => window.jwsimLessonCard.open());
+  $("guide-reset").addEventListener("click", () => resetToStarter());
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && $("lesson-card")) closeLessonCard();
   });

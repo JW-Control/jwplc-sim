@@ -291,7 +291,7 @@
               : "";
       html +=
         `<li><button class="learn-item ${x.kind} ${x.state} ${x === item ? "on" : ""}" data-act="pick" data-id="${esc(x.id)}" ${x.state === "locked" ? 'aria-disabled="true"' : ""}>` +
-        `<span class="ini-num">${String(i + 1).padStart(2, "0")}</span><b>${esc(x.title)}</b>${badge}</button></li>`;
+        `<span class="ini-num">${String(x.kind === "lesson" ? x.lesson.num : i + 1).padStart(2, "0")}</span><b>${esc(x.title)}</b>${badge}</button></li>`;
     });
     html += `</ol></section>`;
     // Columna 3: ficha
@@ -299,17 +299,31 @@
     return html;
   }
 
-  const ul = (arr, cls = "") => (arr?.length ? `<ul class="${cls}">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  // Renglón del README: **negrita** y `código`; un bloque de código (varias
+  // líneas) va tal cual en <pre>.
+  const md = (x) =>
+    String(x).includes("\n")
+      ? `<pre class="ini-pre">${esc(x)}</pre>`
+      : esc(x)
+          .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const ul = (arr, cls = "") => (arr?.length ? `<ul class="${cls}">${arr.map((x) => `<li>${md(x)}</li>`).join("")}</ul>` : "");
+  const SIM = /^En JWPLC Sim$/i;
   function lessonBrief(tier, x) {
     const l = x.lesson;
     const pos = tier.items.indexOf(x) + 1;
     let html =
-      `<small class="ini-eyebrow sm">${esc(tier.tag)} · Lección ${pos} de ${tier.total}</small><h2>${esc(x.title)}</h2>` +
+      `<small class="ini-eyebrow sm">${esc(tier.tag)} · Lección ${esc(String(l.num))} · ${pos} de ${tier.total}</small><h2>${esc(x.title)}</h2>` +
       `<div class="ini-brief-body">` +
       (l.learn.length ? `<h4>Qué vas a aprender</h4>${ul(l.learn)}` : "") +
       (l.need.length ? `<h4>Qué necesitas</h4>${ul(l.need)}` : "") +
-      l.sections.filter((s) => s.items.length).map((s) => `<h4>${esc(s.title)}</h4>${ul(s.items)}`).join("") +
-      (l.steps.length ? `<h4>Cómo probarlo</h4><ol class="ini-ol">${l.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : "") +
+      l.sections.filter((s) => s.items.length && !SIM.test(s.title)).map((s) => `<h4>${esc(s.title)}</h4>${ul(s.items)}`).join("") +
+      // En el Sim se prueba con el banco: los pasos de «En JWPLC Sim» reemplazan
+      // a los del equipo físico cuando la lección los trae.
+      ((sim) => {
+        const steps = sim?.items.filter((s) => !s.includes("\n")) ?? l.steps;
+        return steps.length ? `<h4>${sim ? "Cómo probarlo en el simulador" : "Cómo probarlo"}</h4><ol class="ini-ol">${steps.map((s) => `<li>${md(s)}</li>`).join("")}</ol>` : "";
+      })(l.sections.find((s) => SIM.test(s.title) && s.items.length)) +
       (l.practice.length ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}` : "") +
       (l.graded && l.goals?.length
         ? `<h4>Objetivos que se evalúan</h4>${ul(l.goals.map((g) => g.text + (g.extra ? " (mérito)" : "")), "ini-practice")}`

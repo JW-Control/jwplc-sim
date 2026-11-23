@@ -450,6 +450,20 @@ ipcMain.handle("lessons:open", (_e, id) => {
   return openProject(join(dst, `${id}.jwsim`));
 });
 
+// Código de partida de una práctica de lección o de un reto (el ejemplo de la
+// lección o el .ino inicial del reto), para «Reiniciar código» en Teoría.
+ipcMain.handle("exercise:starter", (_e, id, lesson) => {
+  if (!/^[\w.-]+$/.test(String(id))) throw new Error(`ejercicio inválido: ${id}`);
+  const src = join(lesson ? PRACTICAS : EXERCISES, id);
+  const { project } = loadProject(join(src, `${id}.jwsim`));
+  const sketch = project.program?.sketch;
+  if (project.program?.kind === "openplc" || typeof sketch !== "string") return [];
+  const dir = dirname(resolve(src, sketch));
+  return readdirSync(dir)
+    .filter((f) => /\.(ino|h|hpp|c|cpp)$/i.test(f))
+    .map((name) => ({ name, content: readFileSync(join(dir, name), "utf8") }));
+});
+
 // ---------------------------------------------------------------- arquitecturas
 // Casos de la vitrina (JWPLC_Aprende/extras/arquitecturas/<id>): proyecto
 // completo con su programa, escena y una ficha VITRINA.md con el recorrido y

@@ -5385,6 +5385,21 @@ body.dock-collapsed #btn-dock-toggle {
   margin: 0;
   padding-left: 20px;
 }
+.ini-brief-body code,
+.ini-pre {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  background: var(--panel-2, rgba(127, 127, 127, 0.12));
+  border-radius: 4px;
+}
+.ini-brief-body code {
+  padding: 0 3px;
+}
+.ini-pre {
+  margin: 4px 0;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+}
 .ini-brief-img {
   float: right;
   width: min(44%, 360px);
