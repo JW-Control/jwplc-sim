@@ -160,6 +160,13 @@
               <button data-plant="jwsim/solenoid-valve-2">+ Cilindro 5/2</button>
             </div>
             <button class="view3d-labels on" id="view3d-labels" type="button" aria-pressed="true" title="Mostrar u ocultar los rótulos de los equipos">Etiquetas</button>
+            <button class="view3d-diag-btn" id="view3d-diag-btn" type="button" aria-pressed="false" title="Diagnóstico: órdenes de trabajo, multímetro con puntas en los bornes del tablero, bloqueo y reparación">Diagnóstico</button>
+            <!-- Modo Diagnóstico en la planta: el mismo panel del esquema, flotando. -->
+            <div id="view3d-diag" class="view3d-diag" hidden></div>
+            <!-- Folio de planos: el esquema IEC sacado del bolsillo de la puerta del tablero. -->
+            <div id="view3d-folio" class="view3d-folio" hidden>
+              <header><span>Planos del tablero</span><button id="view3d-folio-close" class="icon" type="button" title="Guardar el plano en el bolsillo" aria-label="Cerrar planos">✕</button></header>
+            </div>
             <!-- Mini placa: la pantalla y los LED del JWPLC mientras se mira la planta. -->
             <button class="mini-plc" id="mini-plc" title="Ir a la placa (Ctrl+4)" hidden>
               <canvas id="mini-tft" width="320" height="170"></canvas>

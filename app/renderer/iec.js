@@ -457,9 +457,52 @@
       tabs.innerHTML = tabsHtml;
       tabs.dataset.html = tabsHtml;
     }
-    svg.innerHTML = `<g id="iec-root">${drawSheet(sh)}</g>`;
+    svg.innerHTML = `<g id="iec-root">${drawSheet(sh)}${probes(sh)}</g>`;
     if (!S.vb || S.vb.sheet !== S.sheet) fit();
     else svg.setAttribute("viewBox", S.vb.box.join(" "));
+  }
+
+  /**
+   * Modo Diagnóstico: con el multímetro abierto, cada borne del plano (y el
+   * inicio de cada riel o barra) es un punto donde apoyar las puntas, como en
+   * el tablero; las puntas puestas se dibujan encima.
+   */
+  function probes(sh) {
+    const Dg = window.JwsimDiag;
+    if (!Dg?.measuring?.()) return "";
+    const Sc = window.JwsimScene;
+    const pts = [];
+    const add = (end, x, y) => {
+      if (!end || (Sc?.terminalOf && !Sc.terminalOf(end))) return;
+      pts.push({ end, x, y });
+    };
+    for (const e of sh.elems ?? []) {
+      if (e.tTop) add(`${e.dev}.${e.tTop}`, e.x, e.y - SYM);
+      if (e.tBot) add(`${e.dev}.${e.tBot}`, e.x, e.y + SYM);
+    }
+    for (const b of sh.blocks ?? []) {
+      for (const p of b.poles ?? []) {
+        if (p.tTop) add(`${b.dev}.${p.tTop}`, p.x, b.y);
+        if (p.tBot && b.kind !== "motor3") add(`${b.dev}.${p.tBot}`, p.x, b.y + b.h);
+      }
+    }
+    if (sh.rails) for (const r of [sh.rails.top, sh.rails.bot]) add(r.rep, sh.x0 - 10, r.y);
+    for (const r of sh.bus ?? []) add(r.rep, sh.x0 - 10, r.y);
+    const st = Dg.state();
+    const at = new Map();
+    for (const p of pts) if (!at.has(p.end)) at.set(p.end, p);
+    let s = pts.map((p) => `<circle class="iec-probe" data-probe="${esc(p.end)}" cx="${p.x}" cy="${p.y}" r="4.5"><title>${esc(p.end)}</title></circle>`).join("");
+    if (st.mode !== "A") {
+      for (const [end, cls, txt] of [[st.red, "red", "+"], [st.black, "black", "COM"]]) {
+        const p = end && at.get(end);
+        if (p) s += `<g transform="translate(${p.x} ${p.y})">${Dg.probeSvg(cls, txt, 0.8)}</g>`;
+      }
+    } else if (st.wire != null) {
+      const w = window.JwsimScene?.specForView?.()?.wiring?.[st.wire];
+      const p = w && (at.get(w.from) ?? at.get(w.to));
+      if (p) s += `<g class="diag-clamp" transform="translate(${p.x} ${p.y})"><circle r="10"/><text y="-15" style="font-size:11px">A</text></g>`;
+    }
+    return `<g class="iec-probes">${s}</g>`;
   }
 
   function fit() {
@@ -688,6 +731,11 @@
     svg.addEventListener("pointerup", (e) => {
       const d = S.drag;
       if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return;
+      const pr = d.target.closest?.("[data-probe]");
+      if (pr) {
+        window.JwsimDiag?.probe?.(pr.dataset.probe);
+        return draw();
+      }
       const el = d.target.closest?.(".iec-el[data-key]");
       const rail = d.target.closest?.("[data-rail]");
       const borne = d.target.closest?.("[data-borne]");

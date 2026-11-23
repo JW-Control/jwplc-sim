@@ -49,6 +49,7 @@
     done: null, // resultado al cerrar
     done_ids: new Set(),
     lastMeasure: 0,
+    lockPending: null, // bloqueo pedido que el motor aún no aplicó
   };
 
   const running = () => !!Sc()?.isRunning?.();
@@ -189,10 +190,13 @@
   // ------------------------------------------------------------ bloqueo y reparación
   async function toggleLock() {
     if (!running()) return;
-    D.locked = !D.locked;
-    if (D.locked) D.zeroProved = false;
-    await api.sceneLockout(D.locked);
-    note(D.locked ? "Seccionador abierto, candado y etiqueta puestos. Pruebe ausencia de tensión." : "Bloqueo retirado: la máquina vuelve a tener energía.", D.locked ? "ok" : "");
+    const on = !D.locked;
+    D.locked = on;
+    if (on) D.zeroProved = false;
+    // Mientras el motor no aplica el bloqueo, una instantánea anterior no lo deshace.
+    D.lockPending = on;
+    note(on ? "Seccionador abierto, candado y etiqueta puestos. Pruebe ausencia de tensión." : "Bloqueo retirado: la máquina vuelve a tener energía.", on ? "ok" : "");
+    await api.sceneLockout(on);
   }
 
   async function repair() {
@@ -231,13 +235,88 @@
   }
 
   // ------------------------------------------------------------ interfaz
-  const isOpen = () => document.querySelector(".scene-main")?.dataset.pane === "diag";
+  // El multímetro trabaja con el panel abierto en el esquema o con su tarjeta
+  // flotante en la Planta 3D (puntas en los bornes del tablero).
+  let in3d = false;
+  const isOpen = () => (in3d && !$("view3d")?.hidden) || (document.querySelector(".scene-main")?.dataset.pane === "diag" && !$("scene-view")?.hidden);
+
+  /** Lleva el panel (órdenes, multímetro, reparación) a la tarjeta de la planta 3D o lo devuelve. */
+  function show3d(on) {
+    const card = $("view3d-diag");
+    const root = $("diag-root");
+    const btn = $("view3d-diag-btn");
+    if (!card || !root) return;
+    in3d = !!on;
+    card.hidden = !in3d;
+    btn?.classList.toggle("on", in3d);
+    btn?.setAttribute("aria-pressed", String(in3d));
+    const home = document.querySelector('.side-pane[data-pane="diag"]');
+    if (in3d && root.parentElement !== card) card.appendChild(root);
+    else if (!in3d && home && root.parentElement !== home) home.appendChild(root);
+    paint();
+    paintProbes();
+  }
+  $("view3d-diag-btn")?.addEventListener("click", () => show3d(!in3d));
 
   function partOptions() {
     const sp = spec();
     const devs = sp.devices.filter((d) => d.type !== "jwsim/jwplc-basic").map((d) => `<option value="d:${esc(d.id)}">Reemplazar ${esc(d.id)} · ${esc(Sc()?.deviceName?.(d.id) ?? "")}</option>`);
     const wires = sp.wiring.map((w, i) => `<option value="w:${i}">Reparar cable ${esc(wireName(w))}</option>`);
     return `<option value="">Elija un equipo o un cable…</option><optgroup label="Equipos">${devs.join("")}</optgroup><optgroup label="Cables">${wires.join("")}</optgroup>`;
+  }
+
+  // Multímetro de mano: pantalla con indicadores y barra, selector giratorio
+  // (V~, V⎓, Ω y pinza) y bornes de las puntas.
+  const DIAL = { VAC: -66, VDC: -22, OHM: 22, A: 66 };
+  function meterHtml(probeTxt) {
+    const m = /^(-?[\d.]+)\s*(.*)$/.exec(D.reading);
+    const val = m ? m[1] : D.reading;
+    const unit = m ? m[2] : "";
+    const n = m ? Math.abs(Number(m[1])) : D.reading === "OL" ? Infinity : 0;
+    const full = { V: D.mode === "VAC" ? 400 : 30, mV: 1000, A: 2, mA: 200, "Ω": 2000, "kΩ": 20, "MΩ": 2 }[unit] ?? 1;
+    const bar = Math.max(0, Math.min(100, (n / full) * 100));
+    const alarm = D.mode === "OHM" && D.live && D.red && D.black;
+    const live = D.mode !== "OHM" && D.mode !== "A" && n > 30;
+    const dial = MODES.map((x) => {
+      const a = (DIAL[x.id] * Math.PI) / 180;
+      return `<button class="dmm-pos${x.id === D.mode ? " on" : ""}" data-mode="${x.id}" title="${x.title}" role="radio" aria-checked="${x.id === D.mode}" style="left:${(50 + Math.sin(a) * 41).toFixed(1)}%;top:${(64 - Math.cos(a) * 52).toFixed(1)}%">${x.label}</button>`;
+    }).join("");
+    const jack = (k, lab, on) => `<span class="dmm-jack ${k}${on ? " on" : ""}"><i></i>${lab}</span>`;
+    return `<div class="dmm${alarm ? " alarm" : ""}">
+      <div class="dmm-head"><b>JW</b><span>DMM-600 · CAT III 600 V</span></div>
+      <div class="dmm-lcd" aria-live="polite">
+        <div class="dmm-flags"><span class="on">AUTO</span><span class="${D.mode === "VDC" ? "on" : ""}">DC</span><span class="${D.mode === "VAC" ? "on" : ""}">AC</span><span class="${D.mode === "A" ? "on" : ""}">CLAMP</span><span class="dmm-hv${live || alarm ? " on" : ""}">⚡</span></div>
+        <div class="dmm-val"><span class="diag-lcd">${esc(val)}</span><small>${esc(unit)}</small></div>
+        <div class="dmm-bar"><i style="width:${bar.toFixed(0)}%"></i></div>
+      </div>
+      <div class="dmm-dial" role="radiogroup" aria-label="Selector">${dial}<div class="dmm-knob" style="transform:rotate(${DIAL[D.mode]}deg)"><i></i></div></div>
+      <div class="dmm-jacks">${jack("a", "A", D.mode === "A")}${jack("com", "COM", D.mode !== "A")}${jack("v", "VΩ", D.mode !== "A")}</div>
+    </div>
+    <div class="diag-probes">${probeTxt}<button class="small link" id="diag-leads-off">Quitar puntas</button></div>`;
+  }
+
+  /**
+   * Punta de prueba grande (aguja, guarda, mango y cable), con la aguja en
+   * (0, 0); `k` la escala para cada dibujo (esquema a colores, plano IEC).
+   */
+  function probeSvg(cls, txt, k = 1) {
+    const rot = cls === "red" ? -18 : 18;
+    return `<g class="diag-tip ${cls}" pointer-events="none"><circle class="ring" r="${9 * k}"/><g transform="rotate(${rot}) scale(${k})">
+      <path class="cable" d="M0 -112 C0 -140 ${cls === "red" ? "-30" : "30"} -150 ${cls === "red" ? "-40" : "40"} -185"/>
+      <path class="needle" d="M-2.2 -30 L2.2 -30 L2.2 -7 L0 0 L-2.2 -7 Z"/>
+      <rect class="guard" x="-10" y="-38" width="20" height="8" rx="3"/>
+      <rect class="body" x="-7.5" y="-112" width="15" height="76" rx="6"/>
+      <path class="grip" d="M-7.5 -90h15M-7.5 -84h15M-7.5 -78h15M-7.5 -72h15"/>
+    </g><text y="${-128 * k}" x="${(cls === "red" ? -46 : 46) * k}" style="font-size:${16 * k}px">${txt}</text></g>`;
+  }
+
+  /** Clic en un borne (esquema, plano IEC o tablero 3D): una punta, o la pinza en un cable que sale de él. */
+  function probe(end) {
+    if (D.mode !== "A") return onTerm(end);
+    const idx = spec().wiring.map((w, i) => (w?.from === end || w?.to === end ? i : -1)).filter((i) => i >= 0);
+    if (!idx.length) return false;
+    const k = idx.indexOf(D.wire);
+    return onWire(idx[(k + 1) % idx.length]);
   }
 
   function paint() {
@@ -262,11 +341,7 @@
       html += `<div class="diag-order"><p class="diag-sym">Reciba una orden de trabajo con una falla oculta (en entradas o salidas), mida y repárela trabajando seguro.</p>
         <div class="diag-row"><button class="small primary" id="diag-new" ${running() ? "" : "disabled"}>Nueva orden</button></div>${running() ? "" : `<p class="diag-hint">Inicie la simulación (▶) para empezar.</p>`}</div>`;
     }
-    html += `<div class="diag-meter${D.mode === "OHM" && D.live && D.red && D.black ? " alarm" : ""}">
-      <div class="diag-lcd" aria-live="polite">${esc(D.reading)}</div>
-      <div class="diag-modes" role="radiogroup" aria-label="Rango">${MODES.map((m) => `<button class="seg${m.id === D.mode ? " on" : ""}" data-mode="${m.id}" title="${m.title}" role="radio" aria-checked="${m.id === D.mode}">${m.label}</button>`).join("")}</div>
-      <div class="diag-probes">${probeTxt}</div>
-      <button class="small link" id="diag-leads-off">Quitar puntas</button></div>`;
+    html += meterHtml(probeTxt);
     html += `<div class="diag-lock${D.locked ? " on" : ""}"><span>${D.locked ? "🔒 Energía bloqueada" : "⚡ Con energía"}</span>
       <button class="small" id="diag-lock" ${running() ? "" : "disabled"}>${D.locked ? "Retirar bloqueo" : "Bloquear y etiquetar"}</button></div>`;
     if (o) {
@@ -324,7 +399,7 @@
         if (!c) continue;
         const p = at(c, Number(c.getAttribute("cx")), Number(c.getAttribute("cy")));
         if (!p) continue;
-        s += `<g class="diag-tip ${cls}" transform="translate(${p[0]} ${p[1]})"><circle r="13"/><path d="M0 -13 L-10 -46 L10 -46 Z"/><text y="-52">${txt}</text></g>`;
+        s += `<g transform="translate(${p[0]} ${p[1]})">${probeSvg(cls, txt, 1)}</g>`;
       }
     }
     if (show && D.mode === "A" && D.wire != null) {
@@ -345,6 +420,7 @@
       g.innerHTML = s;
       g.dataset.s = s;
     }
+    window.Jwsim3D?.onDiag?.();
   }
 
   // Eventos del panel (delegados: el contenido se repinta).
@@ -374,8 +450,20 @@
   window.JwsimDiag = {
     /** Hay una orden abierta: no se muestran las fallas en el inspector. */
     active: () => !!D.order,
+    /** Tarjeta del multímetro abierta en la planta 3D. */
+    in3d: () => in3d && !$("view3d")?.hidden,
+    show3d,
+    /** Cambió la vista: con el panel de diagnóstico abierto, la planta 3D trae su tarjeta. */
+    onView(view) {
+      if (view === "3d" && document.querySelector(".scene-main")?.dataset.pane === "diag") show3d(true);
+      else if (view !== "3d" && in3d) show3d(false);
+    },
     onTerm,
     onWire,
+    probe,
+    probeSvg,
+    /** Las puntas se pueden apoyar ahora (panel abierto y simulación en marcha). */
+    measuring: () => isOpen() && running(),
     /** La falla oculta no aparece en la instantánea que dibuja la interfaz. */
     filter(snap) {
       if (!D.key) return snap;
@@ -386,7 +474,8 @@
       };
     },
     onSnapshot(snap) {
-      if (snap.lockedOut !== undefined && snap.lockedOut !== D.locked && running()) D.locked = !!snap.lockedOut;
+      if (D.lockPending !== null && snap.lockedOut === D.lockPending) D.lockPending = null;
+      if (D.lockPending === null && snap.lockedOut !== undefined && snap.lockedOut !== D.locked && running()) D.locked = !!snap.lockedOut;
       if (isOpen()) {
         measure();
         paintProbes();
@@ -395,7 +484,7 @@
     },
     onProject() {
       if (D.order) abandon(true);
-      Object.assign(D, { done: null, log: [], done_ids: new Set(), red: null, black: null, wire: null, locked: false, reading: "—" });
+      Object.assign(D, { done: null, log: [], done_ids: new Set(), red: null, black: null, wire: null, locked: false, lockPending: null, reading: "—" });
       paint();
     },
     /** La simulación se detuvo: la orden se cierra sin puntaje y el bloqueo se va con ella. */
@@ -406,6 +495,7 @@
         D.key = null;
       }
       D.locked = false;
+      D.lockPending = null;
       D.reading = "—";
       paintProbes();
       paint();
