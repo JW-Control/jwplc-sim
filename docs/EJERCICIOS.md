@@ -71,6 +71,14 @@ esa sigue saliendo de **Calificar**.
 - `hold_ms`: cuánto tiene que sostenerse (0: basta un instante).
 - `after`: no empieza a contar hasta que se cumpla ese objetivo anterior.
 - `extra`: `merit` o `distinction`; se muestran, pero no impiden completar.
+- `console` (en lugar de `when` o junto con él): expresión regular; se
+  cumple con una línea del Monitor Serie que coincide. La expresión no se
+  muestra al alumno: la `description` dice qué se espera.
+- `period`: una señal (`"Q0_0"`) o `{ "console": "…" }` que se repite con un
+  ritmo: `cycle_ms`, `on_ms` u `off_ms` (`[min, max]`) y `cycles` (3 por
+  defecto). La barra cuenta los ciclos buenos seguidos.
+- `hint`: pista que el alumno puede abrir mientras no lo logra. `why`: qué
+  enseña, se muestra al lograrlo.
 
 Lógica en `app/lib/goals.mjs` (pruebas en `tests/app/goals_test.mjs`);
 prueba de la interfaz en `app/tests/e2e-objetivos.mjs`.
@@ -140,6 +148,8 @@ una tabla de verdad temporizada sobre la traza:
 | `from_ms`/`to_ms` + `eventually` (+ `for_ms`) | se cumplen en algún instante del intervalo (y se sostienen al menos `for_ms`) |
 | `console` (+ `from_ms`/`to_ms`) | una línea de la consola coincide con la expresión regular |
 | `no_faults` (+ `from_ms`/`to_ms`) | la escena no registra fallas eléctricas (cortocircuito, sobretensión) |
+| `period` + `cycle_ms`/`on_ms`/`off_ms` (+ `cycles`, `from_ms`/`to_ms`) | los últimos `cycles` ciclos de la señal (o de una línea de la consola, `{ "console": "…" }`) tienen ese ritmo |
+| `responds` (`{ "when", "expect" }`) + `within_ms` | cada vez que `when` pasa a cumplirse, `expect` se cumple dentro del plazo (detecta un `delay()` que bloquea) |
 
 Las claves son señales de la placa (`Q0_0`, `I0_2`) o salidas de los equipos
 de la escena (`KM1.closed`, `H1.lit`, `M1.running`, `M1.direction`,
@@ -191,3 +201,37 @@ xvfb-run -a node app/tests/e2e-g9.mjs       # la app (Linux sin pantalla)
 
 Los ejercicios tienen licencia MIT (REUSE.toml) para que alumnos y docentes
 copien plantillas, soluciones y rúbricas.
+
+## Prácticas evaluadas del curso
+
+Cada lección del Curso JWPLC Basic puede traer una práctica evaluada en
+`JWPLC_Aprende/extras/practicas/curso-NN/` (hoy, las 11 lecciones de las
+Unidades 1 y 2). Tiene el mismo formato que un reto, con dos diferencias:
+
+- El `.jwsim` es un **banco** pequeño (placa, fuente y los pulsadores,
+  selectores y pilotos que usa la lección) y su `exercise` trae
+  `"lesson": "curso-NN"`.
+- El sketch de partida (`sketch/`) es el ejemplo de la lección tal cual
+  (lo comprueba `tests/app/aprende_test.mjs`). Las tareas de «Para
+  practicar» son los objetivos en vivo de `rubrica.json`. Para temporizadores hay
+  objetivos de retardo (`delay` + `delay_ms`): miden cuánto tarda una salida
+  desde que se cumple una condición.
+
+En la app, la lección se abre con su banco: la **guía** de la lección (su
+`README.md`: qué vas a aprender, qué conectar, cómo probarlo) a la izquierda
+del código en Programa y en la pestaña Teoría del esquema, y los
+**objetivos** en el panel derecho. «Para practicar» no se repite en la guía:
+son esos objetivos. Una lección sin práctica también muestra su guía junto
+al código. La lección
+queda hecha solo al cumplir sus objetivos en una corrida; Calificar sirve
+para ver el detalle, pero no la marca.
+
+La rúbrica mira E/S y consola, no el lenguaje: `jwsim-cli grade` y Calificar
+aceptan también un proyecto del OpenPLC Editor (`project.json`; Ladder, ST…).
+Las soluciones IEC van en `solucion/<nombre>` junto a la de C++ (por ahora
+`curso-03/solucion/leer_entrada_st`, en ST).
+
+```text
+node scripts/gate-practicas.mjs                 # JWSIM_PRACTICAS
+xvfb-run -a node app/tests/e2e-practicas.mjs    # la app
+```

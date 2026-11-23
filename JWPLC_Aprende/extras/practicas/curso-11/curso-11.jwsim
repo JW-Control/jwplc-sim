@@ -1,0 +1,214 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 11 · Máquina de estados: un semáforo",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Maquina_de_estados/Maquina_de_estados.ino"
+  },
+  "exercise": {
+    "lesson": "curso-11",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Maquina_de_estados",
+    "brief": {
+      "goal": "Verde peatonal que parpadea en sus últimos 3 s y modo noche con amarillo intermitente.",
+      "steps": [
+        "Ejecuta el ejemplo y aprieta el botón del peatón (S1).",
+        "En ROJO, haz parpadear el verde peatonal (Q0.3) cada medio segundo en los últimos 3 s.",
+        "Con SA1 (I0.1) activo: modo noche, solo el amarillo parpadea cada medio segundo."
+      ],
+      "uses": [
+        "I0_0 · S1, botón del peatón",
+        "I0_1 · SA1, modo noche",
+        "Q0_0 · H1, rojo",
+        "Q0_1 · H2, amarillo",
+        "Q0_2 · H3, verde",
+        "Q0_3 · H4, verde peatonal"
+      ],
+      "teaches": "Cada estado decide sus salidas con su propio tiempo; un modo especial se resuelve antes que la máquina de estados."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Peatón"
+        },
+        "x": 0,
+        "y": 600
+      },
+      {
+        "id": "SA1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Noche"
+        },
+        "x": 220,
+        "y": 600
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Rojo"
+        },
+        "x": 440,
+        "y": 600
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Amarillo"
+        },
+        "x": 0,
+        "y": 900
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Verde"
+        },
+        "x": 220,
+        "y": 900
+      },
+      {
+        "id": "H4",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Peatón"
+        },
+        "x": 440,
+        "y": 900
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA1.13",
+        "color": "rojo"
+      },
+      {
+        "from": "SA1.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H4.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H4.X2",
+        "to": "PS1.-V1",
+        "color": "azul"
+      }
+    ]
+  }
+}

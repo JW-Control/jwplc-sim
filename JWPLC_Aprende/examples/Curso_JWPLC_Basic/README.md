@@ -9,9 +9,9 @@ Archivo → Ejemplos → JWPLC_GlobalPeripherals → Curso_JWPLC_Basic
 ```
 
 Las lecciones van de lo simple a lo completo: primero se aprende una idea
-con pocas líneas y después se usa en un ejemplo más grande. Cada una explica
-al inicio qué vas a aprender, qué conectar, cómo probarla y un reto para
-practicar.
+con pocas líneas y después se usa en un ejemplo más grande. Cada lección trae
+su guía en un `README.md` (qué vas a aprender, qué conectar, cómo probarla y
+un reto para practicar) y el sketch queda solo con el código.
 
 Placa: **JWPLC Basic** (Herramientas → Placa → JW Control ESP32 Boards).
 

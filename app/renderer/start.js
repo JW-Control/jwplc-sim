@@ -311,9 +311,22 @@
       l.sections.filter((s) => s.items.length).map((s) => `<h4>${esc(s.title)}</h4>${ul(s.items)}`).join("") +
       (l.steps.length ? `<h4>Cómo probarlo</h4><ol class="ini-ol">${l.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : "") +
       (l.practice.length ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}` : "") +
-      `<h4>En el simulador</h4><div class="ini-chips"><span>Ejemplo del Curso JWPLC Basic</span><span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
-      `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : "Abrir lección"}</button>` +
-      `<small class="muted">${x.state === "done" ? "Lección vista." : "Se abre como sketch en su carpeta de trabajo."}</small></div>`;
+      (l.graded && l.goals?.length
+        ? `<h4>Objetivos que se evalúan</h4>${ul(l.goals.map((g) => g.text + (g.extra ? " (mérito)" : "")), "ini-practice")}`
+        : l.practice.length
+          ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}`
+          : "") +
+      `<h4>En el simulador</h4><div class="ini-chips">${l.graded ? "<span>Banco de práctica</span><span>Objetivos en vivo</span>" : "<span>Ejemplo del Curso JWPLC Basic</span>"}<span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
+      `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : l.graded ? "Abrir práctica" : "Abrir lección"}</button>` +
+      `<small class="muted">${
+        l.graded
+          ? x.state === "done"
+            ? "Práctica lograda: cumpliste sus objetivos."
+            : "Teoría a la izquierda, objetivos a la derecha: se da por hecha al cumplirlos."
+          : x.state === "done"
+            ? "Lección vista."
+            : "Se abre como sketch en su carpeta de trabajo."
+      }</small></div>`;
     return html;
   }
   function retoBrief(tier, x) {
@@ -566,8 +579,11 @@
       const hit = findItem(tiers(), b.dataset.id);
       if (!hit) return;
       close();
+      // Con práctica evaluada se abre su banco; se da por hecha al cumplir los objetivos.
+      if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id);
       try {
         window.loadSketch(await api.openExample(hit.item.lesson.dir));
+        window.showLessonGuide?.(hit.item.lesson);
         st.lessons = await api.learnLessonSeen(hit.item.id);
         window.consoleWrite?.(`[jwsim] Curso JWPLC Basic · Lección ${hit.item.lesson.num}: ${hit.item.title}\n`, "sys");
       } catch (err) {

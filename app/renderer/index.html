@@ -70,6 +70,18 @@
 
     <main class="workspace">
       <section class="pane code-pane">
+        <!-- Guía de la lección (su README.md) a la izquierda del código: se lee
+             mientras se edita el sketch. Solo aparece en lecciones del curso. -->
+        <aside class="guide-pane" id="guide-pane" hidden aria-label="Guía de la lección">
+          <div class="guide-head">
+            <span class="guide-title">Guía de la lección</span>
+            <button class="icon" id="guide-fold" title="Plegar la guía" aria-label="Plegar la guía">‹</button>
+          </div>
+          <div class="guide-body theory-body" id="guide-body"></div>
+          <div class="guide-grip" id="guide-grip" role="separator" aria-orientation="vertical" aria-label="Ancho de la guía" title="Arrastrar para cambiar el ancho de la guía"></div>
+        </aside>
+        <button class="guide-open" id="guide-open" hidden title="Mostrar la guía de la lección" aria-label="Mostrar la guía de la lección">Guía</button>
+        <div class="code-col">
         <div class="code-head">
           <div class="tabs" id="tabs"></div>
           <div class="group dbg" aria-label="Depuración">
@@ -81,6 +93,7 @@
           </div>
         </div>
         <div id="editor"></div>
+        </div>
       </section>
 
       <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Ancho del editor"
@@ -185,9 +198,17 @@
                     <path d="M5 15h3l3-7h4l3 7h3"/>
                   </svg>
                 </button>
+                <button class="side-tab-left" data-left-pane="teoria" id="scene-tab-teoria"
+                  title="Teoría de la lección" aria-label="Teoría" aria-pressed="false" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/>
+                    <path d="M4 19a2 2 0 012-2h13M8 7h7M8 11h5"/>
+                  </svg>
+                </button>
               </nav>
               <aside class="scene-left" id="scene-left">
                 <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
+                <section class="left-pane theory-pane theory-body" id="theory-pane" data-left-pane="teoria" hidden></section>
               </aside>
               <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
                 aria-label="Ancho del diagrama de estados"
@@ -447,6 +468,7 @@
     </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
+    <script src="editor-syntax.js"></script>
     <script src="completion.js"></script>
     <script src="app.js"></script>
     <script src="start.js"></script>

@@ -1,0 +1,143 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-03",
+  "goals": [
+    {
+      "id": "invertida",
+      "description": "H1 (Q0.0) encendido mientras S1 NO está apretado",
+      "when": {
+        "I0_0": 0,
+        "Q0_0": 1
+      },
+      "hold_ms": 1000,
+      "hint": "digitalWrite(Q0_0, !estado); el ! da vuelta HIGH y LOW."
+    },
+    {
+      "id": "invertida_pulsado",
+      "description": "Al apretar S1, H1 se apaga",
+      "when": {
+        "I0_0": 1,
+        "Q0_0": 0
+      },
+      "after": "invertida",
+      "hold_ms": 500
+    },
+    {
+      "id": "segundo",
+      "description": "S2 (I0.1) enciende H2 (Q0.1)",
+      "when": {
+        "I0_1": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 500,
+      "hint": "Lee I0_1 en otra variable y escríbela en Q0_1.",
+      "why": "Cada entrada se lee aparte; el programa decide qué salida manda."
+    },
+    {
+      "id": "mensaje",
+      "description": "El Monitor Serie avisa «I0.1 activa»",
+      "console": "I0\\.1 activa",
+      "extra": "merit"
+    }
+  ],
+  "cases": [
+    {
+      "name": "S1 invertido",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con S1 suelto, Q0.0 cerrado",
+          "points": 2,
+          "from_ms": 900,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Con S1 apretado, Q0.0 abierto",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 150
+        },
+        {
+          "description": "Al soltar S1, Q0.0 vuelve a cerrarse",
+          "points": 1,
+          "from_ms": 2200,
+          "to_ms": 2700,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "S2 manda Q0.1",
+      "until_ms": 3000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.1 abierto en reposo",
+          "points": 1,
+          "at_ms": 1450,
+          "expect": {
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Q0.1 se cierra con S2",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 150
+        },
+        {
+          "description": "Q0.1 se abre al soltar S2",
+          "points": 1,
+          "from_ms": 2200,
+          "to_ms": 2700,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ]
+}

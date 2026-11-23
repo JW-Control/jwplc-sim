@@ -1,0 +1,139 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-11",
+  "goals": [
+    {
+      "id": "peaton",
+      "description": "El verde peatonal parpadea cada medio segundo en sus últimos 3 s",
+      "period": "Q0_3",
+      "on_ms": [
+        450,
+        550
+      ],
+      "off_ms": [
+        450,
+        550
+      ],
+      "cycles": 2,
+      "hint": "En ROJO, con enEstado >= ROJO_MS - 3000: (enEstado / 500) % 2 == 0 da encendido y apagado cada 500 ms."
+    },
+    {
+      "id": "noche",
+      "description": "Modo noche (SA1): el amarillo parpadea cada medio segundo",
+      "period": "Q0_1",
+      "on_ms": [
+        450,
+        550
+      ],
+      "off_ms": [
+        450,
+        550
+      ],
+      "cycles": 3,
+      "hint": "Si I0_1 está activa, parpadea Q0_1 con millis() y apaga las demás; si no, la máquina de estados de siempre."
+    },
+    {
+      "id": "noche_solo",
+      "description": "En modo noche, el rojo y los verdes quedan apagados",
+      "when": {
+        "I0_1": 1,
+        "Q0_0": 0,
+        "Q0_2": 0,
+        "Q0_3": 0
+      },
+      "hold_ms": 2000,
+      "after": "noche",
+      "why": "Un modo especial manda sobre la secuencia normal: se resuelve antes del switch."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Verde peatonal intermitente",
+      "until_ms": 22000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "En ROJO, el verde peatonal empieza fijo",
+          "points": 2,
+          "from_ms": 13500,
+          "to_ms": 17500,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_3": 1
+          },
+          "for_ms": 2000
+        },
+        {
+          "description": "Parpadea en los últimos 3 s",
+          "points": 6,
+          "from_ms": 17500,
+          "to_ms": 21500,
+          "period": "Q0_3",
+          "on_ms": [
+            450,
+            550
+          ],
+          "off_ms": [
+            450,
+            550
+          ],
+          "cycles": 2
+        }
+      ]
+    },
+    {
+      "name": "Modo noche",
+      "until_ms": 8000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "El amarillo parpadea cada medio segundo",
+          "points": 8,
+          "from_ms": 1000,
+          "to_ms": 8000,
+          "period": "Q0_1",
+          "on_ms": [
+            450,
+            550
+          ],
+          "off_ms": [
+            450,
+            550
+          ],
+          "cycles": 3
+        },
+        {
+          "description": "Rojo y verdes apagados",
+          "points": 4,
+          "from_ms": 1500,
+          "to_ms": 8000,
+          "always": {
+            "Q0_0": 0,
+            "Q0_2": 0,
+            "Q0_3": 0
+          }
+        }
+      ]
+    }
+  ]
+}
