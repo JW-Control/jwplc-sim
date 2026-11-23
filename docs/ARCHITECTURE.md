@@ -702,6 +702,13 @@ piso, franja, paso, caja, pallet). Lo armado se guarda en el `.jwsim`:
   `panel` es el `{x, z, r}` del tablero; `pieces[] = {id, kind, x, z, r,
   params}` con ids `A1`, `A2`… y medidas en `params` (largo, ancho, alto…).
 
+Todo apoya en la rejilla del piso: la esquina de menor x y menor z de la
+huella de cada equipo, del tablero y de cada pieza cae en una línea (no el
+origen del modelo, que en unos es una esquina y en otros el centro), también
+en el acomodo automático. Las juntas de la losa van cada 2 m sobre las
+mismas líneas, y al armar se ve la rejilla fina. Los sensores pegados a un
+equipo sobresalen de su huella sin correrlo.
+
 «Acomodo automático» borra los `p3` y la posición del tablero en un solo
 paso de deshacer. Prueba: `app/tests/e2e-3d-armar.mjs`.
 

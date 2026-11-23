@@ -3404,6 +3404,7 @@
       if (run === S.running) return;
       S.running = run;
       updateUndoRedoButtons();
+      window.Jwsim3D?.onRun?.();
       if (!run) analyze();
       render(true);
     },

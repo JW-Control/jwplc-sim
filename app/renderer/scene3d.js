@@ -10,7 +10,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { buildPiece, setupArmar } from "./scene3d-armar.js";
+import { buildPiece, footprint, gridAlign, setupArmar } from "./scene3d-armar.js";
 
 const COL = {
   frame: 0x5b6470, belt: 0x23272d, roller: 0x9aa3ad, piece: 0xf08a24, floor: 0x1b1f24, grid: 0x2c333b,
@@ -987,18 +987,23 @@ function rebuild(spec) {
   V.hits = [];
   V.zFront = 0;
   V.armIndex = new Map();
+  // Todo apoya en la rejilla del piso (0,5 m o 0,25 m): la esquina de cada
+  // huella cae en una línea, también en el acomodo automático.
+  const G = Number(spec.plant3d?.grid) || 0.5;
+  const align = (g, p3) => gridAlign(g, G, p3 ? "round" : "ceil");
   // Sin edificio (que lleva el suyo en la azotea), el tablero va al inicio de la planta.
   if (!plant.some((d) => d.type === "jwsim/building-water") && spec.devices.some((d) => d.type === "jwsim/jwplc-basic")) {
     const panel = buildPanel(spec);
     panel.group.position.set(panel.W / 2, 0, 0);
     if (spec.plant3d?.panel) placeAt(panel.group, spec.plant3d.panel);
+    align(panel.group, spec.plant3d?.panel);
     armTag(panel.group, "panel", "panel");
     const tag = label("Tablero");
     tag.position.set(0, panel.bottom + panel.H + 0.2, 0);
     panel.group.add(tag);
     V.root.add(panel.group);
     V.panel = panel;
-    x = panel.W + 1.0;
+    x = panel.group.position.x + panel.W / 2 + 1.0;
   }
   for (const d of plant) {
     const p = d.params ?? {};
@@ -1031,6 +1036,8 @@ function rebuild(spec) {
     // El tanque se dibuja centrado en su eje; el resto desde su borde izquierdo.
     model.group.position.set(d.type === "jwsim/tank" ? x + 0.6 : x, 0, 0);
     if (d.p3) placeAt(model.group, d.p3);
+    const sh = align(model.group, d.p3);
+    if (!d.p3) x += sh.dx;
     armTag(model.group, "dev", d.id);
     const tag = label(d.id);
     tag.position.set(w / 2 - (d.type === "jwsim/tank" ? 0.6 : 0), d.type === "jwsim/door" ? 2.9 : d.type === "jwsim/building-water" ? model.height + 0.2 : d.type === "jwsim/lift" ? model.tall + 0.6 : CYLINDERS.has(d.type) ? 1.85 : AIR.has(d.type) ? 1.55 : 2.2, 0);
@@ -1178,11 +1185,13 @@ function rebuild(spec) {
     const conduitM = mat(0x5f6670, { roughness: 0.6 });
     items.forEach((it, k) => {
       const m = it.model;
-      const px = it.host ? centerOf(it.host) + it.slot * 0.65 - 0.15 : fx;
+      const px = it.host ? centerOf(it.host) + it.slot * 1.0 - 0.15 : fx;
       const pz = it.host ? zOf(it.host) + 1.05 : fz;
       m.group.position.set(px + 0.15, 0, pz);
       const fd = spec.devices.find((q) => q.id === it.id);
       if (fd?.p3) placeAt(m.group, fd.p3);
+      const sh = align(m.group, fd?.p3);
+      if (!it.host && !fd?.p3) fx += sh.dx;
       if (fd) armTag(m.group, "dev", fd.id);
       V.root.add(m.group);
       const tag = label(it.label);
@@ -1214,6 +1223,7 @@ function rebuild(spec) {
   for (const pc of pieces) {
     const g = buildPiece(pc.kind, pc.params, { mat, box, cyl, meshPanel });
     placeAt(g, pc);
+    align(g, pc);
     armTag(g, "piece", pc.id);
     V.root.add(g);
   }
@@ -3566,6 +3576,10 @@ window.Jwsim3D = {
     if (V.visible && V.ready) window.Jwsim3D.show(true);
   },
   /** Para pruebas: modo «Armar» (encender/apagar y su estado). */
+  /** La simulación arrancó o se detuvo: el modo «Armar» solo va con ella detenida. */
+  onRun() {
+    V.armarUi?.syncRun();
+  },
   armar(on) {
     if (on !== undefined) V.armarUi?.setOn(!!on);
     return V.armarUi ? { ...V.armarUi.state(), ids: [...(V.armIndex?.keys() ?? [])] } : null;
@@ -3579,7 +3593,9 @@ window.Jwsim3D = {
   /** Para pruebas: lugar { x, z, r } de un grupo movible («dev:M1», «piece:A1», «panel:panel»). */
   armAt(key) {
     const g = V.armIndex?.get(key);
-    return g ? { x: +g.position.x.toFixed(3), z: +g.position.z.toFixed(3), r: Math.round(THREE.MathUtils.radToDeg(g.rotation.y)) } : null;
+    if (!g) return null;
+    const b = footprint(g);
+    return { x: +g.position.x.toFixed(3), z: +g.position.z.toFixed(3), r: Math.round(THREE.MathUtils.radToDeg(g.rotation.y)), fx: +b.min.x.toFixed(3), fz: +b.min.z.toFixed(3) };
   },
   /** Para pruebas: posición en la escena del origen de un equipo de planta. */
   objectAt(id) {

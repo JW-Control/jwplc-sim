@@ -16,6 +16,47 @@ import * as THREE from "three";
 
 const deg = (r) => THREE.MathUtils.degToRad(r ?? 0);
 
+/**
+ * Huella del grupo sobre el piso (caja en coordenadas del mundo), sin los
+ * rótulos: es lo que se alinea a la rejilla, no el origen del modelo (que en
+ * unos equipos es una esquina y en otros el centro).
+ */
+export function footprint(g) {
+  const bb = new THREE.Box3();
+  g.updateMatrixWorld(true);
+  // Solo el cuerpo del equipo: lo que tenía al alinearse la primera vez. Los
+  // sensores y balizas que se le pegan después sobresalen sin correrlo.
+  if (!g.userData.body) g.userData.body = [...g.children];
+  for (const c of g.userData.body) c.traverse((o) => {
+    if (o.userData?.isLabel || o.isSprite || !o.isMesh) return;
+    let p = o.parent;
+    while (p && p !== g) {
+      if (p.userData?.isLabel) return;
+      p = p.parent;
+    }
+    bb.expandByObject(o, false);
+  });
+  return bb;
+}
+
+/**
+ * Lleva la huella del grupo a la rejilla: su esquina de menor x y menor z
+ * cae en una línea. mode "ceil" solo corre hacia +x/+z (acomodo automático,
+ * para no pisar al vecino); "round" va a la línea más cercana.
+ * Devuelve cuánto se corrió { dx, dz }.
+ */
+export function gridAlign(g, grid = 0.5, mode = "round") {
+  const bb = footprint(g);
+  if (bb.isEmpty()) return { dx: 0, dz: 0 };
+  const f = mode === "ceil" ? Math.ceil : Math.round;
+  const q = (v) => f(+(v / grid).toFixed(6)) * grid;
+  const dx = q(bb.min.x) - bb.min.x;
+  const dz = q(bb.min.z) - bb.min.z;
+  g.position.x = +(g.position.x + dx).toFixed(6);
+  g.position.z = +(g.position.z + dz).toFixed(6);
+  return { dx, dz };
+}
+
 /** Piezas de ambiente: nombre, medidas por defecto (m) y qué medidas se editan. */
 export const PIECES = {
   plataforma: { name: "Plataforma con columnas", params: { ancho: 2, largo: 2, alto: 1.5 } },
@@ -234,6 +275,13 @@ export function setupArmar(ctx) {
     box.innerHTML = html;
   }
 
+  /** Con la simulación en marcha no se arma: el botón se apaga y el modo se cierra. */
+  function syncRun() {
+    if (A.on && running()) setOn(false);
+    btn.disabled = running();
+    btn.title = running() ? "Detenga la simulación para armar la planta" : "Armar la planta: agregar piezas, mover (arrastrar), girar (R) y quitar (Supr)";
+  }
+
   function setOn(on) {
     if (on && running()) return;
     A.on = on;
@@ -247,8 +295,40 @@ export function setupArmar(ctx) {
       A.armed = null;
     }
     $("vb-grid").value = String(grid());
+    paintGrid();
     paintList();
     paintProps();
+  }
+
+  /**
+   * Rejilla visible mientras se arma: líneas finas cada 0,5 m (o 0,25 m) y
+   * marcadas cada 2 m, que coinciden con las juntas de la losa.
+   */
+  function paintGrid() {
+    const g = grid();
+    if (A.gridMesh && (A.gridMesh.userData.step !== g || !A.on)) {
+      A.gridMesh.removeFromParent();
+      A.gridMesh.traverse((o) => o.geometry?.dispose());
+      A.gridMesh = null;
+    }
+    if (!A.on || A.gridMesh) return;
+    const SIZE = 40;
+    const grp = new THREE.Group();
+    const fine = new THREE.GridHelper(SIZE, Math.round(SIZE / g), 0x37d67a, 0x3d4650);
+    fine.material.transparent = true;
+    fine.material.opacity = 0.55;
+    fine.material.depthWrite = false;
+    const major = new THREE.GridHelper(SIZE, SIZE / 2, 0x37d67a, 0x37d67a);
+    major.material.transparent = true;
+    major.material.opacity = 0.45;
+    major.material.depthWrite = false;
+    major.position.y = 0.001;
+    grp.add(fine, major);
+    grp.position.y = 0.006;
+    grp.renderOrder = -1;
+    grp.userData.step = g;
+    V.scene.add(grp);
+    A.gridMesh = grp;
   }
 
   function select(s) {
@@ -283,8 +363,10 @@ export function setupArmar(ctx) {
     const s = A.sel;
     const g = s && V.armIndex?.get(`${s.kind}:${s.id}`);
     if (!g || running()) return;
-    const p = placeOf(g);
-    commit(s.kind, s.id, { ...p, r: (p.r + 90) % 360 });
+    // Gira sobre su lugar y vuelve a apoyar la huella en la rejilla.
+    g.rotation.y += Math.PI / 2;
+    gridAlign(g, grid());
+    commit(s.kind, s.id, placeOf(g));
   }
 
   function remove() {
@@ -393,7 +475,9 @@ export function setupArmar(ctx) {
       select({ kind, id });
       const p0 = groundAt(e);
       if (!p0) return;
-      A.drag = { g, kind, id, p0, x0: g.position.x, z0: g.position.z, moved: false };
+      // Se arrastra la huella: su esquina queda sobre las líneas de la rejilla.
+      const fb = footprint(g);
+      A.drag = { g, kind, id, p0, x0: g.position.x, z0: g.position.z, ox: fb.min.x - g.position.x, oz: fb.min.z - g.position.z, moved: false };
       V.controls.enabled = false;
       canvas.setPointerCapture(e.pointerId);
     },
@@ -407,8 +491,8 @@ export function setupArmar(ctx) {
     }
     const p = groundAt(e);
     if (!p) return;
-    const x = snap(d.x0 + p.x - d.p0.x);
-    const z = snap(d.z0 + p.z - d.p0.z);
+    const x = +(snap(d.x0 + p.x - d.p0.x + d.ox) - d.ox).toFixed(6);
+    const z = +(snap(d.z0 + p.z - d.p0.z + d.oz) - d.oz).toFixed(6);
     if (x !== d.g.position.x || z !== d.g.position.z) {
       d.g.position.x = x;
       d.g.position.z = z;
@@ -442,16 +526,16 @@ export function setupArmar(ctx) {
     setOn,
     /** Tras volver a dibujar: la selección sigue al mismo equipo o pieza. */
     afterRebuild() {
+      paintGrid();
       if (A.helper) A.helper.removeFromParent();
       A.helper = null;
       if (A.sel) select(A.sel);
-      if (A.on && running()) setOn(false);
-      btn.disabled = running();
-      btn.title = running() ? "Detenga la simulación para armar la planta" : "Armar la planta: agregar piezas, mover (arrastrar), girar (R) y quitar (Supr)";
+      syncRun();
       if (A.on) paintProps();
     },
+    syncRun,
     select,
     create,
-    state: () => ({ on: A.on, sel: A.sel, armed: A.armed, grid: grid() }),
+    state: () => ({ on: A.on, sel: A.sel, armed: A.armed, grid: grid(), gridShown: A.gridMesh?.userData.step ?? null }),
   };
 }
