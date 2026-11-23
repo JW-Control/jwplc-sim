@@ -1110,6 +1110,8 @@
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
+    // La placa SVG carga aparte: hasta que llegue no se marca como dibujada.
+    if (sym.board && !S.boardSvg) return;
     S.rendered.set(dev.id, sig);
     if (sym.board) {
       if (!g.querySelector("svg")) {
@@ -1290,7 +1292,7 @@
         html += `<div class="insp-head" title="${esc(def.type)}@${esc(def.version)}"><b>${esc(dev.id)}</b><span>${esc(def.name)}</span></div>`;
         html += `<div class="insp-meta">${esc(def.category ?? "Otros")} · ${terms.length} bornes</div>`;
         // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
-        const opts = dev.type === "jwsim/jwplc-basic" || !S.running ? [] : faultOptions(dev, def, st);
+        const opts = dev.type === "jwsim/jwplc-basic" || !S.running || window.JwsimDiag?.active?.() ? [] : faultOptions(dev, def, st);
         let fh = "";
         if (opts.length) {
           const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
@@ -2004,12 +2006,77 @@
     changed();
   }
 
+  /**
+   * Para cada entrada I0_k, los equipos cuyos contactos la alimentan (del
+   * borne hacia la fuente) y, para cada salida Q0_k, la carga que mueve y lo
+   * que hay en el camino. Se sigue el cableado y, dentro de cada equipo, el
+   * borne par (13-14, 21-22, 95-96, A1-A2, X1-X2).
+   */
+  function ioMap() {
+    const plc = S.spec.devices.find((d) => d.type === "jwsim/jwplc-basic");
+    if (!plc) return {};
+    const pair = (t) => {
+      const [id, term] = [t.slice(0, t.indexOf(".")), t.slice(t.indexOf(".") + 1)];
+      let m = /^(\d+)$/.exec(term);
+      if (m) return `${id}.${Number(m[1]) % 2 ? Number(m[1]) + 1 : Number(m[1]) - 1}`;
+      m = /^([A-Za-z]+)([12])$/.exec(term);
+      if (m) return `${id}.${m[1]}${m[2] === "1" ? 2 : 1}`;
+      return null;
+    };
+    const next = (t) => S.spec.wiring.flatMap((w) => (w.from === t ? [w.to] : w.to === t ? [w.from] : []));
+    const isSource = (id) => /power|supply|fuente/.test(devById(id)?.type ?? "");
+    const walk = (start, stopAtLoad) => {
+      const chain = [];
+      const seen = new Set([start]);
+      let frontier = next(start);
+      for (let hop = 0; hop < 12 && frontier.length; hop++) {
+        const t = frontier.find((x) => !seen.has(x));
+        if (!t) break;
+        seen.add(t);
+        const id = t.slice(0, t.indexOf("."));
+        if (id === plc.id || isSource(id)) break;
+        const term = t.slice(t.indexOf(".") + 1);
+        chain.push(id);
+        if (stopAtLoad && /^(A1|X1|\+)$/.test(term)) return { chain, load: id };
+        const p = pair(t);
+        if (!p) break;
+        seen.add(p);
+        frontier = next(p);
+      }
+      return { chain, load: null };
+    };
+    const label = (id) => {
+      const d = devById(id);
+      const l = d?.params?.label;
+      return l ? `${id} (${l})` : id;
+    };
+    /** @type {Record<string, { text: string, devices: string[] }>} */
+    const out = {};
+    for (let k = 0; k < 8; k++) {
+      const i = walk(`${plc.id}.I0_${k}`, false);
+      if (i.chain.length) {
+        const names = [...new Set(i.chain)];
+        const first = names[0];
+        out[`I0_${k}`] = { devices: names, text: names.length > 1 ? `${names.slice().reverse().map(label).join(" · ")} en serie` : `${label(first)} · ${S.defs.get(devById(first)?.type)?.name ?? ""}` };
+      }
+      const q = walk(`${plc.id}.Q0_${k}.2`, true);
+      if (q.chain.length) {
+        const ld = q.load ?? q.chain[q.chain.length - 1];
+        const via = q.chain.filter((x) => x !== ld);
+        out[`Q0_${k}`] = { devices: q.chain, text: `${label(ld)} · ${S.defs.get(devById(ld)?.type)?.name ?? ""}${via.length ? ` (por ${via.join(", ")})` : ""}` };
+      }
+    }
+    return out;
+  }
+
   function changed() {
     normalizeCables();
     S.dirty = true;
     clearTimeout(S.analyzeTimer);
     S.analyzeTimer = setTimeout(analyze, 120);
     window.JwsimStateDiag?.onSpec?.();
+    window.Jwsim3D?.onSpec?.();
+    window.updateIoDescriptions?.();
     render();
   }
 
@@ -2028,7 +2095,7 @@
 
   function cleanSpec() {
     return {
-      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}) })),
+      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount, p3 }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}), ...(p3 ? { p3 } : {}) })),
       wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
         from,
         to,
@@ -2039,7 +2106,16 @@
       })),
       // Cables multipolares (solo dibujo: el simulador usa from/to de cada hilo).
       ...(cablesOf().length ? { cables: cablesOf().map(({ id, label, ref }) => ({ id, ...(label ? { label } : {}), ...(ref ? { ref: true } : {}) })) } : {}),
+      // Planta 3D armada a mano: piezas de ambiente y lugar del tablero (la
+      // posición 3D de cada equipo va en su p3).
+      ...(plant3dOf() ? { plant3d: plant3dOf() } : {}),
     };
+  }
+  function plant3dOf() {
+    const p = S.spec.plant3d;
+    if (!p) return null;
+    const out = { ...(p.grid && p.grid !== 0.5 ? { grid: p.grid } : {}), ...(p.panel ? { panel: p.panel } : {}), ...(p.pieces?.length ? { pieces: p.pieces } : {}) };
+    return Object.keys(out).length ? out : null;
   }
 
   async function act(id, action, value) {
@@ -2135,6 +2211,15 @@
           S.drag = { kind: "vertex", i: S.sel.id, k, moved: false };
           svg.setPointerCapture(e.pointerId);
         }
+        return;
+      }
+      // Modo Diagnóstico: el borne recibe la punta del multímetro.
+      if (term && window.JwsimDiag?.onTerm?.(term.dataset.term)) {
+        e.preventDefault();
+        return;
+      }
+      if (wireEl && window.JwsimDiag?.onWire?.(Number(wireEl.dataset.wire))) {
+        e.preventDefault();
         return;
       }
       if (term) {
@@ -3200,6 +3285,7 @@
     document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
     window.JwsimTabs?.onView(view);
     window.Jwsim3D?.show(view === "3d");
+    window.JwsimDiag?.onView?.(view);
     // scene3d.js es un módulo: si no carga (falta three.js en la instalación),
     // el aviso de «escena sin planta» engañaba; se dice qué pasa.
     if (view === "3d" && !window.Jwsim3D) {
@@ -3224,7 +3310,7 @@
   const Scene = {
     // Escena del proyecto (campo "scene" del .jwsim).
     load(sc, { preserveView = false } = {}) {
-      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
+      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []), ...(sc?.plant3d ? { plant3d: structuredClone(sc.plant3d) } : {}) };
       normalizeCables();
       S.dirty = false;
       S.undoStack = [];
@@ -3271,6 +3357,10 @@
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    /** Nombre del tipo de un equipo («Contactor», «Final de carrera»…). */
+    deviceName: (id) => S.defs.get(devById(id)?.type)?.name ?? "",
+    /** Qué hay en cada E/S del PLC, siguiendo el cableado (tabla de E/S y modo Diagnóstico). */
+    ioMap: () => ioMap(),
     editCircuit: (op) => editCircuit(op),
     // Un dato del equipo que no cambia su dibujo (p. ej. los bornes del PLC
     // que se escriben en el plano IEC). value undefined lo quita. Ctrl+Z deshace.
@@ -3319,12 +3409,57 @@
     removeSelected,
     // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
     // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
-    async addPlant(type) {
+    // Equipo nuevo de planta (o de campo). Desde el armado 3D llega con su
+    // lugar en la planta (p3); en el esquema queda a la derecha, sin cablear.
+    async addPlant(type, p3) {
       if (S.running) return null;
       await loadBoard();
       ensurePlc();
       const right = Math.max(0, ...S.spec.devices.map((d) => (d.x ?? 0) + 400));
-      return addDevice(type, right + 80, 0);
+      const id = addDevice(type, right + 80, 0);
+      if (id && p3) {
+        devById(id).p3 = { ...p3 };
+        changed();
+      }
+      return id;
+    },
+    // Armado 3D: lugar de un equipo en la planta { x, z, r } (m y grados);
+    // null lo devuelve al acomodo automático. Ctrl+Z deshace.
+    place3d(id, p3) {
+      if (S.running) return false;
+      const dev = devById(id);
+      if (!dev) return false;
+      pushHistory();
+      if (p3) dev.p3 = { x: p3.x, z: p3.z, ...(p3.r ? { r: p3.r } : {}) };
+      else delete dev.p3;
+      changed();
+      return true;
+    },
+    // Armado 3D: piezas de ambiente, lugar del tablero y rejilla. fn recibe
+    // una copia de scene.plant3d y la devuelve cambiada. Ctrl+Z deshace.
+    editPlant3d(fn) {
+      if (S.running) return false;
+      pushHistory();
+      S.spec.plant3d = fn(structuredClone(S.spec.plant3d ?? {})) ?? {};
+      changed();
+      return true;
+    },
+    // «Acomodo automático»: equipos y tablero vuelven a su lugar calculado
+    // (las piezas de ambiente se quedan). Un solo paso de Ctrl+Z.
+    resetPlant3d() {
+      if (S.running) return false;
+      pushHistory();
+      for (const d of S.spec.devices) delete d.p3;
+      if (S.spec.plant3d) delete S.spec.plant3d.panel;
+      changed();
+      return true;
+    },
+    // Quita un equipo (y sus cables), como Supr en el esquema.
+    removeDevice(id) {
+      if (S.running || !devById(id) || devById(id).type === "jwsim/jwplc-basic") return false;
+      S.sel = { kind: "device", id };
+      removeSelected();
+      return true;
     },
     isRunning: () => S.running,
     // Gestor de dispositivos: vuelve a leer definiciones y símbolos (sin reiniciar).
@@ -3346,7 +3481,9 @@
       const run = kind === "running" || kind === "paused" || kind === "break";
       if (run === S.running) return;
       S.running = run;
+      if (!run) window.JwsimDiag?.onStop?.();
       updateUndoRedoButtons();
+      window.Jwsim3D?.onRun?.();
       if (!run) analyze();
       render(true);
     },
@@ -3474,7 +3611,10 @@
           S.dirty = true;
         }
       }
+      // Modo Diagnóstico: la falla de la orden de trabajo no se delata.
+      snap = window.JwsimDiag?.filter?.(snap) ?? snap;
       S.snap = snap;
+      window.JwsimDiag?.onSnapshot?.(snap);
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
       window.JwsimIec?.onSnapshot(snap);

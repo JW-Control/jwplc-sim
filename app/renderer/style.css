@@ -2713,6 +2713,167 @@ body[data-tab="plant"] .view3d-empty {
 .view3d-add[hidden] {
   display: none;
 }
+/* Planta 3D armable: botón «Armar» y panel de piezas (scene3d-armar.js). */
+.view3d-armar {
+  position: absolute;
+  left: 96px;
+  top: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  opacity: 0.95;
+}
+.view3d-armar.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.view3d-armar:disabled {
+  opacity: 0.5;
+}
+.view3d-build {
+  position: absolute;
+  left: 12px;
+  top: 46px;
+  bottom: 12px;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--float-bg);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+.view3d-build[hidden] {
+  display: none;
+}
+.view3d.armando .view3d-empty {
+  left: 272px;
+}
+.view3d.poniendo canvas {
+  cursor: crosshair;
+}
+.vb-head {
+  font-weight: 600;
+  font-size: 13px;
+}
+.vb-search,
+.vb-cat {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text);
+}
+.vb-count {
+  color: var(--muted);
+  font-size: 11px;
+}
+.vb-list {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+.vb-cat-name {
+  margin: 8px 0 2px;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.vb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  cursor: grab;
+}
+.vb-item:hover {
+  background: var(--surface-input);
+}
+.vb-item.armed {
+  outline: 1px solid var(--accent);
+  background: var(--surface-input);
+}
+.vb-item span {
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.vb-item span.vb-io {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.vb-item.soon {
+  color: var(--muted);
+  cursor: default;
+}
+.vb-empty,
+.vb-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+.vb-props {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vb-sel {
+  font-weight: 600;
+}
+.vb-sel small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.vb-dim {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vb-dim input {
+  width: 70px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text);
+}
+.vb-actions,
+.vb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.vb-foot {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  justify-content: space-between;
+}
+.vb-actions button,
+.vb-foot button,
+.vb-foot select {
+  font-size: 11px;
+  padding: 3px 8px;
+}
 /* Mini placa sobre la planta 3D: pantalla y LED. */
 .mini-plc {
   position: absolute;
@@ -5758,4 +5919,437 @@ body[data-schem="iec"] .scene-float {
   color: var(--muted);
   font-size: 10.5px;
   margin-top: 6px;
+}
+
+/* ---------------------------------------------------------------- Modo Diagnóstico */
+.io-table td.io-desc {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+.diag-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+.diag-order {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.diag-order.done {
+  border-color: var(--ok-border);
+}
+.diag-order-h {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.diag-order-h span {
+  font-variant-numeric: tabular-nums;
+}
+.diag-title {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.diag-sym {
+  margin: 6px 0 8px;
+  line-height: 1.4;
+}
+.diag-hint,
+.diag-ok {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.diag-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.diag-score {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--ok);
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.diag-score small {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.diag-pens {
+  margin: 0 0 8px;
+  padding-left: 16px;
+  color: var(--err-text-2);
+}
+/* Multímetro de mano (original JW: cuerpo grafito con funda verde). */
+.dmm {
+  position: relative;
+  padding: 12px 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #2b3036, #1d2126);
+  border: 5px solid #1f8a46;
+  box-shadow: inset 0 0 0 1px #0d0f12, 0 4px 14px rgb(0 0 0 / 0.35);
+  color: #e6edf3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dmm.alarm {
+  border-color: var(--err);
+  animation: dmm-alarm 0.6s steps(2) infinite;
+}
+@keyframes dmm-alarm {
+  50% {
+    border-color: #1f8a46;
+  }
+}
+.dmm-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #9aa4af;
+}
+.dmm-head b {
+  font-size: 15px;
+  color: #37d67a;
+  letter-spacing: 0.02em;
+}
+.dmm-lcd {
+  padding: 6px 10px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #c6d3b2, #aebd98);
+  color: #1b2213;
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.35);
+  border: 3px solid #0f1215;
+}
+.dmm-flags {
+  display: flex;
+  gap: 8px;
+  font: 700 9px system-ui, sans-serif;
+}
+.dmm-flags span {
+  opacity: 0.14;
+}
+.dmm-flags span.on {
+  opacity: 0.9;
+}
+.dmm-flags .dmm-hv {
+  margin-left: auto;
+  font-size: 11px;
+}
+.dmm-val {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 46px;
+}
+.dmm-val .diag-lcd {
+  font: 700 40px/1 "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  font-style: italic;
+}
+.dmm-val small {
+  font: 700 18px system-ui, sans-serif;
+  min-width: 30px;
+}
+.dmm-bar {
+  height: 5px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgb(27 34 19 / 0.15) 0 4px, transparent 4px 6px);
+}
+.dmm-bar i {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #1b2213 0 4px, transparent 4px 6px);
+}
+.dmm-dial {
+  position: relative;
+  height: 128px;
+}
+.dmm-knob {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  width: 74px;
+  height: 74px;
+  margin: -37px 0 0 -37px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a525c, #23272d 70%);
+  border: 3px solid #121518;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.5);
+  transition: transform 0.18s ease-out;
+  pointer-events: none;
+}
+.dmm-knob i {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 8px;
+  height: 30px;
+  margin-left: -4px;
+  border-radius: 4px;
+  background: #37d67a;
+}
+.dmm-pos {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #2d333b;
+  color: #e6edf3;
+  border: 1px solid #444c56;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.dmm-pos.on {
+  background: #37d67a;
+  border-color: #37d67a;
+  color: #06130b;
+}
+.dmm-jacks {
+  display: flex;
+  justify-content: space-around;
+  font: 700 10px system-ui, sans-serif;
+  color: #9aa4af;
+}
+.dmm-jack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.dmm-jack i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0b0c0e 35%, #5b636d 38%, #3a4048 70%);
+  border: 2px solid #59616b;
+}
+.dmm-jack.v.on i {
+  border-color: #e5484d;
+}
+.dmm-jack.com.on i {
+  border-color: #0b0c0e;
+  box-shadow: 0 0 0 2px #8b949e;
+}
+.dmm-jack.a.on i {
+  border-color: #f2cf1d;
+}
+.dmm-jack.on {
+  color: #e6edf3;
+}
+.diag-probes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  word-break: break-all;
+}
+.diag-probes .link {
+  margin-left: auto;
+}
+.diag-red {
+  color: #ff5d5d;
+}
+.diag-black {
+  color: #8b949e;
+}
+.diag-lock {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--warn);
+  background: var(--panel);
+}
+.diag-lock.on {
+  border-color: var(--err);
+  background: var(--err-bg);
+}
+.diag-repair {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diag-repair select {
+  width: 100%;
+}
+.diag-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+}
+.diag-log li {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.diag-log li span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.diag-log li.bad {
+  color: var(--err-text-2);
+}
+.diag-log li.ok {
+  color: var(--ok-text);
+}
+.diag-log li.warn {
+  color: var(--warn-text);
+}
+#diag-probes {
+  pointer-events: none;
+}
+/* Puntas de prueba grandes sobre el esquema y el plano IEC. */
+.diag-tip .ring {
+  fill: none;
+  stroke-width: 3;
+}
+.diag-tip .needle {
+  fill: #d5dade;
+  stroke: #4a525c;
+  stroke-width: 0.8;
+}
+.diag-tip .body,
+.diag-tip .guard {
+  stroke: #ffffff;
+  stroke-width: 1.4;
+}
+.diag-tip .grip {
+  stroke: rgb(255 255 255 / 0.35);
+  stroke-width: 1.2;
+}
+.diag-tip .cable {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.diag-tip.red .ring,
+.diag-tip.red .cable {
+  stroke: #e5484d;
+}
+.diag-tip.red .body,
+.diag-tip.red .guard {
+  fill: #d8282d;
+}
+.diag-tip.black .ring,
+.diag-tip.black .cable {
+  stroke: #1d2126;
+}
+.diag-tip.black .body,
+.diag-tip.black .guard {
+  fill: #1d2126;
+}
+.diag-tip text,
+.diag-clamp text {
+  font: 700 16px system-ui, sans-serif;
+  text-anchor: middle;
+  fill: var(--text);
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 4px;
+}
+.diag-clamp circle {
+  fill: none;
+  stroke: #f0b429;
+  stroke-width: 6;
+}
+/* Bornes donde se puede apoyar una punta en el plano IEC. */
+.iec-probe {
+  fill: #37d67a;
+  fill-opacity: 0;
+  stroke: none;
+  cursor: crosshair;
+}
+.iec-probe:hover {
+  fill-opacity: 0.85;
+  stroke: #1f8a46;
+  stroke-width: 1;
+}
+/* Modo Diagnóstico en la Planta 3D: botón, tarjeta flotante y folio de planos. */
+.view3d-diag-btn {
+  position: absolute;
+  left: 168px;
+  top: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  opacity: 0.92;
+}
+.view3d-diag-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.view3d-diag {
+  position: absolute;
+  left: 12px;
+  top: 48px;
+  bottom: 12px;
+  width: 340px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--surface-scene);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  z-index: 3;
+}
+.view3d-diag[hidden],
+.view3d-folio[hidden] {
+  display: none;
+}
+.view3d-folio {
+  position: absolute;
+  inset: 24px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  background: #f4f1e6;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+  z-index: 4;
+}
+.view3d-folio header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1d21;
+  border-bottom: 1px solid #d6d0bd;
+}
+.view3d-folio .iec-view {
+  flex: 1;
+  position: relative;
+}
+/* Con la tarjeta del multímetro abierta, el folio deja libre su lado. */
+.view3d-diag:not([hidden]) ~ .view3d-folio {
+  left: 376px;
 }

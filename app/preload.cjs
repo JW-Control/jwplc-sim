@@ -115,5 +115,8 @@ contextBridge.exposeInMainWorld("jwsim", {
   sceneRearm: () => ipcRenderer.invoke("scene:rearm"),
   sceneInject: (fault) => ipcRenderer.invoke("scene:inject", fault),
   sceneClearFault: (key) => ipcRenderer.invoke("scene:clearFault", key),
+  sceneLockout: (on) => ipcRenderer.invoke("scene:lockout", on),
+  sceneMeasure: (red, black, mode) => ipcRenderer.invoke("scene:measure", { red, black, mode }),
+  sceneClamp: (a, b) => ipcRenderer.invoke("scene:clamp", { a, b }),
   onSceneSnapshot: on("scene:snapshot"),
 });
