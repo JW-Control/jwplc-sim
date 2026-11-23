@@ -721,6 +721,10 @@
       S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]),
       S.spec.wiring.map((w) => [w.from, w.to, w.points, w.cable, w.ref]),
       cablesOf().map((c) => [c.id, c.ref]),
+      // Los bornes de un equipo existen solo cuando ya se dibujó (la placa
+      // espera a su SVG): si cambia lo dibujado, se vuelve a trazar.
+      S.rendered.size,
+      !!S.boardSvg,
     ]);
     if (S.routeKey !== layout) {
       S.bus = busPairs();
