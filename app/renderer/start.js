@@ -18,7 +18,16 @@
   // Programa abierto (const state de app.js, global del documento).
   // eslint-disable-next-line no-undef
   const current = () => (typeof state !== "undefined" ? state.sketch : null);
-  const st = { learn: null, view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
+  // Ruta elegida: «cpp» (Curso JWPLC Basic en C++ y retos) o «iec» (IEC 61131-3).
+  const TRACK_KEY = "jwsim.ruta";
+  const readTrack = () => {
+    try {
+      return localStorage.getItem(TRACK_KEY) === "iec" ? "iec" : "cpp";
+    } catch {
+      return "cpp";
+    }
+  };
+  const st = { track: readTrack(), learn: null, view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
 
   const store = {
     get(k, d) {
@@ -122,18 +131,24 @@
   /** La ruta completa: unidades del curso y después los retos por nivel. */
   function tiers() {
     const out = [];
+    if (st.track === "iec") {
+      // Ruta IEC 61131-3: cada lección en ST, Ladder o FBD con el mismo banco.
+      for (const u of st.courseIec ?? []) {
+        const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
+        out.push({ key: `i${u.unit}`, kind: "unit", tag: `Unidad ${u.unit}`, name: u.name, open: true, items, desc: `La misma práctica en texto estructurado (ST), Ladder (LD) o diagrama de bloques (FBD): elige el lenguaje al abrirla. Se programa en el OpenPLC Editor.` });
+      }
+      return numbered(out);
+    }
     for (const u of st.course ?? []) {
       const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
       out.push({ key: `u${u.unit}`, kind: "unit", tag: `Unidad ${u.unit}`, name: u.name, open: true, items, desc: `Lecciones del Curso JWPLC Basic: se abren como ejemplo y se prueban en el simulador.` });
     }
-    // Ruta IEC 61131-3: cada lección en ST, Ladder o FBD con el mismo banco.
-    for (const u of st.courseIec ?? []) {
-      const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
-      out.push({ key: `i${u.unit}`, kind: "unit", tag: `IEC · Unidad ${u.unit}`, name: u.name, open: true, items, desc: `Ruta IEC 61131-3: la misma práctica en texto estructurado (ST), Ladder (LD) o diagrama de bloques (FBD). Elige el lenguaje al abrirla.` });
-    }
     for (const lv of st.learn?.levels ?? []) {
       out.push({ key: `n${lv.level}`, kind: "level", tag: `Retos · Nivel ${lv.level}`, name: lv.name, open: lv.open, items: lv.items.map((x) => ({ ...x, kind: "reto" })), desc: LEVEL_DESC[lv.level] ?? "" });
     }
+    return numbered(out);
+  }
+  function numbered(out) {
     out.forEach((t, i) => {
       t.n = i + 1;
       t.icon = TIER_ICON[i % TIER_ICON.length];
@@ -142,6 +157,12 @@
     });
     return out;
   }
+  /** Selector de ruta: C++ o IEC 61131-3. */
+  const trackSwitch = () =>
+    `<div class="ini-track" role="tablist" aria-label="Ruta">` +
+    `<button role="tab" data-act="track" data-k="cpp" class="${st.track === "cpp" ? "on" : ""}" aria-selected="${st.track === "cpp"}"><b>C++</b><small>Arduino IDE</small></button>` +
+    `<button role="tab" data-act="track" data-k="iec" class="${st.track === "iec" ? "on" : ""}" aria-selected="${st.track === "iec"}"><b>IEC 61131-3</b><small>ST · Ladder · FBD</small></button>` +
+    `</div>`;
   /** Siguiente paso de la ruta: la primera lección sin ver; luego, el reto «a continuación». */
   function nextStep(T = tiers()) {
     for (const t of T) {
@@ -210,6 +231,7 @@
       `<section class="ini-hero"${archs[0]?.img ? ` style="--img:url('${archs[0].img}')"` : ""}>` +
       `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}Ruta de aprendizaje</span>` +
       `<h1>Empieza aquí</h1><p class="ini-lead"><b>Aprende automatización</b> programando un PLC de verdad: tableros, motores, procesos y neumática.</p>` +
+      trackSwitch() +
       `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar la ruta" : "Comenzar la ruta"}</button>` +
       (nx ? `<span class="ini-next"><small>A continuación</small><b>${esc(nx.tier.tag)} · ${nx.item.kind === "lesson" ? "Lección" : "Reto"} ${pos} de ${nx.tier.total}</b><em>${esc(nx.item.title)}</em></span>` : `<span class="ini-next"><b>¡Ruta completa!</b></span>`) +
       `</div></div></section>`;
@@ -264,6 +286,7 @@
     let html =
       `<div class="ini-route"><div class="ini-strip">` +
       `<button class="ini-rb" data-act="home">${icon("home")}<span>Inicio</span></button>` +
+      trackSwitch() +
       `<div class="ini-strip-prog">${ring(tot.pct, "sm")}<div><b>${tot.done} / ${tot.total}</b><div class="learn-bar"><i style="width:${tot.pct}%"></i></div><small>${tot.total - tot.done} pasos por hacer</small></div></div>` +
       `<div class="ini-kv"><span>Etapas completas</span><b>${tot.tiersDone} / ${T.length}</b></div>` +
       `<div class="ini-badges">${T.map((t) => hex(t, "sm")).join("")}</div>` +
@@ -588,6 +611,14 @@
       st.sel = nx?.item.id ?? null;
       st.tier = nx?.tier.key ?? null;
       st.view = "learn";
+      render();
+    } else if (act === "track") {
+      st.track = b.dataset.k === "iec" ? "iec" : "cpp";
+      try {
+        localStorage.setItem(TRACK_KEY, st.track);
+      } catch {}
+      st.tier = null;
+      st.sel = null;
       render();
     } else if (act === "tier") {
       st.tier = b.dataset.k;

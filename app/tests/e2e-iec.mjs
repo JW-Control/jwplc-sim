@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E de la ruta IEC 61131-3 en la app (Electron + Playwright):
-//   IEC_RUTA     la ruta muestra las unidades IEC y la ficha de una lección
+//   IEC_RUTA     la ruta C++ no muestra las unidades IEC; el selector pasa a
+//                la ruta IEC, que solo trae sus unidades, y la ficha de una lección
 //                trae un botón por lenguaje (ST, Ladder, FBD)
 //   IEC_LADDER   «Ladder» abre la práctica con el programa .ld (de solo
 //                lectura en el Sim, dibujado como diagrama), compila con la
@@ -53,12 +54,15 @@ const stopRun = () => win.click("#btn-stop").catch(() => {});
 try {
   // ---- IEC_RUTA
   await t(() => window.JwsimStart.open("route"));
+  // Por defecto se ve la ruta C++: el selector pasa a la ruta IEC.
+  const cppTiers = await win.$$eval('#start [data-act="tier"]', (l) => l.map((b) => b.dataset.k));
+  await win.click('#start [data-act="track"][data-k="iec"]');
   await win.click('#start [data-act="tier"][data-k="i1"]');
   await win.click('#start .learn-item[data-id="iec-03"]');
   const langs = await win.$$eval('#ini-brief [data-act="lesson"][data-lang]', (l) => l.map((b) => b.dataset.lang));
   const tiers = await win.$$eval('#start [data-act="tier"]', (l) => l.map((b) => b.dataset.k));
   await win.locator("#start").screenshot({ path: join(OUT, "ruta-iec.png") });
-  criteria.IEC_RUTA = { ok: langs.join() === "ST,LD,FBD" && tiers.includes("i1") && tiers.includes("i2"), langs, tiers };
+  criteria.IEC_RUTA = { ok: langs.join() === "ST,LD,FBD" && tiers.every((k) => k.startsWith("i")) && tiers.includes("i2") && !cppTiers.some((k) => k.startsWith("i")), langs, tiers, cppTiers };
   log(`IEC_RUTA ${JSON.stringify(criteria.IEC_RUTA)}`);
 
   // ---- IEC_LADDER

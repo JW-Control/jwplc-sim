@@ -6685,3 +6685,48 @@ body:not([data-tab="program"]) .prog-rail-right { display: none; }
 .iec-t.iec-forcetag.on { fill: #15803d; }
 .iec-el.iec-forced .iec-hitbox { fill: rgba(245, 158, 11, 0.12); stroke: #f59e0b; stroke-dasharray: 3 2; }
 .iec-edit button:disabled { opacity: 0.45; }
+
+/* Selector de ruta: C++ o IEC 61131-3 */
+.ini-track {
+  display: inline-flex;
+  width: fit-content;
+  justify-self: start;
+  align-self: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.ini-hero .ini-track {
+  margin: 4px 0 12px;
+}
+.ini-track button {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ini-track button b {
+  font-size: 13px;
+  color: var(--text);
+}
+.ini-track button small {
+  font-size: 11px;
+}
+.ini-track button:hover {
+  background: var(--hover, rgba(127, 127, 127, 0.1));
+}
+.ini-track button.on {
+  background: var(--jw);
+  color: rgba(255, 255, 255, 0.85);
+}
+.ini-track button.on b {
+  color: #fff;
+}
