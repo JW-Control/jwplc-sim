@@ -1312,6 +1312,475 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 4,
+      "nombre": "El equipo por dentro",
+      "lecciones": [
+        {
+          "id": "curso-19",
+          "numero": 19,
+          "titulo": "La botonera del frente: ajustar sin la PC",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/19.La_botonera_del_frente",
+          "aprende": [
+            "Leer la botonera del equipo con JWPLC_Buttons, sin cables ni digitalRead().",
+            "pressed(): una sola vez por cada pulsación (el flanco ya viene hecho).",
+            "isDown(): si la tecla sigue apretada.",
+            "Ajustar un tiempo de la máquina desde el frente, con límites."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "Q0.0: bobina del contactor de la bomba dosificadora.",
+                "La botonera (UP, DOWN, OK, ESC) ya viene en el frente del equipo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "Abre la pestaña **Placa**: la botonera está a la derecha de la pantalla. También puedes usar las flechas, **Enter** (OK) y **Esc** del teclado.",
+                "Aprieta **UP** dos veces: el tiempo sube a 5 s. Aprieta **OK**: **KM1** se cierra 5 segundos.",
+                "Aprieta **OK** otra vez y, antes de que termine, **ESC**: la dosis se cancela.",
+                "Lección 19: botonera del frente, bomba dosificadora Q0.0\nTiempo: 3 s\nTiempo: 4 s\nTiempo: 5 s\nDosificando 5 s\nDosis completa\nDosificando 5 s\nDosis cancelada"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "UP y DOWN cambian el tiempo de dosis de a 1 segundo, entre 1 y 10.",
+            "OK pone en marcha la bomba durante ese tiempo; ESC la detiene antes."
+          ],
+          "practica": [
+            "Al llegar a un límite, escribe una sola vez «Límite: 10 s» (o «Límite: 1 s») en lugar de quedarte callado.",
+            "Al mantener UP o DOWN apretado, después de 600 ms el tiempo cambia solo cada 200 ms, como el control remoto de un televisor."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-19",
+            "objetivos_en_vivo": [
+              {
+                "id": "ajuste",
+                "text": "Ajusta el tiempo con UP o DOWN: «Tiempo: 4 s»",
+                "extra": false
+              },
+              {
+                "id": "dosis",
+                "text": "OK pone en marcha la bomba (Q0.0)",
+                "extra": false
+              },
+              {
+                "id": "limite",
+                "text": "En el máximo, una sola vez: «Límite: 10 s»",
+                "extra": false
+              },
+              {
+                "id": "repite",
+                "text": "Mantén UP apretado: el tiempo sube solo hasta 9 s o más",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-20",
+          "numero": 20,
+          "titulo": "El buzzer: avisos que se oyen",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/20.El_buzzer",
+          "aprende": [
+            "Hacer sonar el buzzer del equipo con JWPLC_Buzzer: beep(), play() y stop().",
+            "Escribir una melodía como una lista de notas {frecuencia, duración}.",
+            "Avisar antes de arrancar una máquina.",
+            "Una alarma que suena hasta que alguien la reconoce."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: MARCHA (NA). I0.1: PARO (NC). I0.2: contacto 95-96 del térmico (NC). Todos desde +24 V.",
+                "Q0.0: contactor del motor. Q0.1: lámpara de falla.",
+                "El buzzer y la botonera ya vienen en el equipo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**. **S2** y **F1** son NC: en reposo `I0.1` e `I0.2` ya están activas. Sube el volumen de la PC para oír el buzzer.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: suena el aviso y a los 2 s **KM1** se cierra.",
+                "Mantén apretado **F1 Térmico**: **KM1** se abre, **H1** enciende y suena la alarma.",
+                "En la pestaña **Placa** aprieta **OK** (o **Enter**): la alarma se calla. Suelta **F1**: **H1** se apaga.",
+                "Lección 20: marcha I0.0, paro NC I0.1, térmico NC I0.2, motor Q0.0, falla Q0.1\nAviso de arranque\nMotor en marcha\nFalla: térmico\nAlarma reconocida\nTérmico normal"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "MARCHA: el buzzer avisa 2 segundos y recién ahí arranca el motor.",
+            "Con el motor en marcha, abre el térmico: se detiene, Q0.1 enciende y suena la alarma.",
+            "OK en la botonera la reconoce y la calla. Al cerrar el térmico, Q0.1 se apaga."
+          ],
+          "practica": [
+            "Mientras la alarma no esté reconocida, la lámpara de falla parpadea (medio segundo encendida, medio apagada); reconocida, queda fija.",
+            "Durante una falla, MARCHA no arranca: escribe «Bloqueado: térmico abierto» y da un tono grave con JWPLC_Buzzer.beep(300, 600)."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-20",
+            "objetivos_en_vivo": [
+              {
+                "id": "aviso",
+                "text": "MARCHA: «Aviso de arranque» y el motor arranca 2 s después",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Abre el térmico F1: «Falla: térmico»",
+                "extra": false
+              },
+              {
+                "id": "parpadeo",
+                "text": "Sin reconocer, H1 (Q0.1) parpadea",
+                "extra": false
+              },
+              {
+                "id": "reconoce",
+                "text": "OK en la botonera: «Alarma reconocida»",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Con la falla activa, MARCHA: «Bloqueado: térmico abierto»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-21",
+          "numero": 21,
+          "titulo": "El reloj: encender por horario",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/21.El_reloj",
+          "aprende": [
+            "Leer la fecha y la hora del reloj del equipo (RTC) con JWPLC_Time.",
+            "Pasar una hora a segundos del día para comparar horarios con números.",
+            "Encender y apagar una carga por horario.",
+            "Falla segura: sin hora válida, no se adivina."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "Q0.0: contactor del alumbrado. Q0.1: lámpara de aviso (para practicar).",
+                "El reloj del equipo tiene su propia batería: sigue contando sin energía."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "En esta práctica el reloj del Sim arranca a las **17:59:50** de un martes. Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "Espera unos 10 segundos: a las 18:00:00 **KM1** se cierra.",
+                "Para probar otro día u otra hora, cambia ENCENDIDO y APAGADO en el código: el reloj del Sim siempre arranca a las 17:59:50.",
+                "Lección 21: alumbrado por horario, KM1 en Q0.0\nHorario: de 18:00:00 a 23:00:00\n17:59:59 · alumbrado apagado\n18:00:00 · alumbrado ENCENDIDO"
+              ]
+            }
+          ],
+          "pasos": [
+            "Ajusta la hora del equipo (el ejemplo SetFromBuildTime de la librería JW_RTC la toma de la PC).",
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cambia ENCENDIDO a un minuto después de la hora actual y espera: el contactor se cierra a esa hora."
+          ],
+          "practica": [
+            "Aviso previo: los 5 segundos antes de encender, la lámpara de Q0.1 parpadea (250 ms encendida, 250 ms apagada).",
+            "Fin de semana: sábado y domingo la vitrina no enciende. Escribe «Fin de semana: alumbrado apagado». dayOfWeek() da 1 el domingo y 7 el sábado."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-21",
+            "objetivos_en_vivo": [
+              {
+                "id": "enciende",
+                "text": "A las 18:00:00 se enciende KM1 (Q0.0)",
+                "extra": false
+              },
+              {
+                "id": "previo",
+                "text": "Los 5 s antes de encender, H1 (Q0.1) parpadea",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-22",
+          "numero": 22,
+          "titulo": "La FRAM: un contador que sobrevive a un corte",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/22.La_FRAM",
+          "aprende": [
+            "Qué memorias tiene el equipo y cuál no se borra al apagar.",
+            "Guardar y leer un struct entero en la FRAM con writeBlock() y readBlock().",
+            "Para qué sirve la versión del bloque.",
+            "Un contador de piezas que sigue donde quedó después de un corte."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: sensor de piezas (NA) desde +24 V."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**: la primera vez dice «FRAM nueva».",
+                "En **Mandos** (panel **Reto**) da tres toques a **B1 Pieza**: «Piezas: 3».",
+                "Pulsa **Detener** y otra vez **Ejecutar**: es como cortar la energía. La cuenta sigue en 3.",
+                "En la pestaña **Placa** aprieta **ESC**: el contador vuelve a 0.",
+                "Lección 22: sensor de piezas I0.0, cuenta en la FRAM\nFRAM nueva: contador en 0\nPiezas: 1\nPiezas: 2\nPiezas: 3\nLección 22: sensor de piezas I0.0, cuenta en la FRAM\nRecuperado: 3 piezas"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cada pulso del sensor suma una pieza.",
+            "Corta la energía y vuelve a darla: «Recuperado: N piezas».",
+            "ESC en la botonera pone el contador en 0."
+          ],
+          "practica": [
+            "Cuenta también los encendidos del PLC y, al arrancar, escribe «Encendido n.º 2». Al cambiar el struct, sube VERSION a 2.",
+            "Que un toque de ESC no borre nada: solo ESC mantenido 2 segundos escribe «Contador en 0»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-22",
+            "objetivos_en_vivo": [
+              {
+                "id": "cuenta",
+                "text": "Da toques a B1: «Piezas: 3»",
+                "extra": false
+              },
+              {
+                "id": "corte",
+                "text": "Detén y vuelve a ejecutar: «Recuperado: … piezas»",
+                "extra": false
+              },
+              {
+                "id": "encendidos",
+                "text": "Al arrancar otra vez: «Encendido n.º 2» (o más)",
+                "extra": false
+              },
+              {
+                "id": "borra",
+                "text": "ESC mantenido 2 s: «Contador en 0»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-23",
+          "numero": 23,
+          "titulo": "La microSD: un registro con fecha y hora",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/23.La_microSD",
+          "aprende": [
+            "Escribir un archivo en la microSD del equipo con JWPLC_SD y JWPLCFile.",
+            "Abrir, escribir y cerrar; FILE_APPEND para sumar al final.",
+            "Un registro CSV: una línea por evento, con fecha y hora del RTC.",
+            "Leer el archivo y qué hacer si la tarjeta no está."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: MARCHA (NA). I0.1: PARO (NC). Los dos desde +24 V.",
+                "Q0.0: contactor del motor. Q0.1: lámpara de aviso (para practicar).",
+                "Una tarjeta microSD en la ranura del equipo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "En esta práctica el reloj del Sim arranca a las **08:00:00**. Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha** y otro a **S2 Paro**: cada evento queda registrado.",
+                "En la pestaña **Placa** aprieta **OK**: el Monitor muestra el archivo.",
+                "Para probar sin tarjeta, en la pestaña **Placa** haz clic en el zócalo de la microSD: la tarjeta sale. Otro clic la vuelve a poner.",
+                "Lección 23: marcha I0.0, paro NC I0.1, motor Q0.0, registro en la microSD\nRegistrado: 2026-11-24 08:00:00;Encendido\nRegistrado: 2026-11-24 08:00:03;Arranque\nRegistrado: 2026-11-24 08:00:05;Parada\n--- registro.csv ---\n2026-11-24 08:00:00;Encendido\n2026-11-24 08:00:03;Arranque\n2026-11-24 08:00:05;Parada\n--- fin ---"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Arranca y para el motor: cada evento se anota en /registro.csv.",
+            "OK en la botonera muestra el archivo.",
+            "Saca la tarjeta y lee registro.csv en la PC: se abre con Excel."
+          ],
+          "practica": [
+            "Al arrancar el PLC, cuenta las líneas del archivo y escribe «Registro: N eventos».",
+            "Sin microSD, la lámpara de Q0.1 se enciende y el motor sigue funcionando."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-23",
+            "objetivos_en_vivo": [
+              {
+                "id": "registra",
+                "text": "Arranca el motor: «Registrado: … ;Arranque»",
+                "extra": false
+              },
+              {
+                "id": "muestra",
+                "text": "OK en la botonera muestra el registro",
+                "extra": false
+              },
+              {
+                "id": "cuenta",
+                "text": "Al arrancar el PLC: «Registro: N eventos»",
+                "extra": false
+              },
+              {
+                "id": "sinsd",
+                "text": "Sin microSD (clic en su zócalo, en Placa): H1 (Q0.1) encendida",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-24",
+          "numero": 24,
+          "titulo": "El escaneo de E/S: las 8 entradas de una vez",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/24.El_escaneo_de_E_S",
+          "aprende": [
+            "Cómo lee el equipo sus entradas: una foto de las 8 juntas, en segundo plano.",
+            "JWPLC_IO.inputs(): las 8 entradas en un byte; setOutputs(): las 8 salidas.",
+            "Operaciones con bits: & (máscara), ^ (qué cambió) y bitRead().",
+            "Anotar cada cambio de cualquier entrada con un solo bucle."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0 e I0.1: pulsadores (NA). I0.2 e I0.3: finales de carrera B1 y B2 (NA). Todos desde +24 V.",
+                "Q0.0 a Q0.3: lámparas. Q0.4: lámpara de error (para practicar)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) mantén apretado **S1**: **H1** se enciende y el Monitor anota «I0.0 ON».",
+                "Aprieta varias a la vez y mira cómo cambia el byte de «Entradas».",
+                "En **E/S y variables** mira **entradas** y **cambios** mientras aprietas.",
+                "Lección 24: entradas I0.0 a I0.3, lámparas Q0.0 a Q0.3\n  2.10 s  I0.0 ON\nEntradas: 00000001\n  3.40 s  I0.2 ON\nEntradas: 00000101\n  4.02 s  I0.0 OFF\nEntradas: 00000100"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Aprieta cualquier entrada de I0.0 a I0.3: su lámpara se enciende y el Monitor anota el cambio y el byte completo."
+          ],
+          "practica": [
+            "Al soltar una entrada, escribe cuánto estuvo activa, con un decimal: «I0.1 estuvo 1.2 s». Usa un arreglo de 8 tiempos.",
+            "B1 y B2 son finales de carrera opuestos: no pueden estar activos a la vez. Si pasa, enciende Q0.4 y escribe una sola vez «Error: B1 y B2 a la vez»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-24",
+            "objetivos_en_vivo": [
+              {
+                "id": "espejo",
+                "text": "Aprieta S1: H1 (Q0.0) se enciende y Serie dice «I0.0 ON»",
+                "extra": false
+              },
+              {
+                "id": "tiempo",
+                "text": "Al soltar: «I0.0 estuvo 1.2 s»",
+                "extra": false
+              },
+              {
+                "id": "error",
+                "text": "B1 y B2 a la vez: H5 (Q0.4) y «Error: B1 y B2 a la vez»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-25",
+          "numero": 25,
+          "titulo": "Proyecto: un contador de lotes con todo el equipo",
+          "ruta": "examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/25.Proyecto_contador_de_lotes",
+          "aprende": [
+            "Juntar en un programa la botonera, el buzzer, el reloj, la FRAM y la microSD.",
+            "Repartir el trabajo en funciones con un nombre claro.",
+            "Guardar los ajustes de la máquina para que sobrevivan a un corte."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: sensor de piezas (NA) desde +24 V.",
+                "Q0.0: electroválvula del empujador. Q0.1: contactor de la cinta.",
+                "Q0.2: lámpara «lote listo» (para practicar).",
+                "Una tarjeta microSD en la ranura del equipo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "En esta práctica el reloj del Sim arranca a las **05:59:30**. Pulsa **Ejecutar** y mira la pestaña **Serie**.",
+                "En **Mandos** (panel **Reto**) da seis toques a **B1 Pieza**: **Y1** da su golpe y suena el pitido.",
+                "En la pestaña **Placa** aprieta **UP**: el lote pasa a 7 piezas.",
+                "Pulsa **Detener** y **Ejecutar**: el lote de 7 y las piezas siguen ahí.",
+                "Lección 25: sensor I0.0, empujador Q0.0, cinta Q0.1\nFRAM nueva: valores de fábrica\nLote de 6 · 0 piezas · 0 lotes\nPieza 1 de 6\nPieza 2 de 6\nPieza 3 de 6\nPieza 4 de 6\nPieza 5 de 6\nPieza 6 de 6\nLote 1 completo (6 piezas)\nLote de 7"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cada pulso del sensor es una pieza; al juntar el lote, el empujador da un golpe de 1 segundo y el buzzer un pitido.",
+            "UP y DOWN cambian el tamaño del lote; ESC mantenido 2 s borra los contadores.",
+            "Corta la energía: al volver, todo sigue donde quedó."
+          ],
+          "practica": [
+            "Al completar un lote, la cinta se detiene y la lámpara de Q0.2 parpadea hasta que el operador aprieta OK: «Lote reconocido».",
+            "A las 06:00:00 empieza otro turno: escribe «Cambio de turno: N lotes», anótalo en la microSD y pon los lotes en 0."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-25",
+            "objetivos_en_vivo": [
+              {
+                "id": "lote",
+                "text": "Seis toques a B1: «Lote 1 completo (6 piezas)»",
+                "extra": false
+              },
+              {
+                "id": "espera",
+                "text": "Con el lote listo, la cinta KM1 (Q0.1) se detiene y H1 (Q0.2) parpadea",
+                "extra": false
+              },
+              {
+                "id": "reconoce",
+                "text": "OK: «Lote reconocido» y la cinta sigue",
+                "extra": false
+              },
+              {
+                "id": "turno",
+                "text": "A las 06:00:00: «Cambio de turno: N lotes»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "retos": [

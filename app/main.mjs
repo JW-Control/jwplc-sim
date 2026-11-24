@@ -927,6 +927,16 @@ function ethernetConfig(projectFile) {
   }
   return eth.present === false ? null : eth;
 }
+/** Hora fija del RTC al arrancar (simulation.rtc = "fijo:AAAA-MM-DDTHH:MM:SS"), p. ej. una práctica con horario. */
+function projectRtc(projectFile) {
+  if (!projectFile) return null;
+  try {
+    const r = loadProject(projectFile).project.simulation?.rtc;
+    return typeof r === "string" && /^fijo:\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(r) ? r : null;
+  } catch {
+    return null;
+  }
+}
 
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
 // Hora local de la PC como "fijo:AAAA-MM-DDTHH:MM:SS" para el RTC simulado.
@@ -990,7 +1000,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   } else {
     copyDir(st.dir, st.start);
   }
-  const rtcArg = rtc ?? localRtcNow();
+  const rtcArg = rtc ?? projectRtc(projectFile) ?? localRtcNow();
   // esp_restart(): el proceso nuevo tiene otro pid; con breakpoints, gdb se
   // vuelve a adjuntar antes de que el firmware reanude.
   const onRestart = async () => {

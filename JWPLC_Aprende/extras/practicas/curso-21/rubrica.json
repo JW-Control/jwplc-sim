@@ -1,0 +1,171 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-21",
+  "goals": [
+    {
+      "id": "enciende",
+      "description": "A las 18:00:00 se enciende KM1 (Q0.0)",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 1000,
+      "hint": "En esta práctica el reloj arranca a las 17:59:50: espera unos 10 segundos."
+    },
+    {
+      "id": "previo",
+      "description": "Los 5 s antes de encender, H1 (Q0.1) parpadea",
+      "period": "Q0_1",
+      "on_ms": [
+        150,
+        350
+      ],
+      "off_ms": [
+        150,
+        350
+      ],
+      "cycles": 3,
+      "hint": "bool previo = ahora >= ENCENDIDO - 5 && ahora < ENCENDIDO; y digitalWrite(Q0_1, previo && (millis() / 250) % 2 == 0);",
+      "why": "Un aviso antes de que algo se mueva o se encienda solo es una regla de seguridad: nadie se lleva una sorpresa."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Horario",
+      "until_ms": 14000,
+      "checks": [
+        {
+          "description": "Apagado antes de las 18:00:00",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 9000,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Encendido a las 18:00:00",
+          "points": 1,
+          "from_ms": 10000,
+          "to_ms": 11500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "Avisa el encendido",
+          "points": 1,
+          "console": "18:00:0\\d · alumbrado ENCENDIDO"
+        }
+      ]
+    },
+    {
+      "name": "Apagado a las 23:00",
+      "until_ms": 9000,
+      "args": [
+        "--rtc",
+        "fijo:2026-11-24T22:59:55"
+      ],
+      "checks": [
+        {
+          "description": "Encendido antes de las 23:00:00",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "Apagado desde las 23:00:00",
+          "points": 1,
+          "from_ms": 6500,
+          "to_ms": 8900,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Aviso previo",
+      "until_ms": 14000,
+      "checks": [
+        {
+          "description": "H1 apagada lejos del encendido",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 4500,
+          "never": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H1 parpadea los 5 s antes",
+          "points": 6,
+          "from_ms": 5800,
+          "to_ms": 9900,
+          "period": "Q0_1",
+          "on_ms": [
+            150,
+            350
+          ],
+          "off_ms": [
+            150,
+            350
+          ],
+          "cycles": 3
+        },
+        {
+          "description": "H1 apagada con la vitrina encendida",
+          "points": 1,
+          "from_ms": 11800,
+          "to_ms": 13900,
+          "never": {
+            "Q0_1": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fin de semana",
+      "until_ms": 14000,
+      "args": [
+        "--rtc",
+        "fijo:2026-11-28T17:59:50"
+      ],
+      "checks": [
+        {
+          "description": "El sábado no enciende",
+          "points": 4,
+          "from_ms": 1000,
+          "to_ms": 13900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa el fin de semana",
+          "points": 2,
+          "console": "Fin de semana: alumbrado apagado"
+        },
+        {
+          "description": "Sin aviso previo el sábado",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 13900,
+          "never": {
+            "Q0_1": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 14000
+    }
+  ]
+}

@@ -57,6 +57,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
           }
         },
         "additionalProperties": false
@@ -99,6 +111,18 @@
           "items": {
             "$ref": "#/$defs/check"
           }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
         }
       }
     },
@@ -269,6 +293,16 @@
         "within_ms": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "count": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Con 'console': cuántas líneas deben coincidir, [min, max]; [0, 0] = ninguna."
         }
       },
       "oneOf": [

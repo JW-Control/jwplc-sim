@@ -149,6 +149,7 @@ const UNIT_NAMES = {
   "Primeros pasos": "Primeros pasos",
   "Tiempo y logica": "El tiempo y la lógica",
   "CPP para el tablero": "C++ para el tablero",
+  "El equipo por dentro": "El equipo por dentro",
   "Pantalla y botonera": "Pantalla y botonera",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",

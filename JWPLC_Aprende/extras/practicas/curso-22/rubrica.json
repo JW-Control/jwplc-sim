@@ -1,0 +1,266 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-22",
+  "goals": [
+    {
+      "id": "cuenta",
+      "description": "Da toques a B1: «Piezas: 3»",
+      "console": "Piezas: [3-9]",
+      "hint": "Cada toque a B1 es una pieza."
+    },
+    {
+      "id": "corte",
+      "description": "Detén y vuelve a ejecutar: «Recuperado: … piezas»",
+      "console": "Recuperado: [1-9]\\d* piezas",
+      "hint": "Detener y Ejecutar en el Sim es como cortar la energía: la FRAM conserva lo que tenía."
+    },
+    {
+      "id": "encendidos",
+      "description": "Al arrancar otra vez: «Encendido n.º 2» (o más)",
+      "console": "Encendido n\\.º ([2-9]|\\d\\d)",
+      "hint": "Agrega unsigned long encendidos; al struct, súmale 1 en setup() y guarda. Sube VERSION a 2: el bloque viejo deja de valer y arranca en 0.",
+      "why": "Contar los arranques ayuda a diagnosticar: si el PLC se reinicia solo, el número sube sin que nadie lo apague."
+    },
+    {
+      "id": "borra",
+      "description": "ESC mantenido 2 s: «Contador en 0»",
+      "console": "Contador en 0",
+      "hint": "isDown(BTN_ESC) con un tiempo, como el TON de la lección 09: un toque suelto no borra nada."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Primer encendido",
+      "until_ms": 4000,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "FRAM nueva: arranca en 0",
+          "points": 1,
+          "console": "FRAM nueva"
+        },
+        {
+          "description": "Cuenta las piezas",
+          "points": 1,
+          "console": "Piezas: 3"
+        },
+        {
+          "description": "Primer encendido",
+          "points": 2,
+          "console": "Encendido n\\.º 1$"
+        }
+      ]
+    },
+    {
+      "name": "Después del corte",
+      "until_ms": 4000,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Recupera la cuenta",
+          "points": 3,
+          "console": "Recuperado: 3 piezas"
+        },
+        {
+          "description": "Sigue contando desde ahí",
+          "points": 2,
+          "console": "Piezas: 5"
+        },
+        {
+          "description": "Segundo encendido",
+          "points": 4,
+          "console": "Encendido n\\.º 2$"
+        }
+      ]
+    },
+    {
+      "name": "Borrado seguro",
+      "until_ms": 6500,
+      "state": "borrado",
+      "stim": [
+        "2000 BTN_ESC=1",
+        "2200 BTN_ESC=0",
+        "3000 BTN_ESC=1",
+        "5500 BTN_ESC=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Un toque de ESC no borra",
+          "points": 3,
+          "console": "Contador en 0",
+          "from_ms": 2000,
+          "to_ms": 2900,
+          "count": [
+            0,
+            0
+          ]
+        },
+        {
+          "description": "ESC mantenido 2 s borra",
+          "points": 4,
+          "console": "Contador en 0",
+          "from_ms": 4900,
+          "to_ms": 5400
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Primer encendido",
+      "until_ms": 4000,
+      "state": "g",
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "Después del corte",
+      "until_ms": 6500,
+      "state": "g",
+      "stim": [
+        "2000 BTN_ESC=1",
+        "4500 BTN_ESC=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

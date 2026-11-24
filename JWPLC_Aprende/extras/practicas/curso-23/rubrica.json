@@ -1,0 +1,255 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-23",
+  "goals": [
+    {
+      "id": "registra",
+      "description": "Arranca el motor: «Registrado: … ;Arranque»",
+      "console": "Registrado: .*;Arranque",
+      "hint": "Da un toque a S1."
+    },
+    {
+      "id": "muestra",
+      "description": "OK en la botonera muestra el registro",
+      "console": "--- registro.csv ---"
+    },
+    {
+      "id": "cuenta",
+      "description": "Al arrancar el PLC: «Registro: N eventos»",
+      "console": "Registro: \\d+ eventos",
+      "hint": "Abre el archivo con FILE_READ y cuenta los '\\n' mientras available(); haz la cuenta en setup(), antes de registrar «Encendido».",
+      "why": "Leer lo que ya hay en la tarjeta es tan importante como escribir: así el PLC sabe dónde quedó."
+    },
+    {
+      "id": "sinsd",
+      "description": "Sin microSD (clic en su zócalo, en Placa): H1 (Q0.1) encendida",
+      "when": {
+        "Q0_1": 1
+      },
+      "hold_ms": 1000,
+      "hint": "digitalWrite(Q0_1, !JWPLC_SD.isReady()); al final de loop().",
+      "why": "Una falla del registro se avisa, pero no detiene la máquina: el motor sigue."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Registro",
+      "until_ms": 6000,
+      "state": "sd",
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "5200 BTN_OK=1",
+        "5350 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Registra el arranque con fecha y hora",
+          "points": 2,
+          "console": "Registrado: 2026-11-24 08:00:0\\d;Arranque"
+        },
+        {
+          "description": "OK muestra el archivo",
+          "points": 1,
+          "console": "--- registro.csv ---"
+        },
+        {
+          "description": "El archivo tiene las paradas",
+          "points": 1,
+          "console": "^2026-11-24 08:00:0\\d;Parada$"
+        }
+      ]
+    },
+    {
+      "name": "Al volver a encender",
+      "until_ms": 3000,
+      "state": "sd",
+      "checks": [
+        {
+          "description": "Cuenta los eventos guardados",
+          "points": 6,
+          "console": "Registro: 5 eventos"
+        },
+        {
+          "description": "Registra el nuevo encendido",
+          "points": 1,
+          "console": "Registrado: .*;Encendido"
+        }
+      ]
+    },
+    {
+      "name": "Sin microSD",
+      "until_ms": 5000,
+      "faults": [
+        {
+          "kind": "sd-absent",
+          "at_ms": 0
+        }
+      ],
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Avisa que no registra",
+          "points": 1,
+          "console": "Sin microSD: no se registra"
+        },
+        {
+          "description": "El motor funciona igual",
+          "points": 2,
+          "from_ms": 1200,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "H1 avisa la falta de microSD",
+          "points": 6,
+          "from_ms": 1000,
+          "to_ms": 4900,
+          "always": {
+            "Q0_1": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Registro",
+      "until_ms": 6000,
+      "state": "g",
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "5200 BTN_OK=1",
+        "5350 BTN_OK=0"
+      ]
+    },
+    {
+      "name": "Otra vez",
+      "until_ms": 3000,
+      "state": "g"
+    },
+    {
+      "name": "Sin microSD",
+      "until_ms": 4000,
+      "faults": [
+        {
+          "kind": "sd-absent",
+          "at_ms": 0
+        }
+      ]
+    }
+  ]
+}
