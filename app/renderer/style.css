@@ -4832,8 +4832,27 @@ body.dock-collapsed #btn-dock-toggle {
   height: 16px;
   fill: currentColor;
 }
+/* El hover genérico de button pone fondo claro (--hover): aquí se mantiene
+   el verde y solo se aclara un poco, se eleva y se hunde al pulsar. */
 .ini-go:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: linear-gradient(100deg, var(--jw), var(--jw-2));
+  border-color: transparent;
+  color: #fff;
+  filter: brightness(1.1);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--jw) 40%, transparent);
+  transform: translateY(-1px);
+}
+.ini-go:active:not(:disabled) {
+  filter: brightness(0.95);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--jw) 30%, transparent);
+  transform: translateY(0);
+}
+.ini-go:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--jw) 55%, #fff);
+  outline-offset: 3px;
+}
+.ini-go {
+  transition: filter 0.12s, box-shadow 0.12s, transform 0.12s;
 }
 .ini-go:disabled {
   background: var(--strip);
