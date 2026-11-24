@@ -106,6 +106,13 @@
             <button id="btn-dbg-pause" class="icon" title="Interrumpir el firmware en el código (Ctrl+F8)" aria-label="Interrumpir" disabled>⏸</button>
           </div>
         </div>
+        <div id="plc-diagram" class="plc-diagram" hidden>
+          <div class="plc-diagram-head">
+            <span id="plc-diagram-hint">Se edita en el OpenPLC Editor; al guardar allí, el Sim recompila.</span>
+            <button id="plc-diagram-text" class="small" title="Ver el archivo como texto (JSON del editor)">Ver como texto</button>
+          </div>
+          <div id="plc-diagram-body" class="plc-diagram-body"></div>
+        </div>
         <div id="editor"></div>
         </div>
       </section>
@@ -498,6 +505,7 @@
     </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
+    <script src="../lib/plc-diagram.cjs"></script>
     <script src="editor-syntax.js"></script>
     <script src="completion.js"></script>
     <script src="app.js"></script>

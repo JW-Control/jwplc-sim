@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Proceso principal de JWPLC Sim (Electron): ventana, sketches del usuario,
 // compilación con jwsim-cli y ciclo de vida del runner (un PLC simulado).
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 
@@ -20,10 +21,10 @@ import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, 
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
-import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
+import { MARK, syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
 import { levels, loadProgress, markDone, markLesson, nextAfter, saveProgress } from "./lib/learning.mjs";
-import { APRENDE, ARQUITECTURAS, imageOf, lessonById, listAprendeExamples, listArquitecturas, listCurso, listRetos, PRACTICAS, RETOS } from "../cli/lib/aprende.mjs";
+import { APRENDE, ARQUITECTURAS, imageOf, lessonById, listAprendeExamples, listArquitecturas, listCurso, listCursoIec, listRetos, PRACTICAS, RETOS } from "../cli/lib/aprende.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -373,7 +374,7 @@ ipcMain.handle("learn:state", () => {
 // Lecciones con práctica evaluada, en el orden del curso.
 const gradedLessons = () => {
   try {
-    return listCurso().flatMap((u) => u.lessons.filter((l) => l.graded));
+    return [...listCurso(), ...listCursoIec()].flatMap((u) => u.lessons.filter((l) => l.graded));
   } catch {
     return [];
   }
@@ -381,7 +382,7 @@ const gradedLessons = () => {
 ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   const p = loadProgress(progressFile());
   // Una lección del curso solo queda hecha al cumplir sus objetivos en vivo.
-  if (/^curso-\d+$/.test(String(id))) {
+  if (/^(curso|iec)-\d+$/.test(String(id))) {
     const changed = via === "goals" && markLesson(p, String(id));
     if (changed) saveProgress(progressFile(), p);
     const list = gradedLessons();
@@ -398,6 +399,14 @@ ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
 ipcMain.handle("course:list", () => {
   try {
     return listCurso();
+  } catch {
+    return [];
+  }
+});
+// Ruta IEC 61131-3 (las mismas ideas en ST, Ladder y FBD).
+ipcMain.handle("course:listIec", () => {
+  try {
+    return listCursoIec();
   } catch {
     return [];
   }
@@ -441,14 +450,35 @@ ipcMain.handle("shell:openExternal", (_e, url) => {
   shell.openExternal(String(url));
   return true;
 });
-ipcMain.handle("lessons:open", (_e, id) => {
-  if (!/^curso-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
+ipcMain.handle("lessons:open", (_e, id, lang) => {
+  if (!/^(curso|iec)-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
   const src = join(PRACTICAS, id);
   if (!existsSync(src)) throw new Error(`la lección ${id} no tiene práctica evaluada`);
   const dst = join(workspaceDir(), "Curso", id);
   syncExercise(src, dst);
+  if (lang) chooseLanguage(dst, id, String(lang));
   return openProject(join(dst, `${id}.jwsim`));
 });
+
+// Práctica IEC: el banco apunta al programa en el lenguaje elegido
+// (iniciar/ST, LD o FBD). La copia anota el .jwsim como «sin tocar» para
+// que siga poniéndose al día con el Sim.
+function chooseLanguage(dst, id, lang) {
+  if (!/^(ST|LD|FBD)$/.test(lang) || !existsSync(join(dst, "iniciar", lang, "project.json"))) throw new Error(`lenguaje no disponible: ${lang}`);
+  const file = join(dst, `${id}.jwsim`);
+  const jw = JSON.parse(readFileSync(file, "utf8"));
+  const want = `./iniciar/${lang}`;
+  if (jw.program?.project === want) return;
+  jw.program = { ...jw.program, kind: "openplc", project: want };
+  const text = JSON.stringify(jw, null, 2) + "\n";
+  writeFileSync(file, text);
+  try {
+    const mf = join(dst, MARK);
+    const mark = JSON.parse(readFileSync(mf, "utf8"));
+    mark.files[`${id}.jwsim`] = createHash("sha256").update(Buffer.from(text)).digest("hex");
+    writeFileSync(mf, `${JSON.stringify(mark, null, 2)}\n`);
+  } catch {}
+}
 
 // Código de partida de una práctica de lección o de un reto (el ejemplo de la
 // lección o el .ino inicial del reto), para «Reiniciar código» en Teoría.
@@ -577,7 +607,17 @@ ipcMain.handle("sketch:openDialog", async () => {
 ipcMain.handle("sketch:openPlc", (_e, target) => readSketch(openPlcDir(target)));
 
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
-  if (isOpenPlcProject(dir)) return true; // se edita en el OpenPLC Editor
+  if (isOpenPlcProject(dir)) {
+    // Proyecto OpenPLC: el texto estructurado (pous/**/*.st) se edita aquí
+    // también; Ladder y FBD, en el OpenPLC Editor.
+    for (const f of files) {
+      const p = resolve(dir, f.name);
+      if (!/\.st$/i.test(f.name) || relative(join(resolve(dir), "pous"), p).startsWith("..") || !existsSync(p)) continue;
+      ownWrites.set(p, f.content);
+      writeFileSync(p, f.content);
+    }
+    return true;
+  }
   for (const f of files) {
     const p = resolve(dir, f.name);
     if (dirname(p) !== resolve(dir)) throw new Error(`nombre de archivo inválido: ${f.name}`);

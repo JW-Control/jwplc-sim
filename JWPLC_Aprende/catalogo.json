@@ -1783,6 +1783,594 @@
       ]
     }
   ],
+  "curso_iec": [
+    {
+      "unidad": 1,
+      "nombre": "Contactos y lógica",
+      "lecciones": [
+        {
+          "id": "iec-01",
+          "numero": 1,
+          "titulo": "Contactos y bobinas",
+          "ruta": "extras/Curso_IEC_61131/1.Contactos_y_logica/01.Contactos_y_bobinas",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Qué es una variable ubicada: `AT %IX0.0` es la entrada I0.0 y `AT %QX0.0` la salida Q0.0.",
+            "Qué son un contacto y una bobina, y cómo se escriben en ST y FBD.",
+            "A invertir una entrada: contacto cerrado en Ladder, `NOT` en ST, bloque NOT en FBD."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El PLC repite su ciclo sin parar (cada 20 ms en estos proyectos): lee las entradas, ejecuta el programa de arriba abajo y escribe las salidas. En cada ciclo, `H1 := S1;` copia el estado del pulsador al piloto. No hay `if` ni espera: la salida sigue a la entrada mientras el programa corre."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, pulsador NA",
+                "%IX0.1 · S2, pulsador NA",
+                "%QX0.0 · H1, piloto verde",
+                "%QX0.1 · H2, piloto amarillo"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: el Sim compila el proyecto con la misma cadena que el OpenPLC Editor.",
+                "En **Mandos** mantén apretado **S1**: `%IX0.0` se activa y H1 se enciende. Al soltarlo, se apaga.",
+                "Mira la pestaña **Programa**: en ST puedes cambiar el código ahí mismo; Ladder y FBD se abren en el OpenPLC Editor.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "H1 (Q0.0) encendido mientras S1 NO esté apretado, y S2 que manda H2 (Q0.1).",
+            "Ejecuta el ejemplo y aprieta S1: H1 sigue al pulsador.",
+            "Invierte la lógica: H1 encendido con S1 suelto (NOT en ST, contacto cerrado en Ladder, bloque NOT en FBD).",
+            "Agrega lo que manda H2 con S2.",
+            "Prueba los dos pulsadores en el banco."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-01",
+            "objetivos_en_vivo": [
+              {
+                "id": "invertida",
+                "text": "H1 (Q0.0) encendido mientras S1 NO está apretado",
+                "extra": false
+              },
+              {
+                "id": "invertida_pulsado",
+                "text": "Al apretar S1, H1 se apaga",
+                "extra": false
+              },
+              {
+                "id": "segundo",
+                "text": "S2 (I0.1) enciende H2 (Q0.1)",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-02",
+          "numero": 2,
+          "titulo": "Lógica Y, O, NO",
+          "ruta": "extras/Curso_IEC_61131/1.Contactos_y_logica/02.Logica_Y_O_NO",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Y (AND): contactos en serie.",
+            "O (OR): contactos en paralelo.",
+            "NO (NOT): contacto cerrado.",
+            "Que un bloque AND u OR de FBD admite más de dos entradas."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "Cada salida tiene su propia línea (un peldaño en Ladder, una red en FBD). `H1 := SA1 AND SA2;` baja la prensa con las dos manos; `H2 := SA1 OR SA2;` se enciende con cualquiera; `H3 := NOT SA1;` está encendido mientras SA1 está suelto. Las tres se calculan en cada ciclo, una después de la otra."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · SA1, mano izquierda",
+                "%IX0.1 · SA2, mano derecha",
+                "%IX0.2 · SA3, tercera mano",
+                "%QX0.0…%QX0.4 · H1…H5, pilotos"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mueve los selectores **SA1** y **SA2** en **Mandos** (en el banco son las manos).",
+                "Con uno solo, H1 queda apagado; con los dos, se enciende. H2 se enciende con cualquiera.",
+                "H3 está encendido mientras SA1 está en 0.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Prensa a tres manos en H1 (Q0.0) y H5 (Q0.4) encendido con SA1 activa pero SA2 inactiva.",
+            "Ejecuta el ejemplo y prueba los selectores (en el banco son las «manos»).",
+            "Agrega la tercera mano SA3: H1 solo con las tres.",
+            "H5: encendido con SA1 activa y SA2 inactiva.",
+            "Prueba todas las combinaciones."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-02",
+            "objetivos_en_vivo": [
+              {
+                "id": "tres",
+                "text": "Con las tres manos, H1 (Q0.0) enciende",
+                "extra": false
+              },
+              {
+                "id": "dos_no",
+                "text": "Con dos manos, H1 queda apagado",
+                "extra": false
+              },
+              {
+                "id": "q4",
+                "text": "H5 (Q0.4) enciende con SA1 activa y SA2 inactiva",
+                "extra": false
+              },
+              {
+                "id": "q4_no",
+                "text": "Con SA2 activa, H5 se apaga",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-03",
+          "numero": 3,
+          "titulo": "Enclavamiento: marcha y parada",
+          "ruta": "extras/Curso_IEC_61131/1.Contactos_y_logica/03.Enclavamiento",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "El circuito de marcha y parada con enclavamiento (contacto de retención).",
+            "Por qué la parada y el térmico se cablean normalmente cerrados.",
+            "A escribir la misma lógica en una línea de ST: `KM1 := (MARCHA OR KM1) AND PARADA AND TERMICO;`."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "`KM1 := (MARCHA OR KM1) AND PARADA AND TERMICO;` se lee igual que el peldaño: «KM1 queda encendido si (se aprieta MARCHA o ya estaba encendido) y PARADA no está apretada y el térmico está bien». KM1 aparece a los dos lados: el valor de la derecha es el del ciclo anterior. En FBD es un OR que entra a un AND de tres entradas."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, MARCHA (NA)",
+                "%IX0.1 · S2, PARADA (NC)",
+                "%IX0.2 · F1, térmico 95-96 (NC)",
+                "%QX0.0 · KM1, contactor",
+                "%QX0.1 · H1, falla",
+                "%QX0.2 · H2, marcha"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1** (MARCHA): KM1 arranca y sigue al soltarlo.",
+                "Aprieta **S2** (PARADA): el motor para.",
+                "Arranca otra vez y aprieta **F1**: el térmico dispara y el motor para. Al rearmarlo, el motor **no** vuelve solo.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Piloto de marcha H2 (Q0.2) con el motor y piloto de falla H1 (Q0.1) mientras el térmico esté disparado.",
+            "Ejecuta el ejemplo: MARCHA arranca KM1 y sigue en marcha al soltarla.",
+            "Agrega H2 encendido mientras el motor marcha.",
+            "Agrega H1 encendido mientras el térmico (F1) esté disparado.",
+            "Comprueba que al rearmar el térmico el motor NO arranca solo."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-03",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "H2 (Q0.2) encendido con el motor en marcha",
+                "extra": false
+              },
+              {
+                "id": "marcha_off",
+                "text": "H2 se apaga al detener el motor",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Dispara el térmico (aprieta F1): H1 (Q0.1) enciende y el motor para",
+                "extra": false
+              },
+              {
+                "id": "sin_rearranque",
+                "text": "Con el térmico rearmado, el motor sigue parado",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-04",
+          "numero": 4,
+          "titulo": "Set y reset",
+          "ruta": "extras/Curso_IEC_61131/1.Contactos_y_logica/04.Set_y_reset",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Las bobinas S (set) y R (reset) de Ladder.",
+            "Los bloques SR y RS de FBD: cuál gana si las dos entradas están activas.",
+            "El equivalente en ST con dos IF.",
+            "A memorizar una falla hasta que alguien la reconozca."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El ejemplo pone KM1 en TRUE con MARCHA y lo vuelve a FALSE con PARADA o el térmico. El reset está escrito después del set, así que gana. En Ladder son dos peldaños, uno con la bobina S y otro con la R; en FBD, un bloque RS con un OR en su entrada de reset."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, MARCHA (NA)",
+                "%IX0.1 · S2, PARADA (NC)",
+                "%IX0.2 · F1, térmico (NC)",
+                "%QX0.0 · KM1, contactor",
+                "%QX0.1 · H1, falla",
+                "%QX0.2 · H2, marcha"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: MARCHA (S1) pone KM1 y PARADA (S2) lo quita.",
+                "Dispara el térmico con **F1** y suéltalo: el motor queda parado.",
+                "En la práctica, la falla queda encendida en H1 hasta reconocerla con PARADA.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Falla del térmico memorizada en H1 (Q0.1): tras dispararse, MARCHA no arranca hasta reconocerla con PARADA.",
+            "Ejecuta el ejemplo: MARCHA pone KM1 y PARADA lo quita.",
+            "Memoriza la falla: una variable FALLA que se pone con el térmico abierto.",
+            "PARADA la reconoce (la borra) solo con el térmico ya rearmado.",
+            "MARCHA solo arranca sin falla; H1 muestra la falla."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-04",
+            "objetivos_en_vivo": [
+              {
+                "id": "disparo",
+                "text": "Dispara el térmico (aprieta F1): el motor para y H1 enciende",
+                "extra": false
+              },
+              {
+                "id": "memoria",
+                "text": "Con el térmico rearmado, H1 sigue encendido",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Sin reconocer, MARCHA no arranca",
+                "extra": false
+              },
+              {
+                "id": "reconoce",
+                "text": "Tras apretar PARADA, H1 se apaga y MARCHA arranca de nuevo",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "unidad": 2,
+      "nombre": "Tiempo y conteo",
+      "lecciones": [
+        {
+          "id": "iec-05",
+          "numero": 5,
+          "titulo": "Temporizadores TON y TOF",
+          "ruta": "extras/Curso_IEC_61131/2.Tiempo_y_conteo/05.Temporizadores_TON_y_TOF",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "TON: retardo a la conexión.",
+            "TOF: retardo a la desconexión.",
+            "Qué es una instancia: cada temporizador tiene su nombre y su memoria.",
+            "Las entradas IN y PT y las salidas Q y ET.",
+            "Los tiempos en IEC: `T#3s`, `T#500ms`, `T#1m30s`."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "`ARRANQUE(IN := S1, PT := T#3s);` llama al temporizador en cada ciclo con el estado de S1; `H1 := ARRANQUE.Q;` copia su salida al piloto. En Ladder el bloque va en el peldaño: la corriente del contacto entra por IN y la salida Q sigue hacia la bobina. En FBD, la variable S1 va a IN y Q a la variable H1."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, arranque",
+                "%IX0.1 · B1, presencia (selector)",
+                "%QX0.0 · H1, arranque",
+                "%QX0.1 · H2, luz del pasillo",
+                "%QX0.2 · HA1, bocina"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mantén **S1** apretado: H1 se enciende a los 3 s.",
+                "Activa la presencia **B1**: el pasillo (H2) se enciende al instante; al quitarla, sigue 10 s más.",
+                "En la práctica cambias los tiempos y agregas la bocina.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Arranque a los 2 s, luz de pasillo de 5 s y una bocina si la presencia dura más de 30 s.",
+            "Ejecuta el ejemplo: mantén S1 3 s y activa la presencia B1.",
+            "Cambia el arranque a 2 s y la luz del pasillo a 5 s (PT).",
+            "Agrega un tercer temporizador: HA1 (Q0.2) suena si la presencia dura más de 30 s.",
+            "Prueba los tres tiempos."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-05",
+            "objetivos_en_vivo": [
+              {
+                "id": "arranque",
+                "text": "Q0.0 se cierra a los 2 s de mantener S1",
+                "extra": false
+              },
+              {
+                "id": "pasillo",
+                "text": "La luz del pasillo se apaga 5 s después de la última presencia",
+                "extra": false
+              },
+              {
+                "id": "bocina",
+                "text": "HA1 (Q0.2) suena si la presencia dura más de 30 s",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-06",
+          "numero": 6,
+          "titulo": "Flancos: un pulsador que enciende y apaga",
+          "ruta": "extras/Curso_IEC_61131/2.Tiempo_y_conteo/06.Flancos",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Flanco de subida (R_TRIG, contacto P) y de bajada (F_TRIG, contacto N).",
+            "Que un flanco dura un solo ciclo.",
+            "A cambiar una salida con XOR: `H1 := H1 XOR PULSO;`."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "En ST, `APRIETA(CLK := S1);` actualiza el detector y `IF APRIETA.Q THEN H1 := NOT H1; END_IF;` invierte la luz en el único ciclo del flanco. En Ladder, un contacto P de S1 da el pulso y un bloque XOR con H1 lo aplica. En FBD, un R_TRIG alimenta un XOR que vuelve a H1."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, pulsador NA",
+                "%QX0.0 · H1, piloto verde",
+                "%QX0.1 · H2, piloto amarillo"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1** varias veces: cada pulsación cambia H1.",
+                "Mantén S1 apretado: H1 cambia una sola vez.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Una segunda luz H2 (Q0.1) que cambia al SOLTAR S1 (flanco de bajada).",
+            "Ejecuta el ejemplo: cada pulsación cambia H1.",
+            "Mantén S1 apretado: H1 no parpadea, cambia una sola vez.",
+            "Agrega un flanco de bajada (F_TRIG) que cambie H2 al soltar.",
+            "Prueba varias pulsaciones."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-06",
+            "objetivos_en_vivo": [
+              {
+                "id": "baja",
+                "text": "Al soltar S1, H2 (Q0.1) cambia",
+                "extra": false
+              },
+              {
+                "id": "baja_otra",
+                "text": "Otra pulsación completa vuelve a cambiar H2",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-07",
+          "numero": 7,
+          "titulo": "Contadores",
+          "ruta": "extras/Curso_IEC_61131/2.Tiempo_y_conteo/07.Contadores",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "CTU, el contador ascendente: CU, R, PV, Q y CV.",
+            "Que CTU cuenta flancos, no ciclos: una pieza es una sola cuenta.",
+            "A usar la cuenta (CV) como un número entero (INT)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "`PIEZAS(CU := B1, R := FALSE, PV := 10);` cuenta cada pieza que pasa por B1. `LLENA := PIEZAS.Q;` se pone en TRUE con 10; la cinta (`KM1 := NOT LLENA;`) para y H1 avisa. En el ejemplo R está fijo en FALSE: la caja nunca se vacía. En Ladder, el contacto B1 alimenta CU; PV y R son pines del bloque."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · B1, sensor de piezas",
+                "%IX0.1 · S1, RESET",
+                "%QX0.0 · KM1, motor de la cinta",
+                "%QX0.1 · H1, caja llena"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: la cinta (KM1) marcha.",
+                "Toca **B1** diez veces: con la décima, la cinta para y H1 se enciende.",
+                "En la práctica la caja es de 24 y RESET (S1) empieza otra.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Cajas de 24 piezas y RESET (S1) que empieza una caja nueva.",
+            "Ejecuta el ejemplo: cada toque a B1 es una pieza; con 10 para la cinta.",
+            "Cambia la meta a 24 piezas (PV).",
+            "Conecta RESET: S1 a la entrada R del contador.",
+            "Llena una caja y empieza otra."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-07",
+            "objetivos_en_vivo": [
+              {
+                "id": "llena",
+                "text": "Con 24 piezas la cinta para y H1 avisa",
+                "extra": false
+              },
+              {
+                "id": "reset",
+                "text": "RESET (S1) arranca otra caja",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-08",
+          "numero": 8,
+          "titulo": "Intermitencia con dos temporizadores",
+          "ruta": "extras/Curso_IEC_61131/2.Tiempo_y_conteo/08.Intermitencia",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A armar un generador de pulsos con dos TON en anillo.",
+            "Que el PLC nunca se detiene a esperar: los temporizadores cuentan mientras el resto del programa sigue.",
+            "A elegir el tiempo encendido y el apagado por separado."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "Las cuatro líneas de ST son el anillo: cada TON mira la salida del otro. Como un TON solo actualiza su salida cuando se lo llama, el programa sigue corriendo todo el tiempo; por eso cualquier otra línea (como `H2 := S1;` en la práctica) responde al instante."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, pulsador NA",
+                "%QX0.0 · H1, piloto verde",
+                "%QX0.1 · H2, piloto amarillo",
+                "%QX0.2 · H3, piloto rojo"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: H1 parpadea cada medio segundo.",
+                "Cuenta el ritmo: medio segundo encendido y medio segundo apagado, mientras todo lo demás sigue respondiendo.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "H3 (Q0.2) parpadea 2 s encendido y 2 s apagado, y H2 (Q0.1) sigue a S1 al instante.",
+            "Ejecuta el ejemplo: H1 parpadea cada 500 ms.",
+            "Arma otra intermitencia, lenta, de 2 s y 2 s para H3.",
+            "H2 sigue a S1 sin esperar.",
+            "Mira las tres luces a la vez: ninguna frena a las otras."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-08",
+            "objetivos_en_vivo": [
+              {
+                "id": "lenta",
+                "text": "H3 (Q0.2) parpadea 2 s encendido y 2 s apagado",
+                "extra": false
+              },
+              {
+                "id": "s1",
+                "text": "H2 (Q0.1) sigue a S1 al instante",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
   "retos": [
     {
       "id": "01-marcha-parada",

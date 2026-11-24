@@ -67,7 +67,7 @@ export function loadExercise(path) {
     level: ex.level,
     statement: ex.statement ? resolve(base, ex.statement) : null,
     solution: ex.solution ? resolve(base, ex.solution) : null,
-    sketch: links.sketch ? dirname(links.sketch) : null,
+    sketch: links.sketch ? dirname(links.sketch) : (links.plcProject ?? null),
     scene: project.scene,
     rtc: typeof project.simulation?.rtc === "string" ? project.simulation.rtc : null,
     rubric,

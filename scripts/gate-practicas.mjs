@@ -8,6 +8,7 @@
 //   P1 la solución de referencia en C++ saca 20/20
 //   P2 el punto de partida (el ejemplo de la lección, tal cual) no aprueba:
 //      la práctica pide algo que el ejemplo no hace
+//      (ruta IEC: el programa de partida en cada lenguaje, iniciar/ST|LD|FBD)
 //   P3 cada solución IEC 61131-3 (carpeta de solucion/ con project.json del
 //      OpenPLC Editor) saca 20/20 con la misma rúbrica
 //
@@ -35,12 +36,17 @@ for (const id of ids) {
     ok &&= pass;
     console.log(`  ${id} ${k} ${pass ? "OK" : "FALLA"} ${detail}`);
   };
+  const iec = isOpenPlcProject(ex.solution);
   const sol = await gradeSketch(ex, ex.solution, { buildRoot });
-  add("P1", sol.ok && sol.grade === 20, `solución C++: ${sol.grade}/20 ${sol.grade === 20 ? "" : fails(sol).join(" | ")}`);
-  const start = await gradeSketch(ex, ex.sketch, { buildRoot });
-  add("P2", start.ok && start.grade < 20, `punto de partida: ${start.grade}/20`);
+  add("P1", sol.ok && sol.grade === 20, `solución ${iec ? `IEC ${ex.solution.split(/[\\/]/).pop()}` : "C++"}: ${sol.grade}/20 ${sol.grade === 20 ? "" : fails(sol).join(" | ")}`);
+  const iniDir = join(ex.dir, "iniciar");
+  const starts = existsSync(iniDir) ? readdirSync(iniDir).filter((x) => isOpenPlcProject(join(iniDir, x))).map((x) => join(iniDir, x)) : [ex.sketch];
+  for (const s of starts) {
+    const start = await gradeSketch(ex, s, { buildRoot });
+    add("P2", start.ok && start.grade < 20, `punto de partida${existsSync(iniDir) ? ` ${s.split(/[\\/]/).pop()}` : ""}: ${start.ok ? `${start.grade}/20` : `no compila: ${start.error ?? ""}`}`);
+  }
   const solDir = join(ex.dir, "solucion");
-  for (const d of readdirSync(solDir).filter((x) => isOpenPlcProject(join(solDir, x)))) {
+  for (const d of readdirSync(solDir).filter((x) => isOpenPlcProject(join(solDir, x)) && join(solDir, x) !== ex.solution)) {
     const g = await gradeSketch(ex, join(solDir, d), { buildRoot });
     add("P3", g.ok && g.grade === 20, `solución IEC ${d}: ${g.grade}/20 ${g.grade === 20 ? "" : fails(g).join(" | ")}`);
   }

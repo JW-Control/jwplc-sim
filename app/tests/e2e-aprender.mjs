@@ -27,8 +27,9 @@ const APP = resolve(import.meta.dirname, "..");
 const ROOT = resolve(APP, "..");
 // Pasos de la ruta: lecciones del curso más retos, según el catálogo de la librería.
 const CAT = JSON.parse(readFileSync(join(ROOT, "JWPLC_Aprende", "catalogo.json"), "utf8"));
-const UNITS = CAT.curso.length;
-const STEPS = CAT.curso.reduce((n, u) => n + u.lecciones.length, 0) + CAT.retos.length;
+// La ruta IEC 61131-3 suma sus unidades después de las del curso C++.
+const UNITS = CAT.curso.length + (CAT.curso_iec?.length ?? 0);
+const STEPS = [...CAT.curso, ...(CAT.curso_iec ?? [])].reduce((n, u) => n + u.lecciones.length, 0) + CAT.retos.length;
 const OUT = join(ROOT, "build", "gates", "aprender");
 mkdirSync(OUT, { recursive: true });
 const workspace = mkdtempSync(join(tmpdir(), "jwsim-ws-"));

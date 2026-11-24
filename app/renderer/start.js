@@ -126,6 +126,11 @@
       const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
       out.push({ key: `u${u.unit}`, kind: "unit", tag: `Unidad ${u.unit}`, name: u.name, open: true, items, desc: `Lecciones del Curso JWPLC Basic: se abren como ejemplo y se prueban en el simulador.` });
     }
+    // Ruta IEC 61131-3: cada lección en ST, Ladder o FBD con el mismo banco.
+    for (const u of st.courseIec ?? []) {
+      const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
+      out.push({ key: `i${u.unit}`, kind: "unit", tag: `IEC · Unidad ${u.unit}`, name: u.name, open: true, items, desc: `Ruta IEC 61131-3: la misma práctica en texto estructurado (ST), Ladder (LD) o diagrama de bloques (FBD). Elige el lenguaje al abrirla.` });
+    }
     for (const lv of st.learn?.levels ?? []) {
       out.push({ key: `n${lv.level}`, kind: "level", tag: `Retos · Nivel ${lv.level}`, name: lv.name, open: lv.open, items: lv.items.map((x) => ({ ...x, kind: "reto" })), desc: LEVEL_DESC[lv.level] ?? "" });
     }
@@ -268,7 +273,7 @@
     for (const t of T) {
       html +=
         `<button class="ini-node learn-level ${t.key === tier.key ? "on" : ""} ${t.open ? "" : "locked"}" data-act="tier" data-k="${t.key}">${hex(t)}` +
-        `${t.key === nx?.tier.key ? `<i class="ini-now">ahora</i>` : ""}<b>${esc(t.kind === "level" ? `Nivel ${t.key.slice(1)} · ${t.name}` : `Unidad ${t.key.slice(1)} · ${t.name}`)}</b><small>${t.done}/${t.total}</small></button>`;
+        `${t.key === nx?.tier.key ? `<i class="ini-now">ahora</i>` : ""}<b>${esc(t.kind === "level" ? `Nivel ${t.key.slice(1)} · ${t.name}` : `${t.tag} · ${t.name}`)}</b><small>${t.done}/${t.total}</small></button>`;
     }
     html += `</div><label class="learn-unlock"><input type="checkbox" id="learn-unlock" ${st.learn?.unlockAll ? "checked" : ""}/> Desbloquear todos los niveles (docente)</label></section>`;
     // Columna 2: pasos de la etapa
@@ -309,6 +314,8 @@
           .replace(/`([^`]+)`/g, "<code>$1</code>");
   const ul = (arr, cls = "") => (arr?.length ? `<ul class="${cls}">${arr.map((x) => `<li>${md(x)}</li>`).join("")}</ul>` : "");
   const SIM = /^En JWPLC Sim$/i;
+  const LANG_SHORT = { ST: "ST", LD: "Ladder", FBD: "FBD" };
+  const LANG_NAME = { ST: "Texto estructurado: se edita aquí mismo", LD: "Diagrama Ladder: se edita en el OpenPLC Editor", FBD: "Diagrama de bloques: se edita en el OpenPLC Editor" };
   function lessonBrief(tier, x) {
     const l = x.lesson;
     const pos = tier.items.indexOf(x) + 1;
@@ -330,8 +337,11 @@
         : l.practice.length
           ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}`
           : "") +
-      `<h4>En el simulador</h4><div class="ini-chips">${l.graded ? "<span>Banco de práctica</span><span>Objetivos en vivo</span>" : "<span>Ejemplo del Curso JWPLC Basic</span>"}<span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
-      `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : l.graded ? "Abrir práctica" : "Abrir lección"}</button>` +
+      (l.iec
+        ? `<h4>En el simulador</h4><div class="ini-chips"><span>Banco de práctica</span><span>Objetivos en vivo</span><span>OpenPLC Editor</span><span>Placa JWPLC Basic</span></div>` +
+          `</div><div class="ini-brief-foot"><div class="ini-langs"><small>Abrir la práctica en</small>${(l.langs ?? []).map((g) => `<button class="ini-go" data-act="lesson" data-id="${esc(x.id)}" data-lang="${g}" title="${esc(LANG_NAME[g] ?? g)}">${icon("play")}${esc(LANG_SHORT[g] ?? g)}</button>`).join("")}</div>`
+        : `<h4>En el simulador</h4><div class="ini-chips">${l.graded ? "<span>Banco de práctica</span><span>Objetivos en vivo</span>" : "<span>Ejemplo del Curso JWPLC Basic</span>"}<span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
+          `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : l.graded ? "Abrir práctica" : "Abrir lección"}</button>`) +
       `<small class="muted">${
         l.graded
           ? x.state === "done"
@@ -389,14 +399,16 @@
   }
 
   async function refreshLearn() {
-    const [learn, course, lessons, archs] = await Promise.all([
+    const [learn, course, courseIec, lessons, archs] = await Promise.all([
       api.learnState().catch(() => null),
       st.course ? Promise.resolve(st.course) : api.courseList?.().catch(() => []) ?? [],
+      st.courseIec ? Promise.resolve(st.courseIec) : api.courseListIec?.().catch(() => []) ?? [],
       api.learnLessons?.().catch(() => ({})) ?? {},
       st.archs ? Promise.resolve(st.archs) : api.listArchs().catch(() => []),
     ]);
     st.learn = learn;
     st.course = course ?? [];
+    st.courseIec = courseIec ?? [];
     st.lessons = lessons ?? {};
     st.archs = archs ?? [];
     if (!$("start")?.hidden && st.view !== "wizard") render();
@@ -594,7 +606,7 @@
       if (!hit) return;
       close();
       // Con práctica evaluada se abre su banco; se da por hecha al cumplir los objetivos.
-      if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id);
+      if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id, b.dataset.lang);
       try {
         window.loadSketch(await api.openExample(hit.item.lesson.dir));
         window.showLessonGuide?.(hit.item.lesson);

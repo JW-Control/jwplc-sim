@@ -661,10 +661,18 @@ function loadSketch(sketch) {
   if (state.guide) renderTheory(null); // la guía es de la lección abierta
   for (const f of sketch.files) addModel(f);
   state.exe = null;
-  // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
-  editor.updateOptions({ readOnly: !!sketch.openplc });
+  // Proyecto OpenPLC (G6): el texto estructurado (.st) se edita aquí; Ladder
+  // y FBD, en el OpenPLC Editor (al guardar allí se recompila aquí).
   window.JwsimTabs?.onProgram(!!sketch.openplc);
-  if (sketch.openplc) consoleWrite(`[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor; al guardar allí se recompila aquí\n`, "sys");
+  if (sketch.openplc) {
+    const st = sketch.files.every((f) => /\.st$/i.test(f.name));
+    consoleWrite(
+      st
+        ? `[jwsim] proyecto OpenPLC en texto estructurado: se edita aquí o en el OpenPLC Editor (${sketch.dir})\n`
+        : `[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor (Abrir proyecto → ${sketch.dir}); al guardar allí se recompila aquí\n`,
+      "sys",
+    );
+  }
   showFile(sketch.files[0].name);
   clearProblems();
   $("build-log").textContent = "";
@@ -673,8 +681,49 @@ function loadSketch(sketch) {
   api.watch(sketch.dir);
 }
 
+// En un proyecto OpenPLC solo el texto estructurado se edita en el Sim.
+const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name);
+
+// Contactos y bobinas de E/S de la placa en el diagrama: en verde con la señal en 1.
+function paintPlcDiagram(names) {
+  const box = $("plc-diagram-body");
+  if (!box || $("plc-diagram").hidden) return;
+  for (const el of box.querySelectorAll(names ? names.map((n) => `[data-sig="${n}"]`).join(",") : "[data-sig]")) el.classList.toggle("on", !!state.levels.get(el.dataset.sig));
+}
+
+// Ladder (.ld) y FBD (.fbd): se muestra el diagrama; «Ver como texto» deja el JSON.
+const isDiagramFile = (name) => !!state.sketch?.openplc && /\.(ld|fbd)$/i.test(name) && !!window.JwsimPlcDiagram;
+function renderPlcDiagram(name) {
+  const box = $("plc-diagram");
+  const diagram = isDiagramFile(name);
+  const show = diagram && !state.plcText;
+  box.hidden = !diagram;
+  box.classList.toggle("as-text", diagram && !!state.plcText);
+  $("plc-diagram-body").hidden = !show;
+  $("plc-diagram-text").textContent = state.plcText ? "Ver el diagrama" : "Ver como texto";
+  const wasHidden = $("editor").hidden;
+  $("editor").hidden = show;
+  if (!show) {
+    if (wasHidden) requestAnimationFrame(() => editor.layout());
+    return;
+  }
+  try {
+    const text = state.models.get(name)?.getValue() ?? "";
+    $("plc-diagram-body").innerHTML = /\.ld$/i.test(name) ? window.JwsimPlcDiagram.ladderSvg(text) : window.JwsimPlcDiagram.fbdSvg(text);
+    // Un poco más grande que en la wiki: se lee a la distancia del editor.
+    const svg = $("plc-diagram-body").querySelector("svg");
+    const vb = svg?.viewBox.baseVal;
+    if (vb?.width) svg.style.width = `${Math.round(vb.width * 1.35)}px`;
+    paintPlcDiagram();
+  } catch (err) {
+    $("plc-diagram-body").textContent = `No se pudo dibujar el diagrama: ${err.message}`;
+  }
+}
+
 function showFile(name) {
   state.active = name;
+  editor.updateOptions({ readOnly: isReadOnlyFile(name) });
+  renderPlcDiagram(name);
   editor.setModel(state.models.get(name));
   renderTabs();
 }
@@ -804,8 +853,9 @@ async function deleteSketchFile(name, { ask = true } = {}) {
 }
 
 async function saveSketch() {
-  if (!state.sketch || state.sketch.openplc) return;
-  const files = [...state.models].map(([name, m]) => ({ name, content: m.getValue() }));
+  if (!state.sketch) return;
+  const files = [...state.models].filter(([name]) => !isReadOnlyFile(name)).map(([name, m]) => ({ name, content: m.getValue() }));
+  if (!files.length) return;
   await api.save({ dir: state.sketch.dir, files });
   for (const f of files) state.saved.set(f.name, f.content);
   renderTabs();
@@ -1396,6 +1446,7 @@ function onMessage(m) {
         renderSignal(name, level);
         updateWatchSignal(name);
       }
+      if (m.changes.length) paintPlcDiagram(m.changes.map(([n]) => n));
       $("clock").textContent = fmtTime(m.t_ns);
       break;
     case "status":
@@ -1613,6 +1664,7 @@ function onOpenPlcChange({ name, content, at }) {
     model.setValue(content);
     state.saved.set(name, content);
     renderTabs();
+    if (state.active === name) renderPlcDiagram(name);
   }
   if (!plcReload.names.size) plcReload.first = at;
   plcReload.names.add(name);
@@ -2412,9 +2464,9 @@ function fillAfter(el, r, lead = "") {
         : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
 }
 
-window.openLessonById = async (id) => {
+window.openLessonById = async (id, lang) => {
   try {
-    applyProject(await api.openLesson(id));
+    applyProject(await api.openLesson(id, lang));
   } catch (err) {
     consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
   }
@@ -2917,6 +2969,11 @@ function statusbarH() {
 }
 
 function wireUi() {
+  $("plc-diagram-text").addEventListener("click", () => {
+    state.plcText = !state.plcText;
+    renderPlcDiagram(state.active);
+    if (state.plcText) editor.layout();
+  });
   wireSplitter();
   wireGuide();
   wireDock();
@@ -3350,6 +3407,11 @@ window.jwsimTest = {
   deleteFile: (name) => deleteSketchFile(name, { ask: false }),
   showFile: (name) => showFile(name),
   language: () => editor.getModel()?.getLanguageId() ?? null,
+  // Proyectos OpenPLC: cualquier archivo por su nombre y si el editor lo deja cambiar.
+  setFile: (name, text) => state.models.get(name)?.setValue(text),
+  readOnly: () => editor.getOption(monacoRef.editor.EditorOption.readOnly),
+  // Nivel de una señal de la placa (I0_0…, Q0_0…) según el último snapshot.
+  level: (name) => !!state.levels.get(name),
 };
 
 async function main() {

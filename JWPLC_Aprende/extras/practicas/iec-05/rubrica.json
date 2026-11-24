@@ -1,0 +1,170 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-05",
+  "goals": [
+    {
+      "id": "arranque",
+      "description": "Q0.0 se cierra a los 2 s de mantener S1",
+      "delay": {
+        "from": {
+          "I0_0": 1
+        },
+        "to": {
+          "Q0_0": 1
+        }
+      },
+      "delay_ms": [
+        1900,
+        2100
+      ],
+      "hint": "PT := T#2s en el TON del arranque."
+    },
+    {
+      "id": "pasillo",
+      "description": "La luz del pasillo se apaga 5 s después de la última presencia",
+      "delay": {
+        "from": {
+          "I0_1": 0
+        },
+        "to": {
+          "Q0_1": 0
+        }
+      },
+      "delay_ms": [
+        4800,
+        5200
+      ]
+    },
+    {
+      "id": "bocina",
+      "description": "HA1 (Q0.2) suena si la presencia dura más de 30 s",
+      "delay": {
+        "from": {
+          "I0_1": 1
+        },
+        "to": {
+          "Q0_2": 1
+        }
+      },
+      "delay_ms": [
+        29500,
+        30500
+      ],
+      "hint": "Otro TON con IN := B1 y PT := T#30s; su Q a HA1.",
+      "why": "Un TON más vigila que algo dure demasiado: así se arma una alarma de tiempo."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Tiempos y bocina",
+      "until_ms": 46000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 12000,
+          "device": "B1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 45000,
+          "device": "B1",
+          "action": "position",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.0 no arranca antes de 2 s",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 2880,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Q0.0 arranca a los 2 s",
+          "points": 3,
+          "from_ms": 2880,
+          "to_ms": 3200,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "El pasillo sigue encendido menos de 5 s",
+          "points": 2,
+          "from_ms": 6050,
+          "to_ms": 10750,
+          "always": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "El pasillo se apaga a los 5 s",
+          "points": 3,
+          "from_ms": 10750,
+          "to_ms": 11300,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "La bocina calla antes de 30 s",
+          "points": 3,
+          "from_ms": 12000,
+          "to_ms": 41800,
+          "never": {
+            "Q0_2": 1
+          }
+        },
+        {
+          "description": "La bocina suena a los 30 s",
+          "points": 5,
+          "from_ms": 41800,
+          "to_ms": 42300,
+          "eventually": {
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bocina calla al irse la presencia",
+          "points": 2,
+          "from_ms": 45000,
+          "to_ms": 45300,
+          "eventually": {
+            "Q0_2": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ]
+}
