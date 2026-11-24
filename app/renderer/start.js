@@ -160,8 +160,8 @@
   /** Selector de ruta: C++ o IEC 61131-3. */
   const trackSwitch = () =>
     `<div class="ini-track" role="tablist" aria-label="Ruta">` +
-    `<button role="tab" data-act="track" data-k="cpp" class="${st.track === "cpp" ? "on" : ""}" aria-selected="${st.track === "cpp"}"><b>C++</b><small>Arduino IDE</small></button>` +
-    `<button role="tab" data-act="track" data-k="iec" class="${st.track === "iec" ? "on" : ""}" aria-selected="${st.track === "iec"}"><b>IEC 61131-3</b><small>ST · Ladder · FBD</small></button>` +
+    `<button role="tab" data-act="track" data-k="cpp" class="${st.track === "cpp" ? "on" : ""}" aria-selected="${st.track === "cpp"}"><b>Ruta C++</b><small>Código como en Arduino, con retos</small></button>` +
+    `<button role="tab" data-act="track" data-k="iec" class="${st.track === "iec" ? "on" : ""}" aria-selected="${st.track === "iec"}"><b>Ruta PLC · IEC 61131-3</b><small>Ladder, ST y FBD en OpenPLC</small></button>` +
     `</div>`;
   /** Siguiente paso de la ruta: la primera lección sin ver; luego, el reto «a continuación». */
   function nextStep(T = tiers()) {
@@ -232,7 +232,7 @@
       `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}Ruta de aprendizaje</span>` +
       `<h1>Empieza aquí</h1><p class="ini-lead"><b>Aprende automatización</b> programando un PLC de verdad: tableros, motores, procesos y neumática.</p>` +
       trackSwitch() +
-      `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar la ruta" : "Comenzar la ruta"}</button>` +
+      `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar" : "Comenzar"} la ruta ${st.track === "iec" ? "PLC" : "C++"}</button>` +
       (nx ? `<span class="ini-next"><small>A continuación</small><b>${esc(nx.tier.tag)} · ${nx.item.kind === "lesson" ? "Lección" : "Reto"} ${pos} de ${nx.tier.total}</b><em>${esc(nx.item.title)}</em></span>` : `<span class="ini-next"><b>¡Ruta completa!</b></span>`) +
       `</div></div></section>`;
     // ---- Progreso
@@ -479,6 +479,19 @@
     return !!st.language;
   }
 
+  // Fundido: al cambiar de vista o de ruta se funde todo; al cambiar de
+  // etapa, sus pasos y la ficha; al elegir un paso, solo la ficha.
+  let shown = {};
+  function fadeChanges(box) {
+    const now = { view: st.view, track: st.track, tier: st.tier, sel: st.sel, arch: st.archIdx };
+    const fade = (sel) => box.querySelectorAll(sel).forEach((e) => e.classList.add("ini-fade"));
+    if (now.view !== shown.view || now.track !== shown.track) fade(".ini-body");
+    else if (now.view === "learn" && now.tier !== shown.tier) fade(".ini-steps, .ini-brief");
+    else if (now.view === "learn" && now.sel !== shown.sel) fade(".ini-brief");
+    else if (now.view === "home" && now.arch !== shown.arch) fade(".ini-show-txt");
+    shown = now;
+  }
+
   function render() {
     const box = el();
     const focus = document.activeElement?.id;
@@ -499,6 +512,7 @@
         `<button class="icon" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>` +
         `<div class="start-body">${wizard()}</div></div>`;
     }
+    fadeChanges(box);
     if (focus && $(focus)) {
       $(focus).focus();
       if (caret !== undefined && $(focus).setSelectionRange) $(focus).setSelectionRange(caret, caret);
