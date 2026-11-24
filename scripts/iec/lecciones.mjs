@@ -19,6 +19,154 @@ const never = (description, points, from_ms, to_ms, n) => ({ description, points
 const always = (description, points, from_ms, to_ms, a) => ({ description, points, from_ms, to_ms, always: a });
 const expect = (description, points, at_ms, e) => ({ description, points, at_ms, expect: e });
 
+
+// El semáforo por etapas (lección 09): lo comparten el ejemplo y la solución.
+const SEMAFORO_ST = `(* Arranque: la primera vuelta del programa activa la etapa inicial. *)
+ARRANQUE := NOT INICIADO;
+INICIADO := TRUE;
+
+(* Cada etapa lleva su temporizador. *)
+T_VMIN(IN := X1, PT := T#10s);
+FIN_VMIN := T_VMIN.Q;
+T_VMAX(IN := X1, PT := T#30s);
+FIN_VMAX := T_VMAX.Q;
+T_AMA(IN := X2, PT := T#3s);
+FIN_AMA := T_AMA.Q;
+T_ROJO(IN := X3, PT := T#8s);
+FIN_ROJO := T_ROJO.Q;
+
+(* Transiciones: etapa activa Y condición cumplida. *)
+PIDE := PEATON OR FIN_VMAX;
+T1 := X1 AND PIDE AND FIN_VMIN;
+T2 := X2 AND FIN_AMA;
+T3 := X3 AND FIN_ROJO;
+
+(* Etapas: se activan con la transición que llega y se apagan con la que sale. *)
+X1 := (X1 OR T3 OR ARRANQUE) AND NOT T1;
+X2 := (X2 OR T1) AND NOT T2;
+X3 := (X3 OR T2) AND NOT T3;
+
+(* El pedido del peatón se recuerda hasta que se atiende. *)
+PEATON := (PEATON OR S1) AND NOT T2;`;
+const SEMAFORO_LD = [
+  { comment: "Arranque: solo en la primera vuelta", elements: ["!INICIADO", "=ARRANQUE"] },
+  { comment: "", elements: ["ARRANQUE", "S=INICIADO"] },
+  { comment: "Verde mínimo: 10 s", elements: ["X1", { fb: "TON", inst: "T_VMIN", pins: { PT: "T#10s" } }, "=FIN_VMIN"] },
+  { comment: "Verde máximo: 30 s", elements: ["X1", { fb: "TON", inst: "T_VMAX", pins: { PT: "T#30s" } }, "=FIN_VMAX"] },
+  { comment: "Amarillo: 3 s", elements: ["X2", { fb: "TON", inst: "T_AMA", pins: { PT: "T#3s" } }, "=FIN_AMA"] },
+  { comment: "Rojo: 8 s", elements: ["X3", { fb: "TON", inst: "T_ROJO", pins: { PT: "T#8s" } }, "=FIN_ROJO"] },
+  { comment: "Pide el cambio: peatón o verde máximo", elements: ["PEATON", "=PIDE"], branches: [{ at: 0, elements: ["FIN_VMAX"] }] },
+  { comment: "T1: VERDE → AMARILLO", elements: ["X1", "PIDE", "FIN_VMIN", "=T1"] },
+  { comment: "T2: AMARILLO → ROJO", elements: ["X2", "FIN_AMA", "=T2"] },
+  { comment: "T3: ROJO → VERDE", elements: ["X3", "FIN_ROJO", "=T3"] },
+  { comment: "Etapa VERDE", elements: ["X1", "!T1", "=X1"], branches: [{ at: 0, elements: ["T3"] }, { at: 0, elements: ["ARRANQUE"] }] },
+  { comment: "Etapa AMARILLO", elements: ["X2", "!T2", "=X2"], branches: [{ at: 0, elements: ["T1"] }] },
+  { comment: "Etapa ROJO", elements: ["X3", "!T3", "=X3"], branches: [{ at: 0, elements: ["T2"] }] },
+  { comment: "El pedido del peatón se recuerda hasta que se atiende", elements: ["PEATON", "!T2", "=PEATON"], branches: [{ at: 0, elements: ["S1"] }] },
+];
+const SEMAFORO_FBD = [
+  { out: "ARRANQUE", expr: ["NOT", "INICIADO"] },
+  { out: "INICIADO", expr: ["OR", "INICIADO", "ARRANQUE"] },
+  { fb: "TON", inst: "T_VMIN", in: { IN: "X1", PT: "T#10s" }, out: { Q: "FIN_VMIN" } },
+  { fb: "TON", inst: "T_VMAX", in: { IN: "X1", PT: "T#30s" }, out: { Q: "FIN_VMAX" } },
+  { fb: "TON", inst: "T_AMA", in: { IN: "X2", PT: "T#3s" }, out: { Q: "FIN_AMA" } },
+  { fb: "TON", inst: "T_ROJO", in: { IN: "X3", PT: "T#8s" }, out: { Q: "FIN_ROJO" } },
+  { out: "PIDE", expr: ["OR", "PEATON", "FIN_VMAX"] },
+  { out: "T1", expr: ["AND", "X1", "PIDE", "FIN_VMIN"] },
+  { out: "T2", expr: ["AND", "X2", "FIN_AMA"] },
+  { out: "T3", expr: ["AND", "X3", "FIN_ROJO"] },
+  { out: "X1", expr: ["AND", ["OR", "X1", "T3", "ARRANQUE"], ["NOT", "T1"]] },
+  { out: "X2", expr: ["AND", ["OR", "X2", "T1"], ["NOT", "T2"]] },
+  { out: "X3", expr: ["AND", ["OR", "X3", "T2"], ["NOT", "T3"]] },
+  { out: "PEATON", expr: ["AND", ["OR", "PEATON", "S1"], ["NOT", "T2"]] },
+];
+
+// Lección 11: el bloque MOTOR (marcha y parada con enclavamiento y cuenta de arranques).
+const MOTOR_FB = {
+  name: "MOTOR",
+  doc: "Marcha y parada con enclavamiento; cuenta los arranques.",
+  inputs: [
+    { name: "MARCHA", type: "BOOL", doc: "pulsador NA" },
+    { name: "PARADA", type: "BOOL", doc: "pulsador NC: TRUE sin pulsar" },
+  ],
+  outputs: [
+    { name: "Q", type: "BOOL", doc: "en marcha" },
+    { name: "ARRANQUES", type: "INT", doc: "veces que arrancó" },
+  ],
+  locals: [{ name: "FLANCO", type: "R_TRIG" }],
+  body: `(* Enclavamiento (lección 03): la parada manda. *)
+Q := (Q OR MARCHA) AND PARADA;
+
+(* Cada arranque suma uno (flanco de subida de Q). *)
+FLANCO(CLK := Q);
+IF FLANCO.Q THEN
+  ARRANQUES := ARRANQUES + 1;
+END_IF;`,
+};
+const BOMBAS = [...press("S1", 1000, 200), ...press("S2", 2000, 200), ...press("S1", 3000, 200), ...press("S3", 4000, 200), ...press("S2", 5000, 200), ...press("S4", 6500, 200)];
+
+// Lección 12: el portón por etapas numeradas. full = con la barrera y la baliza.
+const PORTON_ST = (full) => `(* CASE: cada etapa revisa solo sus transiciones. *)
+CASE ETAPA OF
+  0: (* PARADO *)
+    IF S1 AND NOT B1 THEN
+      ETAPA := 1;
+    ELSIF S2 AND NOT B2 THEN
+      ETAPA := 2;
+    END_IF;
+  1: (* ABRIENDO: hasta el final B1 *)
+    IF B1 THEN
+      ETAPA := 0;
+    END_IF;
+  2: (* CERRANDO: hasta el final B2 *)
+    IF B2 THEN
+      ETAPA := 0;${full ? `
+    ELSIF B3 THEN
+      (* Obstáculo: vuelve a abrir. *)
+      ETAPA := 1;` : ""}
+    END_IF;
+END_CASE;
+
+(* La parada manda en cualquier etapa (S0 es NC). *)
+IF NOT S0 THEN
+  ETAPA := 0;
+END_IF;
+
+(* Salidas: un solo sentido por etapa, nunca los dos a la vez. *)
+KM1 := ETAPA = 1;
+KM2 := ETAPA = 2;${full ? `
+H1 := ETAPA > 0;` : ""}`;
+const eq = (n) => ({ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: String(n), OUT: `E${n}` } });
+const mv = (n) => ({ fb: "MOVE", en: true, pins: { IN: String(n), OUT: "ETAPA" } });
+const PORTON_LD = (full) => [
+  { comment: "¿En qué etapa está?", elements: [eq(0)] },
+  { comment: "", elements: [eq(1)] },
+  { comment: "", elements: [eq(2)] },
+  { comment: "PARADO → ABRIENDO con S1, si no está abierto", elements: ["E0", "S1", "!B1", mv(1)] },
+  { comment: "PARADO → CERRANDO con S2, si no está cerrado", elements: ["E0", "S2", "!B2", mv(2)] },
+  { comment: "ABRIENDO → PARADO en el final B1", elements: ["E1", "B1", mv(0)] },
+  { comment: "CERRANDO → PARADO en el final B2", elements: ["E2", "B2", mv(0)] },
+  ...(full ? [{ comment: "CERRANDO → ABRIENDO con un obstáculo", elements: ["E2", "B3", mv(1)] }] : []),
+  { comment: "La parada manda en cualquier etapa", elements: ["!S0", mv(0)] },
+  { comment: "Motor: abrir", elements: ["E1", "=KM1"] },
+  { comment: "Motor: cerrar", elements: ["E2", "=KM2"] },
+  ...(full ? [{ comment: "Baliza: en movimiento", elements: ["!E0", "=H1"] }] : []),
+];
+const PORTON_FBD = (full) => [
+  { out: "E0", expr: ["EQ", "ETAPA", "0"] },
+  { out: "E1", expr: ["EQ", "ETAPA", "1"] },
+  { out: "E2", expr: ["EQ", "ETAPA", "2"] },
+  { out: "ETAPA", expr: ["SEL", ["AND", "E0", "S1", ["NOT", "B1"]], "ETAPA", "1"] },
+  { out: "ETAPA", expr: ["SEL", ["AND", "E0", "S2", ["NOT", "B2"]], "ETAPA", "2"] },
+  { out: "ETAPA", expr: ["SEL", ["AND", "E1", "B1"], "ETAPA", "0"] },
+  { out: "ETAPA", expr: ["SEL", ["AND", "E2", "B2"], "ETAPA", "0"] },
+  ...(full ? [{ out: "ETAPA", expr: ["SEL", ["AND", "E2", "B3"], "ETAPA", "1"] }] : []),
+  { out: "ETAPA", expr: ["SEL", ["NOT", "S0"], "ETAPA", "0"] },
+  { out: "KM1", expr: "E1" },
+  { out: "KM2", expr: "E2" },
+  ...(full ? [{ out: "H1", expr: ["NOT", "E0"] }] : []),
+];
+
 // ------------------------------------------------------------ lecciones
 export const LECCIONES = [
   // ======================================================== Unidad 1
@@ -755,5 +903,396 @@ H2 := S1;`,
       ],
       goal_runs: [{ name: "Intermitencias", until_ms: 12000, actions: [...press("S1", 3000, 800)] }],
     },
+  },
+  // ======================================================== Unidad 3
+  {
+    id: "iec-09",
+    unit: "3.Secuencias",
+    folder: "09.Etapas_un_semaforo",
+    project: "etapas_semaforo",
+    title: "Etapas: un semáforo",
+    bench: "curso-11",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "botón del peatón" },
+      { name: "SA1", type: "BOOL", at: "%IX0.1", doc: "modo noche" },
+      { name: "H1", type: "BOOL", at: "%QX0.0", doc: "rojo" },
+      { name: "H2", type: "BOOL", at: "%QX0.1", doc: "amarillo" },
+      { name: "H3", type: "BOOL", at: "%QX0.2", doc: "verde" },
+      { name: "H4", type: "BOOL", at: "%QX0.3", doc: "verde peatonal" },
+      { name: "X1", type: "BOOL", doc: "etapa VERDE" },
+      { name: "X2", type: "BOOL", doc: "etapa AMARILLO" },
+      { name: "X3", type: "BOOL", doc: "etapa ROJO" },
+      { name: "T1", type: "BOOL", doc: "transición VERDE → AMARILLO" },
+      { name: "T2", type: "BOOL", doc: "transición AMARILLO → ROJO" },
+      { name: "T3", type: "BOOL", doc: "transición ROJO → VERDE" },
+      { name: "ARRANQUE", type: "BOOL", doc: "solo en la primera vuelta" },
+      { name: "INICIADO", type: "BOOL" },
+      { name: "PEATON", type: "BOOL", doc: "pedido del peatón" },
+      { name: "PIDE", type: "BOOL", doc: "peatón o verde máximo" },
+      { name: "T_VMIN", type: "TON" },
+      { name: "T_VMAX", type: "TON" },
+      { name: "T_AMA", type: "TON" },
+      { name: "T_ROJO", type: "TON" },
+      { name: "FIN_VMIN", type: "BOOL" },
+      { name: "FIN_VMAX", type: "BOOL" },
+      { name: "FIN_AMA", type: "BOOL" },
+      { name: "FIN_ROJO", type: "BOOL" },
+      { name: "T_ULT", type: "TON" },
+      { name: "ULTIMOS", type: "BOOL", doc: "últimos 3 s del rojo" },
+      { name: "T_ON", type: "TON" },
+      { name: "T_OFF", type: "TON" },
+      { name: "ENCENDIDO", type: "BOOL" },
+      { name: "APAGADO", type: "BOOL" },
+      { name: "AMA_NORMAL", type: "BOOL" },
+    ],
+    example: {
+      st: SEMAFORO_ST + `
+
+(* Salidas: cada luz depende solo de su etapa. *)
+H1 := X3;
+H2 := X2;
+H3 := X1;
+H4 := X3;`,
+      ld: { rungs: [...SEMAFORO_LD, { comment: "Rojo", elements: ["X3", "=H1"] }, { comment: "Amarillo", elements: ["X2", "=H2"] }, { comment: "Verde", elements: ["X1", "=H3"] }, { comment: "Verde peatonal", elements: ["X3", "=H4"] }] },
+      fbd: { networks: [...SEMAFORO_FBD, { out: "H1", expr: "X3" }, { out: "H2", expr: "X2" }, { out: "H3", expr: "X1" }, { out: "H4", expr: "X3" }] },
+    },
+    solution: {
+      st: SEMAFORO_ST + `
+
+(* Los últimos 3 s del rojo: 5 s después de entrar en la etapa. *)
+T_ULT(IN := X3, PT := T#5s);
+ULTIMOS := T_ULT.Q;
+
+(* Intermitencia de medio segundo (lección 08). *)
+T_ON(IN := NOT APAGADO, PT := T#500ms);
+ENCENDIDO := T_ON.Q;
+T_OFF(IN := ENCENDIDO, PT := T#500ms);
+APAGADO := T_OFF.Q;
+
+(* Salidas. El modo noche (SA1) manda sobre la secuencia. *)
+H1 := X3 AND NOT SA1;
+AMA_NORMAL := X2 AND NOT SA1;
+H2 := AMA_NORMAL OR (SA1 AND ENCENDIDO);
+H3 := X1 AND NOT SA1;
+H4 := X3 AND NOT SA1 AND (NOT ULTIMOS OR ENCENDIDO);`,
+      ld: {
+        rungs: [
+          ...SEMAFORO_LD,
+          { comment: "Últimos 3 s del rojo", elements: ["X3", { fb: "TON", inst: "T_ULT", pins: { PT: "T#5s" } }, "=ULTIMOS"] },
+          { comment: "Intermitencia: tiempo apagado", elements: ["!APAGADO", { fb: "TON", inst: "T_ON", pins: { PT: "T#500ms" } }, "=ENCENDIDO"] },
+          { comment: "Intermitencia: tiempo encendido", elements: ["ENCENDIDO", { fb: "TON", inst: "T_OFF", pins: { PT: "T#500ms" } }, "=APAGADO"] },
+          { comment: "Rojo, salvo de noche", elements: ["X3", "!SA1", "=H1"] },
+          { comment: "Amarillo normal", elements: ["X2", "!SA1", "=AMA_NORMAL"] },
+          { comment: "Amarillo: normal, o intermitente de noche", elements: ["AMA_NORMAL", "=H2"], branches: [{ at: 0, elements: ["SA1", "ENCENDIDO"] }] },
+          { comment: "Verde, salvo de noche", elements: ["X1", "!SA1", "=H3"] },
+          { comment: "Verde peatonal: fijo y, en los últimos 3 s, intermitente", elements: ["X3", "!SA1", "!ULTIMOS", "=H4"], branches: [{ at: 2, elements: ["ENCENDIDO"] }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          ...SEMAFORO_FBD,
+          { fb: "TON", inst: "T_ULT", in: { IN: "X3", PT: "T#5s" }, out: { Q: "ULTIMOS" } },
+          { fb: "TON", inst: "T_ON", in: { IN: ["NOT", "APAGADO"], PT: "T#500ms" }, out: { Q: "ENCENDIDO" } },
+          { fb: "TON", inst: "T_OFF", in: { IN: "ENCENDIDO", PT: "T#500ms" }, out: { Q: "APAGADO" } },
+          { out: "H1", expr: ["AND", "X3", ["NOT", "SA1"]] },
+          { out: "AMA_NORMAL", expr: ["AND", "X2", ["NOT", "SA1"]] },
+          { out: "H2", expr: ["OR", "AMA_NORMAL", ["AND", "SA1", "ENCENDIDO"]] },
+          { out: "H3", expr: ["AND", "X1", ["NOT", "SA1"]] },
+          { out: "H4", expr: ["AND", "X3", ["NOT", "SA1"], ["OR", ["NOT", "ULTIMOS"], "ENCENDIDO"]] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Verde peatonal (Q0.3) que parpadea en sus últimos 3 s y modo noche (SA1) con el amarillo intermitente.",
+      steps: ["Ejecuta el ejemplo y aprieta el botón del peatón (S1): el verde dura al menos 10 s, luego amarillo 3 s y rojo 8 s.", "Con otro TON de 5 s en la etapa ROJO, haz parpadear el verde peatonal en los últimos 3 s.", "Con SA1 (I0.1) activo: modo noche, solo el amarillo parpadea cada medio segundo."],
+      uses: ["%IX0.0 · S1, botón del peatón", "%IX0.1 · SA1, modo noche", "%QX0.0 · H1, rojo", "%QX0.1 · H2, amarillo", "%QX0.2 · H3, verde", "%QX0.3 · H4, verde peatonal"],
+      teaches: "Una secuencia se arma con un bit por etapa y una transición entre etapas; cada etapa enciende sus salidas y lleva su propio temporizador.",
+    },
+    rubricFrom: "curso-11",
+    hints: {
+      peaton: "Un TON de 5 s con IN := X3 marca los últimos 3 s; ahí H4 := ENCENDIDO (la intermitencia de la lección 08).",
+      noche: "Con SA1: H2 := SA1 AND ENCENDIDO, y las demás luces con AND NOT SA1.",
+    },
+  },
+  {
+    id: "iec-10",
+    unit: "3.Secuencias",
+    folder: "10.Etapa_numerada_CASE",
+    project: "etapa_numerada",
+    title: "Etapa numerada: CASE, comparar y MOVE",
+    bench: "retos/06-estrella-triangulo",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "marcha, NA" },
+      { name: "S0", type: "BOOL", at: "%IX0.1", doc: "parada, NC: TRUE sin pulsar" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "línea" },
+      { name: "KM2", type: "BOOL", at: "%QX0.1", doc: "estrella" },
+      { name: "KM3", type: "BOOL", at: "%QX0.2", doc: "triángulo" },
+      { name: "H1", type: "BOOL", at: "%QX0.3", doc: "piloto en marcha" },
+      { name: "ETAPA", type: "INT", doc: "0 parado, 1 estrella, 2 pausa, 3 triángulo" },
+      { name: "T_EST", type: "TON" },
+      { name: "T_PAU", type: "TON" },
+      { name: "FIN_EST", type: "BOOL" },
+      { name: "FIN_PAU", type: "BOOL" },
+      { name: "E0", type: "BOOL", doc: "ETAPA = 0", langs: ["ld", "fbd"] },
+      { name: "E1", type: "BOOL", doc: "ETAPA = 1", langs: ["ld", "fbd"] },
+      { name: "E2", type: "BOOL", doc: "ETAPA = 2", langs: ["ld", "fbd"] },
+      { name: "E3", type: "BOOL", doc: "ETAPA = 3", langs: ["ld", "fbd"] },
+    ],
+    example: {
+      st: `(* Temporizador de la etapa 1 (estrella). *)
+T_EST(IN := ETAPA = 1, PT := T#3s);
+FIN_EST := T_EST.Q;
+
+(* CASE elige el bloque de la etapa actual: solo se revisan sus condiciones. *)
+CASE ETAPA OF
+  0: (* PARADO: espera la marcha *)
+    IF S1 AND S0 THEN
+      ETAPA := 1;
+    END_IF;
+  1: (* ESTRELLA: 3 s *)
+    IF FIN_EST THEN
+      ETAPA := 2;
+    END_IF;
+END_CASE;
+
+(* La parada manda en cualquier etapa (S0 es NC). *)
+IF NOT S0 THEN
+  ETAPA := 0;
+END_IF;
+
+(* Salidas según la etapa. *)
+KM1 := ETAPA > 0;
+KM2 := ETAPA = 1;
+KM3 := ETAPA = 2;`,
+      ld: {
+        rungs: [
+          { comment: "¿En qué etapa está?", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "0", OUT: "E0" } }] },
+          { comment: "", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "1", OUT: "E1" } }] },
+          { comment: "", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "2", OUT: "E2" } }] },
+          { comment: "Estrella: 3 s", elements: ["E1", { fb: "TON", inst: "T_EST", pins: { PT: "T#3s" } }, "=FIN_EST"] },
+          { comment: "PARADO → ESTRELLA con la marcha", elements: ["E0", "S1", "S0", { fb: "MOVE", en: true, pins: { IN: "1", OUT: "ETAPA" } }] },
+          { comment: "ESTRELLA → TRIÁNGULO a los 3 s", elements: ["E1", "FIN_EST", { fb: "MOVE", en: true, pins: { IN: "2", OUT: "ETAPA" } }] },
+          { comment: "La parada manda en cualquier etapa", elements: ["!S0", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "ETAPA" } }] },
+          { comment: "Línea: en cualquier etapa menos la 0", elements: ["!E0", "=KM1"] },
+          { comment: "Estrella", elements: ["E1", "=KM2"] },
+          { comment: "Triángulo", elements: ["E2", "=KM3"] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { out: "E0", expr: ["EQ", "ETAPA", "0"] },
+          { out: "E1", expr: ["EQ", "ETAPA", "1"] },
+          { out: "E2", expr: ["EQ", "ETAPA", "2"] },
+          { fb: "TON", inst: "T_EST", in: { IN: "E1", PT: "T#3s" }, out: { Q: "FIN_EST" } },
+          { out: "ETAPA", expr: ["SEL", ["AND", "E0", "S1", "S0"], "ETAPA", "1"] },
+          { out: "ETAPA", expr: ["SEL", ["AND", "E1", "FIN_EST"], "ETAPA", "2"] },
+          { out: "ETAPA", expr: ["SEL", ["NOT", "S0"], "ETAPA", "0"] },
+          { out: "KM1", expr: ["NOT", "E0"] },
+          { out: "KM2", expr: "E1" },
+          { out: "KM3", expr: "E2" },
+        ],
+      },
+    },
+    solution: {
+      st: `T_EST(IN := ETAPA = 1, PT := T#3s);
+FIN_EST := T_EST.Q;
+(* Pausa de 100 ms con los dos contactores abiertos. *)
+T_PAU(IN := ETAPA = 2, PT := T#100ms);
+FIN_PAU := T_PAU.Q;
+
+CASE ETAPA OF
+  0: (* PARADO *)
+    IF S1 AND S0 THEN
+      ETAPA := 1;
+    END_IF;
+  1: (* ESTRELLA *)
+    IF FIN_EST THEN
+      ETAPA := 2;
+    END_IF;
+  2: (* PAUSA *)
+    IF FIN_PAU THEN
+      ETAPA := 3;
+    END_IF;
+END_CASE;
+
+IF NOT S0 THEN
+  ETAPA := 0;
+END_IF;
+
+KM1 := ETAPA > 0;
+KM2 := ETAPA = 1;
+KM3 := ETAPA = 3;
+H1 := ETAPA > 0;`,
+      ld: {
+        rungs: [
+          { comment: "¿En qué etapa está?", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "0", OUT: "E0" } }] },
+          { comment: "", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "1", OUT: "E1" } }] },
+          { comment: "", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "2", OUT: "E2" } }] },
+          { comment: "", elements: [{ fb: "EQ", en: true, pins: { IN1: "ETAPA", IN2: "3", OUT: "E3" } }] },
+          { comment: "Estrella: 3 s", elements: ["E1", { fb: "TON", inst: "T_EST", pins: { PT: "T#3s" } }, "=FIN_EST"] },
+          { comment: "Pausa: 100 ms", elements: ["E2", { fb: "TON", inst: "T_PAU", pins: { PT: "T#100ms" } }, "=FIN_PAU"] },
+          { comment: "PARADO → ESTRELLA con la marcha", elements: ["E0", "S1", "S0", { fb: "MOVE", en: true, pins: { IN: "1", OUT: "ETAPA" } }] },
+          { comment: "ESTRELLA → PAUSA a los 3 s", elements: ["E1", "FIN_EST", { fb: "MOVE", en: true, pins: { IN: "2", OUT: "ETAPA" } }] },
+          { comment: "PAUSA → TRIÁNGULO a los 100 ms", elements: ["E2", "FIN_PAU", { fb: "MOVE", en: true, pins: { IN: "3", OUT: "ETAPA" } }] },
+          { comment: "La parada manda en cualquier etapa", elements: ["!S0", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "ETAPA" } }] },
+          { comment: "Línea", elements: ["!E0", "=KM1"] },
+          { comment: "Estrella", elements: ["E1", "=KM2"] },
+          { comment: "Triángulo", elements: ["E3", "=KM3"] },
+          { comment: "Piloto en marcha", elements: ["!E0", "=H1"] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { out: "E0", expr: ["EQ", "ETAPA", "0"] },
+          { out: "E1", expr: ["EQ", "ETAPA", "1"] },
+          { out: "E2", expr: ["EQ", "ETAPA", "2"] },
+          { out: "E3", expr: ["EQ", "ETAPA", "3"] },
+          { fb: "TON", inst: "T_EST", in: { IN: "E1", PT: "T#3s" }, out: { Q: "FIN_EST" } },
+          { fb: "TON", inst: "T_PAU", in: { IN: "E2", PT: "T#100ms" }, out: { Q: "FIN_PAU" } },
+          { out: "ETAPA", expr: ["SEL", ["AND", "E0", "S1", "S0"], "ETAPA", "1"] },
+          { out: "ETAPA", expr: ["SEL", ["AND", "E1", "FIN_EST"], "ETAPA", "2"] },
+          { out: "ETAPA", expr: ["SEL", ["AND", "E2", "FIN_PAU"], "ETAPA", "3"] },
+          { out: "ETAPA", expr: ["SEL", ["NOT", "S0"], "ETAPA", "0"] },
+          { out: "KM1", expr: ["NOT", "E0"] },
+          { out: "KM2", expr: "E1" },
+          { out: "KM3", expr: "E3" },
+          { out: "H1", expr: ["NOT", "E0"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Pausa de 100 ms con KM2 y KM3 abiertos entre estrella y triángulo, y piloto H1 (Q0.3) encendido en marcha.",
+      steps: ["Ejecuta el ejemplo: con S1 cierran KM1 y KM2 (estrella) y a los 3 s pasa a KM3 (triángulo).", "Agrega una etapa 2, PAUSA, de 100 ms con KM2 y KM3 abiertos; el triángulo pasa a ser la etapa 3.", "Enciende H1 en cualquier etapa menos la 0.", "Comprueba que S0 detiene todo en cualquier etapa."],
+      uses: ["%IX0.0 · S1, marcha", "%IX0.1 · S0, parada NC", "%QX0.0 · KM1, línea", "%QX0.1 · KM2, estrella", "%QX0.2 · KM3, triángulo", "%QX0.3 · H1, en marcha"],
+      teaches: "Con un número de etapa, CASE (ST) o una comparación por etapa (Ladder y FBD) elige qué condiciones revisar, y MOVE o SEL escriben la etapa siguiente.",
+    },
+    rubricFrom: "retos/06-estrella-triangulo",
+    hints: {
+      triangulo: "Una etapa más: 2 = PAUSA con un TON de 100 ms; al vencer, ETAPA := 3 y KM3 := ETAPA = 3.",
+    },
+  },
+  {
+    id: "iec-11",
+    unit: "3.Secuencias",
+    folder: "11.Bloque_de_funcion_propio",
+    project: "bloque_propio",
+    title: "Bloque de función propio: un motor",
+    bench: "curso-12",
+    blocks: [MOTOR_FB],
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "marcha bomba 1, NA" },
+      { name: "S2", type: "BOOL", at: "%IX0.1", doc: "parada bomba 1, NC" },
+      { name: "S3", type: "BOOL", at: "%IX0.2", doc: "marcha bomba 2, NA" },
+      { name: "S4", type: "BOOL", at: "%IX0.3", doc: "parada bomba 2, NC" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "bomba 1" },
+      { name: "KM2", type: "BOOL", at: "%QX0.1", doc: "bomba 2" },
+      { name: "H1", type: "BOOL", at: "%QX0.2", doc: "lámpara «Bombeando»" },
+      { name: "BOMBA1", type: "MOTOR" },
+      { name: "BOMBA2", type: "MOTOR" },
+    ],
+    example: {
+      st: `(* Una instancia del bloque MOTOR por bomba: cada una guarda sus datos. *)
+BOMBA1(MARCHA := S1, PARADA := S2);
+KM1 := BOMBA1.Q;`,
+      ld: { rungs: [{ comment: "Bomba 1: el bloque MOTOR hace la marcha y parada", elements: ["S1", { fb: "MOTOR", inst: "BOMBA1", pins: { PARADA: "S2" } }, "=KM1"] }] },
+      fbd: { networks: [{ fb: "MOTOR", inst: "BOMBA1", in: { MARCHA: "S1", PARADA: "S2" }, out: { Q: "KM1" } }] },
+    },
+    solution: {
+      st: `BOMBA1(MARCHA := S1, PARADA := S2);
+KM1 := BOMBA1.Q;
+
+(* Otra instancia del mismo bloque: la bomba 2 con sus pulsadores. *)
+BOMBA2(MARCHA := S3, PARADA := S4);
+KM2 := BOMBA2.Q;
+
+(* Se pregunta a cada instancia por su salida. *)
+H1 := BOMBA1.Q OR BOMBA2.Q;`,
+      ld: {
+        rungs: [
+          { comment: "Bomba 1", elements: ["S1", { fb: "MOTOR", inst: "BOMBA1", pins: { PARADA: "S2" } }, "=KM1"] },
+          { comment: "Bomba 2: otra instancia del mismo bloque", elements: ["S3", { fb: "MOTOR", inst: "BOMBA2", pins: { PARADA: "S4" } }, "=KM2"] },
+          { comment: "Bombeando: cualquiera de las dos", elements: ["KM1", "=H1"], branches: [{ at: 0, elements: ["KM2"] }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "MOTOR", inst: "BOMBA1", in: { MARCHA: "S1", PARADA: "S2" }, out: { Q: "KM1" } },
+          { fb: "MOTOR", inst: "BOMBA2", in: { MARCHA: "S3", PARADA: "S4" }, out: { Q: "KM2" } },
+          { out: "H1", expr: ["OR", "KM1", "KM2"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "La bomba 2 (Q0.1) con otra instancia del bloque MOTOR (S3 marcha, S4 parada) y la lámpara H1 (Q0.2) encendida con cualquier bomba en marcha.",
+      steps: ["Ejecuta el ejemplo: S1 arranca la bomba 1 y S2 la detiene; mira el bloque MOTOR en pous/function-blocks.", "Declara BOMBA2 : MOTOR y llámala con S3 y S4; su salida Q a KM2.", "Enciende H1 con BOMBA1.Q OR BOMBA2.Q.", "Arranca las dos y detenlas por separado: cada instancia es independiente."],
+      uses: ["%IX0.0 · S1, marcha bomba 1", "%IX0.1 · S2, parada bomba 1 (NC)", "%IX0.2 · S3, marcha bomba 2", "%IX0.3 · S4, parada bomba 2 (NC)", "%QX0.0 · KM1, bomba 1", "%QX0.1 · KM2, bomba 2", "%QX0.2 · H1, bombeando"],
+      teaches: "Un FUNCTION_BLOCK propio se escribe una vez y se usa en cada equipo con su propia instancia, que guarda sus datos aparte, igual que una clase en C++.",
+    },
+    rubric: {
+      goals: [
+        { id: "b2", description: "La bomba 2 (Q0.1) arranca con S3, con su propia instancia de MOTOR", when: { Q0_1: 1 }, hold_ms: 500, hint: "BOMBA2(MARCHA := S3, PARADA := S4); KM2 := BOMBA2.Q;" },
+        { id: "h1_b1", description: "H1 (Q0.2) encendida con la bomba 1 en marcha", when: { Q0_0: 1, Q0_2: 1 }, hold_ms: 500, hint: "H1 := BOMBA1.Q OR BOMBA2.Q;" },
+        { id: "h1_b2", description: "H1 sigue encendida con solo la bomba 2 en marcha", when: { Q0_0: 0, Q0_1: 1, Q0_2: 1 }, hold_ms: 500, after: "h1_b1" },
+        { id: "h1_off", description: "H1 se apaga con las dos bombas detenidas", when: { Q0_0: 0, Q0_1: 0, Q0_2: 0 }, hold_ms: 300, after: "h1_b2", why: "Cada instancia guarda su propio estado: detener una no toca a la otra." },
+      ],
+      cases: [
+        {
+          name: "Dos bombas con el mismo bloque",
+          until_ms: 7500,
+          actions: BOMBAS,
+          checks: [
+            ev("La bomba 1 arranca con S1", 2, 1000, 1600, { Q0_0: 1 }, 200),
+            ev("La bomba 1 se detiene con S2", 2, 2000, 2600, { Q0_0: 0 }, 200),
+            ev("La bomba 2 arranca con S3", 4, 4000, 4600, { Q0_1: 1 }, 200),
+            ev("La bomba 2 sigue al detener la 1", 3, 5000, 5600, { Q0_0: 0, Q0_1: 1 }, 200),
+            ev("La bomba 2 se detiene con S4", 3, 6500, 7100, { Q0_1: 0 }, 200),
+            ev("H1 enciende con la bomba 1", 2, 1000, 1600, { Q0_0: 1, Q0_2: 1 }, 200),
+            ev("H1 sigue con solo la bomba 2", 2, 5000, 5600, { Q0_0: 0, Q0_1: 1, Q0_2: 1 }, 200),
+            ev("H1 se apaga con las dos detenidas", 2, 6500, 7100, { Q0_2: 0 }, 200),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Dos bombas", until_ms: 7500, actions: BOMBAS }],
+    },
+  },
+  {
+    id: "iec-12",
+    unit: "3.Secuencias",
+    folder: "12.Proyecto_porton_automatico",
+    project: "porton",
+    title: "Proyecto: un portón automático",
+    bench: "retos/05-puerta",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "abrir, NA" },
+      { name: "S2", type: "BOOL", at: "%IX0.1", doc: "cerrar, NA" },
+      { name: "S0", type: "BOOL", at: "%IX0.2", doc: "parada, NC: TRUE sin pulsar" },
+      { name: "B1", type: "BOOL", at: "%IX0.3", doc: "final: portón abierto" },
+      { name: "B2", type: "BOOL", at: "%IX0.4", doc: "final: portón cerrado" },
+      { name: "B3", type: "BOOL", at: "%IX0.5", doc: "barrera: obstáculo en el paso" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "motor: abrir" },
+      { name: "KM2", type: "BOOL", at: "%QX0.1", doc: "motor: cerrar" },
+      { name: "H1", type: "BOOL", at: "%QX0.2", doc: "baliza de movimiento" },
+      { name: "ETAPA", type: "INT", doc: "0 parado, 1 abriendo, 2 cerrando" },
+      { name: "E0", type: "BOOL", doc: "ETAPA = 0", langs: ["ld", "fbd"] },
+      { name: "E1", type: "BOOL", doc: "ETAPA = 1", langs: ["ld", "fbd"] },
+      { name: "E2", type: "BOOL", doc: "ETAPA = 2", langs: ["ld", "fbd"] },
+    ],
+    example: {
+      st: PORTON_ST(false),
+      ld: { rungs: PORTON_LD(false) },
+      fbd: { networks: PORTON_FBD(false) },
+    },
+    solution: {
+      st: PORTON_ST(true),
+      ld: { rungs: PORTON_LD(true) },
+      fbd: { networks: PORTON_FBD(true) },
+    },
+    brief: {
+      goal: "Si la barrera B3 ve un obstáculo mientras el portón cierra, vuelve a abrir; y la baliza H1 (Q0.2) encendida mientras el portón se mueve.",
+      steps: ["Ejecuta el ejemplo: S1 abre hasta B1, S2 cierra hasta B2 y S0 lo detiene donde esté.", "En la etapa CERRANDO agrega la transición a ABRIENDO con B3.", "Enciende H1 en cualquier etapa menos la 0.", "Prueba un obstáculo a mitad del cierre: KM2 abre y KM1 cierra, nunca los dos a la vez."],
+      uses: ["%IX0.0 · S1, abrir", "%IX0.1 · S2, cerrar", "%IX0.2 · S0, parada NC", "%IX0.3 · B1, abierto", "%IX0.4 · B2, cerrado", "%IX0.5 · B3, barrera", "%QX0.0 · KM1, abrir", "%QX0.1 · KM2, cerrar", "%QX0.2 · H1, baliza"],
+      teaches: "Una máquina real se ordena en etapas: cada una revisa solo sus salidas posibles, y la seguridad (parada, obstáculo) es una transición más.",
+    },
+    rubricFrom: "retos/05-puerta",
   },
 ];

@@ -160,4 +160,163 @@ El tiempo de T_ON es el apagado y el de T_OFF el encendido: con PT distintos, el
     como: `Las cuatro líneas de ST son el anillo: cada TON mira la salida del otro. Como un TON solo actualiza su salida cuando se lo llama, el programa sigue corriendo todo el tiempo; por eso cualquier otra línea (como \`H2 := S1;\` en la práctica) responde al instante.`,
     sim: ["Pulsa **Ejecutar**: H1 parpadea cada medio segundo.", "Cuenta el ritmo: medio segundo encendido y medio segundo apagado, mientras todo lo demás sigue respondiendo.", ABRIR],
   },
+  "iec-09": {
+    descripcion: "Secuencias por etapas en IEC 61131-3: un semáforo con un bit por etapa, transiciones y un temporizador por etapa, en ST, Ladder y FBD.",
+    intro: `Casi toda máquina trabaja por pasos: llenar, mezclar, vaciar; avanzar, esperar, volver. En C++ se arma con \`enum\` y \`switch\` (lección 11). En un PLC, el método clásico es el de las **etapas**: un bit por paso y una **transición** que dice cuándo se pasa al siguiente. Es la base del GRAFCET y del SFC, y se escribe igual en ST, Ladder y FBD.`,
+    aprende: ["A dividir un proceso en etapas, con un bit por etapa (X1, X2, X3).", "A escribir cada transición como «etapa activa Y condición».", "La ecuación de una etapa: se activa con la transición que llega y se apaga con la que sale.", "A darle a cada etapa su propio temporizador y sus propias salidas."],
+    idea: `### Etapas y transiciones
+
+El semáforo tiene tres etapas: **X1** VERDE, **X2** AMARILLO y **X3** ROJO. Solo una está activa a la vez. Entre etapa y etapa hay una **transición**:
+
+| Transición | De → a | Condición |
+|---|---|---|
+| T1 | VERDE → AMARILLO | pidió el peatón y pasaron 10 s, o pasaron 30 s |
+| T2 | AMARILLO → ROJO | pasaron 3 s |
+| T3 | ROJO → VERDE | pasaron 8 s |
+
+Cada transición se escribe igual: **etapa de origen Y condición**, por ejemplo \`T2 := X2 AND FIN_AMA;\`.
+
+### La ecuación de una etapa
+
+Una etapa es un enclavamiento (lección 03): se **activa** con la transición que llega, se **mantiene** sola y se **apaga** con la transición que sale.
+
+\`\`\`pascal
+X2 := (X2 OR T1) AND NOT T2;
+\`\`\`
+
+En Ladder es un peldaño de marcha y parada: el contacto de la propia etapa en paralelo con el de la transición que llega, y en serie el contacto cerrado de la que sale.
+
+### La etapa inicial
+
+Al encender el PLC todas las etapas están en FALSE. Un bit **ARRANQUE**, verdadero solo en la primera vuelta del programa, activa la etapa inicial (X1).
+
+### Las salidas, al final
+
+Cada luz depende solo de su etapa: \`H3 := X1;\`. Así cada salida tiene una sola regla y es fácil ver qué la enciende.`,
+    como: `El programa va en cuatro bloques, siempre en el mismo orden: los **temporizadores** de cada etapa (cuentan mientras su etapa está activa), las **transiciones**, las **etapas** y las **salidas**. Como todas las transiciones se calculan antes de mover las etapas, en cada vuelta se avanza como mucho un paso.
+
+El pedido del peatón (\`PEATON\`) es otro enclavamiento: S1 lo activa y T2 lo borra, cuando el semáforo ya pasó a rojo.`,
+    sim: ["Pulsa **Ejecutar**: el semáforo arranca en verde.", "Aprieta **S1** (botón del peatón): a los 10 s de verde pasa a amarillo 3 s y a rojo 8 s, con el verde peatonal encendido.", "Sin apretar S1, el verde dura 30 s.", ABRIR],
+  },
+  "iec-10": {
+    descripcion: "Secuencia con un número de etapa en IEC 61131-3: CASE en ST, comparación y MOVE en Ladder, SEL en FBD, con un arranque estrella-triángulo.",
+    intro: `En la lección 09 cada etapa tenía su propio bit. Otra forma, muy usada, es guardar **el número de la etapa** en una variable entera: \`ETAPA = 0\` parado, \`1\` estrella, \`2\` triángulo. Así nunca hay dos etapas activas a la vez y agregar una etapa es agregar un número.
+
+El ejemplo es un **arranque estrella-triángulo**: el motor arranca en estrella (KM1 y KM2) para que la corriente de arranque sea menor y, a los 3 s, pasa a triángulo (KM1 y KM3).`,
+    aprende: ["A guardar la etapa en una variable INT y a cambiarla con una asignación.", "CASE en ST: solo se revisan las condiciones de la etapa actual.", "En Ladder: un bloque EQ por etapa y un MOVE para pasar a la siguiente, con EN/ENO.", "En FBD: EQ para leer la etapa y SEL para escribirla."],
+    idea: `### Un número en lugar de varios bits
+
+| ETAPA | Nombre | KM1 | KM2 | KM3 |
+|---|---|---|---|---|
+| 0 | PARADO | | | |
+| 1 | ESTRELLA | ✔ | ✔ | |
+| 2 | TRIÁNGULO | ✔ | | ✔ |
+
+### En ST: CASE
+
+\`CASE ETAPA OF\` salta al bloque del número que tenga la etapa. Dentro de cada bloque va la transición: si se cumple la condición, se escribe el número siguiente.
+
+\`\`\`pascal
+CASE ETAPA OF
+  0: IF S1 AND S0 THEN ETAPA := 1; END_IF;
+  1: IF FIN_EST THEN ETAPA := 2; END_IF;
+END_CASE;
+\`\`\`
+
+### En Ladder: comparar y MOVE
+
+Ladder no tiene CASE. Se hace en dos pasos: primero un bloque **EQ** por etapa deja un bit (E0, E1, E2) en TRUE si \`ETAPA\` vale ese número; después, cada transición es un peldaño con los contactos de la etapa y su condición, que termina en un **MOVE** con el número siguiente. MOVE solo copia cuando le llega corriente a su entrada **EN**.
+
+En el OpenPLC Editor, EQ y MOVE se conectan al riel por EN/ENO: en las propiedades del bloque marca **Execution control**.
+
+### En FBD: SEL
+
+\`SEL(G, IN0, IN1)\` entrega IN0 si G es FALSE e IN1 si G es TRUE. Con IN0 = ETAPA, la etapa queda igual hasta que la condición G pide la siguiente.`,
+    como: `La parada va **después** del CASE y manda sobre todo: con S0 pulsado (S0 es NC, así que vale FALSE), \`ETAPA := 0\` en cualquier etapa. Las salidas se calculan al final a partir de la etapa: \`KM2 := ETAPA = 1;\`.
+
+En Ladder, los bits E0 a E2 se calculan al principio de cada vuelta, así que un cambio de etapa se ve en las salidas en la vuelta siguiente, 20 ms después.`,
+    sim: ["Pulsa **Ejecutar** y aprieta **S1**: cierran KM1 y KM2 (estrella).", "A los 3 s abre KM2 y cierra KM3 (triángulo).", "Aprieta **S0**: abren los tres contactores.", ABRIR],
+  },
+  "iec-11": {
+    descripcion: "Bloques de función propios en IEC 61131-3: un FUNCTION_BLOCK MOTOR escrito en ST y usado con una instancia por bomba desde ST, Ladder y FBD.",
+    intro: `Ya usaste bloques de la norma: TON, CTU, R_TRIG. Cada uno guarda sus datos y se usa con una **instancia** por equipo (\`T1\`, \`T2\`…). Con un **FUNCTION_BLOCK** propio haces lo mismo con tu lógica: la marcha y parada de un motor se escribe una vez y se usa en cada bomba. Es la misma idea que las clases de C++ (lección 12).`,
+    aprende: ["A escribir un FUNCTION_BLOCK con entradas (VAR_INPUT), salidas (VAR_OUTPUT) y datos internos (VAR).", "A declarar una instancia por equipo y a llamarla desde ST, Ladder y FBD.", "Que cada instancia guarda sus propios datos: detener una bomba no toca a la otra."],
+    idea: `### El bloque MOTOR
+
+El bloque va en su propio archivo, \`pous/function-blocks/MOTOR.st\`, y se escribe en ST:
+
+\`\`\`pascal
+FUNCTION_BLOCK MOTOR
+  VAR_INPUT
+    MARCHA : BOOL;      (* pulsador NA *)
+    PARADA : BOOL;      (* pulsador NC: TRUE sin pulsar *)
+  END_VAR
+  VAR_OUTPUT
+    Q : BOOL;           (* en marcha *)
+    ARRANQUES : INT;    (* veces que arrancó *)
+  END_VAR
+  VAR
+    FLANCO : R_TRIG;
+  END_VAR
+
+  Q := (Q OR MARCHA) AND PARADA;
+  FLANCO(CLK := Q);
+  IF FLANCO.Q THEN
+    ARRANQUES := ARRANQUES + 1;
+  END_IF;
+END_FUNCTION_BLOCK
+\`\`\`
+
+- **VAR_INPUT** son las patas de la izquierda del bloque; **VAR_OUTPUT**, las de la derecha.
+- **VAR** son sus datos internos: quedan guardados entre una vuelta y la siguiente, y nadie de afuera los toca.
+
+### Una instancia por equipo
+
+En el programa se declara una variable del tipo del bloque por cada bomba, igual que un TON:
+
+\`\`\`pascal
+VAR
+  BOMBA1 : MOTOR;
+  BOMBA2 : MOTOR;
+END_VAR
+\`\`\`
+
+\`BOMBA1\` y \`BOMBA2\` tienen cada una su \`Q\` y su \`ARRANQUES\`. En Ladder y FBD el bloque MOTOR aparece en la lista de bloques del proyecto, con el nombre de la instancia encima.
+
+### En el OpenPLC Editor
+
+Se crea con **Agregar POU → Function Block**, lenguaje ST. Un bloque escrito en ST se usa igual desde un programa en Ladder o FBD.`,
+    como: `\`BOMBA1(MARCHA := S1, PARADA := S2);\` llama al bloque con los pulsadores de la bomba 1, y \`BOMBA1.Q\` lee su salida. En Ladder, la primera entrada (MARCHA) y la primera salida (Q) del bloque van en el riel: el contacto S1 alimenta MARCHA y Q enciende la bobina KM1; PARADA se conecta aparte, con S2.`,
+    sim: ["Pulsa **Ejecutar** y aprieta **S1**: arranca la bomba 1. **S2** la detiene.", "Abre \`pous/function-blocks/MOTOR.st\` en el panel del código para ver el bloque.", ABRIR],
+  },
+  "iec-12": {
+    descripcion: "Proyecto de secuencias en IEC 61131-3: un portón automático por etapas, con finales de carrera, parada y barrera de seguridad, en ST, Ladder y FBD.",
+    intro: `El proyecto de la unidad junta todo: etapas numeradas, transiciones, una parada que manda sobre todo y una seguridad que cambia el sentido. Un **portón automático** abre hasta un final de carrera, cierra hasta otro y, si la barrera ve algo mientras cierra, vuelve a abrir.`,
+    aprende: ["A ordenar una máquina real en etapas antes de escribir el programa.", "A escribir la seguridad (parada, obstáculo) como transiciones más.", "A garantizar que dos salidas opuestas nunca estén juntas: cada una sale de una etapa distinta."],
+    idea: `### Primero, las etapas
+
+| ETAPA | Nombre | KM1 abrir | KM2 cerrar |
+|---|---|---|---|
+| 0 | PARADO | | |
+| 1 | ABRIENDO | ✔ | |
+| 2 | CERRANDO | | ✔ |
+
+### Después, las transiciones
+
+| De → a | Condición |
+|---|---|
+| PARADO → ABRIENDO | S1 y el portón no está abierto (NOT B1) |
+| PARADO → CERRANDO | S2 y el portón no está cerrado (NOT B2) |
+| ABRIENDO → PARADO | llegó al final B1 |
+| CERRANDO → PARADO | llegó al final B2 |
+| cualquiera → PARADO | parada S0 |
+
+Con las dos tablas escritas, el programa sale solo: un bloque del CASE por etapa en ST, un peldaño con MOVE por transición en Ladder, un SEL por transición en FBD.
+
+### Salidas opuestas
+
+KM1 y KM2 juntos serían un cortocircuito en el motor. Como cada uno sale de una etapa distinta (\`KM1 := ETAPA = 1;\`, \`KM2 := ETAPA = 2;\`) y la etapa es un solo número, es imposible que estén los dos a la vez, sin enclavamientos extra.`,
+    como: `El programa es el de la lección 10 con otras etapas. La parada va después del CASE para que mande sobre cualquier transición. En la práctica falta una transición: **CERRANDO → ABRIENDO con B3**, la barrera. Es una línea más en el CASE (un ELSIF), un peldaño más en Ladder o un SEL más en FBD.`,
+    sim: ["Pulsa **Ejecutar** y aprieta **S1**: el portón abre hasta B1.", "Aprieta **S2**: cierra hasta B2. **S0** lo detiene donde esté.", ABRIR],
+  },
 };

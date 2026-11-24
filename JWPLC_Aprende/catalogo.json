@@ -2369,6 +2369,324 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 3,
+      "nombre": "Secuencias",
+      "lecciones": [
+        {
+          "id": "iec-09",
+          "numero": 9,
+          "titulo": "Etapas: un semáforo",
+          "ruta": "extras/Curso_IEC_61131/3.Secuencias/09.Etapas_un_semaforo",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A dividir un proceso en etapas, con un bit por etapa (X1, X2, X3).",
+            "A escribir cada transición como «etapa activa Y condición».",
+            "La ecuación de una etapa: se activa con la transición que llega y se apaga con la que sale.",
+            "A darle a cada etapa su propio temporizador y sus propias salidas."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El programa va en cuatro bloques, siempre en el mismo orden: los **temporizadores** de cada etapa (cuentan mientras su etapa está activa), las **transiciones**, las **etapas** y las **salidas**. Como todas las transiciones se calculan antes de mover las etapas, en cada vuelta se avanza como mucho un paso.",
+                "El pedido del peatón (`PEATON`) es otro enclavamiento: S1 lo activa y T2 lo borra, cuando el semáforo ya pasó a rojo."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, botón del peatón",
+                "%IX0.1 · SA1, modo noche",
+                "%QX0.0 · H1, rojo",
+                "%QX0.1 · H2, amarillo",
+                "%QX0.2 · H3, verde",
+                "%QX0.3 · H4, verde peatonal"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: el semáforo arranca en verde.",
+                "Aprieta **S1** (botón del peatón): a los 10 s de verde pasa a amarillo 3 s y a rojo 8 s, con el verde peatonal encendido.",
+                "Sin apretar S1, el verde dura 30 s.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Verde peatonal (Q0.3) que parpadea en sus últimos 3 s y modo noche (SA1) con el amarillo intermitente.",
+            "Ejecuta el ejemplo y aprieta el botón del peatón (S1): el verde dura al menos 10 s, luego amarillo 3 s y rojo 8 s.",
+            "Con otro TON de 5 s en la etapa ROJO, haz parpadear el verde peatonal en los últimos 3 s.",
+            "Con SA1 (I0.1) activo: modo noche, solo el amarillo parpadea cada medio segundo."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-09",
+            "objetivos_en_vivo": [
+              {
+                "id": "peaton",
+                "text": "El verde peatonal parpadea cada medio segundo en sus últimos 3 s",
+                "extra": false
+              },
+              {
+                "id": "noche",
+                "text": "Modo noche (SA1): el amarillo parpadea cada medio segundo",
+                "extra": false
+              },
+              {
+                "id": "noche_solo",
+                "text": "En modo noche, el rojo y los verdes quedan apagados",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-10",
+          "numero": 10,
+          "titulo": "Etapa numerada: CASE, comparar y MOVE",
+          "ruta": "extras/Curso_IEC_61131/3.Secuencias/10.Etapa_numerada_CASE",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A guardar la etapa en una variable INT y a cambiarla con una asignación.",
+            "CASE en ST: solo se revisan las condiciones de la etapa actual.",
+            "En Ladder: un bloque EQ por etapa y un MOVE para pasar a la siguiente, con EN/ENO.",
+            "En FBD: EQ para leer la etapa y SEL para escribirla."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "La parada va **después** del CASE y manda sobre todo: con S0 pulsado (S0 es NC, así que vale FALSE), `ETAPA := 0` en cualquier etapa. Las salidas se calculan al final a partir de la etapa: `KM2 := ETAPA = 1;`.",
+                "En Ladder, los bits E0 a E2 se calculan al principio de cada vuelta, así que un cambio de etapa se ve en las salidas en la vuelta siguiente, 20 ms después."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, marcha",
+                "%IX0.1 · S0, parada NC",
+                "%QX0.0 · KM1, línea",
+                "%QX0.1 · KM2, estrella",
+                "%QX0.2 · KM3, triángulo",
+                "%QX0.3 · H1, en marcha"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: cierran KM1 y KM2 (estrella).",
+                "A los 3 s abre KM2 y cierra KM3 (triángulo).",
+                "Aprieta **S0**: abren los tres contactores.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Pausa de 100 ms con KM2 y KM3 abiertos entre estrella y triángulo, y piloto H1 (Q0.3) encendido en marcha.",
+            "Ejecuta el ejemplo: con S1 cierran KM1 y KM2 (estrella) y a los 3 s pasa a KM3 (triángulo).",
+            "Agrega una etapa 2, PAUSA, de 100 ms con KM2 y KM3 abiertos; el triángulo pasa a ser la etapa 3.",
+            "Enciende H1 en cualquier etapa menos la 0.",
+            "Comprueba que S0 detiene todo en cualquier etapa."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-10",
+            "objetivos_en_vivo": [
+              {
+                "id": "estrella",
+                "text": "Pulsa S1: arranca en estrella (KM1 y KM2)",
+                "extra": false
+              },
+              {
+                "id": "triangulo",
+                "text": "A los 3 s pasa a triángulo (KM1 y KM3)",
+                "extra": false
+              },
+              {
+                "id": "piloto",
+                "text": "El piloto H1 encendido en marcha",
+                "extra": false
+              },
+              {
+                "id": "parada",
+                "text": "Pulsa S0: abren los tres contactores",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-11",
+          "numero": 11,
+          "titulo": "Bloque de función propio: un motor",
+          "ruta": "extras/Curso_IEC_61131/3.Secuencias/11.Bloque_de_funcion_propio",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A escribir un FUNCTION_BLOCK con entradas (VAR_INPUT), salidas (VAR_OUTPUT) y datos internos (VAR).",
+            "A declarar una instancia por equipo y a llamarla desde ST, Ladder y FBD.",
+            "Que cada instancia guarda sus propios datos: detener una bomba no toca a la otra."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "`BOMBA1(MARCHA := S1, PARADA := S2);` llama al bloque con los pulsadores de la bomba 1, y `BOMBA1.Q` lee su salida. En Ladder, la primera entrada (MARCHA) y la primera salida (Q) del bloque van en el riel: el contacto S1 alimenta MARCHA y Q enciende la bobina KM1; PARADA se conecta aparte, con S2."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, marcha bomba 1",
+                "%IX0.1 · S2, parada bomba 1 (NC)",
+                "%IX0.2 · S3, marcha bomba 2",
+                "%IX0.3 · S4, parada bomba 2 (NC)",
+                "%QX0.0 · KM1, bomba 1",
+                "%QX0.1 · KM2, bomba 2",
+                "%QX0.2 · H1, bombeando"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: arranca la bomba 1. **S2** la detiene.",
+                "Abre `pous/function-blocks/MOTOR.st` en el panel del código para ver el bloque.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "La bomba 2 (Q0.1) con otra instancia del bloque MOTOR (S3 marcha, S4 parada) y la lámpara H1 (Q0.2) encendida con cualquier bomba en marcha.",
+            "Ejecuta el ejemplo: S1 arranca la bomba 1 y S2 la detiene; mira el bloque MOTOR en pous/function-blocks.",
+            "Declara BOMBA2 : MOTOR y llámala con S3 y S4; su salida Q a KM2.",
+            "Enciende H1 con BOMBA1.Q OR BOMBA2.Q.",
+            "Arranca las dos y detenlas por separado: cada instancia es independiente."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-11",
+            "objetivos_en_vivo": [
+              {
+                "id": "b2",
+                "text": "La bomba 2 (Q0.1) arranca con S3, con su propia instancia de MOTOR",
+                "extra": false
+              },
+              {
+                "id": "h1_b1",
+                "text": "H1 (Q0.2) encendida con la bomba 1 en marcha",
+                "extra": false
+              },
+              {
+                "id": "h1_b2",
+                "text": "H1 sigue encendida con solo la bomba 2 en marcha",
+                "extra": false
+              },
+              {
+                "id": "h1_off",
+                "text": "H1 se apaga con las dos bombas detenidas",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-12",
+          "numero": 12,
+          "titulo": "Proyecto: un portón automático",
+          "ruta": "extras/Curso_IEC_61131/3.Secuencias/12.Proyecto_porton_automatico",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A ordenar una máquina real en etapas antes de escribir el programa.",
+            "A escribir la seguridad (parada, obstáculo) como transiciones más.",
+            "A garantizar que dos salidas opuestas nunca estén juntas: cada una sale de una etapa distinta."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El programa es el de la lección 10 con otras etapas. La parada va después del CASE para que mande sobre cualquier transición. En la práctica falta una transición: **CERRANDO → ABRIENDO con B3**, la barrera. Es una línea más en el CASE (un ELSIF), un peldaño más en Ladder o un SEL más en FBD."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, abrir",
+                "%IX0.1 · S2, cerrar",
+                "%IX0.2 · S0, parada NC",
+                "%IX0.3 · B1, abierto",
+                "%IX0.4 · B2, cerrado",
+                "%IX0.5 · B3, barrera",
+                "%QX0.0 · KM1, abrir",
+                "%QX0.1 · KM2, cerrar",
+                "%QX0.2 · H1, baliza"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: el portón abre hasta B1.",
+                "Aprieta **S2**: cierra hasta B2. **S0** lo detiene donde esté.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Si la barrera B3 ve un obstáculo mientras el portón cierra, vuelve a abrir; y la baliza H1 (Q0.2) encendida mientras el portón se mueve.",
+            "Ejecuta el ejemplo: S1 abre hasta B1, S2 cierra hasta B2 y S0 lo detiene donde esté.",
+            "En la etapa CERRANDO agrega la transición a ABRIENDO con B3.",
+            "Enciende H1 en cualquier etapa menos la 0.",
+            "Prueba un obstáculo a mitad del cierre: KM2 abre y KM1 cierra, nunca los dos a la vez."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-12",
+            "objetivos_en_vivo": [
+              {
+                "id": "abre",
+                "text": "Pulsa S1: el portón abre (KM1) con la baliza encendida",
+                "extra": false
+              },
+              {
+                "id": "abierto",
+                "text": "Acciona B1 (abierto): el motor para y la baliza se apaga",
+                "extra": false
+              },
+              {
+                "id": "cierra",
+                "text": "Pulsa S2: el portón cierra (KM2)",
+                "extra": false
+              },
+              {
+                "id": "obstaculo",
+                "text": "Corta la fotocelda B3 mientras cierra: para y vuelve a abrir",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "retos": [

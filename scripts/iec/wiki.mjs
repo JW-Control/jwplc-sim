@@ -45,6 +45,14 @@ const cppLink = (bench) => {
   return "/wiki/curso-jwplc-basic/";
 };
 
+// Texto del banco: la lección C++ hermana (con enlace) o el reto de JWPLC Sim.
+const RETOS = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "JWPLC_Aprende", "catalogo.json"), "utf8")).retos;
+const benchText = (bench) => {
+  if (!bench.startsWith("retos/")) return `el mismo de la [lección ${bench.slice(6)} en C++](${cppLink(bench)})`;
+  const r = RETOS.find((x) => x.id === bench.slice(6));
+  return `el del reto «${r?.titulo ?? r?.title ?? bench.slice(6)}» de JWPLC Sim`;
+};
+
 export function lessonUrl(l) {
   return `/wiki/curso-iec-61131/unidad-${unitNum(l.unit)}/${l.id.slice(4)}-${slug(l.title)}/`;
 }
@@ -70,7 +78,7 @@ sidebar:
 
 import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
 
-**Ruta IEC 61131-3** · **Tiempo:** unos 20 minutos · **Banco:** el mismo de la [lección ${l.bench.slice(6)} en C++](${cppLink(l.bench)})
+**Ruta IEC 61131-3** · **Tiempo:** unos 20 minutos · **Banco:** ${benchText(l.bench)}
 
 ${t.intro}
 
@@ -173,6 +181,11 @@ for (const l of LECCIONES) {
 
 // Presentación y temario.
 const NAMES = { 1: "Contactos y lógica", 2: "Tiempo y conteo", 3: "Secuencias", 4: "Comparar y calcular", 5: "Comunicaciones" };
+const PROXIMAS = [
+  [3, "Etapas, CASE en ST, el semáforo, bloques de función propios"],
+  [4, "INT y REAL, comparadores, MOVE, escalado"],
+  [5, "Modbus desde el OpenPLC Editor, variables ubicadas de red, pantalla HMI"],
+];
 let index = `---
 title: Curso IEC 61131-3
 description: Programa el JWPLC Basic con los lenguajes de la norma IEC 61131-3 (ST, Ladder y FBD) en el OpenPLC Editor y pruébalo en JWPLC Sim. Cada lección en los tres lenguajes.
@@ -201,9 +214,7 @@ index += `
 
 | Unidad | Qué se aprende |
 |---|---|
-| 3 · Secuencias | Etapas, CASE en ST, el semáforo, bloques de función propios |
-| 4 · Comparar y calcular | INT y REAL, comparadores, MOVE, escalado |
-| 5 · Comunicaciones | Modbus desde el OpenPLC Editor, variables ubicadas de red, pantalla HMI |
+${PROXIMAS.filter(([u]) => !units.has(u)).map(([u, q]) => `| ${u} · ${NAMES[u]} | ${q} |`).join("\n")}
 
 SFC (diagrama de funciones secuenciales) llega cuando el OpenPLC Editor lo compile para el JWPLC Basic.
 `;

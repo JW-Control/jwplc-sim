@@ -45,7 +45,8 @@ export function stProgram({ name = "main", vars, body }) {
 // Elemento: "A" contacto NA, "!A" contacto NC, "^A" flanco de subida,
 // "vA" flanco de bajada, "=Q" bobina, "!=Q" bobina negada, "S=Q" set,
 // "R=Q" reset, { fb: "TON", inst: "T1", pins: { PT: "T#2s" } } bloque
-// (pins: variables o literales en las entradas y salidas que no son el riel).
+// (pins: variables o literales en las entradas y salidas que no son el riel;
+// en: true lo conecta al riel por EN/ENO, para EQ, MOVE y otros de datos).
 function elementSpec(e) {
   if (typeof e !== "string") return { kind: "block", blockType: e.fb, instanceName: e.inst, pins: Object.entries(e.pins ?? {}).map(([pin, variable]) => ({ pin, variable: String(variable) })) };
   const coil = /^(S|R|!)?=(.+)$/.exec(e);
@@ -54,10 +55,46 @@ function elementSpec(e) {
   return { kind: "contact", variable: c[2], variant: { "!": "negated", "^": "risingEdge", v: "fallingEdge" }[c[1]] ?? "default" };
 }
 
-function resolveBlock(system, type) {
+// Bloques de función propios del proyecto (ver userBlock): se buscan antes
+// que los de la librería.
+let USER = [];
+export function setUserBlocks(list) {
+  USER = list ?? [];
+}
+
+/** Bloque de función propio en ST: { name, doc, inputs, outputs, locals, body }
+ *  (inputs/outputs/locals: [{ name, type, doc }]). Devuelve el texto del .st. */
+export function functionBlockText(fb) {
+  const sec = (kw, vs) => (vs?.length ? `  ${kw}\n${vs.map((v) => `    ${v.name} : ${v.type}${v.init !== undefined ? ` := ${v.init}` : ""};${v.doc ? ` (* ${v.doc} *)` : ""}`).join("\n")}\n  END_VAR\n` : "");
+  const body = fb.body.replace(/^\n+|\s+$/g, "").split("\n").map((l) => (l ? `  ${l}` : l)).join("\n");
+  return `FUNCTION_BLOCK ${fb.name}\n${sec("VAR_INPUT", fb.inputs)}${sec("VAR_OUTPUT", fb.outputs)}${sec("VAR", fb.locals)}\n${body}\n\nEND_FUNCTION_BLOCK\n`;
+}
+
+function userVariant(fb) {
+  const t = (type) => ({ definition: /^(BOOL|INT|DINT|UINT|REAL|TIME|WORD|BYTE|STRING)$/.test(type) ? "base-type" : "derived", value: type });
+  return {
+    name: fb.name,
+    type: "function-block",
+    variables: [...fb.inputs.map((v) => ({ name: v.name, class: "input", type: t(v.type) })), ...fb.outputs.map((v) => ({ name: v.name, class: "output", type: t(v.type) }))],
+    documentation: fb.doc ?? "",
+    extensible: false,
+  };
+}
+
+function resolveBlock(system, type, en = false) {
+  const own = USER.find((b) => b.name.toLowerCase() === type.toLowerCase());
+  if (own) return userVariant(own);
   const pou = system.flatMap((l) => l.pous).find((p) => p.name.toLowerCase() === type.toLowerCase());
   if (!pou) return undefined;
-  return { name: pou.name, type: pou.type, variables: pou.variables.map((v) => ({ name: v.name, class: v.class, type: v.type })), documentation: pou.documentation, extensible: pou.extensible ?? false };
+  const variables = pou.variables.map((v) => ({ name: v.name, class: v.class, type: v.type }));
+  // en: con EN/ENO (la casilla «Execution control» del editor). El editor la
+  // fuerza cuando la primera entrada no admite BOOL; para EQ o MOVE, que sí
+  // la admiten, se marca la primera entrada como ANY_NUM.
+  if (en) {
+    const i = variables.findIndex((v) => v.class === "input");
+    if (i >= 0 && /^ANY(_ELEMENTARY)?$/.test(variables[i].type?.value ?? "")) variables[i] = { ...variables[i], type: { definition: "generic-type", value: "ANY_NUM" } };
+  }
+  return { name: pou.name, type: pou.type, variables, documentation: pou.documentation, extensible: pou.extensible ?? false };
 }
 
 /**
@@ -68,7 +105,8 @@ function resolveBlock(system, type) {
 function buildRung(g, i, rung, variables) {
   const rungId = `rung_main_${i}`;
   const spec = { comment: rung.comment ?? "", elements: rung.elements.map(elementSpec) };
-  const built = g.buildRungFromSpec({ rungId, spec, variables, resolveBlock: (t) => resolveBlock(g.system, t) });
+  const en = new Set(rung.elements.filter((e) => typeof e !== "string" && e.en).map((e) => e.fb.toLowerCase()));
+  const built = g.buildRungFromSpec({ rungId, spec, variables, resolveBlock: (t) => resolveBlock(g.system, t, en.has(t.toLowerCase())) });
   if (!built.ok) throw new Error(`peldaño ${i + 1}: ${built.errors.join("; ")}`);
   let r = built.rung;
   const spine = r.nodes.filter((n) => ["contact", "coil", "block"].includes(n.type)).map((n) => n.id);
@@ -77,8 +115,11 @@ function buildRung(g, i, rung, variables) {
     if (!v) throw new Error(`peldaño ${i + 1}: variable ${name} no declarada`);
     return v;
   };
+  const heads = {};
   for (const br of rung.branches ?? []) {
-    let anchor = spine[br.at];
+    // Una segunda rama sobre el mismo elemento cuelga de la anterior, como
+    // en el editor (marcador de abajo del contacto de la rama).
+    let anchor = heads[br.at] ?? spine[br.at];
     let first = true;
     for (const e of br.elements) {
       const s = elementSpec(e);
@@ -90,6 +131,7 @@ function buildRung(g, i, rung, variables) {
       const id = res.newNode.id;
       const nodesOut = g.removePlaceholderElements(res.nodes).map((n) => (n.id === id ? { ...n, data: { ...n.data, variant: s.variant, variable: varOf(s.variable) } } : n));
       r = { ...r, nodes: nodesOut, edges: res.edges };
+      if (first) heads[br.at] = id;
       anchor = id;
       first = false;
     }
@@ -244,7 +286,7 @@ const PROJECT = (name) => ({
 const DEVICE = { deviceBoard: "JWPLC BASIC [2.0.0]", communicationPort: "", runtimeIpAddress: "", vendorScreenData: {}, vendorScreenDataByBoard: {}, selectedPlatformOptions: {} };
 
 /** Escribe la carpeta del proyecto (la borra antes). lang: st | ld | fbd. */
-export function writeProject(dir, { name, lang, program }) {
+export function writeProject(dir, { name, lang, program, blocks = [] }) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, "pous", "programs"), { recursive: true });
   mkdirSync(join(dir, "devices"), { recursive: true });
@@ -252,4 +294,6 @@ export function writeProject(dir, { name, lang, program }) {
   writeFileSync(join(dir, "devices", "configuration.json"), JSON.stringify(DEVICE, null, 2) + "\n");
   writeFileSync(join(dir, "devices", "pin-mapping.json"), "{}\n");
   writeFileSync(join(dir, "pous", "programs", `main.${lang}`), program);
+  if (blocks.length) mkdirSync(join(dir, "pous", "function-blocks"), { recursive: true });
+  for (const fb of blocks) writeFileSync(join(dir, "pous", "function-blocks", `${fb.name}.st`), functionBlockText(fb));
 }

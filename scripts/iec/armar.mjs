@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { LECCIONES } from "./lecciones.mjs";
-import { fbdProgram, ldProgram, stProgram, writeProject } from "./proyecto.mjs";
+import { fbdProgram, ldProgram, setUserBlocks, stProgram, writeProject } from "./proyecto.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
 const APRENDE = join(ROOT, "JWPLC_Aprende");
@@ -22,19 +22,27 @@ const LANGS = { ST: "st", LD: "ld", FBD: "fbd" };
 
 const only = process.argv.slice(2);
 
-async function program(lang, vars, p) {
+// Banco o rúbrica: «curso-11» (práctica) o «retos/06-estrella-triangulo».
+const extra = (x, file) => (x.includes("/") ? join(APRENDE, "extras", x, `${x.split("/").pop()}${file}`) : join(PRACTICAS, x, `${x}${file}`));
+
+async function program(lang, all, p) {
+  // Una variable con langs solo se declara en esos lenguajes.
+  const vars = all.filter((v) => !v.langs || v.langs.includes(lang));
   if (lang === "st") return stProgram({ vars, body: p.st });
   if (lang === "ld") return ldProgram({ vars, rungs: p.ld.rungs });
   return fbdProgram({ vars, networks: p.fbd.networks });
 }
 
 async function writeSet(dir, l, p) {
-  for (const [L, lang] of Object.entries(LANGS)) writeProject(join(dir, L), { name: `${l.project}_${lang}`, lang, program: await program(lang, l.vars, p) });
+  // Bloques de función propios (en ST): los del programa o, si no, los de la lección.
+  const blocks = p.blocks ?? l.blocks ?? [];
+  setUserBlocks(blocks);
+  for (const [L, lang] of Object.entries(LANGS)) writeProject(join(dir, L), { name: `${l.project}_${lang}`, lang, program: await program(lang, l.vars, p), blocks });
 }
 
 function rubricOf(l) {
   if (!l.rubricFrom) return { $schema: "../../../../schema/jwsim-rubric-1.json", id: l.id, ...l.rubric };
-  const r = JSON.parse(readFileSync(join(PRACTICAS, l.rubricFrom, "rubrica.json"), "utf8"));
+  const r = JSON.parse(readFileSync(extra(l.rubricFrom, "").replace(/[^/\\]+$/, "rubrica.json"), "utf8"));
   r.id = l.id;
   for (const g of r.goals ?? []) if (l.hints?.[g.id]) g.hint = l.hints[g.id];
   return r;
@@ -54,7 +62,7 @@ for (const l of LECCIONES) {
   mkdirSync(pdir, { recursive: true });
   await writeSet(join(pdir, "iniciar"), l, l.example);
   await writeSet(join(pdir, "solucion"), l, l.solution);
-  const bench = JSON.parse(readFileSync(join(PRACTICAS, l.bench, `${l.bench}.jwsim`), "utf8"));
+  const bench = JSON.parse(readFileSync(extra(l.bench, ".jwsim"), "utf8"));
   const jw = {
     ...bench,
     name: `IEC · Lección ${num} · ${l.title}`,
