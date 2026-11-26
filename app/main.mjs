@@ -1779,6 +1779,8 @@ app.whenReady().then(() => {
     minWidth: 960,
     minHeight: 600,
     title: "JWPLC Sim",
+    // Sin la barra de menús a la vista: los atajos siguen funcionando y Alt la muestra.
+    autoHideMenuBar: true,
     // Ícono de la ventana y de la barra de tareas (en Windows empaquetado lo da el .exe).
     icon: join(import.meta.dirname, "icon", process.platform === "win32" ? "icon.ico" : "icon.png"),
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa",

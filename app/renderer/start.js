@@ -166,7 +166,7 @@
     },
     iec: {
       eyebrow: "Ruta PLC · IEC 61131-3",
-      title: "Habla PLC",
+      title: "Como en la industria",
       lead: "<b>Ladder, ST y FBD</b>: los lenguajes IEC 61131-3 de cualquier PLC industrial, en el OpenPLC Editor.",
     },
   };
@@ -517,7 +517,7 @@
       box.innerHTML =
         `<div class="ini">${st.view === "home" ? ribbon() : ""}<div class="ini-body">${body}</div>` +
         `<footer class="start-foot"><label><input type="checkbox" id="start-show" ${store.get(SHOW_KEY, true) ? "checked" : ""}/> Mostrar al iniciar</label>` +
-        `<span class="muted small">Vuelva aquí con «Inicio» en la barra de arriba o Archivo › Inicio.</span></footer></div>`;
+        `<span class="muted small">Vuelve aquí con el botón «Inicio» de la barra de arriba.</span></footer></div>`;
     } else {
       box.innerHTML =
         `<div class="start-card">` +

@@ -4830,11 +4830,10 @@ body.dock-collapsed #btn-dock-toggle {
 }
 .ini-hero h1 {
   margin: 0;
-  font-size: clamp(42px, 5.4vw, 76px);
-  line-height: 0.95;
-  font-weight: 900;
+  font-size: clamp(28px, 2.6vw, 38px);
+  line-height: 1.1;
+  font-weight: 800;
   letter-spacing: -0.01em;
-  text-transform: uppercase;
   color: var(--text-strong);
 }
 .ini-lead {
