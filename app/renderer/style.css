@@ -6764,3 +6764,124 @@ body:not([data-tab="program"]) .prog-rail-right { display: none; }
   flex: none;
   object-fit: contain;
 }
+
+/* Al abrir, mientras se decide si sale Inicio, no se pinta el editor vacío. */
+html.booting body > :not(#start) {
+  visibility: hidden !important;
+}
+
+/* Cinta de Inicio: grupos con separador visible (también en oscuro) y su
+   nombre centrado abajo, como en una cinta de Office. */
+.ini-rgroup {
+  flex-direction: column-reverse;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0 12px;
+  border-right: 1px solid color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.ini-rgroup:first-child {
+  padding-left: 2px;
+}
+.ini-rgroup:nth-last-child(2) {
+  border-right: 0;
+}
+.ini-rgroup > small {
+  text-align: center;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--muted) 85%, var(--text));
+}
+.ini-brand div {
+  white-space: nowrap;
+}
+html.booting body {
+  background: var(--bg) url("../icon/icon.svg") center / 96px no-repeat;
+}
+
+/* Media pantalla (≤ 1280 px, p. ej. 960 px en un monitor Full HD): la Teoría
+   y el Reto de Programa flotan sobre el código y la placa (app.js, NARROW). */
+@media (max-width: 1280px) {
+  .code-pane {
+    position: relative;
+  }
+  .sim-pane {
+    position: relative;
+  }
+  .code-pane > .guide-pane,
+  .sim-pane > .prog-side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(360px, calc(100% - 90px));
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+    animation: ini-fade 0.2s ease-out both;
+  }
+  .code-pane > .guide-pane {
+    left: 39px;
+    width: min(var(--guide-w, 340px), calc(100% - 90px));
+  }
+  .sim-pane > .prog-side {
+    right: 39px;
+    width: min(360px, calc(100% - 60px));
+  }
+  .guide-grip {
+    display: none;
+  }
+  /* Barra superior: menos texto para que todo entre. */
+  .brand > span:last-child,
+  .theme-btn .theme-lbl,
+  .tb-lbl,
+  .tb-sep {
+    display: none;
+  }
+  .com-status #com-label {
+    display: none;
+  }
+  /* Esquema: la teoría (izquierda) y el panel derecho flotan sobre el
+     lienzo en lugar de quitarle columnas; se abren con su pestaña. */
+  .scene-main {
+    --left-col: 0px;
+    --left-spl: 0px;
+    --side-col: 0px;
+    --side-spl: 0px;
+  }
+  .scene-main .scene-left,
+  .scene-main .scene-side {
+    position: absolute;
+    grid-column: auto;
+    grid-row: auto;
+    top: 0;
+    bottom: 0;
+    z-index: 30;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+    animation: ini-fade 0.2s ease-out both;
+  }
+  .scene-main .scene-left {
+    left: 36px;
+    width: min(380px, calc(100% - 110px));
+  }
+  .scene-main .scene-side {
+    right: 36px;
+    width: min(360px, calc(100% - 110px));
+  }
+  #scene-left-splitter,
+  #scene-side-splitter {
+    display: none;
+  }
+  /* Inicio y Ruta: solo el logo a la derecha; la franja de la ruta sin
+     insignias ni contadores, que en angosto la volvían una columna alta. */
+  .ini-brand div,
+  .ini-strip .ini-badges,
+  .ini-strip .ini-kv {
+    display: none;
+  }
+  .ini-strip {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .ini-tiers .ini-node b {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}

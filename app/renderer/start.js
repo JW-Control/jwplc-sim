@@ -778,8 +778,12 @@
     close,
     /** app.js al terminar de arrancar: la pantalla Proyectos, salvo si vino un proyecto del editor. */
     async onReady({ openedFromEditor }) {
-      if (openedFromEditor || !store.get(SHOW_KEY, true)) return;
-      if (await api.startScreen()) open("home");
+      try {
+        if (!openedFromEditor && store.get(SHOW_KEY, true) && (await api.startScreen())) open("home");
+      } finally {
+        // Ya se decidió qué se ve primero: se muestra la ventana (theme-init.js).
+        document.documentElement.classList.remove("booting");
+      }
     },
     state: () => ({ ...st, hidden: el().hidden }),
   };

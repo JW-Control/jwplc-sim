@@ -1958,7 +1958,8 @@ async function showExercise(file) {
   if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
   mandosSig = "";
   placeReto();
-  if (info) window.JwsimShowReto?.();
+  // En media pantalla el reto no se abre solo: taparía la placa.
+  if (info && !NARROW.matches) window.JwsimShowReto?.();
   // Lecciones y retos se hacen en Programa: teoría a la izquierda, reto a la derecha.
   if (info) window.JwsimTabs?.select("program");
   if (!info && document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
@@ -2049,9 +2050,14 @@ function renderTheory(l, graded = !!l) {
   if (prev?.id !== l.id && l.card !== false) openLessonCard(l, graded);
 }
 window.showLessonGuide = (l) => renderTheory(l, false);
+// Media pantalla (≤ 1280 px): la Teoría y el Reto de Programa se abren
+// encima del código y la placa en lugar de quitarles ancho; empiezan
+// cerrados, se abren con su botón y uno cierra al otro.
+const NARROW = window.matchMedia("(max-width: 1280px)");
+const narrowOpen = { guide: false, reto: false };
 function showGuide() {
   const has = !!state.guide;
-  const folded = storeGet(GUIDE_FOLD_KEY) === "1";
+  const folded = NARROW.matches ? !narrowOpen.guide : storeGet(GUIDE_FOLD_KEY) === "1";
   $("guide-pane").hidden = !has || folded;
   $("prog-rail-left").hidden = !has;
   $("guide-open").classList.toggle("active", has && !folded);
@@ -2244,13 +2250,23 @@ function wireGuide() {
   const saved = Number(storeGet(GUIDE_W_KEY));
   if (saved > 0) pane.style.setProperty("--guide-w", `${saved}px`);
   $("guide-fold").addEventListener("click", () => {
-    storeSet(GUIDE_FOLD_KEY, "1");
+    if (NARROW.matches) narrowOpen.guide = false;
+    else storeSet(GUIDE_FOLD_KEY, "1");
     showGuide();
   });
   // Botón «Teoría» de la barra izquierda de Programa: abre y pliega la clase.
   $("guide-open").addEventListener("click", () => {
-    storeSet(GUIDE_FOLD_KEY, $("guide-pane").hidden ? null : "1");
+    const open = $("guide-pane").hidden;
+    if (NARROW.matches) {
+      narrowOpen.guide = open;
+      if (open) narrowOpen.reto = false;
+      placeReto();
+    } else storeSet(GUIDE_FOLD_KEY, open ? null : "1");
     showGuide();
+  });
+  NARROW.addEventListener("change", () => {
+    showGuide();
+    placeReto();
   });
   const grip = $("guide-grip");
   grip.addEventListener("pointerdown", (e) => {
@@ -2318,7 +2334,7 @@ function placeReto() {
   const dest = prog ? $("prog-reto-slot") : document.querySelector(".reto-pane");
   if (body.parentElement !== dest) dest.appendChild(body);
   const has = !!state.exercise;
-  const open = has && storeGet(PROG_RETO_KEY) !== "0";
+  const open = has && (NARROW.matches ? narrowOpen.reto : storeGet(PROG_RETO_KEY) !== "0");
   $("prog-rail-right").hidden = !has;
   $("prog-side").hidden = !open;
   const t = $("prog-tab-reto");
@@ -2326,7 +2342,11 @@ function placeReto() {
   t.setAttribute("aria-pressed", String(open));
 }
 function setProgReto(open) {
-  storeSet(PROG_RETO_KEY, open ? null : "0");
+  if (NARROW.matches) {
+    narrowOpen.reto = open;
+    if (open) narrowOpen.guide = false;
+    showGuide();
+  } else storeSet(PROG_RETO_KEY, open ? null : "0");
   placeReto();
   window.dispatchEvent(new Event("resize"));
 }
@@ -2805,6 +2825,8 @@ function setLeftPane(pane, save = true) {
   }
   for (const p of document.querySelectorAll(".left-pane")) p.hidden = p.dataset.leftPane !== open;
   main.dataset.leftPane = open ?? "";
+  // Media pantalla: los paneles flotan sobre el lienzo, solo uno a la vez.
+  if (open && NARROW.matches && !main.classList.contains("side-collapsed")) setScenePane(null, false);
   if (save) storeSet(LEFT_KEY, pane || "none");
   clampSideWidths();
   window.JwsimStateDiag?.setVisible?.(open === "states");
@@ -2833,13 +2855,14 @@ function setScenePane(pane, save = true) {
   }
   for (const p of document.querySelectorAll(".side-pane")) p.hidden = p.dataset.pane !== pane;
   main.dataset.pane = pane ?? "";
+  if (pane && NARROW.matches && !main.classList.contains("left-collapsed")) setLeftPane(null, false);
   if (save) storeSet(SIDE_KEY, pane || "none");
   clampSideWidths();
   if (pane === "add") $("scene-add-filter").focus();
 }
 function wireSceneSide() {
   const saved = storeGet(SIDE_KEY);
-  setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  setScenePane(NARROW.matches || saved === "none" ? null : saved === "add" ? "add" : "props", false);
   setLeftAvailability(false);
   wireSceneSplitter("scene-left-splitter", "left");
   wireSceneSplitter("scene-side-splitter", "right");
@@ -2873,7 +2896,7 @@ function wireSceneSide() {
     setTheoryAvailable(on) {
       leftAvail.teoria = !!on;
       $("scene-tab-teoria").hidden = !on;
-      if (on) setLeftPane("teoria", false);
+      if (on && !NARROW.matches) setLeftPane("teoria", false);
       else if (document.querySelector(".scene-main").dataset.leftPane === "teoria") setLeftPane(null, false);
     },
     isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
