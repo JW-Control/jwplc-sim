@@ -101,6 +101,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   onFileChanged: on("fs:changed"),
   onProjectChanged: on("project:changed"),
   onBuildLog: on("build:log"),
+  onBuildWarmup: on("build:warmup"),
   onMessage: on("sim:message"),
   onDisplay: on("sim:display"),
   onStderr: on("sim:stderr"),

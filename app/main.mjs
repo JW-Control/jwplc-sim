@@ -54,6 +54,9 @@ if (app.isPackaged && process.platform === "win32") {
 // Instalada, la carpeta de la app puede ser de solo lectura (Program Files,
 // instalación para todos los usuarios): la caché de compilación va a los datos.
 if (app.isPackaged) process.env.JWSIM_CACHE_DIR ??= join(app.getPath("userData"), "cache");
+// Caché de compilación que trae el instalador (scripts/cache-seed.mjs): los
+// objetos del package y del motor ya compilados, de solo lectura.
+if (app.isPackaged && existsSync(join(process.resourcesPath, "cache-seed"))) process.env.JWSIM_CACHE_SEED ??= join(process.resourcesPath, "cache-seed");
 
 // Archivos del sketch que van al compilador: las pestañas .ino y los fuentes
 // de la raíz (cli/lib/build.mjs, como arduino-cli).
@@ -884,11 +887,11 @@ ipcMain.handle("watch:set", (_e, dir) => {
 let builder = null;
 let buildSeq = 0;
 const builds = new Map();
-function buildInWorker(dir, outDir) {
+function buildInWorker(dir, outDir, opts = {}) {
   if (!builder) {
     builder = new Worker(new URL("./lib/build-worker.mjs", import.meta.url));
     builder.on("message", ({ id, log, done }) => {
-      if (log !== undefined) forward("build:log", log);
+      if (log !== undefined && !quietBuilds.has(id)) forward("build:log", log);
       if (done) {
         builds.get(id)?.(done);
         builds.delete(id);
@@ -901,18 +904,106 @@ function buildInWorker(dir, outDir) {
     });
   }
   const id = ++buildSeq;
+  if (opts.quiet) quietBuilds.add(id);
   return new Promise((resolveBuild) => {
-    builds.set(id, resolveBuild);
-    builder.postMessage({ id, dir, outDir });
+    builds.set(id, (done) => {
+      quietBuilds.delete(id);
+      resolveBuild(done);
+    });
+    builder.postMessage({ id, dir, outDir, options: opts.options });
+  });
+}
+const quietBuilds = new Set();
+
+// Precalentado al abrir la app: compila el sketch mínimo en segundo plano.
+// Con la caché del instalador solo arma el header precompilado (unos
+// segundos); sin ella (o tras cambiar el package) compila todo el package, que
+// es lo que igual tendría que hacer el primer Ejecutar. Las compilaciones del
+// usuario esperan a que termine, para no escribir los mismos objetos a la vez.
+// JWSIM_WARMUP=0 lo apaga (pruebas que miden la primera compilación).
+let warmup = null;
+let warmupDone = false;
+function warmCompiler() {
+  if (process.env.JWSIM_WARMUP === "0" || warmup) return;
+  const dir = join(import.meta.dirname, "..", "scripts", "cache-seed", "semilla");
+  if (!existsSync(dir)) return;
+  const t0 = Date.now();
+  forward("build:warmup", { state: "start" });
+  warmup = buildInWorker(dir, join(app.getPath("userData"), "build", "_semilla"), { quiet: true, options: { seedDiscovery: true } }).then((r) => {
+    warmupDone = true;
+    forward("build:warmup", { state: "done", ok: r.ok, ms: Date.now() - t0 });
+    return r;
+  });
+}
+
+// Windows Defender revisa cada .o que escribe GCC: en la primera compilación
+// eso puede duplicar el tiempo. Tras una compilación lenta (o desde
+// Herramientas) se ofrece excluir las carpetas de caché y de compilación de la
+// app. Agregar la exclusión pide permiso de administrador (UAC); sin él no
+// cambia nada.
+function readPref(key) {
+  try {
+    return JSON.parse(readFileSync(themeCfgFile(), "utf8"))?.[key];
+  } catch {
+    return undefined;
+  }
+}
+function writePref(key, value) {
+  try {
+    const cur = existsSync(themeCfgFile()) ? JSON.parse(readFileSync(themeCfgFile(), "utf8")) : {};
+    writeFileSync(themeCfgFile(), `${JSON.stringify({ ...cur, [key]: value }, null, 2)}\n`);
+  } catch {}
+}
+const AV_SLOW_MS = 20000;
+async function offerAvExclusion(auto) {
+  if (process.platform !== "win32" || !win) return;
+  if (auto && readPref("antivirusAviso")) return;
+  const dirs = [process.env.JWSIM_CACHE_DIR ?? join(app.getPath("userData"), "cache"), join(app.getPath("userData"), "build")];
+  const { response } = await dialog.showMessageBox(win, {
+    type: "info",
+    title: "Acelerar la compilación",
+    message: auto ? "La compilación tardó más de lo normal" : "Excluir las carpetas del compilador del antivirus",
+    detail:
+      "Windows Defender revisa cada archivo que crea el compilador, y eso puede duplicar el tiempo de la primera compilación.\n\n" +
+      "Puede excluir solo estas carpetas de JWPLC Sim (Windows pedirá permiso de administrador):\n" +
+      dirs.map((d) => `  ${d}`).join("\n") +
+      "\n\nSi usa otro antivirus, agregue las mismas carpetas en sus exclusiones.",
+    buttons: ["Excluir carpetas", "Ahora no", "No volver a preguntar"],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (response === 2) writePref("antivirusAviso", "no");
+  if (response !== 0) return;
+  for (const d of dirs) mkdirSync(d, { recursive: true });
+  // Start-Process -Verb RunAs abre la ventana de UAC. El comando interior va
+  // dentro de comillas simples: sus comillas se duplican (y las de una ruta,
+  // que ya van duplicadas, otra vez).
+  const list = dirs.map((d) => `''${d.replaceAll("'", "''''")}''`).join(",");
+  const inner = `Add-MpPreference -ExclusionPath ${list}`;
+  const ps = `try { Start-Process powershell.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','${inner}'; exit 0 } catch { exit 1 }`;
+  const p = spawn("powershell.exe", ["-NoProfile", "-Command", ps], { windowsHide: true });
+  p.on("exit", (code) => {
+    if (code === 0) writePref("antivirusAviso", "hecho");
+    dialog.showMessageBox(win, {
+      type: code === 0 ? "info" : "warning",
+      title: "Acelerar la compilación",
+      message: code === 0 ? "Listo: las carpetas quedaron excluidas de Windows Defender." : "No se agregó la exclusión (se canceló el permiso de administrador).",
+      noLink: true,
+    });
   });
 }
 
 ipcMain.handle("sketch:build", async (_e, dir) => {
   await stopRunner();
+  if (warmup && !warmupDone) forward("build:log", "[build] esperando a que termine la preparación del compilador (solo la primera vez)…");
+  await warmup;
   const outDir = join(app.getPath("userData"), "build", basename(dir));
   const t0 = Date.now();
   const r = await buildInWorker(dir, outDir);
-  return { ...r, ms: Date.now() - t0 };
+  const ms = Date.now() - t0;
+  if (r.ok && ms > AV_SLOW_MS && !readPref("antivirusAviso")) setTimeout(() => offerAvExclusion(true), 1500);
+  return { ...r, ms };
 });
 
 // Memoria no volátil de la placa (FRAM, NVS, SD): por proyecto (junto al
@@ -1667,6 +1758,7 @@ function buildMenu() {
           { label: "Dispositivos propios…", click: send("devices") },
           { label: "Nuevo dispositivo…", click: send("newDevice") },
           { label: "Editor de componentes…", click: send("componentEditor") },
+          ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
         ],
       },
       {
@@ -1793,6 +1885,7 @@ app.whenReady().then(() => {
     },
   });
   win.loadFile(join(import.meta.dirname, "renderer", "index.html"));
+  win.webContents.once("did-finish-load", () => setTimeout(warmCompiler, 1500));
 });
 
 app.on("window-all-closed", async () => {

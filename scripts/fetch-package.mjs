@@ -53,7 +53,13 @@ function git(args, cwd) {
 }
 
 function revParse(dir, rev) {
+  // Solo el repositorio del propio package: si su .git falta o está
+  // incompleto (la copia que lleva la app armada), git sube hasta un
+  // repositorio que lo contenga y daría el commit de otro proyecto.
+  if (!existsSync(join(dir, ".git"))) return null;
   try {
+    const norm = (d) => (process.platform === "win32" ? resolve(d).toLowerCase() : resolve(d));
+    if (norm(git(["rev-parse", "--show-toplevel"], dir)) !== norm(dir)) return null;
     return git(["rev-parse", `${rev}^{commit}`], dir);
   } catch {
     return null;

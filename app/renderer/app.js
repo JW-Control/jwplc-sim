@@ -3103,6 +3103,17 @@ function wireUi() {
     storeSet(TS_KEY, state.serialTs ? "1" : "0");
   });
 
+  // Precalentado del compilador al abrir la app (app/main.mjs warmCompiler).
+  api.onBuildWarmup?.(({ state: st, ok }) => {
+    const sb = $("sb-build");
+    if (st === "start") {
+      sb.textContent = "Preparando el compilador…";
+      sb.dataset.warmup = "1";
+    } else if (sb.dataset.warmup) {
+      delete sb.dataset.warmup;
+      sb.textContent = ok ? "Compilador listo" : "";
+    }
+  });
   api.onBuildLog((line) => {
     const log = $("build-log");
     log.textContent += `${line}\n`;

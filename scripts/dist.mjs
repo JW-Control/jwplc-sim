@@ -15,8 +15,9 @@
 // incluido: la app compila sin red.
 //
 // El instalador es por usuario (en %LOCALAPPDATA%\Programs, sin pedir
-// administrador): la app escribe su caché de compilación junto a sus
-// archivos. El portable es la misma carpeta en un .zip; al no tener el
+// administrador). Trae ya compilados el package y el motor del simulador
+// (resources/cache-seed, scripts/cache-seed.mjs); la caché que la app escribe
+// va a sus datos. El portable es la misma carpeta en un .zip; al no tener el
 // desinstalador al lado, la app guarda sus datos en "datos\" dentro de la
 // carpeta (app/main.mjs).
 import { spawnSync } from "node:child_process";
@@ -79,6 +80,16 @@ if (win) node([join("scripts", "fetch-com0com.mjs")]);
 // no puede corregirlos al compilar.
 if (win && !ensurePchFriendlyCompiler(bundledToolchainBin())) throw new Error("no se pudo preparar cc1/cc1plus del toolchain para el PCH");
 
+// Caché de compilación del package y del motor (scripts/cache-seed.mjs), con
+// el mismo toolchain que lleva el instalador: la app instalada solo compila el
+// sketch en su primera compilación. JWSIM_DIST_SIN_CACHE=1 la omite.
+const seedDir = join(ROOT, "build", "cache-seed");
+if (process.env.JWSIM_DIST_SIN_CACHE !== "1") {
+  log("caché de compilación para el instalador…");
+  node([join("scripts", "cache-seed.mjs"), "--out", seedDir]);
+}
+const withSeed = existsSync(join(seedDir, "seed.json")) && process.env.JWSIM_DIST_SIN_CACHE !== "1";
+
 // 2. electron-builder (dependencia de desarrollo de app/).
 const { build, Platform } = createRequire(join(APP, "package.json"))("electron-builder");
 const version = JSON.parse(readFileSync(join(APP, "package.json"), "utf8")).version;
@@ -110,6 +121,7 @@ const config = {
       ? [{ from: join(ROOT, editorDir, "deps", "node_modules"), to: `${editorDir}/deps/node_modules`, filter: ["**/*", "!esbuild/**", "!@esbuild/**"] }]
       : []),
     ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
+    ...(withSeed ? [{ from: seedDir, to: "cache-seed", filter: ["**/*"] }] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
     // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,
     // importado como three/addons/ en renderer/index.html). Sin esto la vista
