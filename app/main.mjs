@@ -1624,6 +1624,22 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
   }
 });
 
+// Mi JWPLC: la prueba de recepción y la documentación del equipo. La ficha
+// técnica va en JWPLC_Aprende/extras/equipo/ (sin red); si no está, se abre la
+// página del producto.
+const EQUIPO_DIR = join(import.meta.dirname, "..", "JWPLC_Aprende", "extras", "equipo");
+const EQUIPO_PDF = join(EQUIPO_DIR, "JWPLC_Basic_ficha_tecnica.pdf");
+const EQUIPO_WEB = "https://jw-control.com/productos/JWPLC-Basic/";
+ipcMain.handle("equipo:info", () => ({ pruebaDir: join(EQUIPO_DIR, "prueba_recepcion"), pdf: existsSync(EQUIPO_PDF) }));
+ipcMain.handle("equipo:open", async (_e, kind) => {
+  if (kind === "pdf" && existsSync(EQUIPO_PDF)) {
+    const err = await shell.openPath(EQUIPO_PDF);
+    return err ? { error: err } : { ok: true };
+  }
+  await shell.openExternal(EQUIPO_WEB);
+  return { ok: true, web: true };
+});
+
 ipcMain.handle("sim:stop", async () => {
   await stopRunner();
   return true;
@@ -1871,6 +1887,7 @@ function buildMenu() {
           },
           { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
+          { label: "Mi JWPLC (primer arranque y bornes)…", click: send("miJwplc") },
           { type: "separator" },
           { role: "reload", label: "Recargar" },
           { role: "toggleDevTools", label: "Herramientas de desarrollo" },

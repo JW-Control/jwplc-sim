@@ -69,3 +69,18 @@ instalador ya la trae hecha:
 Medido en la app armada para Linux con datos vacíos: precalentado 5,6 s y
 primera compilación de una lección 1,0 s (antes 34 s). Prueba:
 `node scripts/dist.mjs --dir` y luego `app/tests/e2e-cache-instalador.mjs`.
+
+## Mi JWPLC (primer arranque)
+
+**Ver ▸ Mi JWPLC** (o «Primer arranque y bornes…» en el panel de Subir) abre
+una ventana con el dibujo de bornes (`app/renderer/assets/jwplc-basic.svg`),
+los pasos del primer arranque, el cableado y la documentación.
+
+- La prueba de recepción está en
+  `JWPLC_Aprende/extras/equipo/prueba_recepcion`: barre Q0.0 a Q0.7 dos veces
+  y luego repite cada entrada en su salida hasta ver las 8 («PRUEBA
+  COMPLETA»). Si las E/S no arrancan muestra ERR «IO».
+- Ficha técnica: si existe
+  `JWPLC_Aprende/extras/equipo/JWPLC_Basic_ficha_tecnica.pdf` se abre sin
+  red; si no, se abre la página del producto en jw-control.com.
+- Prueba: `app/tests/e2e-mi-jwplc.mjs`.

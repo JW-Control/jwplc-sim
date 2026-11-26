@@ -652,6 +652,16 @@ body.resizing #editor {
 .plc-diagram-body [data-sig].on {
   fill: rgba(47, 208, 90, 0.28);
 }
+/* Forzada desde el diagrama (clic derecho): borde ámbar punteado. */
+.plc-diagram-body [data-sig].forced {
+  stroke: var(--warn) !important;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.plc-force-menu {
+  position: fixed;
+  z-index: 40;
+}
 .plc-diagram-body svg {
   max-width: none !important;
   height: auto;
@@ -7020,4 +7030,162 @@ html.booting body {
   .tb-read-size {
     display: none;
   }
+}
+
+/* ------------------------------------------------------- Mi JWPLC */
+.mi-jwplc {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 45%);
+}
+.mi-jwplc[hidden] {
+  display: none;
+}
+.mi-box {
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px var(--shadow);
+  overflow: hidden;
+}
+.mi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.mi-head h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.mi-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) 1fr;
+  gap: 20px;
+  padding: 16px;
+  overflow: auto;
+}
+.mi-fig {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  align-self: start;
+}
+.mi-fig img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mi-fig figcaption {
+  font-size: 12px;
+  color: #59636e;
+  text-align: center;
+  margin-top: 4px;
+}
+.mi-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mi-cols h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-strong);
+}
+.mi-cols h3:not(:first-child) {
+  margin-top: 16px;
+}
+.mi-steps,
+.mi-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.mi-steps button {
+  margin-right: 6px;
+}
+.mi-docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.up-panel #up-first {
+  grid-column: 1 / 4;
+  justify-self: start;
+}
+@media (max-width: 760px) {
+  .mi-body {
+    grid-template-columns: 1fr;
+  }
+  .mi-fig {
+    max-width: 340px;
+  }
+}
+
+/* «Ver en el tiempo» de un objetivo: lecturas de los últimos segundos. */
+.goal-time {
+  margin-top: 4px;
+  font-size: 11.5px;
+}
+.goal-time[hidden] {
+  display: none;
+}
+.goal-time summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.goal-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 4px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+.goal-chart .gc-ok {
+  fill: var(--ok-bg-2);
+  opacity: 0.7;
+}
+.goal-chart .gc-want {
+  fill: var(--accent-soft);
+  opacity: 0.6;
+}
+.goal-chart .gc-want-line {
+  stroke: var(--accent);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+.goal-chart .gc-line {
+  fill: none;
+  stroke: var(--text-strong);
+  stroke-width: 1.5;
+}
+.goal-chart .gc-key {
+  font: 600 9px ui-monospace, monospace;
+  fill: var(--text-soft);
+}
+.goal-chart .gc-axis {
+  font-size: 9px;
+  fill: var(--muted);
+}
+.goal-explain {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  line-height: 1.4;
 }

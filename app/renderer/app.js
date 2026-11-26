@@ -690,7 +690,65 @@ const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name)
 function paintPlcDiagram(names) {
   const box = $("plc-diagram-body");
   if (!box || $("plc-diagram").hidden) return;
-  for (const el of box.querySelectorAll(names ? names.map((n) => `[data-sig="${n}"]`).join(",") : "[data-sig]")) el.classList.toggle("on", !!state.levels.get(el.dataset.sig));
+  for (const el of box.querySelectorAll(names ? names.map((n) => `[data-sig="${n}"]`).join(",") : "[data-sig]")) {
+    el.classList.toggle("on", !!state.levels.get(el.dataset.sig));
+    const f = state.forced.get(el.dataset.sig);
+    el.classList.toggle("forced", f !== undefined);
+  }
+}
+
+// Forzar desde el Ladder/FBD en vivo (clic derecho en un contacto o bobina de
+// E/S de la placa): Force True / Force False / Release, como en OpenPLC y en
+// el plano IEC. Usa el mismo forzado que la tabla de E/S.
+function plcSigAt(ev) {
+  for (const el of $("plc-diagram-body").querySelectorAll("[data-sig]")) {
+    const r = el.getBoundingClientRect();
+    if (ev.clientX >= r.left - 2 && ev.clientX <= r.right + 2 && ev.clientY >= r.top - 2 && ev.clientY <= r.bottom + 2) return el.dataset.sig;
+  }
+  return null;
+}
+function openPlcForce(sig, ev) {
+  const menu = $("plc-force-menu");
+  const running = ["running", "paused", "break"].includes(state.sim);
+  const now = state.forced.get(sig);
+  const kind = sig.startsWith("I") ? "Entrada" : "Salida";
+  const st = now === undefined ? "libre" : `forzada a ${now ? 1 : 0}`;
+  menu.innerHTML =
+    `<div class="iec-edit-h">Forzar ${kind} ${sig.replace("_", ".")} <span class="muted">(${st})</span></div>` +
+    `<button data-v="1"${running ? "" : " disabled"}>Force True</button>` +
+    `<button data-v="0"${running ? "" : " disabled"}>Force False</button>` +
+    `<button data-v="x"${running && now !== undefined ? "" : " disabled"}>Release (liberar)</button>` +
+    `<div class="iec-edit-foot">${running ? "Queda forzada hasta liberarla, como en OpenPLC." : "Pulse ▶ Ejecutar para forzar."}</div>`;
+  menu.dataset.sig = sig;
+  menu.hidden = false;
+  const w = menu.offsetWidth;
+  const h = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, Math.min(ev.clientX + 8, window.innerWidth - w - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(ev.clientY + 8, window.innerHeight - h - 8))}px`;
+}
+function wirePlcForce() {
+  const body = $("plc-diagram-body");
+  const menu = $("plc-force-menu");
+  body.addEventListener("contextmenu", (ev) => {
+    const sig = plcSigAt(ev);
+    if (!sig) return;
+    ev.preventDefault();
+    openPlcForce(sig, ev);
+  });
+  menu.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-v]");
+    if (!b || b.disabled) return;
+    const sig = menu.dataset.sig;
+    setForce(sig, b.dataset.v === "x" ? null : Number(b.dataset.v));
+    menu.hidden = true;
+    paintPlcDiagram([sig]);
+  });
+  document.addEventListener("pointerdown", (ev) => {
+    if (!menu.hidden && !ev.target.closest("#plc-force-menu")) menu.hidden = true;
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") menu.hidden = true;
+  });
 }
 
 // Ladder (.ld) y FBD (.fbd): se muestra el diagrama; «Ver como texto» deja el JSON.
@@ -1302,6 +1360,7 @@ function setForce(signal, value) {
   }
   const el = document.querySelector(`.io[data-signal="${signal}"]`);
   el?.classList.toggle("forced", value !== null);
+  paintPlcDiagram([signal]);
   if (el) el.title = value === null ? el.title.replace(/ · forzada.*$/, "") : `${el.title.replace(/ · forzada.*$/, "")} · forzada a ${value}`;
   updateWatchSignal(signal);
 }
@@ -1793,7 +1852,91 @@ function mdToHtml(text, opts = {}) {
 
 // ---- Objetivos en vivo (rubrica.json "goals"): la barra de cada objetivo se
 // llena mientras su condición se sostiene en la simulación.
-const goalUi = { goals: [], progress: null, error: null };
+const goalUi = { goals: [], progress: null, error: null, hist: new Map() };
+
+// «Ver en el tiempo»: las lecturas de cada objetivo con condición («when») en
+// los últimos segundos simulados, para explicar por qué todavía no se cumple.
+const GOAL_WINDOW_MS = 10000;
+function recordGoalHistory(p) {
+  const last = goalUi.lastT ?? -1;
+  if (p.t_ms < last) goalUi.hist.clear(); // corrida nueva
+  goalUi.lastT = p.t_ms;
+  for (const s of p.goals) {
+    const g = goalUi.goals.find((x) => x.id === s.id);
+    if (!g?.when || !s.reading) continue;
+    const h = goalUi.hist.get(g.id) ?? [];
+    const r = {};
+    for (const k of Object.keys(g.when)) r[k] = s.reading[k];
+    h.push({ t: p.t_ms, r });
+    while (h.length > 2 && h[0].t < p.t_ms - 3 * GOAL_WINDOW_MS) h.shift();
+    goalUi.hist.set(g.id, h);
+  }
+}
+const goalNum = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
+function goalChart(g, h) {
+  const keys = Object.keys(g.when);
+  const t1 = h.at(-1).t;
+  const t0 = Math.max(h[0].t, t1 - GOAL_WINDOW_MS);
+  const pts = h.filter((x) => x.t >= t0);
+  const W = 200;
+  const L = 34;
+  const RH = 20;
+  const H = keys.length * RH + 16;
+  const x = (t) => L + ((t - t0) / Math.max(1, t1 - t0)) * (W - L - 4);
+  const ok = (e) => keys.every((k) => window.JwsimGoalMatch(e.r[k], g.when[k]));
+  // Franjas en que se cumplía todo a la vez, y la racha más larga.
+  let bands = "";
+  let best = 0;
+  let start = null;
+  for (let i = 0; i < pts.length; i++) {
+    const m = ok(pts[i]);
+    if (m && start === null) start = pts[i].t;
+    const end = i === pts.length - 1 || !ok(pts[i + 1]);
+    if (m && end) {
+      const stop = i < pts.length - 1 ? pts[i + 1].t : pts[i].t;
+      bands += `<rect class="gc-ok" x="${x(start).toFixed(1)}" y="2" width="${Math.max(1.5, x(stop) - x(start)).toFixed(1)}" height="${H - 16}"/>`;
+      best = Math.max(best, stop - start);
+      start = null;
+    }
+  }
+  let rows = "";
+  keys.forEach((k, i) => {
+    const want = g.when[k];
+    const vals = pts.map((e) => goalNum(e.r[k]));
+    const digital = !Array.isArray(want) && vals.every((v) => v === 0 || v === 1);
+    const y0 = i * RH + 4;
+    let lo = 0;
+    let hi = 1;
+    if (!digital) {
+      lo = Math.min(...vals, Array.isArray(want) ? want[0] : goalNum(want));
+      hi = Math.max(...vals, Array.isArray(want) ? want[1] : goalNum(want));
+      if (hi - lo < 1e-9) hi = lo + 1;
+    }
+    const y = (v) => y0 + RH - 6 - ((v - lo) / (hi - lo)) * (RH - 10);
+    let d = "";
+    pts.forEach((e, j) => {
+      const v = goalNum(e.r[k]);
+      d += j ? `H${x(e.t).toFixed(1)}V${y(v).toFixed(1)}` : `M${x(e.t).toFixed(1)} ${y(v).toFixed(1)}`;
+    });
+    if (Array.isArray(want)) rows += `<rect class="gc-want" x="${L}" y="${y(want[1]).toFixed(1)}" width="${W - L - 4}" height="${Math.max(1, y(want[0]) - y(want[1])).toFixed(1)}"/>`;
+    else rows += `<line class="gc-want-line" x1="${L}" x2="${W - 4}" y1="${y(goalNum(want)).toFixed(1)}" y2="${y(goalNum(want)).toFixed(1)}"/>`;
+    rows += `<text class="gc-key" x="2" y="${y0 + RH / 2 + 1}">${esc(k)}</text><path class="gc-line" d="${d}"/>`;
+  });
+  const axis = `<text class="gc-axis" x="${L}" y="${H - 2}">${(t0 / 1000).toFixed(1)} s</text><text class="gc-axis" x="${W - 4}" y="${H - 2}" text-anchor="end">${(t1 / 1000).toFixed(1)} s</text>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lecturas del objetivo en los últimos segundos">${bands}${rows}${axis}</svg>`;
+  // Explicación en palabras.
+  const hold = Number(g.hold_ms ?? 0);
+  let text;
+  if (!pts.some(ok)) {
+    const never = keys.filter((k) => !pts.some((e) => window.JwsimGoalMatch(e.r[k], g.when[k])));
+    text = never.length
+      ? `En estos segundos ${never.map((k) => `${k} nunca estuvo en ${fmtWant(k, g.when[k])}`).join(" y ")}.`
+      : "Cada condición se cumplió alguna vez, pero nunca todas a la vez.";
+  } else if (hold > 0 && best < hold) {
+    text = `Se cumplió a la vez como máximo ${(best / 1000).toFixed(1)} s seguidos; se piden ${(hold / 1000).toFixed(1)} s.`;
+  } else text = "Las franjas verdes marcan cuándo se cumplía todo a la vez.";
+  return { svg, text };
+}
 
 function fmtReading(key, v) {
   if (v === undefined) return "—";
@@ -1843,6 +1986,7 @@ function buildGoals() {
     html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
     html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
     if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined || (g.delay !== undefined && (g.cycles ?? 1) > 1)) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (g.when && Object.keys(g.when).length) html += `<details class="goal-time"><summary>Ver en el tiempo</summary><div class="goal-chart"></div><p class="goal-explain"></p></details>`;
     if (g.hint) html += `<details class="goal-hint"><summary>Pista</summary>${esc(g.hint)}</details>`;
     if (g.why) html += `<div class="goal-why" hidden>${esc(g.why)}</div>`;
     html += `</div></li>`;
@@ -1891,6 +2035,16 @@ function renderGoals() {
     }
     const hint = li.querySelector(".goal-hint");
     if (hint) hint.hidden = st === "done";
+    const tl = li.querySelector(".goal-time");
+    if (tl) {
+      const h = goalUi.hist.get(g.id);
+      tl.hidden = st === "done" || st === "blocked" || !h || h.length < 2;
+      if (!tl.hidden && tl.open) {
+        const c = goalChart(g, h);
+        tl.querySelector(".goal-chart").innerHTML = c.svg;
+        tl.querySelector(".goal-explain").textContent = c.text;
+      }
+    }
     const why = li.querySelector(".goal-why");
     if (why) why.hidden = st !== "done";
     const hold = Number(g.hold_ms ?? 0);
@@ -1933,6 +2087,7 @@ api.onGoalsProgress((p) => {
   // Al empezar a correr, la ficha se pliega para que se vean los objetivos.
   if (!goalUi.progress && !$("ex-brief").classList.contains("collapsed")) renderBrief(false);
   goalUi.progress = p;
+  recordGoalHistory(p);
   renderGoals();
 });
 
@@ -1942,6 +2097,8 @@ async function showExercise(file) {
   goalUi.error = info?.goalsError ?? null;
   goalUi.progress = null;
   goalUi.resent = false;
+  goalUi.hist.clear();
+  goalUi.lastT = -1;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
   state.exercise = info ? { file, id: info.id, brief: info.brief, lesson: !!info.lesson } : null;
@@ -2994,6 +3151,7 @@ function statusbarH() {
 }
 
 function wireUi() {
+  wirePlcForce();
   $("plc-diagram-text").addEventListener("click", () => {
     state.plcText = !state.plcText;
     renderPlcDiagram(state.active);
@@ -3093,6 +3251,26 @@ function wireUi() {
   $("up-refresh").addEventListener("click", upRefresh);
   $("up-tools").addEventListener("click", upInstallTools);
   $("up-go").addEventListener("click", upGo);
+  $("up-first").addEventListener("click", () => {
+    upPopover(false);
+    miJwplc(true);
+  });
+  $("mi-close").addEventListener("click", () => miJwplc(false));
+  $("mi-jwplc").addEventListener("pointerdown", (e) => e.target === e.currentTarget && miJwplc(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("mi-jwplc").hidden) miJwplc(false);
+  });
+  $("mi-open-test").addEventListener("click", async () => {
+    const { pruebaDir } = await api.equipoInfo();
+    loadSketch(await api.openExample(pruebaDir));
+    $("mi-note").textContent = "Prueba de recepción abierta. Ahora pulse «Subir al JWPLC».";
+  });
+  $("mi-upload").addEventListener("click", async () => {
+    miJwplc(false);
+    await upPopover(true);
+  });
+  $("mi-pdf").addEventListener("click", () => api.equipoOpen("pdf"));
+  $("mi-web").addEventListener("click", () => api.equipoOpen("web"));
   $("com-connect").addEventListener("click", comToggle);
   $("com-install").addEventListener("click", async () => {
     $("com-note").textContent = "Instalando el puerto COM virtual (acepta el permiso de administrador)…";
@@ -3156,6 +3334,7 @@ function wireUi() {
       if (s) loadSketch(s);
     } else if (cmd.startsWith("example:")) loadSketch(await api.openExample(cmd.slice(8)));
     else if (cmd === "save") saveSketch();
+    else if (cmd === "miJwplc") miJwplc(true);
     else if (cmd === "newFile") promptNewFile();
     else if (cmd === "importFiles") importSketchFiles();
     else if (cmd === "format") autoFormat();
@@ -3383,6 +3562,16 @@ async function upGo() {
   else $("up-go").disabled = false;
 }
 
+// ------------------------------------------------------------- Mi JWPLC
+async function miJwplc(open) {
+  $("mi-jwplc").hidden = !open;
+  if (!open) return;
+  const info = await api.equipoInfo();
+  $("mi-pdf").title = info.pdf ? "Abre la ficha técnica incluida" : "Abre la ficha técnica en la página de JW Control";
+  $("mi-note").textContent = info.pdf ? "" : "La ficha técnica se abre en la página de JW Control (necesita internet).";
+  $("mi-close").focus();
+}
+
 // Panel del COM: se abre bajo su botón de la barra superior.
 function comPlace() {
   const r = $("btn-com").getBoundingClientRect();
@@ -3493,6 +3682,8 @@ window.jwsimTest = {
   showAllBuses: (on) => showAllBuses(on),
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
+  miJwplc: (open = true) => miJwplc(open),
+  forced: (sig) => state.forced.get(sig),
   openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
   saveProject: () => saveProjectFile(),
   toggleBreakpoint: (name, line) => toggleBreakpoint(name, line),
