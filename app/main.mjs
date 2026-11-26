@@ -41,16 +41,16 @@ import { symbolSvg } from "../scene/component-symbol.mjs";
 import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
 import { folderOf, readComponent, writeComponent } from "../cli/lib/component-files.mjs";
 import { ComponentBench } from "./lib/component-bench.mjs";
+import { createUpdater } from "./lib/updater.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
 // "datos" dentro de su carpeta, no en el perfil del usuario.
-if (app.isPackaged && process.platform === "win32") {
+const PORTABLE = app.isPackaged && process.platform === "win32" && !readdirSync(dirname(process.execPath)).some((f) => /^Uninstall .*\.exe$/i.test(f));
+if (PORTABLE) {
   const dir = dirname(process.execPath);
-  if (!readdirSync(dir).some((f) => /^Uninstall .*\.exe$/i.test(f))) {
-    app.setPath("userData", join(dir, "datos"));
-    process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
-  }
+  app.setPath("userData", join(dir, "datos"));
+  process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
 }
 // Instalada, la carpeta de la app puede ser de solo lectura (Program Files,
 // instalación para todos los usuarios): la caché de compilación va a los datos.
@@ -208,6 +208,25 @@ function listExamples() {
 function forward(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
+
+// Actualización desde el programa (app/lib/updater.mjs).
+const updater = createUpdater({
+  app,
+  dialog,
+  window: () => (win && !win.isDestroyed() ? win : null),
+  forward,
+  readPref,
+  writePref,
+  portable: PORTABLE,
+  beforeInstall: async () => {
+    await stopBuilder();
+    await stopRunner();
+    await comBridge?.close();
+  },
+});
+ipcMain.handle("update:status", () => updater.status);
+ipcMain.handle("update:check", () => updater.check(true));
+ipcMain.handle("update:install", () => updater.install());
 
 // Suelta gdb (el proceso sigue) y luego cierra el runner.
 async function stopRunner() {
@@ -1860,6 +1879,15 @@ function buildMenu() {
           { label: "Nuevo dispositivo…", click: send("newDevice") },
           { label: "Editor de componentes…", click: send("componentEditor") },
           ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
+          { type: "separator" },
+          { label: "Buscar actualizaciones…", click: () => updater.check(true) },
+          {
+            label: "Canal de actualizaciones",
+            submenu: [
+              { label: "Estable", type: "radio", checked: updater.channel() === "estable", click: () => updater.setChannel("estable") },
+              { label: "Pruebas (versiones alpha)", type: "radio", checked: updater.channel() === "pruebas", click: () => updater.setChannel("pruebas") },
+            ],
+          },
         ],
       },
       {
@@ -1987,7 +2015,10 @@ app.whenReady().then(() => {
     },
   });
   win.loadFile(join(import.meta.dirname, "renderer", "index.html"));
-  win.webContents.once("did-finish-load", () => setTimeout(warmCompiler, 1500));
+  win.webContents.once("did-finish-load", () => {
+    setTimeout(warmCompiler, 1500);
+    updater.start();
+  });
 });
 
 app.on("window-all-closed", async () => {

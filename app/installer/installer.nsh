@@ -81,9 +81,21 @@
     !insertmacro jwsimRemoveInstall "$INSTDIR"
   !macroend
 !else
-  ; En la sección de instalación (por si algo se abrió después de la página).
+  ; Borra la instalación anterior antes de que el instalador llame a su
+  ; desinstalador (falla al actualizar, ver customRemoveFiles): sin él sigue
+  ; directo. Sus accesos y su registro los reescribe esta instalación.
+  !macro jwsimRemovePrevious
+    ReadRegStr $R5 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+    ${if} $R5 != ""
+      !insertmacro jwsimRemoveInstall "$R5"
+    ${endIf}
+  !macroend
+
+  ; En la sección de instalación: por si algo se abrió después de la página,
+  ; y en la actualización desde el programa (silenciosa, sin páginas).
   !macro customCheckAppRunning
     !insertmacro jwsimCheckRunning Abort
+    !insertmacro jwsimRemovePrevious
   !macroend
 
   ; Página invisible justo antes de instalar: la comprobación corre en la
@@ -100,14 +112,7 @@
     ${endIf}
     !insertmacro jwsimCheckRunning Quit
     StrCpy $INSTDIR $R6
-    ; Los desinstaladores de versiones anteriores fallan al actualizar (ver
-    ; customRemoveFiles): se borra antes su carpeta y el instalador ya no los
-    ; llama (sin desinstalador, sigue directo). Sus accesos y su registro los
-    ; reescribe esta instalación.
-    ReadRegStr $R5 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
-    ${if} $R5 != ""
-      !insertmacro jwsimRemoveInstall "$R5"
-    ${endIf}
+    !insertmacro jwsimRemovePrevious
     Abort
   FunctionEnd
   !macroend

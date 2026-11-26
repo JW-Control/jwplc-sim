@@ -107,6 +107,11 @@ contextBridge.exposeInMainWorld("jwsim", {
   onProjectChanged: on("project:changed"),
   onBuildLog: on("build:log"),
   onBuildWarmup: on("build:warmup"),
+  // Actualización desde el programa (app/lib/updater.mjs).
+  onUpdateState: on("update:state"),
+  updateStatus: () => ipcRenderer.invoke("update:status"),
+  updateCheck: () => ipcRenderer.invoke("update:check"),
+  updateInstall: () => ipcRenderer.invoke("update:install"),
   onMessage: on("sim:message"),
   onDisplay: on("sim:display"),
   onStderr: on("sim:stderr"),

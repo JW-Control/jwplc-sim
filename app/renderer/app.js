@@ -3306,6 +3306,29 @@ function wireUi() {
       sb.textContent = ok ? "Compilador listo" : "";
     }
   });
+  // Actualización desde el programa: solo se muestra mientras hay algo que
+  // decir (descargando o lista para instalar).
+  const showUpdate = (u) => {
+    const b = $("sb-update");
+    if (!b || !u) return;
+    b.dataset.state = u.state;
+    if (u.state === "downloading" || u.state === "available") {
+      b.hidden = false;
+      b.disabled = true;
+      b.textContent = `Descargando JWPLC Sim ${u.version ?? ""}${u.percent != null ? ` · ${u.percent} %` : "…"}`;
+      b.title = "La nueva versión se descarga en segundo plano; puede seguir trabajando.";
+    } else if (u.state === "ready") {
+      b.hidden = false;
+      b.disabled = false;
+      b.textContent = `⟳ Actualizar a ${u.version}`;
+      b.title = "La nueva versión ya está descargada. Clic para reiniciar e instalar (o se instala sola al cerrar JWPLC Sim).";
+    } else {
+      b.hidden = true;
+    }
+  };
+  api.onUpdateState?.(showUpdate);
+  api.updateStatus?.().then(showUpdate).catch(() => {});
+  $("sb-update")?.addEventListener("click", () => api.updateInstall?.());
   api.onBuildLog((line) => {
     const log = $("build-log");
     log.textContent += `${line}\n`;

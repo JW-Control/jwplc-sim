@@ -63,11 +63,17 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           pkg=$(grep '^JWPLC_PACKAGE_REF=' package.lock | cut -d= -f2)
           printf 'JWPLC Sim %s para Windows x64.\n\n- `*-instalador.exe`: instalador por usuario (sin administrador).\n- `*-portable.zip`: la misma app en una carpeta.\n\nIncluye el package JWPLC `%s`, las dependencias de terceros y el toolchain GCC: compila sin red ni Node.js.\nNo tiene firma de código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.\n' "$tag" "$pkg" > notes.md
+          # latest.yml y el .blockmap: los lee la actualización desde el
+          # programa (app/lib/updater.mjs). Sin ellos la Release no se ofrece.
+          files=(build/dist/*-instalador.exe build/dist/*-instalador.exe.blockmap build/dist/latest.yml build/dist/*-portable.zip)
+          # Versión con guion (v0.6.0-alpha.1) = pre-release: solo la ve el
+          # canal «Pruebas». Sin guion = estable: la ven todos.
+          pre=()
+          case "$tag" in *-*) pre=(--prerelease) ;; esac
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             # Release creada a mano desde GitHub: se respetan su texto y se adjuntan los archivos.
-            gh release upload "$tag" build/dist/*-instalador.exe build/dist/*-portable.zip \
-              --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$tag" build/dist/*-instalador.exe build/dist/*-portable.zip \
-              --repo "$GITHUB_REPOSITORY" --title "JWPLC Sim $tag" --notes-file notes.md --prerelease
+            gh release create "$tag" "${files[@]}" \
+              --repo "$GITHUB_REPOSITORY" --title "JWPLC Sim $tag" --notes-file notes.md "${pre[@]}"
           fi

@@ -106,7 +106,11 @@ const config = {
   productName: "JWPLC Sim",
   copyright: "© 2026 JW Control",
   directories: { output: OUT },
-  publish: null,
+  // Releases de GitHub: con esto electron-builder escribe latest.yml (y el
+  // .blockmap) junto al instalador y app-update.yml dentro de la app, que
+  // electron-updater lee (app/lib/updater.mjs). No publica nada: lo sube el
+  // workflow dist-windows al crear la Release del tag.
+  publish: [{ provider: "github", owner: "JW-Control", repo: "jwplc-sim" }],
   asar: false,
   npmRebuild: false,
   // La app sin sus pruebas ni las dependencias de desarrollo.
@@ -134,7 +138,7 @@ const config = {
   // Lo que el renderer importa desde node_modules tiene que estar en la app
   // armada, antes de empaquetar el instalador y el portable.
   afterPack: async ({ appOutDir }) => {
-    const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js"];
+    const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js", "electron-updater/package.json"];
     const missing = need.filter((f) => !existsSync(join(appOutDir, "resources", "app", "node_modules", ...f.split("/"))));
     if (editorDir) {
       const strucpp = join(appOutDir, "resources", ...editorDir.split("/"), "deps", "node_modules", "strucpp");
@@ -168,6 +172,6 @@ const config = {
 };
 
 log(`armando JWPLC Sim ${version} (${dirOnly ? "carpeta" : "instalador y portable"})…`);
-const files = await build({ projectDir: APP, targets: (win ? Platform.WINDOWS : Platform.LINUX).createTarget(), config });
+const files = await build({ projectDir: APP, targets: (win ? Platform.WINDOWS : Platform.LINUX).createTarget(), config, publish: "never" });
 for (const f of files) log(`listo: ${f}`);
 if (dirOnly) log(`carpeta: ${join(OUT, win ? "win-unpacked" : "linux-unpacked")}`);
