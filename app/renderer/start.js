@@ -157,6 +157,19 @@
     });
     return out;
   }
+  /** Encabezado de Inicio según la ruta elegida. */
+  const HERO = {
+    cpp: {
+      eyebrow: "Ruta C++ · Curso JWPLC Basic",
+      title: "Empieza aquí",
+      lead: "<b>Programa un PLC en C++</b>, como en Arduino IDE, y después resuelve retos con tableros, motores y neumática.",
+    },
+    iec: {
+      eyebrow: "Ruta PLC · IEC 61131-3",
+      title: "Habla PLC",
+      lead: "<b>Ladder, ST y FBD</b>: los lenguajes IEC 61131-3 de cualquier PLC industrial, en el OpenPLC Editor.",
+    },
+  };
   /** Selector de ruta: C++ o IEC 61131-3. */
   const trackSwitch = () =>
     `<div class="ini-track" role="tablist" aria-label="Ruta">` +
@@ -210,7 +223,7 @@
       b("archs", "archs", "Arquitecturas", "Casos industriales completos: bombeo, montacargas, tratamiento") +
       b("examples", "examples", "Ejemplos", "Ejemplos de las librerías del JWPLC Basic") +
       `</div></div>` +
-      `<div class="ini-brand"><span class="start-logo">JW</span><div><b>JWPLC Sim</b><small>JW Control</small></div>` +
+      `<div class="ini-brand"><img class="app-logo" src="../icon/icon.svg" alt="" width="32" height="32"/><div><b>JWPLC Sim</b><small>JW Control</small></div>` +
       `<button class="icon ini-close" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></div>` +
       `</nav>`
     );
@@ -229,8 +242,8 @@
     // ---- Empieza aquí
     html +=
       `<section class="ini-hero"${archs[0]?.img ? ` style="--img:url('${archs[0].img}')"` : ""}>` +
-      `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}Ruta de aprendizaje</span>` +
-      `<h1>Empieza aquí</h1><p class="ini-lead"><b>Aprende automatización</b> programando un PLC de verdad: tableros, motores, procesos y neumática.</p>` +
+      `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}${HERO[st.track].eyebrow}</span>` +
+      `<h1>${HERO[st.track].title}</h1><p class="ini-lead">${HERO[st.track].lead}</p>` +
       trackSwitch() +
       `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar" : "Comenzar"} la ruta ${st.track === "iec" ? "PLC" : "C++"}</button>` +
       (nx ? `<span class="ini-next"><small>A continuación</small><b>${esc(nx.tier.tag)} · ${nx.item.kind === "lesson" ? "Lección" : "Reto"} ${pos} de ${nx.tier.total}</b><em>${esc(nx.item.title)}</em></span>` : `<span class="ini-next"><b>¡Ruta completa!</b></span>`) +
@@ -508,7 +521,7 @@
     } else {
       box.innerHTML =
         `<div class="start-card">` +
-        `<header class="start-head"><span class="start-logo">JW</span><b>Nuevo proyecto</b>` +
+        `<header class="start-head"><img class="app-logo" src="../icon/icon.svg" alt="" width="24" height="24"/><b>Nuevo proyecto</b>` +
         `<button class="icon" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>` +
         `<div class="start-body">${wizard()}</div></div>`;
     }

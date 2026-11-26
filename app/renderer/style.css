@@ -6758,3 +6758,10 @@ body:not([data-tab="program"]) .prog-rail-right { display: none; }
     animation: none;
   }
 }
+
+/* Logo de JWPLC Sim (el mismo ícono de la aplicación) */
+.app-logo {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
