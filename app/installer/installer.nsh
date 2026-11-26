@@ -53,9 +53,32 @@
   ${endIf}
 !macroend
 
+; Borra una instalación anterior sin pasar por su desinstalador. Solo una
+; carpeta que contenga JWPLC Sim.exe; los datos del usuario (AppData\Roaming)
+; no se tocan.
+!macro jwsimRemoveInstall _DIR
+  ${if} ${FileExists} "${_DIR}\${APP_EXECUTABLE_FILENAME}"
+    !insertmacro jwsimKillInstdirProcs "${_DIR}"
+    SetOutPath $TEMP
+    RMDir /r "${_DIR}"
+    ${if} ${FileExists} "${_DIR}\*.*"
+      Sleep 1500
+      RMDir /r "${_DIR}"
+    ${endIf}
+  ${endIf}
+!macroend
+
 !ifdef BUILD_UNINSTALLER
   !macro customCheckAppRunning
     !insertmacro jwsimCheckRunning Quit
+  !macroend
+
+  ; Al actualizar, electron-builder mueve archivo por archivo la instalación a
+  ; %TEMP% y, si uno solo falla (ruta larga del toolchain, antivirus revisando
+  ; un archivo), aborta: el instalador nuevo reintentaba 5 veces y mostraba
+  ; «No se puede cerrar JWPLC Sim». Se borra la carpeta directamente.
+  !macro customRemoveFiles
+    !insertmacro jwsimRemoveInstall "$INSTDIR"
   !macroend
 !else
   ; En la sección de instalación (por si algo se abrió después de la página).
@@ -77,6 +100,14 @@
     ${endIf}
     !insertmacro jwsimCheckRunning Quit
     StrCpy $INSTDIR $R6
+    ; Los desinstaladores de versiones anteriores fallan al actualizar (ver
+    ; customRemoveFiles): se borra antes su carpeta y el instalador ya no los
+    ; llama (sin desinstalador, sigue directo). Sus accesos y su registro los
+    ; reescribe esta instalación.
+    ReadRegStr $R5 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+    ${if} $R5 != ""
+      !insertmacro jwsimRemoveInstall "$R5"
+    ${endIf}
     Abort
   FunctionEnd
   !macroend
