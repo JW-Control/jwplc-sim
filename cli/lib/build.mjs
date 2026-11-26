@@ -201,13 +201,40 @@ export function unsupportedApiNotes(diagnostics, table) {
   return notes;
 }
 
+// Procesos del compilador en curso. Al cerrar la app hay que cortarlos con su
+// árbol: en Windows g++ lanza cc1plus/as, que siguen vivos aunque muera el
+// padre, y quedan corriendo desde la carpeta de instalación (el instalador
+// los ve después como «JWPLC Sim está abierto»).
+const liveChildren = new Set();
+let abortedBuilds = false;
+export function killBuildProcesses() {
+  abortedBuilds = true;
+  for (const child of liveChildren) {
+    if (process.platform === "win32") spawnSync("taskkill", ["/F", "/T", "/PID", String(child.pid)], { stdio: "ignore", windowsHide: true });
+    else {
+      spawnSync("pkill", ["-KILL", "-P", String(child.pid)], { stdio: "ignore" });
+      child.kill("SIGKILL");
+    }
+  }
+  liveChildren.clear();
+}
+
 function run(cmd, args, opts = {}) {
   return new Promise((resolvePromise) => {
-    const child = spawn(cmd, args, { ...opts, stdio: ["ignore", "pipe", "pipe"] });
+    if (abortedBuilds) return resolvePromise({ code: 1, out: "compilación cancelada al cerrar JWPLC Sim" });
+    const child = spawn(cmd, args, { windowsHide: true, ...opts, stdio: ["ignore", "pipe", "pipe"] });
+    liveChildren.add(child);
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));
-    child.on("close", (code) => resolvePromise({ code, out }));
+    child.on("error", (err) => {
+      liveChildren.delete(child);
+      resolvePromise({ code: 1, out: String(err.message) });
+    });
+    child.on("close", (code) => {
+      liveChildren.delete(child);
+      resolvePromise({ code, out });
+    });
   });
 }
 

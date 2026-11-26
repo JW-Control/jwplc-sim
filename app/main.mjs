@@ -915,6 +915,24 @@ function buildInWorker(dir, outDir, opts = {}) {
   });
 }
 const quietBuilds = new Set();
+// Cierra el worker cortando antes los compiladores que tenga corriendo (si
+// no, quedan huérfanos en Windows y bloquean el instalador).
+async function stopBuilder() {
+  const w = builder;
+  if (!w) return;
+  builder = null;
+  await new Promise((done) => {
+    const t = setTimeout(done, 3000);
+    w.on("message", (m) => {
+      if (m?.aborted) {
+        clearTimeout(t);
+        done();
+      }
+    });
+    w.postMessage({ abort: true });
+  });
+  await w.terminate().catch(() => {});
+}
 
 // Precalentado al abrir la app: compila el sketch mínimo en segundo plano.
 // Con la caché del instalador solo arma el header precompilado (unos
@@ -1974,7 +1992,7 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", async () => {
   watcher?.close();
-  builder?.terminate();
+  await stopBuilder();
   await stopRunner();
   await comBridge?.close();
   app.quit();

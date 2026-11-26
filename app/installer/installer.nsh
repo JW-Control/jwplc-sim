@@ -36,19 +36,51 @@
   Sleep 800
 !macroend
 
-!macro customCheckAppRunning
+; _EXIT es la orden para salir si el usuario cancela: Quit en una página o en
+; el desinstalador; Abort dentro de la sección de instalación, donde Quit no
+; detenía la instalación (la seguía después de Cancelar).
+!macro jwsimCheckRunning _EXIT
   !insertmacro jwsimListInstdirProcs "$INSTDIR" $R7
   ${if} $R7 != ""
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "JWPLC Sim tiene procesos abiertos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nAceptar los cierra y continúa." /SD IDOK IDOK +2
-    Quit
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "JWPLC Sim tiene procesos abiertos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nAceptar los cierra y continúa. Cancelar sale sin instalar." /SD IDOK IDOK +2
+    ${_EXIT}
     !insertmacro jwsimKillInstdirProcs "$INSTDIR"
     !insertmacro jwsimListInstdirProcs "$INSTDIR" $R7
     ${if} $R7 != ""
       MessageBox MB_OK|MB_ICONSTOP "No se pudieron cerrar estos procesos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nCiérrelos en el Administrador de tareas (pestaña Detalles) o reinicie Windows, y vuelva a ejecutar el instalador." /SD IDOK
-      Quit
+      ${_EXIT}
     ${endIf}
   ${endIf}
 !macroend
+
+!ifdef BUILD_UNINSTALLER
+  !macro customCheckAppRunning
+    !insertmacro jwsimCheckRunning Quit
+  !macroend
+!else
+  ; En la sección de instalación (por si algo se abrió después de la página).
+  !macro customCheckAppRunning
+    !insertmacro jwsimCheckRunning Abort
+  !macroend
+
+  ; Página invisible justo antes de instalar: la comprobación corre en la
+  ; ventana del instalador, donde Cancelar sí sale de inmediato.
+  !macro customPageAfterChangeDir
+    Page custom jwsimCheckRunningPage
+  Function jwsimCheckRunningPage
+    ; Misma carpeta que usará la instalación (instFilesPre le agrega
+    ; la subcarpeta de la app si el usuario eligió solo la carpeta madre).
+    StrCpy $R6 "$INSTDIR"
+    ${StrContains} $R5 "${APP_FILENAME}" $INSTDIR
+    ${if} $R5 == ""
+      StrCpy $INSTDIR "$INSTDIR\${APP_FILENAME}"
+    ${endIf}
+    !insertmacro jwsimCheckRunning Quit
+    StrCpy $INSTDIR $R6
+    Abort
+  FunctionEnd
+  !macroend
+!endif
 
 ; Si el desinstalador de la versión anterior falla (los instalados antes de
 ; esta comprobación traen la de electron-builder y salen con código 2), se
