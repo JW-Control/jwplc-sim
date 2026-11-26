@@ -5634,6 +5634,30 @@ body.dock-collapsed #btn-dock-toggle {
   }
   .ini-cols {
     grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+    /* Etapas y pasos solo tan altos como su contenido (tope 45 %): antes
+       las dos filas se repartían el alto y quedaban huecos. */
+    grid-template-rows: fit-content(45%) minmax(0, 1fr);
+  }
+  /* Progreso: «Etapas completas» y «Etapa actual» como dos datos lado a
+     lado, el valor bajo su rótulo. */
+  .ini-prog-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 24px;
+  }
+  .ini-prog-main > .ini-prog-head {
+    grid-column: 1 / -1;
+  }
+  .ini-prog-main > .ini-kv {
+    display: grid;
+    justify-content: start;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+  }
+  .ini-prog-main > .ini-kv b {
+    text-align: left;
+    font-size: 13px;
   }
   .ini-brief {
     grid-column: 1 / -1;
@@ -6921,8 +6945,11 @@ html.booting body {
     display: none;
   }
   .ini-strip {
-    flex-wrap: wrap;
     gap: 12px;
+  }
+  .ini-strip-prog {
+    flex: 1;
+    min-width: 150px;
   }
   .ini-tiers .ini-node b {
     white-space: normal;

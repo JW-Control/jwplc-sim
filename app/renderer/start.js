@@ -118,6 +118,12 @@
     bell: '<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20h4"/>',
     lock: '<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 016 0v3"/>',
     check: '<path d="M5 12l4 4 10-10"/>',
+    chip: '<rect x="7" y="7" width="10" height="10" rx="1"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+    gauge: '<path d="M4 17a8 8 0 0116 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.5"/>',
+    book: '<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/><path d="M4 19a2 2 0 012-2h13"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+    steps: '<path d="M4 20h4v-4h4v-4h4V8h4V4"/>',
+    trophy: '<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 21h8M9 17h6"/>',
     play: '<path d="M8 5l11 7-11 7z"/>',
   };
   const icon = (k, cls = "") => `<svg class="ini-ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] ?? ""}</svg>`;
@@ -126,7 +132,9 @@
     2: "Procesos con sensores: histéresis, máquinas de estado, secuencias temporizadas y contadores.",
     3: "Alarmas, procesos continuos y neumática con vigilancia por tiempo.",
   };
-  const TIER_ICON = ["lesson", "clock", "motor", "seq", "bell"];
+  // Cada etapa con su propio ícono: unidades y niveles de retos no se repiten.
+  const UNIT_ICON = ["lesson", "clock", "motor", "chip", "gauge", "seq", "book"];
+  const LEVEL_ICON = ["flag", "steps", "bell", "trophy"];
 
   /** La ruta completa: unidades del curso y después los retos por nivel. */
   function tiers() {
@@ -151,7 +159,9 @@
   function numbered(out) {
     out.forEach((t, i) => {
       t.n = i + 1;
-      t.icon = TIER_ICON[i % TIER_ICON.length];
+      const k = out.slice(0, i).filter((x) => x.kind === t.kind).length;
+      const set = t.kind === "level" ? LEVEL_ICON : UNIT_ICON;
+      t.icon = set[k % set.length];
       t.done = t.items.filter((x) => x.state === "done").length;
       t.total = t.items.length;
     });
