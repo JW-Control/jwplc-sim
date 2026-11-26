@@ -250,13 +250,13 @@
       `</div></div></section>`;
     // ---- Progreso
     html +=
-      `<aside class="ini-card ini-progress"><div class="ini-prog-head">${ring(tot.pct)}<div class="ini-prog-txt"><div class="ini-row"><b class="ini-h">Progreso</b><span class="ini-num">${tot.done} / ${tot.total}</span></div>` +
+      `<aside class="ini-card ini-progress"><div class="ini-prog-main"><div class="ini-prog-head">${ring(tot.pct)}<div class="ini-prog-txt"><div class="ini-row"><b class="ini-h">Progreso</b><span class="ini-num">${tot.done} / ${tot.total}</span></div>` +
       `<div class="learn-bar"><i style="width:${tot.pct}%"></i></div><small>${tot.total - tot.done} pasos por hacer</small></div></div>` +
       `<div class="ini-kv"><span>Etapas completas</span><b>${tot.tiersDone} / ${T.length}</b></div>` +
       `<div class="ini-kv"><span>Etapa actual</span><b>${esc(cur ? `${cur.tag} · ${cur.name}` : "—")}</b></div>` +
-      `<div class="ini-row ini-h2"><b class="ini-h">Logros</b><span class="ini-num">${tot.tiersDone} / ${T.length}</span></div>` +
+      `</div><div class="ini-prog-ach"><div class="ini-row ini-h2"><b class="ini-h">Logros</b><span class="ini-num">${tot.tiersDone} / ${T.length}</span></div>` +
       `<div class="ini-badges">${T.map((t) => `<span title="${esc(`${t.tag} · ${t.name}`)}">${hex(t, "sm")}</span>`).join("")}</div>` +
-      `<button class="link" data-act="route">Ver la ruta completa →</button></aside>`;
+      `<button class="link" data-act="route">Ver la ruta completa →</button></div></aside>`;
     // ---- Vitrina de arquitecturas
     html += `<section class="ini-card ini-show" id="ini-show"><div class="ini-show-txt"><span class="ini-eyebrow sm">En vitrina · Arquitecturas industriales</span>`;
     if (a) {

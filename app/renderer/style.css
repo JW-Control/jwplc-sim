@@ -4992,6 +4992,15 @@ body.dock-collapsed #btn-dock-toggle {
   flex-wrap: wrap;
   gap: 6px;
 }
+.ini-prog-main,
+.ini-prog-ach {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ini-prog-ach {
+  flex: 1;
+}
 .ini-progress .link {
   align-self: flex-start;
   margin-top: auto;
@@ -5590,6 +5599,38 @@ body.dock-collapsed #btn-dock-toggle {
   .ini-home {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "hero" "prog" "path" "show" "recent";
+  }
+  /* A todo el ancho, Progreso en dos mitades: avance y etapas a la
+     izquierda, logros a la derecha (antes quedaba un listado largo con
+     el valor lejos de su rótulo). */
+  .ini-progress {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 28px;
+  }
+  .ini-prog-ach {
+    padding-left: 28px;
+    border-left: 1px solid var(--border-subtle);
+  }
+  .ini-prog-ach .ini-h2 {
+    border-top: 0;
+    padding-top: 0;
+  }
+  /* Ruta: rótulos sin mayúsculas ni espaciado, sin cortar palabras. */
+  .ini-path ol {
+    gap: 10px;
+  }
+  .ini-node b {
+    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+    overflow-wrap: normal;
+    hyphens: auto;
+  }
+  .ini-node small {
+    font-size: 10.5px;
+    white-space: normal;
+    text-wrap: balance;
   }
   .ini-cols {
     grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
