@@ -188,7 +188,9 @@ function setStatus(kind, text) {
     btnRun.textContent = "▶ Ejecutar";
     btnRun.title = "Compilar y ejecutar (F5)";
   }
-  btnPause.textContent = kind === "paused" ? "▶ Continuar" : kind === "break" ? "⏸ Break" : "❚❚ Pausa";
+  // El rótulo va en .tb-lbl: en ventana angosta queda solo el ícono.
+  const [ico, lbl] = kind === "paused" ? ["▶", "Continuar"] : kind === "break" ? ["⏸", "Break"] : ["❚❚", "Pausa"];
+  btnPause.innerHTML = `${ico}<span class="tb-lbl"> ${lbl}</span>`;
   btnPause.title =
     kind === "paused"
       ? `${text} — clic para continuar (F6)`

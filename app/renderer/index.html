@@ -55,7 +55,7 @@
          escena) al lado; las demás ocupan todo el ancho. -->
     <nav class="main-tabs" id="main-tabs" role="tablist" aria-label="Área de trabajo">
       <button class="mtab active" role="tab" aria-selected="true" data-tab="program" title="Código del programa con la placa al lado (Ctrl+1)">Programa</button>
-      <button class="mtab" role="tab" aria-selected="false" data-tab="schematic" title="Tablero: la placa cableada a los equipos (Ctrl+2)">Esquema eléctrico</button>
+      <button class="mtab" role="tab" aria-selected="false" data-tab="schematic" title="Tablero: la placa cableada a los equipos (Ctrl+2)">Esquema<span class="mt-lbl"> eléctrico</span></button>
       <button class="mtab" role="tab" aria-selected="false" data-tab="plant" title="Planta en 3D movida por la simulación (Ctrl+3)">Planta 3D</button>
       <button class="mtab" role="tab" aria-selected="false" data-tab="board" title="El JWPLC Basic de frente: pantalla, botonera y E/S (Ctrl+4)">Placa</button>
       <div class="mtab-sub" id="mtab-sub-program" role="radiogroup" aria-label="Lenguaje">
@@ -65,7 +65,7 @@
       </div>
       <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
         <button class="seg active" id="schem-color" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
-        <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado (IEC)</button>
+        <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado<span class="mt-lbl"> (IEC)</span></button>
         <button class="seg" id="schem-pneu" role="radio" aria-checked="false" title="Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento">Neumático</button>
       </div>
     </nav>

@@ -1776,7 +1776,8 @@ app.whenReady().then(() => {
   win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 960,
+    // 640: cabe a media pantalla aun en monitores de 1366 px o con escala de Windows alta.
+    minWidth: 640,
     minHeight: 600,
     title: "JWPLC Sim",
     // Sin la barra de menús a la vista: los atajos siguen funcionando y Alt la muestra.

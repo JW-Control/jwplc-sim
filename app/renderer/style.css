@@ -6834,6 +6834,10 @@ html.booting body {
   .tb-sep {
     display: none;
   }
+  #btn-pause,
+  #btn-stop {
+    width: 40px;
+  }
   .com-status #com-label {
     display: none;
   }
@@ -6883,5 +6887,55 @@ html.booting body {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
+  }
+}
+
+/* Ventana muy angosta (media pantalla en monitores de 1366 px o con
+   escala alta de Windows): pestañas y cinta más compactas. */
+@media (max-width: 860px) {
+  .mt-lbl {
+    display: none;
+  }
+  .mtab {
+    padding: 7px 10px 8px;
+    white-space: nowrap;
+  }
+  .main-tabs .seg {
+    white-space: nowrap;
+  }
+  .ini-ribbon {
+    overflow-x: auto;
+    padding-inline: 4px;
+  }
+  .ini-rgroup {
+    padding: 0 4px;
+  }
+  .ini .ini-rb {
+    width: auto;
+    min-width: 60px;
+    padding: 6px 3px;
+  }
+  .ini .ini-rb span {
+    font-size: 10.5px;
+  }
+  /* Sin centrar Ejecutar: en angosto se montaba sobre Guardar. */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding-inline: 6px;
+  }
+  .ini-ribbon {
+    scrollbar-width: thin;
+  }
+  .ini-brand {
+    display: none;
+  }
+  .main-tabs .faults-menu summary {
+    white-space: nowrap;
+  }
+  /* Barra superior: A− y A+ vuelven al ensanchar la ventana. */
+  .tb-read-size {
+    display: none;
   }
 }
