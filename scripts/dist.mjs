@@ -21,7 +21,7 @@
 // desinstalador al lado, la app guarda sus datos en "datos\" dentro de la
 // carpeta (app/main.mjs).
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 
@@ -99,6 +99,31 @@ const electronVersion = JSON.parse(readFileSync(join(APP, "node_modules", "elect
 const ICON = join(APP, "icon");
 const res = (from, to = from) => ({ from: join(ROOT, from), to, filter: ["**/*", "!**/node_modules/**", "!**/*.estado/**"] });
 
+// El instalador de electron-builder descomprime en %TEMP%\nsXXXX.tmp\7z-out\
+// y copia a %LOCALAPPDATA%\Programs\jwplc-sim\ con CopyFiles, que no admite
+// rutas de más de 259 caracteres: con una sola, la copia falla y el instalador
+// muestra «No se puede cerrar JWPLC Sim» (Reintentar/Cancelar) aunque no haya
+// nada abierto. Con un usuario de Windows de hasta ~20 letras, esas carpetas
+// ocupan ~65 caracteres: las rutas dentro de la app no pueden pasar de 190.
+const MAX_REL_PATH = 190;
+function longPaths(appOutDir) {
+  const long = [];
+  const walk = (dir, rel) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}\\${e.name}` : e.name;
+      if (r.length > MAX_REL_PATH) long.push(r);
+      if (e.isDirectory()) walk(join(dir, e.name), r);
+    }
+  };
+  walk(appOutDir, "");
+  if (!long.length) return;
+  long.sort((a, b) => b.length - a.length);
+  const list = long.slice(0, 10).map((r) => `  ${r.length}  ${r}`).join("\n");
+  const msg = `${long.length} rutas de más de ${MAX_REL_PATH} caracteres en la app armada; el instalador no podría copiarlas:\n${list}`;
+  if (process.env.JWSIM_DIST_RUTAS_LARGAS === "1") console.warn(`[dist] AVISO: ${msg}`);
+  else throw new Error(`${msg}\n(JWSIM_DIST_RUTAS_LARGAS=1 arma igual)`);
+}
+
 /** @type {import("electron-builder").Configuration} */
 const config = {
   appId: "pe.jwcontrol.jwplcsim",
@@ -120,7 +145,11 @@ const config = {
     res("package.lock"), res("editor.lock"), res("LICENSE"), res("LICENSES"),
     res(pkgDir),
     res(".jwsim/third_party"),
-    ...(editorDir ? [res(editorDir)] : []),
+    // Del editor solo hace falta lo que usa la cadena (fetch-editor.mjs
+    // editorPaths): pipeline.cjs, resources/sources, el VPP y STruC++. Las
+    // fuentes (editor/src, ya empaquetadas en pipeline.cjs) traen las rutas
+    // más largas del instalador (ver longPaths).
+    ...(editorDir ? [{ ...res(editorDir), filter: [...res(editorDir).filter, "!editor/src/**", "!editor/.github/**"] }] : []),
     // pipeline.cjs carga STruC++ de deps/node_modules, que `res` deja fuera.
     // esbuild solo hace falta para armar la cadena, no para compilar.
     ...(editorDir
@@ -147,6 +176,7 @@ const config = {
       }
     }
     if (missing.length) throw new Error(`faltan en la app armada: ${missing.join(", ")}`);
+    longPaths(appOutDir);
   },
   win: {
     icon: join(ICON, "icon.ico"),
