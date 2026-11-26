@@ -155,7 +155,9 @@ const config = {
     ...(editorDir
       ? [{ from: join(ROOT, editorDir, "deps", "node_modules"), to: `${editorDir}/deps/node_modules`, filter: ["**/*", "!esbuild/**", "!@esbuild/**"] }]
       : []),
-    ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
+    // pb_ds (estructuras de datos de extensión de libstdc++) no lo usa ningún
+    // sketch y trae las rutas más largas del toolchain (hasta 204 caracteres).
+    ...(win ? [{ ...res(".jwsim/toolchain"), filter: [...res(".jwsim/toolchain").filter, "!**/include/c++/ext/pb_ds/**"] }, res(".jwsim/com0com")] : []),
     res(".jwsim/arduino-cli"),
     ...(withSeed ? [{ from: seedDir, to: "cache-seed", filter: ["**/*"] }] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
