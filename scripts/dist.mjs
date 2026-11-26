@@ -74,6 +74,8 @@ const editorRel = relative(ROOT, editorDirOf()).split("\\").join("/");
 const editorDir = existsSync(join(ROOT, editorRel, "ready.json")) ? editorRel : null;
 if (!editorDir) console.error(`[dist] aviso: sin ${editorRel}; los proyectos OpenPLC no compilarán en la app instalada (node scripts/fetch-editor.mjs)`);
 if (win && !existsSync(join(ROOT, ".jwsim", "toolchain"))) throw new Error("falta el toolchain (node scripts/fetch-toolchain.mjs)");
+// arduino-cli y ctags para «Subir al JWPLC» (scripts/fetch-arduino-cli.mjs).
+node([join("scripts", "fetch-arduino-cli.mjs")]);
 // Puerto COM virtual (com0com): componente opcional del instalador de Windows.
 if (win) node([join("scripts", "fetch-com0com.mjs")]);
 // cc1/cc1plus sin ASLR ya en el instalador: instalada en Program Files la app
@@ -121,6 +123,7 @@ const config = {
       ? [{ from: join(ROOT, editorDir, "deps", "node_modules"), to: `${editorDir}/deps/node_modules`, filter: ["**/*", "!esbuild/**", "!@esbuild/**"] }]
       : []),
     ...(win ? [res(".jwsim/toolchain"), res(".jwsim/com0com")] : []),
+    res(".jwsim/arduino-cli"),
     ...(withSeed ? [{ from: seedDir, to: "cache-seed", filter: ["**/*"] }] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
     // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,

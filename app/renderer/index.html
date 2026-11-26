@@ -29,6 +29,7 @@
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
         <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚<span class="tb-lbl"> Pausa</span></button>
         <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■<span class="tb-lbl"> Detener</span></button>
+        <button id="btn-upload" title="Compilar para el JWPLC Basic real y cargarlo por USB" aria-haspopup="dialog" aria-expanded="false">⇪<span class="tb-lbl"> Subir al JWPLC</span></button>
       </div>
       <div class="group tb-right">
         <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
@@ -475,6 +476,17 @@
       <button id="com-connect" class="small">Conectar</button>
       <button id="com-install" class="ghost small" hidden title="Instala el driver libre com0com y el par COM20 ↔ COM21 (pide permiso de administrador)">Instalar COM20 ↔ COM21</button>
       <span id="com-note" class="muted"></span>
+    </div>
+
+    <div id="up-panel" class="com-panel up-panel" role="dialog" aria-label="Subir al JWPLC" hidden>
+      <strong class="up-title">Subir al JWPLC Basic</strong>
+      <label for="up-port">Puerto USB</label>
+      <select id="up-port"></select>
+      <button id="up-refresh" class="ghost small" title="Volver a buscar puertos">↻</button>
+      <p id="up-help" class="muted up-help">Conecte el JWPLC por USB-C y aliméntelo con 24 V. El JWPLC Basic v2.0 entra solo en modo de carga: no hace falta apretar BOOT.</p>
+      <button id="up-tools" class="small" hidden>Descargar herramientas del ESP32</button>
+      <button id="up-go" class="primary small">Compilar y subir</button>
+      <span id="up-note" class="muted"></span>
     </div>
 
     <footer class="statusbar">

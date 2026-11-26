@@ -3079,6 +3079,20 @@ function wireUi() {
   });
   window.addEventListener("resize", () => !$("com-panel").hidden && comPlace());
   $("com-refresh").addEventListener("click", comRefresh);
+  $("btn-upload").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    await upPopover($("up-panel").hidden);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!$("up-panel").hidden && !e.target.closest("#up-panel, #btn-upload")) upPopover(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("up-panel").hidden) upPopover(false);
+  });
+  window.addEventListener("resize", () => !$("up-panel").hidden && upPlace());
+  $("up-refresh").addEventListener("click", upRefresh);
+  $("up-tools").addEventListener("click", upInstallTools);
+  $("up-go").addEventListener("click", upGo);
   $("com-connect").addEventListener("click", comToggle);
   $("com-install").addEventListener("click", async () => {
     $("com-note").textContent = "Instalando el puerto COM virtual (acepta el permiso de administrador)…";
@@ -3284,6 +3298,89 @@ function comShow(current, note = "") {
   $("com-port").disabled = on;
   $("com-uart").disabled = on;
   $("com-note").textContent = note || (on ? `Conectado: el otro programa abre el par de ${current.path}.` : "");
+}
+
+// ------------------------------------------------------------- Subir al JWPLC
+// Panel bajo su botón: puerto USB, herramientas del ESP32 y «Compilar y subir».
+// El registro va al panel Compilación (app/main.mjs jwplc:upload).
+const UP_PORT_KEY = "jwsim.subir.puerto";
+let upBusy = false;
+function upPlace() {
+  const r = $("btn-upload").getBoundingClientRect();
+  const panel = $("up-panel");
+  panel.style.top = `${Math.round(r.bottom + 6)}px`;
+  panel.style.left = `${Math.max(8, Math.min(Math.round(r.left), window.innerWidth - panel.offsetWidth - 8))}px`;
+}
+async function upPopover(open) {
+  $("up-panel").hidden = !open;
+  $("btn-upload").setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  upPlace();
+  await upRefresh();
+}
+async function upRefresh() {
+  const info = await api.jwplcUploadInfo();
+  const sel = $("up-port");
+  const prev = sel.value || storeGet(UP_PORT_KEY);
+  sel.textContent = "";
+  for (const p of info.ports ?? []) {
+    const o = document.createElement("option");
+    o.value = p.path;
+    o.textContent = p.label;
+    sel.appendChild(o);
+  }
+  if (prev && info.ports?.some((p) => p.path === prev)) sel.value = prev;
+  const missing = info.missing ?? [];
+  $("up-tools").hidden = !missing.length || !info.cli;
+  $("up-tools").textContent = `Descargar herramientas del ESP32 (unos ${info.downloadMb ?? 500} MB, una sola vez)`;
+  $("up-go").disabled = upBusy || info.busy || !info.cli || !!missing.length || !info.ports?.length || !state.sketch;
+  $("up-note").textContent = info.error
+    ? info.error
+    : !info.cli
+      ? "Esta instalación no trae arduino-cli."
+      : missing.length
+        ? `Falta: ${missing.join(", ")}. Si ya usa el JWPLC en Arduino IDE, instale la placa JWPLC allí y vuelva a abrir este panel.`
+        : !info.ports?.length
+          ? "No se ve ningún puerto USB. Conecte el JWPLC y pulse ↻."
+          : !state.sketch
+            ? "Abra un programa para subirlo."
+            : `Se compila con el package ${info.version}, el mismo que usa el simulador.`;
+}
+async function upInstallTools() {
+  upBusy = true;
+  $("up-tools").disabled = true;
+  $("up-note").textContent = "Descargando… el avance se ve en el panel Compilación.";
+  setView("build");
+  setDockCollapsed(false);
+  $("build-log").textContent = "";
+  const r = await api.jwplcInstallTools();
+  upBusy = false;
+  $("up-tools").disabled = false;
+  await upRefresh();
+  if (!r.ok) $("up-note").textContent = r.message;
+}
+async function upGo() {
+  const port = $("up-port").value;
+  if (!port || !state.sketch || upBusy) return;
+  storeSet(UP_PORT_KEY, port);
+  upBusy = true;
+  $("up-go").disabled = true;
+  $("up-note").textContent = "Compilando para el ESP32 y cargando… (la primera vez tarda más)";
+  await saveSketch();
+  setView("build");
+  setDockCollapsed(false);
+  $("build-log").textContent = "";
+  $("sb-build").textContent = "Subiendo al JWPLC…";
+  const r = await api.jwplcUpload({ dir: state.sketch.dir, port });
+  upBusy = false;
+  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : "No se pudo subir al JWPLC";
+  $("up-note").textContent = r.ok ? `Listo en ${port}: el JWPLC ya corre el programa.` : r.message;
+  if (!r.ok && r.message) {
+    $("build-log").textContent += `\n${r.message}\n`;
+    $("build-log").scrollTop = $("build-log").scrollHeight;
+  }
+  if (r.needTools) await upRefresh();
+  else $("up-go").disabled = false;
 }
 
 // Panel del COM: se abre bajo su botón de la barra superior.

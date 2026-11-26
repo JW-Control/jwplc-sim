@@ -17,6 +17,7 @@ import { checkDeviceDir, installedDevices, linkDevice, localDevices, registryWit
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
+import { compileEsp32, installEsp32Tools, prepareEsp32, TOOLS_DOWNLOAD_MB, uploadEsp32 } from "../cli/lib/esp32.mjs";
 import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
@@ -1555,6 +1556,72 @@ ipcMain.handle("com:set", async (_e, cfg) => {
   comBridge = b;
   if (runner) b.attach(runner);
   return { current: comStatus() };
+});
+
+// ---------------------------------------------------------------- Subir al JWPLC
+// Compila el sketch para el ESP32 real con el package fijado y lo carga por
+// USB (cli/lib/esp32.mjs). Las herramientas del ESP32 se toman del Arduino15
+// del usuario o se descargan una vez a los datos de la app.
+const arduinoData = () => process.env.JWSIM_ARDUINO_DATA ?? join(app.getPath("userData"), "arduino");
+let uploading = false;
+async function uploadPorts() {
+  // Los puertos virtuales (com0com) no llevan a un equipo real.
+  return (await listComPorts()).filter((p) => !/com0com/i.test(p.label));
+}
+ipcMain.handle("jwplc:uploadInfo", async () => {
+  try {
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports: await uploadPorts(), busy: uploading, version: env.version };
+  } catch (err) {
+    return { error: err.message, ports: [], missing: [] };
+  }
+});
+ipcMain.handle("jwplc:installTools", async () => {
+  if (uploading) return { ok: false, message: "ya hay una carga en curso" };
+  uploading = true;
+  const log = (l) => forward("build:log", l);
+  try {
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    await installEsp32Tools(env, { log });
+    log("[subir] herramientas del ESP32 listas");
+    return { ok: true };
+  } catch (err) {
+    log(`[subir] ${err.message}`);
+    return { ok: false, message: err.message.split("\n")[0] };
+  } finally {
+    uploading = false;
+  }
+});
+ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
+  if (uploading) return { ok: false, message: "ya hay una carga en curso" };
+  if (isOpenPlcProject(dir)) return { ok: false, message: "Los proyectos IEC todavía se cargan desde el OpenPLC Editor. «Subir al JWPLC» por ahora es para sketches C++." };
+  uploading = true;
+  const t0 = Date.now();
+  const log = (l) => forward("build:log", l);
+  try {
+    // El monitor del COM virtual usa el puerto: se suelta antes de cargar.
+    if (comBridge && comBridge.path.toUpperCase() === String(port).toUpperCase()) {
+      const b = comBridge;
+      comBridge = null;
+      await b.close();
+      forward("com:closed", b.path);
+    }
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    if (!env.cli) return { ok: false, message: "Esta instalación de JWPLC Sim no trae arduino-cli (node scripts/fetch-arduino-cli.mjs)." };
+    if (env.missing.length) return { ok: false, needTools: true, message: `Faltan las herramientas del ESP32 (${env.missing.map((t) => t.label).join(", ")}).` };
+    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log });
+    if (!c.ok) return { ok: false, stage: "compile", message: "No compiló para el JWPLC real. Revise el registro de Compilación.", ms: Date.now() - t0 };
+    for (const l of c.size) log(`[subir] ${l}`);
+    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log });
+    if (!u.ok) return { ok: false, stage: "upload", message: u.hint || "No se pudo cargar al JWPLC. Revise el registro de Compilación.", ms: Date.now() - t0 };
+    log("[subir] listo: el JWPLC se reinició con el programa nuevo");
+    return { ok: true, ms: Date.now() - t0, size: c.size };
+  } catch (err) {
+    log(`[subir] ${err.message}`);
+    return { ok: false, message: err.message.split("\n")[0], ms: Date.now() - t0 };
+  } finally {
+    uploading = false;
+  }
 });
 
 ipcMain.handle("sim:stop", async () => {

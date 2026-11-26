@@ -2731,6 +2731,20 @@ button.fault.on {
 .com-panel select {
   min-width: 0;
 }
+.up-panel .up-title,
+.up-panel .up-help,
+.up-panel #up-tools,
+.up-panel #up-go,
+.up-panel #up-note {
+  grid-column: 1 / 4;
+}
+.up-panel .up-help {
+  margin: 0;
+  line-height: 1.4;
+}
+.up-panel #up-tools[hidden] {
+  display: none;
+}
 
 /* ------------------------------------------------------- pestañas (tabs.js) */
 .main-tabs {
