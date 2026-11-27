@@ -387,7 +387,22 @@ function setPackageMode(m) {
   forward("app:packageChanged", packageInfo());
 }
 
+function packageMenuItems() {
+  const mode = process.env.JWSIM_PACKAGE ?? packageMode();
+  const local = localPackageDir();
+  return [
+    { label: `JWPLC (publicado, ${readLock().JWPLC_PACKAGE_REF})`, type: "radio", checked: mode === "publicado", click: () => setPackageMode("publicado") },
+    { label: local ? "JWPLC local (desarrollo)" : "JWPLC local (desarrollo): no encontrado", type: "radio", checked: mode === "local", enabled: !!local || mode === "local", click: () => setPackageMode("local") },
+    ...(local ? [{ label: local, enabled: false }] : []),
+  ];
+}
+
 ipcMain.handle("app:info", () => packageInfo());
+// La etiqueta junto al logo abre el mismo selector (la barra de menús se oculta).
+ipcMain.handle("app:packageMenu", (e, at) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  Menu.buildFromTemplate(packageMenuItems()).popup({ window: w, x: Math.round(at?.x ?? 0), y: Math.round(at?.y ?? 0) });
+});
 
 ipcMain.handle("examples:list", () => listExamples());
 
@@ -1946,18 +1961,7 @@ function buildMenu() {
           { label: "Editor de componentes…", click: send("componentEditor") },
           ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
           { type: "separator" },
-          {
-            label: "Package JWPLC",
-            submenu: (() => {
-              const mode = process.env.JWSIM_PACKAGE ?? packageMode();
-              const local = localPackageDir();
-              return [
-                { label: `JWPLC (publicado, ${readLock().JWPLC_PACKAGE_REF})`, type: "radio", checked: mode === "publicado", click: () => setPackageMode("publicado") },
-                { label: local ? "JWPLC local (desarrollo)" : "JWPLC local (desarrollo): no encontrado", type: "radio", checked: mode === "local", enabled: !!local || mode === "local", click: () => setPackageMode("local") },
-                ...(local ? [{ label: local, enabled: false }] : []),
-              ];
-            })(),
-          },
+          { label: "Package JWPLC", submenu: packageMenuItems() },
           { type: "separator" },
           { label: "Buscar actualizaciones…", click: () => updater.check(true) },
           {

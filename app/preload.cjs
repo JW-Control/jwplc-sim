@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   setTheme: (theme) => ipcRenderer.invoke("app:setTheme", theme),
   onThemeChanged: on("app:themeChanged"),
   onPackageChanged: on("app:packageChanged"),
+  packageMenu: (at) => ipcRenderer.invoke("app:packageMenu", at),
   listExamples: () => ipcRenderer.invoke("examples:list"),
   apiCatalog: () => ipcRenderer.invoke("api:catalog"),
   listExercises: () => ipcRenderer.invoke("exercises:list"),

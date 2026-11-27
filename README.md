@@ -119,8 +119,9 @@ placa del OpenPLC Editor: **JWPLC (publicado)** es el de esta versión del Sim
 (`package.lock`, el que trae el instalador) y **JWPLC local (desarrollo)** es tu
 copia de platform-jwplc, que se encuentra por la placa `jwplc_local` del
 Arduino15, por `JWPLC_PACKAGE_DIR` o por el repo hermano `..\platform-jwplc`.
-La app instalada arranca en publicado. Con el local activo, junto al logo se ve
-la etiqueta «JWPLC local». El Sim nunca modifica ese checkout.
+La app instalada arranca en publicado. La etiqueta junto al logo dice cuál está
+activo («JWPLC publicado» o «JWPLC local») y con un clic abre el mismo selector
+(la barra de menús se muestra con Alt). El Sim nunca modifica ese checkout.
 
 **Ver > JWPLC real (pantalla en vivo)…** (`Ctrl+Shift+R`) abre en una ventana
 aparte la pantalla de un JWPLC Basic real por Ethernet, con su botonera: el

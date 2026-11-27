@@ -3877,10 +3877,15 @@ async function main() {
     document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})${info.local ? ` · local: ${info.root}` : ""}`;
     const badge = document.getElementById("pkg-badge");
     if (badge) {
-      badge.hidden = !info.local;
-      badge.title = info.local ? `Package de desarrollo: ${info.root} (${info.packageRef})` : "";
+      badge.textContent = info.local ? "JWPLC local" : "JWPLC publicado";
+      badge.classList.toggle("is-local", !!info.local);
+      badge.title = `${info.local ? `Package de desarrollo: ${info.root}` : "Package publicado"} (${info.packageRef}). Clic para cambiar.`;
     }
   };
+  document.getElementById("pkg-badge")?.addEventListener("click", (ev) => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    api.packageMenu?.({ x: r.left, y: r.bottom + 2 });
+  });
   showPackage(await api.info());
   api.onPackageChanged?.((info) => {
     showPackage(info);
