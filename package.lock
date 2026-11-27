@@ -3,7 +3,7 @@
 # COMMIT, ejecutar `node scripts/fetch-package.mjs` y correr los gates
 # (ver docs/ARCHITECTURE.md §9 y docs/GATES.md).
 JWPLC_PACKAGE_REPO=https://github.com/JW-Control/platform-jwplc.git
-# 2.1.0-alpha.17 publicada el 17/11/2026 (Release v2.1.0-alpha.17 de platform-jwplc).
-JWPLC_PACKAGE_REF=v2.1.0-alpha.17
-JWPLC_PACKAGE_COMMIT=a486b84d46e57e0552ef65d4b96def1df5604c54
+# 2.1.0-alpha.18 publicada el 27/11/2026 (Release v2.1.0-alpha.18 de platform-jwplc).
+JWPLC_PACKAGE_REF=v2.1.0-alpha.18
+JWPLC_PACKAGE_COMMIT=11574e5a99e081b5e95d5edb44fcf5b466b8c0ed
 JWPLC_PACKAGE_TREE=JWPLC/2.1.0
