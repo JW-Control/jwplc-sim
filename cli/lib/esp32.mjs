@@ -105,7 +105,7 @@ export function prepareEsp32({ dataDir, package: pkg } = {}) {
   );
   // Plataforma: una sola versión, la del package fijado.
   const hwBase = join(dataDir, "packages", "jwplc_sim", "hardware", "esp32");
-  const version = lock.JWPLC_PACKAGE_REF.replace(/^v/, "").replaceAll("/", "_");
+  const version = carpetaVersion(lock.JWPLC_PACKAGE_REF);
   if (existsSync(hwBase)) for (const v of readdirSync(hwBase)) if (v !== version) rmSync(join(hwBase, v), { recursive: true, force: true });
   const hw = join(hwBase, version);
   if (!linkDir(tree, hw) && !existsSync(join(hw, "platform.txt"))) cpSync(tree, hw, { recursive: true });
@@ -128,6 +128,20 @@ export function prepareEsp32({ dataDir, package: pkg } = {}) {
 
 // Avisos de arduino-cli sin red o sin las herramientas «builtin» (índices,
 // descubrimiento de puertos): no impiden compilar ni cargar con --port.
+
+// arduino-cli exige que la carpeta de la plataforma sea una versión semver
+// válida: «v2.1.0-alpha.18/JWPLC-Sim/main» o «_» rompen la carga
+// («invalid prerelease separator»). Se deja solo [0-9A-Za-z.-], y una
+// referencia que no empiece con número (rama, SHA) va como 0.0.0-<ref>.
+export function carpetaVersion(ref) {
+  let v = String(ref || "").trim().replace(/^v(?=\d)/, "");
+  v = v.replace(/[^0-9A-Za-z.-]+/g, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+  const m = /^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/.exec(v);
+  const limpiar = (pre) => pre.split(".").filter(Boolean).map((x) => (/^0\d+$/.test(x) ? `n${x}` : x)).join(".");
+  if (m) return m[4] ? `${m[1]}.${m[2]}.${m[3]}-${limpiar(m[4])}` : `${m[1]}.${m[2]}.${m[3]}`;
+  return `0.0.0-${limpiar(v) || "local"}`;
+}
+
 const NOISE = /^(Downloading index|Error initializing instance: (Loading index file|Error downloading index|Error loading hardware platform: discovery))/;
 
 function runCli(cli, args, { log = () => {}, cwd } = {}) {
