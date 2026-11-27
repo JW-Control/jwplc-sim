@@ -49,7 +49,7 @@ uint16_t registros[1];
 unsigned long ultimoCiclo = 0;
 unsigned long ultimoAviso = 0;
 
-void cambiarEstado(Estado nuevo, const char *aviso)
+void cambiarEstado(Estado nuevo, String aviso)
 {
     estado = nuevo;
     integral = MIN_HZ;

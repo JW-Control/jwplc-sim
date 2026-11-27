@@ -59,7 +59,7 @@ Si mañana cambia el variador, se toca solo `actuar()`. Si cambia el transmisor,
 ### Cambiar de estado en un solo lugar
 
 ```cpp
-void cambiarEstado(Estado nuevo, const char *aviso)
+void cambiarEstado(Estado nuevo, String aviso)
 ```
 
 Cada cambio reinicia la integral y el tiempo en el mínimo, y escribe su aviso. Así ningún cambio de estado se olvida de alguna de esas cosas.

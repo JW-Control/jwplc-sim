@@ -3006,6 +3006,322 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 9,
+      "nombre": "Oficio industrial",
+      "lecciones": [
+        {
+          "id": "curso-52",
+          "numero": 52,
+          "titulo": "Parada de emergencia y rearme",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/52.Parada_de_emergencia",
+          "aprende": [
+            "Por qué la emergencia corta por cable y el programa solo la registra.",
+            "Por qué soltar la seta no debe arrancar nada: el rearme.",
+            "A ordenar la máquina en estados: normal, emergencia y espera de rearme."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "ES: seta de emergencia, contacto 11-12 NC. Alimenta el común de Q0.0 y vuelve a I0.3.",
+                "I0.0: marcha (NA). I0.1: parada (NC). I0.2: rearme (NA, azul).",
+                "Q0.0: bobina de KM1. Q0.1: lámpara H1 de emergencia."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: **KM1** cierra.",
+                "Aprieta la seta **ES** en su símbolo: **KM1** cae aunque el programa no hiciera nada.",
+                "Gírala para soltarla, aprieta **S3** (Rearme) y otra vez **S1**.",
+                "Lección 52: emergencia NC I0.3, rearme I0.2, marcha I0.0, parada NC I0.1\nMotor en marcha\nEMERGENCIA\nMotor detenido\nEmergencia liberada: apriete Rearme\nRearmado: la máquina espera una marcha\nMotor en marcha"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca el motor con marcha.",
+            "Aprieta la seta: el motor para y H1 se enciende.",
+            "Suelta la seta: el motor no vuelve. Aprieta rearme y después marcha."
+          ],
+          "practica": [
+            "En EMERGENCIA, H1 parpadea una vez por segundo; en ESPERA_REARME queda fija.",
+            "Si se aprieta rearme con la seta apretada: «Libere la emergencia antes de rearmar»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-52",
+            "objetivos_en_vivo": [
+              {
+                "id": "parpadea",
+                "text": "Seta apretada: H1 parpadea",
+                "extra": false
+              },
+              {
+                "id": "libere",
+                "text": "Rearme con la seta apretada: «Libere la emergencia antes de rearmar»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-53",
+          "numero": 53,
+          "titulo": "Diagnóstico: ¿el contactor hizo caso?",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/53.Realimentacion_del_contactor",
+          "aprende": [
+            "Qué es la realimentación de un contactor y para qué sirve.",
+            "A comparar lo que el programa mandó con lo que pasó, con un tiempo de respuesta.",
+            "Por qué una falla queda enclavada hasta que alguien la reconoce."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Contacto auxiliar NA de KM1 (13-14) a I0.2.",
+                "I0.0: marcha (NA). I0.1: parada (NC).",
+                "Q0.0: bobina de KM1. Q0.1: lámpara H1 de falla."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: **KM1** cierra y el auxiliar vuelve a I0.2.",
+                "Clic derecho sobre **KM1** → Falla → Bobina cortada, y da marcha otra vez: aparece la falla.",
+                "Prueba también **contactos soldados**: el motor no para con la parada.",
+                "Lección 53: realimentación de KM1 en I0.2, falla H1 en Q0.1, ESC reconoce\nMotor en marcha\nMotor detenido\nMotor en marcha\nFalla KM1: no cierra\nMotor detenido\nFalla reconocida"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca: el motor gira y no hay falla.",
+            "Desconecta la bobina de KM1 y da marcha: a los 300 ms, «Falla KM1: no cierra».",
+            "Reconoce con ESC y conecta la bobina otra vez."
+          ],
+          "practica": [
+            "Contactor pegado: si se mandó abrir y a los 300 ms el auxiliar sigue cerrado, «Falla KM1: contactos pegados» una vez, H1 encendida y la marcha bloqueada."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-53",
+            "objetivos_en_vivo": [
+              {
+                "id": "pegado",
+                "text": "Contactor soldado: «Falla KM1: contactos pegados»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-54",
+          "numero": 54,
+          "titulo": "Horómetro: el tiempo de marcha que no se pierde",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/54.Horometro_y_mantenimiento",
+          "aprende": [
+            "Por qué el mantenimiento se programa por horas de marcha.",
+            "A contar segundos de marcha sin perder milisegundos.",
+            "A guardar el horómetro en la FRAM para que sobreviva a un corte."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: marcha (NA). I0.1: parada (NC).",
+                "Q0.0: bobina de KM1. Q0.1: lámpara H2 de mantenimiento (para la práctica)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: la consola suma la marcha.",
+                "Detén la simulación y vuelve a ejecutar: el horómetro sigue, porque la FRAM se guarda entre corridas.",
+                "Aprieta **S2**: deja de sumar.",
+                "Lección 54: horómetro en FRAM, marcha I0.0, parada NC I0.1\nHorómetro nuevo en 0\nMotor en marcha\nMarcha acumulada: 5 s\nMarcha acumulada: 10 s\nMotor detenido. Marcha acumulada: 12 s"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y da marcha: cada 5 s aparece la marcha acumulada.",
+            "Apaga y enciende la placa: el horómetro sigue donde estaba.",
+            "Para el motor: el horómetro se detiene."
+          ],
+          "practica": [
+            "A los 20 s de marcha desde el último mantenimiento: H2 encendida y «Mantenimiento: lubricar la bomba» una vez.",
+            "Con OK: el mantenimiento queda registrado en la FRAM, «Mantenimiento registrado» y H2 apagada."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-54",
+            "objetivos_en_vivo": [
+              {
+                "id": "aviso",
+                "text": "A los 20 s de marcha: «Mantenimiento: lubricar la bomba»",
+                "extra": false
+              },
+              {
+                "id": "ok",
+                "text": "OK: «Mantenimiento registrado»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-55",
+          "numero": 55,
+          "titulo": "Recetas: una máquina, varios productos",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/55.Recetas",
+          "aprende": [
+            "Qué es una receta y por qué evita cambiar el programa para cada producto.",
+            "A guardar las recetas en una tabla de structs.",
+            "A elegir receta solo con la máquina parada."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: marcha (NA).",
+                "Q0.0: bobina de KM1, la mezcla. Q0.1: lámpara H1, producto listo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: la consola muestra la receta 1.",
+                "Usa **UP** y **DOWN** en la botonera de la **Placa** y aprieta **S1**.",
+                "Mira **KM1**: cierra el tiempo de mezcla de esa receta.",
+                "Lección 55: recetas con UP/DOWN, marcha I0.0, mezcla KM1 Q0.0, listo H1 Q0.1\nReceta 1: YOGUR · mezcla 4 s · reposo 2 s\nReceta 2: CREMA · mezcla 6 s · reposo 1 s\nCiclo de CREMA\nCREMA listo"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: la consola muestra la receta 1, YOGUR.",
+            "UP y DOWN cambian de receta.",
+            "Marcha: mezcla con los tiempos de la receta elegida y al final H1 se enciende."
+          ],
+          "practica": [
+            "Guarda la receta elegida en la FRAM al cambiarla.",
+            "Al encender, recupérala: «Receta recuperada: N NOMBRE»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-55",
+            "objetivos_en_vivo": [
+              {
+                "id": "guarda",
+                "text": "Tras un corte: «Receta recuperada: 2 CREMA»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-56",
+          "numero": 56,
+          "titulo": "Primera falla: ¿qué pasó primero?",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/56.Primera_falla",
+          "aprende": [
+            "Qué es la primera falla (first-out) y por qué dice la causa.",
+            "A memorizar la primera con su hora y anotar las demás.",
+            "A reconocer solo cuando ya no queda ninguna causa activa."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.2: térmico F1 (NC). I0.3: presostato de aceite B2 (NC). I0.4: nivel de aceite B3 (NC).",
+                "I0.0: marcha (NA). I0.1: parada (NC).",
+                "Q0.0: bobina de KM1. Q0.1: lámpara H1 de falla."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**.",
+                "Mantén apretado **F1** y después **B3** (simulan el térmico y el nivel): mira la consola.",
+                "Suéltalos y aprieta **ESC** en la botonera.",
+                "Lección 56: primera falla, térmico I0.2, presión I0.3, nivel I0.4 (NC), ESC reconoce\nCompresor en marcha\nPrimera falla: TERMICO a las 10:00:03\nCompresor detenido\nTambién: NIVEL DE ACEITE\nFallas reconocidas"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca el compresor.",
+            "Abre el térmico y después el nivel: la consola marca la primera y anota la segunda.",
+            "Cierra las dos y aprieta ESC: «Fallas reconocidas»."
+          ],
+          "practica": [
+            "Si ESC llega con una causa todavía activa: «No se puede reconocer: NOMBRE sigue activa», con el nombre de esa causa."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-56",
+            "objetivos_en_vivo": [
+              {
+                "id": "primera",
+                "text": "«Primera falla: TERMICO»",
+                "extra": false
+              },
+              {
+                "id": "explica",
+                "text": "ESC con una causa activa: «No se puede reconocer: NIVEL DE ACEITE sigue activa»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-57",
+          "numero": 57,
+          "titulo": "Proyecto: el tablero de una bomba de pozo",
+          "ruta": "examples/Curso_JWPLC_Basic/9.Oficio_industrial/57.Proyecto_bomba_de_pozo",
+          "aprende": [
+            "A juntar en un tablero la emergencia, las fallas enclavadas, la realimentación y el horómetro.",
+            "A registrar cada evento con su hora.",
+            "A ordenar las protecciones en una función que decide el estado."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: marcha (NA). I0.1: parada (NC). I0.2: auxiliar 13-14 de KM1.",
+                "I0.3: emergencia (NC, también corta el común de Q0.0). I0.4: térmico F1 (NC). I0.5: rearme (NA).",
+                "Q0.0: KM1. Q0.1: H1 falla o emergencia. Q0.2: H2 bomba en marcha."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: **KM1** cierra y **H2** se enciende.",
+                "Aprieta la seta **ES**, suéltala y aprieta **S3**.",
+                "Clic derecho sobre **KM1** → Falla → Bobina cortada: «Falla: KM1 no cierra».",
+                "Lección 57: tablero de bomba de pozo\nHorómetro: 0 s de marcha\n10:00:01 Bomba en marcha\n10:00:03 EMERGENCIA\n10:00:04 Emergencia liberada: apriete Rearme\n10:00:05 Rearmado"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca la bomba: H2 se enciende.",
+            "Prueba la emergencia, el térmico y una bobina desconectada: cada una deja su evento con hora.",
+            "Rearme sirve para la emergencia y para reconocer una falla sin causa."
+          ],
+          "practica": [
+            "Como máximo 3 arranques en 60 s; el cuarto no arranca y escribe «Demasiados arranques: espere»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-57",
+            "objetivos_en_vivo": [
+              {
+                "id": "bloquea",
+                "text": "Cuarto arranque en un minuto: «Demasiados arranques: espere»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "curso_iec": [

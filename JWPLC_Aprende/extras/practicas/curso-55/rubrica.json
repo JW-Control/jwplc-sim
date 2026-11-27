@@ -1,0 +1,105 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-55",
+  "goals": [
+    {
+      "id": "guarda",
+      "description": "Tras un corte: «Receta recuperada: 2 CREMA»",
+      "console": "Receta recuperada",
+      "hint": "writeBlock al elegir; readBlock en setup() y validar que el número sea menor que CANTIDAD.",
+      "why": "Si después de un corte la máquina vuelve a la primera receta, el operador puede hacer un lote equivocado sin darse cuenta."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Elegir CREMA",
+      "until_ms": 10000,
+      "state": "fram",
+      "stim": [
+        "1500 BTN_UP=1",
+        "1650 BTN_UP=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 2400,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "UP elige CREMA",
+          "points": 2,
+          "console": "Receta 2: CREMA"
+        },
+        {
+          "description": "El ciclo de CREMA mezcla 6 s",
+          "points": 3,
+          "from_ms": 2600,
+          "to_ms": 8400,
+          "always": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Después del corte",
+      "until_ms": 10000,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1900,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "«Receta recuperada: 2 CREMA»",
+          "points": 6,
+          "console": "Receta recuperada: 2 CREMA",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Sin tocar nada, el ciclo es el de CREMA",
+          "points": 4,
+          "console": "Ciclo de CREMA"
+        },
+        {
+          "description": "Mezcla los 6 s de CREMA",
+          "points": 5,
+          "from_ms": 2100,
+          "to_ms": 7900,
+          "always": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Recetas",
+      "until_ms": 40000,
+      "actions": []
+    }
+  ]
+}

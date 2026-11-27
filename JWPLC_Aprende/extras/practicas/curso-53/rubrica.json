@@ -1,0 +1,116 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-53",
+  "goals": [
+    {
+      "id": "pegado",
+      "description": "Contactor soldado: «Falla KM1: contactos pegados»",
+      "console": "contactos pegados",
+      "hint": "La misma comparación al revés: orden en LOW, auxiliar en HIGH, tiempo vencido.",
+      "why": "Con los contactos pegados el motor no para con la parada: hay que avisar y cortar aguas arriba."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Contactor soldado",
+      "until_ms": 9500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "faults": [
+        {
+          "kind": "welded",
+          "device": "KM1",
+          "at_ms": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca con la marcha",
+          "points": 2,
+          "at_ms": 2500,
+          "expect": {
+            "Q0_0": true
+          }
+        },
+        {
+          "description": "«Falla KM1: contactos pegados», una vez",
+          "points": 6,
+          "console": "Falla KM1: contactos pegados",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "H1 encendida con el contactor pegado",
+          "points": 5,
+          "at_ms": 5500,
+          "expect": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Con la falla, la marcha no vuelve a mandar Q0.0",
+          "points": 5,
+          "from_ms": 6500,
+          "to_ms": 9000,
+          "always": {
+            "Q0_0": false
+          }
+        },
+        {
+          "description": "No confunde el pegado con «no cierra»",
+          "points": 2,
+          "console": "no cierra",
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Contactor",
+      "until_ms": 30000,
+      "actions": []
+    }
+  ]
+}

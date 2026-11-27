@@ -1,0 +1,158 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-52",
+  "goals": [
+    {
+      "id": "parpadea",
+      "description": "Seta apretada: H1 parpadea",
+      "console": "EMERGENCIA",
+      "hint": "(millis() / 500) % 2 da el parpadeo de la lección 30."
+    },
+    {
+      "id": "libere",
+      "description": "Rearme con la seta apretada: «Libere la emergencia antes de rearmar»",
+      "console": "Libere la emergencia",
+      "hint": "En el flanco de rearme, si el estado sigue en EMERGENCIA.",
+      "why": "El operador tiene que saber por qué la máquina no le hace caso."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Emergencia y rearme",
+      "until_ms": 15500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "ES",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "ES",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con la seta, el motor para",
+          "points": 1,
+          "at_ms": 4500,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "En emergencia H1 parpadea una vez por segundo",
+          "points": 8,
+          "from_ms": 4100,
+          "to_ms": 8900,
+          "period": "H1.lit",
+          "cycle_ms": [
+            900,
+            1100
+          ],
+          "cycles": 3
+        },
+        {
+          "description": "«Libere la emergencia antes de rearmar»",
+          "points": 5,
+          "console": "Libere la emergencia antes de rearmar",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Seta suelta sin rearme: H1 fija",
+          "points": 2,
+          "from_ms": 9500,
+          "to_ms": 11800,
+          "always": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Rearmado: H1 apagada",
+          "points": 1,
+          "at_ms": 12600,
+          "expect": {
+            "H1.lit": false
+          }
+        },
+        {
+          "description": "El rearme no arranca el motor",
+          "points": 2,
+          "at_ms": 13500,
+          "expect": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Con una marcha nueva, arranca",
+          "points": 1,
+          "at_ms": 14800,
+          "expect": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Emergencia",
+      "until_ms": 30000,
+      "actions": []
+    }
+  ]
+}

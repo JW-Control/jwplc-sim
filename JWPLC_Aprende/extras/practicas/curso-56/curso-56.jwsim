@@ -1,0 +1,253 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 56 · Primera falla",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Primera_falla/Primera_falla.ino"
+  },
+  "exercise": {
+    "lesson": "curso-56",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Primera_falla",
+    "brief": {
+      "goal": "Decir por qué no se puede reconocer: con una causa todavía activa, ESC escribe «No se puede reconocer: NOMBRE sigue activa».",
+      "steps": [
+        "Ejecuta el ejemplo: arranca con S1 y abre el térmico F1 y después el nivel B3. La consola marca la primera y anota la otra.",
+        "Con una causa activa, ESC no hace nada y el operador no sabe por qué.",
+        "Si ESC llega con una causa activa: «No se puede reconocer: NOMBRE sigue activa», con el nombre de esa causa."
+      ],
+      "uses": [
+        "I0_0 · S1, marcha (NA)",
+        "I0_1 · S2, parada (NC)",
+        "I0_2 · F1, térmico (NC)",
+        "I0_3 · B2, presostato de aceite (NC)",
+        "I0_4 · B3, nivel de aceite (NC)",
+        "Q0_0 · KM1, compresor",
+        "Q0_1 · H1, falla",
+        "Botonera: ESC"
+      ],
+      "teaches": "La primera falla dice la causa; las que vienen detrás son consecuencias. Se reconoce solo cuando ya no queda ninguna causa activa."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "B2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Presostato aceite"
+        },
+        "x": 880,
+        "y": 0
+      },
+      {
+        "id": "B3",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Nivel aceite"
+        },
+        "x": 1080,
+        "y": 0
+      },
+      {
+        "id": "R",
+        "type": "jwsim/power-3ph",
+        "x": 840,
+        "y": 660
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 240,
+        "y": 1540
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 560,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "F1.11",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B2.11",
+        "ref": true
+      },
+      {
+        "from": "B2.12",
+        "to": "plc.I0_3"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B3.11",
+        "ref": true
+      },
+      {
+        "from": "B3.12",
+        "to": "plc.I0_4"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "R.L1",
+        "to": "KM1.1",
+        "ref": true
+      },
+      {
+        "from": "R.L2",
+        "to": "KM1.3",
+        "ref": true
+      },
+      {
+        "from": "R.L3",
+        "to": "KM1.5",
+        "ref": true
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.V1"
+      },
+      {
+        "from": "KM1.6",
+        "to": "M1.W1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

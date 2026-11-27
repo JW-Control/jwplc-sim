@@ -158,6 +158,7 @@ const UNIT_NAMES = {
   "Pantalla y HMI": "Pantalla y HMI",
   "RS485 y Modbus RTU": "RS-485 y Modbus RTU",
   "Analogicas y control": "Analógicas y control",
+  "Oficio industrial": "Oficio industrial",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",
   Proyectos: "Proyectos",
