@@ -171,7 +171,7 @@ function setStatus(kind, text) {
   btnRun.className = `primary state-${kind}`;
   btnPause.className = kind === "paused" ? "is-paused" : kind === "break" ? "is-break" : "";
   btnStop.className = live ? "is-live" : "";
-  if (state.ldView) paintPlcDiagram();
+  paintPlcDiagram();
   if (kind === "building") {
     btnRun.textContent = "⟳ Compilando";
     btnRun.title = "Compilando el programa…";
@@ -691,6 +691,7 @@ const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name)
 
 // Contactos y bobinas de E/S de la placa en el diagrama: en verde con la señal en 1.
 function paintPlcDiagram(names) {
+  if (typeof ldFloatPaint === "function") ldFloatPaint();
   const box = $("plc-diagram-body");
   if (!box || $("plc-diagram").hidden) return;
   if (state.ldView) return paintLadder();
@@ -705,8 +706,7 @@ function paintPlcDiagram(names) {
 // vivo, como su depurador, verde lo que está en 1 y la corriente que pasa,
 // azul lo que está en 0; forzado en verde oliva / azul claro. Solo mientras
 // corre la simulación; se conocen las E/S de la placa (AT %IX0.n / %QX0.n).
-function paintLadder() {
-  const box = $("plc-diagram-body");
+function paintLadder(box = $("plc-diagram-body"), text = state.ldView) {
   const live = ["running", "paused", "break"].includes(state.sim);
   box.classList.toggle("ld-live", live);
   const valueOf = (d) => {
@@ -714,7 +714,7 @@ function paintLadder() {
     if (!sig || !live) return undefined;
     return !!state.levels.get(sig);
   };
-  const flow = live ? window.JwsimPlcDiagram.ladderFlow(state.ldView, valueOf) : { edges: new Map(), nodes: new Map() };
+  const flow = live ? window.JwsimPlcDiagram.ladderFlow(text, valueOf) : { edges: new Map(), nodes: new Map() };
   for (const el of box.querySelectorAll(".ld-edge")) el.classList.toggle("on", flow.edges.get(el.dataset.edge) === true);
   for (const el of box.querySelectorAll(".ld-el")) {
     const v = flow.nodes.get(el.dataset.node);
@@ -752,6 +752,9 @@ function openPlcForce(sig, ev) {
     `<button data-v="x"${running && now !== undefined ? "" : " disabled"}>Release (liberar)</button>` +
     `<div class="iec-edit-foot">${running ? "Queda forzada hasta liberarla, como en OpenPLC." : "Pulse ▶ Ejecutar para forzar."}</div>`;
   menu.dataset.sig = sig;
+  // También se abre desde el Ladder flotante (Esquema y Planta 3D), donde el
+  // panel del programa está oculto: el menú vive en <body>.
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
   menu.hidden = false;
   const w = menu.offsetWidth;
   const h = menu.offsetHeight;

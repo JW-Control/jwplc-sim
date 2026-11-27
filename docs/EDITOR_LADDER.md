@@ -45,6 +45,21 @@ mismo que abre el OpenPLC Editor: se puede pasar de uno a otro.
   (Ctrl+S) o al pulsar Ejecutar, que compila con la misma cadena del OpenPLC
   Editor.
 
+## Ladder en vivo en Esquema y Planta 3D
+
+En las pestañas **Esquema eléctrico** y **Planta 3D**, el botón **▤ Ladder en
+vivo** (o Ctrl+L) abre el programa Ladder del proyecto en una ventana
+flotante, pintada en vivo igual que la vista del programa:
+
+- se mueve arrastrando la cabecera, se agranda por la esquina y se minimiza
+  con — (o doble clic en la cabecera);
+- recuerda su lugar, su tamaño y si estaba abierta;
+- con clic derecho en un contacto o bobina de E/S se fuerza (Force True,
+  Force False, Release), como en la vista del programa.
+
+Prueba: `node tests/e2e-ladder-flotante.mjs` (capturas en
+`build/gates/ladder-flotante/`).
+
 ## Por qué es compatible
 
 Las operaciones de peldaño no son una copia propia. Son las del OpenPLC Editor,

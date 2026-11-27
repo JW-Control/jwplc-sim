@@ -7493,3 +7493,119 @@ html.booting body {
 .ld-vt-del:hover { opacity: 1; }
 .ld-vt-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .ld-vt-foot .muted { font-size: 11px; }
+
+/* ---- Ladder en vivo flotante (ladder-edit.js ldFloat): en Esquema eléctrico
+   y Planta 3D, el programa Ladder pintado en vivo en una ventana que se mueve
+   (arrastrando la cabecera), se agranda (esquina) y se minimiza. */
+.ld-float-btn {
+  margin-left: auto;
+  align-self: center;
+  margin-bottom: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+.ld-float-btn[hidden] {
+  display: none;
+}
+.ld-float-btn.on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--text-strong);
+}
+/* Con el botón a la vista, él empuja el grupo a la derecha y «Fallas» y los
+   símbolos van pegados a él. */
+.main-tabs .ld-float-btn:not([hidden]) {
+  margin-right: 8px;
+}
+.main-tabs .ld-float-btn:not([hidden]) ~ .faults-menu {
+  margin-left: 0;
+}
+.ld-float {
+  position: fixed;
+  right: 18px;
+  bottom: 44px;
+  width: 560px;
+  height: 340px;
+  min-width: 260px;
+  min-height: 120px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  resize: both;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  /* Apenas translúcida a propósito: si es opaca, Chromium la toma como
+     tapa del lienzo WebGL de la Planta 3D y deja de dibujar un recuadro del
+     3D por encima de ella (queda en blanco). */
+  opacity: 0.99;
+}
+.ld-float[hidden] {
+  display: none;
+}
+.ld-float.min {
+  height: auto !important;
+  min-height: 0;
+  resize: none;
+}
+.ld-float.min .ld-float-body {
+  display: none;
+}
+.ld-float-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 10px;
+  font-size: 12px;
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.ld-float.min .ld-float-h {
+  border-bottom: none;
+}
+.ld-float-h b {
+  color: var(--text-strong);
+}
+.ld-float-file {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ld-float-h .icon {
+  cursor: pointer;
+  padding: 1px 7px;
+}
+.ld-float-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.ld-float.live .ld-float-dot {
+  background: #2fd05a;
+  box-shadow: 0 0 6px #2fd05a;
+}
+.ld-float-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.ld-float .plc-diagram-body.is-ladder {
+  padding: 10px 12px 14px;
+}
+/* El menú de forzado se abre también sobre la ventana flotante. */
+#plc-force-menu {
+  position: fixed;
+  z-index: 50;
+}
