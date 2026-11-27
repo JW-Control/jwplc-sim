@@ -21,7 +21,7 @@
     "brief": {
       "goal": "Una alarma con bocina y piloto intermitente que el operador debe reconocer.",
       "steps": [
-        "Con B1 cerrado suene HA1 y haga parpadear H1 (0,5 s / 0,5 s).",
+        "Con B1 cerrado, que suene HA1 y parpadee H1 (0,5 s / 0,5 s).",
         "S1 (reconocer) calla la bocina; con la alarma presente, H1 queda fijo.",
         "Si la alarma desaparece después de reconocerla, H1 se apaga.",
         "Si desaparece sin reconocerla, todo sigue hasta que se reconozca."

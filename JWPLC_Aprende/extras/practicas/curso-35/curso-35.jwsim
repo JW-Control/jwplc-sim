@@ -1,0 +1,220 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 35 · El módulo de E/S remotas",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Modulo_de_E_S_remotas/Modulo_de_E_S_remotas.ino"
+  },
+  "exercise": {
+    "lesson": "curso-35",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Modulo_de_E_S_remotas",
+    "brief": {
+      "goal": "Sumar el térmico de la bomba en DI3 (NC) y su lámpara de falla en DO3, todo por el módulo remoto.",
+      "steps": [
+        "Ejecuta el ejemplo: S1 y S2 están en el módulo IO1, no en el JWPLC; la bomba arranca y para por el bus.",
+        "Lee DI3 (bit 2): con el térmico F1 abierto, la bomba para y no arranca; escribe «Falla: térmico» una vez.",
+        "Enciende H2 en DO3 (bit 2 de las salidas) mientras dure la falla."
+      ],
+      "uses": [
+        "RS-485 · IO1, módulo de E/S remotas, dirección 3",
+        "DI1 · S1, marcha (NA)",
+        "DI2 · S2, parada (NC)",
+        "DI3 · F1, térmico (NC)",
+        "DO1 · KM1, bomba",
+        "DO2 · H1, marcha",
+        "DO3 · H2, falla"
+      ],
+      "teaches": "Un módulo remoto se maneja como las E/S propias, con un paso más: leer sus entradas en un byte, decidir y escribir sus salidas en otro byte."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "IO1",
+        "type": "jwsim/remote-io",
+        "params": {
+          "address": 3,
+          "baud": "9600"
+        },
+        "x": 2180,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 820,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 1020,
+        "y": 0
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 1220,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 1420,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 1700,
+        "y": 0
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 1900,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "IO1.+"
+      },
+      {
+        "from": "IO1.-",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "IO1.DC",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "IO1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "IO1.B"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "IO1.DI1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "IO1.DI2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "F1.11",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "IO1.DI3"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "IO1.C1"
+      },
+      {
+        "from": "IO1.DO1",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "IO1.DO2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "IO1.DO3",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

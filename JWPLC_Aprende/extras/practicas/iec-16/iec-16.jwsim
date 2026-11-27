@@ -1,0 +1,193 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 16 · Proyecto: lotes y turno en una cinta",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-16",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Lotes de 4 piezas y un turno de 3 lotes: con el turno completo, S1 ya no empieza otro lote.",
+      "steps": [
+        "Ejecuta el ejemplo: S1 arranca, cada toque a B1 es una pieza y con 3 la cinta para; S1 empieza otro lote.",
+        "Cambia el lote a 4 piezas.",
+        "Cuenta los lotes completos (LOTES, en el flanco de COMPLETO) y calcula TURNO := LOTES >= 3.",
+        "Con el turno completo, S1 no vuelve a cero las piezas: la cinta queda parada y H1 encendido."
+      ],
+      "uses": [
+        "%IX0.0 · S1, marcha / lote nuevo",
+        "%IX0.1 · S0, parada NC",
+        "%IX0.2 · B1, sensor de piezas",
+        "%QX0.0 · KM1, motor de la cinta",
+        "%QX0.1 · H1, lote completo"
+      ],
+      "teaches": "Dos cuentas encadenadas (piezas por lote y lotes por turno) se arman con sumas en el flanco del evento y comparaciones; cada comparación es una condición más de la lógica."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Marcha",
+          "color": "verde"
+        },
+        "x": 760,
+        "y": 0
+      },
+      {
+        "id": "S0",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "label": "Parada",
+          "color": "rojo"
+        },
+        "x": 920,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-inductive",
+        "x": 1100,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 1800,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "azul",
+          "label": "Lote"
+        },
+        "x": 2040,
+        "y": 0
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 440
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "x": 1800,
+        "y": 420
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S0.11"
+      },
+      {
+        "from": "S0.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "B1.BN"
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "L1.L",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "M1.U2",
+        "to": "L1.N"
+      }
+    ]
+  }
+}

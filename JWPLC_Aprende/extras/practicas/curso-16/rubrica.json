@@ -1,0 +1,247 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-16",
+  "goals": [
+    {
+      "id": "aviso",
+      "description": "Con MARCHA, la sirena HA1 (Q0.3) suena y el motor todavía no arranca",
+      "when": {
+        "Q0_3": 1,
+        "Q0_0": 0
+      },
+      "hold_ms": 1000,
+      "hint": "En D_Logica: ordenMarcha = (pbMarcha || ordenMarcha) && !pbParo && !fallaTermico; motor = tAviso.ejecutar(ordenMarcha, T_AVISO_ARRANQUE_MS); sirena = ordenMarcha && !motor;"
+    },
+    {
+      "id": "arranca",
+      "description": "A los 2 s calla la sirena, arranca el motor y enciende H2 (Q0.2)",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 1,
+        "Q0_3": 0
+      },
+      "hold_ms": 1000,
+      "after": "aviso",
+      "hint": "Una salida nueva toca tres pestañas: su bit en B_Tags.h, la decisión en D_Logica y su bitWrite() en F_Salidas."
+    },
+    {
+      "id": "paro",
+      "description": "PARO detiene el motor y apaga H2",
+      "when": {
+        "Q0_0": 0,
+        "Q0_2": 0,
+        "Q0_3": 0
+      },
+      "hold_ms": 500,
+      "after": "arranca"
+    },
+    {
+      "id": "termico",
+      "description": "Arranca de nuevo y dispara el térmico F1: se detiene y enciende H1",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "paro",
+      "why": "Cada cambio fue a su pestaña: los bits en B_Tags, el tiempo en A_Config, la decisión en D_Logica y la escritura en F_Salidas."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Paro y térmico",
+      "until_ms": 11500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "PARO detiene el motor",
+          "points": 3,
+          "from_ms": 5000,
+          "to_ms": 5700,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "El térmico detiene el motor y enciende la falla",
+          "points": 3,
+          "from_ms": 10000,
+          "to_ms": 10500,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Arranque con aviso",
+      "until_ms": 5000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "El motor no arranca antes de los 2 s de aviso",
+          "points": 5,
+          "from_ms": 1000,
+          "to_ms": 2800,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "La sirena suena durante el aviso",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1700,
+          "eventually": {
+            "Q0_3": 1,
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "A los 2 s arranca y la sirena calla",
+          "points": 3,
+          "from_ms": 3000,
+          "to_ms": 3800,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_3": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H2 encendida con el motor en marcha",
+          "points": 3,
+          "from_ms": 3000,
+          "to_ms": 3800,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Arranque con aviso, paro y térmico",
+      "until_ms": 12000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 11500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

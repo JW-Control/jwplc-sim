@@ -1,0 +1,92 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 22 · La FRAM: un contador que sobrevive a un corte",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/La_FRAM/La_FRAM.ino"
+  },
+  "exercise": {
+    "lesson": "curso-22",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/La_FRAM",
+    "brief": {
+      "goal": "Contar los encendidos del PLC y que el contador solo se borre con ESC mantenido 2 segundos.",
+      "steps": [
+        "Ejecuta el ejemplo, cuenta unas piezas con B1, detén y vuelve a ejecutar: la cuenta sigue.",
+        "Guarda también los encendidos y, al arrancar, escribe «Encendido n.º 2». Cambia VERSION al cambiar el struct.",
+        "Un toque de ESC ya no borra: solo ESC mantenido 2 s escribe «Contador en 0»."
+      ],
+      "uses": [
+        "I0_0 · B1, sensor de piezas",
+        "Botonera: ESC"
+      ],
+      "teaches": "La FRAM guarda un struct entero con writeBlock() y lo devuelve con readBlock(); Detener y Ejecutar en el Sim es como un corte de energía."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "negro",
+          "label": "Pieza"
+        },
+        "x": 460,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      }
+    ]
+  }
+}

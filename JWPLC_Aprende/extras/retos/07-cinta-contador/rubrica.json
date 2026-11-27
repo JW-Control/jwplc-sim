@@ -1,6 +1,38 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "07-cinta-contador",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "Pulsa S1: la cinta arranca",
+      "when": {
+        "KM1.closed": true,
+        "H1.lit": false
+      },
+      "hold_ms": 800
+    },
+    {
+      "id": "lote",
+      "description": "Pasa 3 piezas frente a B1: la cinta para y H1 avisa",
+      "when": {
+        "KM1.closed": false,
+        "H1.lit": true
+      },
+      "after": "marcha",
+      "hold_ms": 800,
+      "hint": "Cuenta flancos de subida de B1, no el nivel: una pieza quieta cuenta una vez."
+    },
+    {
+      "id": "nuevo",
+      "description": "Pulsa S1: empieza un lote nuevo",
+      "when": {
+        "KM1.closed": true,
+        "H1.lit": false
+      },
+      "after": "lote",
+      "hold_ms": 800
+    }
+  ],
   "cases": [
     {
       "name": "Lote de tres piezas",
@@ -243,6 +275,74 @@
             "KM1.closed": true,
             "H1.lit": false
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Un lote y otro",
+      "until_ms": 6500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2600,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3400,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4900,
+          "device": "S1",
+          "action": "press",
+          "value": false
         }
       ]
     }

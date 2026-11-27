@@ -117,6 +117,7 @@ const VIEW_NOTES = {
   watch: "Forzar fija la señal aunque el programa o la escena la cambien",
   debug: "gdb",
   exercise: "Enunciado y calificación",
+  ldvars: "Variables del programa Ladder: se guardan en el .ld, como en el OpenPLC Editor",
 };
 function setView(view) {
   state.view = view;
@@ -131,6 +132,7 @@ function setView(view) {
   $("opt-ts").hidden = view !== "console";
   $("btn-view-clear").hidden = !["console", "buses"].includes(view);
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
+  if (view === "ldvars") ldVarsRender();
 }
 
 let editor = null;
@@ -169,6 +171,7 @@ function setStatus(kind, text) {
   btnRun.className = `primary state-${kind}`;
   btnPause.className = kind === "paused" ? "is-paused" : kind === "break" ? "is-break" : "";
   btnStop.className = live ? "is-live" : "";
+  paintPlcDiagram();
   if (kind === "building") {
     btnRun.textContent = "⟳ Compilando";
     btnRun.title = "Compilando el programa…";
@@ -188,7 +191,9 @@ function setStatus(kind, text) {
     btnRun.textContent = "▶ Ejecutar";
     btnRun.title = "Compilar y ejecutar (F5)";
   }
-  btnPause.textContent = kind === "paused" ? "▶ Continuar" : kind === "break" ? "⏸ Break" : "❚❚ Pausa";
+  // El rótulo va en .tb-lbl: en ventana angosta queda solo el ícono.
+  const [ico, lbl] = kind === "paused" ? ["▶", "Continuar"] : kind === "break" ? ["⏸", "Break"] : ["❚❚", "Pausa"];
+  btnPause.innerHTML = `${ico}<span class="tb-lbl"> ${lbl}</span>`;
   btnPause.title =
     kind === "paused"
       ? `${text} — clic para continuar (F6)`
@@ -401,12 +406,27 @@ async function placeBoard() {
   svg.removeAttribute("width");
   svg.removeAttribute("height");
   // El mayor tamaño que entra en el panel sin deformar el dibujo.
+  // El alto libre es el del panel menos la fila de LEDs y la tira de
+  // salidas, que van pegadas arriba y abajo del frente; el conjunto queda
+  // centrado (ver .plc). La tira escala con el frente (--plc-w): los 8
+  // relés siempre en una fila.
   const fit = () => {
-    const box = $("plc-fit");
-    const w = Math.min(box.clientWidth, (box.clientHeight * vw) / vh, 900);
-    if (w > 0) Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
+    const plc = $("plc");
+    const cs = getComputedStyle(plc);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const leds = plc.querySelector(".plc-leds");
+    const strip = plc.querySelector(".out-strip");
+    const used = (leds?.offsetHeight ?? 0) + (strip?.offsetHeight ?? 0) + 8;
+    const availH = plc.clientHeight - padY - used;
+    const w = Math.min(plc.clientWidth - padX, (availH * vw) / vh, 900);
+    if (w > 0) {
+      Object.assign($("plc-stage").style, { width: `${w}px`, height: `${(w * vh) / vw}px` });
+      plc.style.setProperty("--plc-w", `${w}px`);
+      plc.style.setProperty("--plc-k", String(Math.round((w / 600) * 1000) / 1000));
+    }
   };
-  new ResizeObserver(fit).observe($("plc-fit"));
+  new ResizeObserver(fit).observe($("plc"));
   fit();
   // Nitidez de la pantalla según el tamaño con que quedó (ver fitTftRendering).
   new ResizeObserver(() => fitTftRendering($("tft"))).observe($("tft"));
@@ -646,10 +666,18 @@ function loadSketch(sketch) {
   if (state.guide) renderTheory(null); // la guía es de la lección abierta
   for (const f of sketch.files) addModel(f);
   state.exe = null;
-  // Proyecto OpenPLC (G6): se edita en el OpenPLC Editor; aquí solo se ve.
-  editor.updateOptions({ readOnly: !!sketch.openplc });
+  // Proyecto OpenPLC (G6): el texto estructurado (.st) se edita aquí; Ladder
+  // y FBD, en el OpenPLC Editor (al guardar allí se recompila aquí).
   window.JwsimTabs?.onProgram(!!sketch.openplc);
-  if (sketch.openplc) consoleWrite(`[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor; al guardar allí se recompila aquí\n`, "sys");
+  if (sketch.openplc) {
+    const st = sketch.files.every((f) => /\.st$/i.test(f.name));
+    consoleWrite(
+      st
+        ? `[jwsim] proyecto OpenPLC en texto estructurado: se edita aquí o en el OpenPLC Editor (${sketch.dir})\n`
+        : `[jwsim] proyecto OpenPLC: se edita en el OpenPLC Editor (Abrir proyecto → ${sketch.dir}); al guardar allí se recompila aquí\n`,
+      "sys",
+    );
+  }
   showFile(sketch.files[0].name);
   clearProblems();
   $("build-log").textContent = "";
@@ -658,8 +686,182 @@ function loadSketch(sketch) {
   api.watch(sketch.dir);
 }
 
+// En un proyecto OpenPLC solo el texto estructurado se edita en el Sim.
+const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name);
+
+// Contactos y bobinas de E/S de la placa en el diagrama: en verde con la señal en 1.
+function paintPlcDiagram(names) {
+  if (typeof ldSidePaint === "function") ldSidePaint();
+  const box = $("plc-diagram-body");
+  if (!box || $("plc-diagram").hidden) return;
+  if (state.ldView) return paintLadder();
+  for (const el of box.querySelectorAll(names ? names.map((n) => `[data-sig="${n}"]`).join(",") : "[data-sig]")) {
+    el.classList.toggle("on", !!state.levels.get(el.dataset.sig));
+    const f = state.forced.get(el.dataset.sig);
+    el.classList.toggle("forced", f !== undefined);
+  }
+}
+
+// Ladder con el aspecto del OpenPLC Editor (plc-diagram.cjs ladderView): en
+// vivo, como su depurador, verde lo que está en 1 y la corriente que pasa,
+// azul lo que está en 0; forzado en verde oliva / azul claro. Solo mientras
+// corre la simulación; se conocen las E/S de la placa (AT %IX0.n / %QX0.n).
+function paintLadder(box = $("plc-diagram-body"), text = state.ldView) {
+  const live = ["running", "paused", "break"].includes(state.sim);
+  box.classList.toggle("ld-live", live);
+  // E/S de la placa por su nivel; el resto (marcas, bloques) por el
+  // depurador del OpenPLC (plcVal, ladder-edit.js).
+  const valueOf = (d) => {
+    if (!live) return undefined;
+    const sig = ldSig(d);
+    if (sig) return !!state.levels.get(sig);
+    const v = plcVal(d.variable?.name);
+    return typeof v === "boolean" ? v : undefined;
+  };
+  const pinValue = (inst, pin) => {
+    const v = plcVal(`${inst}.${pin}`);
+    return typeof v === "boolean" ? v : undefined;
+  };
+  const flow = live ? window.JwsimPlcDiagram.ladderFlow(text, valueOf, pinValue) : { edges: new Map(), nodes: new Map() };
+  for (const el of box.querySelectorAll("[data-live]")) {
+    const v = live ? plcVal(el.dataset.live) : undefined;
+    el.textContent = plcFmt(v);
+    el.classList.toggle("on", v === true);
+  }
+  for (const el of box.querySelectorAll(".ld-edge")) el.classList.toggle("on", flow.edges.get(el.dataset.edge) === true);
+  for (const el of box.querySelectorAll(".ld-el")) {
+    const v = flow.nodes.get(el.dataset.node);
+    const neg = el.dataset.variant === "negated";
+    const shown = v === undefined ? undefined : neg ? !v : v;
+    const f = el.dataset.sig ? state.forced.get(el.dataset.sig) : undefined;
+    el.classList.toggle("on", f === undefined && shown === true);
+    el.classList.toggle("off", f === undefined && shown === false);
+    el.classList.toggle("forced-1", live && f !== undefined && !!f);
+    el.classList.toggle("forced-0", live && f !== undefined && !f);
+    el.classList.toggle("forced", f !== undefined);
+  }
+}
+
+// Forzar desde el Ladder/FBD en vivo (clic derecho en un contacto o bobina de
+// E/S de la placa): Force True / Force False / Release, como en OpenPLC y en
+// el plano IEC. Usa el mismo forzado que la tabla de E/S.
+function plcSigAt(ev) {
+  for (const el of $("plc-diagram-body").querySelectorAll("[data-sig]")) {
+    const r = el.getBoundingClientRect();
+    if (ev.clientX >= r.left - 2 && ev.clientX <= r.right + 2 && ev.clientY >= r.top - 2 && ev.clientY <= r.bottom + 2) return el.dataset.sig;
+  }
+  return null;
+}
+function openPlcForce(sig, ev) {
+  const menu = $("plc-force-menu");
+  const running = ["running", "paused", "break"].includes(state.sim);
+  const now = state.forced.get(sig);
+  const kind = sig.startsWith("I") ? "Entrada" : "Salida";
+  const st = now === undefined ? "libre" : `forzada a ${now ? 1 : 0}`;
+  menu.innerHTML =
+    `<div class="iec-edit-h">Forzar ${kind} ${sig.replace("_", ".")} <span class="muted">(${st})</span></div>` +
+    `<button data-v="1"${running ? "" : " disabled"}>Force True</button>` +
+    `<button data-v="0"${running ? "" : " disabled"}>Force False</button>` +
+    `<button data-v="x"${running && now !== undefined ? "" : " disabled"}>Release (liberar)</button>` +
+    `<div class="iec-edit-foot">${running ? "Queda forzada hasta liberarla, como en OpenPLC." : "Pulse ▶ Ejecutar para forzar."}</div>`;
+  menu.dataset.sig = sig;
+  // También se abre desde el Ladder en vivo lateral (Esquema y Planta 3D), donde el
+  // panel del programa está oculto: el menú vive en <body>.
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
+  menu.hidden = false;
+  const w = menu.offsetWidth;
+  const h = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, Math.min(ev.clientX + 8, window.innerWidth - w - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(ev.clientY + 8, window.innerHeight - h - 8))}px`;
+}
+function wirePlcForce() {
+  const body = $("plc-diagram-body");
+  plcFitObs ??= new ResizeObserver(() => fitPlcDiagram());
+  plcFitObs.observe(body);
+  const menu = $("plc-force-menu");
+  body.addEventListener("contextmenu", (ev) => {
+    const sig = plcSigAt(ev);
+    if (!sig) return;
+    ev.preventDefault();
+    openPlcForce(sig, ev);
+  });
+  menu.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-v]");
+    if (!b || b.disabled) return;
+    const sig = menu.dataset.sig;
+    setForce(sig, b.dataset.v === "x" ? null : Number(b.dataset.v));
+    menu.hidden = true;
+    paintPlcDiagram([sig]);
+  });
+  document.addEventListener("pointerdown", (ev) => {
+    if (!menu.hidden && !ev.target.closest("#plc-force-menu")) menu.hidden = true;
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") menu.hidden = true;
+  });
+}
+
+// Tamaño del diagrama: un poco más grande que en la wiki (se lee a la
+// distancia del editor). En Ladder todos los peldaños con la misma escala,
+// achicada lo justo para que el más ancho entre en el panel sin barra.
+function fitPlcDiagram() {
+  const body = $("plc-diagram-body");
+  const svgs = [...body.querySelectorAll("svg")];
+  if (!svgs.length) return;
+  const ld = body.classList.contains("is-ladder");
+  if (!ld) {
+    const vb = svgs[0].viewBox.baseVal;
+    if (vb?.width) svgs[0].style.width = `${Math.round(vb.width * 1.35)}px`;
+    return;
+  }
+  const widest = Math.max(...svgs.map((s) => s.viewBox.baseVal.width || 0));
+  // Ancho útil: panel menos sus márgenes y los de la tarjeta (~64 px).
+  const room = Math.max(240, body.clientWidth - 64);
+  const k = Math.max(0.8, Math.min(1.25, room / widest));
+  for (const svg of svgs) {
+    const vb = svg.viewBox.baseVal;
+    svg.style.width = `${Math.round(vb.width * k)}px`;
+    svg.style.height = `${Math.round(vb.height * k)}px`;
+  }
+}
+let plcFitObs = null;
+
+// Ladder (.ld) y FBD (.fbd): se muestra el diagrama; «Ver como texto» deja el JSON.
+const isDiagramFile = (name) => !!state.sketch?.openplc && /\.(ld|fbd)$/i.test(name) && !!window.JwsimPlcDiagram;
+function renderPlcDiagram(name) {
+  const box = $("plc-diagram");
+  const diagram = isDiagramFile(name);
+  const show = diagram && !state.plcText;
+  ldEditSync(name, show && /\.ld$/i.test(name));
+  box.hidden = !diagram;
+  box.classList.toggle("as-text", diagram && !!state.plcText);
+  $("plc-diagram-body").hidden = !show;
+  $("plc-diagram-text").textContent = state.plcText ? "Ver el diagrama" : "Ver como texto";
+  const wasHidden = $("editor").hidden;
+  $("editor").hidden = show;
+  if (!show) {
+    if (wasHidden) requestAnimationFrame(() => editor.layout());
+    return;
+  }
+  try {
+    const text = state.models.get(name)?.getValue() ?? "";
+    const ld = /\.ld$/i.test(name);
+    state.ldView = ld ? text : null;
+    // Ladder: vista o modo edición (ladder-edit.js).
+    $("plc-diagram-body").innerHTML = ld ? ldHtml(text) : window.JwsimPlcDiagram.fbdSvg(text);
+    $("plc-diagram-body").classList.toggle("is-ladder", ld);
+    fitPlcDiagram();
+    paintPlcDiagram();
+  } catch (err) {
+    state.ldView = null;
+    $("plc-diagram-body").textContent = `No se pudo dibujar el diagrama: ${err.message}`;
+  }
+}
+
 function showFile(name) {
   state.active = name;
+  editor.updateOptions({ readOnly: isReadOnlyFile(name) });
+  renderPlcDiagram(name);
   editor.setModel(state.models.get(name));
   renderTabs();
 }
@@ -789,8 +991,10 @@ async function deleteSketchFile(name, { ask = true } = {}) {
 }
 
 async function saveSketch() {
-  if (!state.sketch || state.sketch.openplc) return;
-  const files = [...state.models].map(([name, m]) => ({ name, content: m.getValue() }));
+  if (!state.sketch) return;
+  // Los .ld se guardan también: se editan en el editor Ladder del Sim.
+  const files = [...state.models].filter(([name, m]) => !isReadOnlyFile(name) || (/\.ld$/i.test(name) && m.getValue() !== state.saved.get(name))).map(([name, m]) => ({ name, content: m.getValue() }));
+  if (!files.length) return;
   await api.save({ dir: state.sketch.dir, files });
   for (const f of files) state.saved.set(f.name, f.content);
   renderTabs();
@@ -1235,9 +1439,13 @@ function setForce(signal, value) {
   }
   const el = document.querySelector(`.io[data-signal="${signal}"]`);
   el?.classList.toggle("forced", value !== null);
+  paintPlcDiagram([signal]);
   if (el) el.title = value === null ? el.title.replace(/ · forzada.*$/, "") : `${el.title.replace(/ · forzada.*$/, "")} · forzada a ${value}`;
   updateWatchSignal(signal);
 }
+
+// Forzado de E/S para el plano IEC (clic derecho: Force True/False/Release).
+window.JwsimForce = { set: (signal, value) => setForce(signal, value), get: (signal) => state.forced.get(signal) };
 
 function setWatchValues(values) {
   if (!values) return;
@@ -1378,6 +1586,7 @@ function onMessage(m) {
         renderSignal(name, level);
         updateWatchSignal(name);
       }
+      if (m.changes.length) paintPlcDiagram(m.changes.map(([n]) => n));
       $("clock").textContent = fmtTime(m.t_ns);
       break;
     case "status":
@@ -1595,6 +1804,7 @@ function onOpenPlcChange({ name, content, at }) {
     model.setValue(content);
     state.saved.set(name, content);
     renderTabs();
+    if (state.active === name) renderPlcDiagram(name);
   }
   if (!plcReload.names.size) plcReload.first = at;
   plcReload.names.add(name);
@@ -1721,7 +1931,91 @@ function mdToHtml(text, opts = {}) {
 
 // ---- Objetivos en vivo (rubrica.json "goals"): la barra de cada objetivo se
 // llena mientras su condición se sostiene en la simulación.
-const goalUi = { goals: [], progress: null, error: null };
+const goalUi = { goals: [], progress: null, error: null, hist: new Map() };
+
+// «Ver en el tiempo»: las lecturas de cada objetivo con condición («when») en
+// los últimos segundos simulados, para explicar por qué todavía no se cumple.
+const GOAL_WINDOW_MS = 10000;
+function recordGoalHistory(p) {
+  const last = goalUi.lastT ?? -1;
+  if (p.t_ms < last) goalUi.hist.clear(); // corrida nueva
+  goalUi.lastT = p.t_ms;
+  for (const s of p.goals) {
+    const g = goalUi.goals.find((x) => x.id === s.id);
+    if (!g?.when || !s.reading) continue;
+    const h = goalUi.hist.get(g.id) ?? [];
+    const r = {};
+    for (const k of Object.keys(g.when)) r[k] = s.reading[k];
+    h.push({ t: p.t_ms, r });
+    while (h.length > 2 && h[0].t < p.t_ms - 3 * GOAL_WINDOW_MS) h.shift();
+    goalUi.hist.set(g.id, h);
+  }
+}
+const goalNum = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
+function goalChart(g, h) {
+  const keys = Object.keys(g.when);
+  const t1 = h.at(-1).t;
+  const t0 = Math.max(h[0].t, t1 - GOAL_WINDOW_MS);
+  const pts = h.filter((x) => x.t >= t0);
+  const W = 200;
+  const L = 34;
+  const RH = 20;
+  const H = keys.length * RH + 16;
+  const x = (t) => L + ((t - t0) / Math.max(1, t1 - t0)) * (W - L - 4);
+  const ok = (e) => keys.every((k) => window.JwsimGoalMatch(e.r[k], g.when[k]));
+  // Franjas en que se cumplía todo a la vez, y la racha más larga.
+  let bands = "";
+  let best = 0;
+  let start = null;
+  for (let i = 0; i < pts.length; i++) {
+    const m = ok(pts[i]);
+    if (m && start === null) start = pts[i].t;
+    const end = i === pts.length - 1 || !ok(pts[i + 1]);
+    if (m && end) {
+      const stop = i < pts.length - 1 ? pts[i + 1].t : pts[i].t;
+      bands += `<rect class="gc-ok" x="${x(start).toFixed(1)}" y="2" width="${Math.max(1.5, x(stop) - x(start)).toFixed(1)}" height="${H - 16}"/>`;
+      best = Math.max(best, stop - start);
+      start = null;
+    }
+  }
+  let rows = "";
+  keys.forEach((k, i) => {
+    const want = g.when[k];
+    const vals = pts.map((e) => goalNum(e.r[k]));
+    const digital = !Array.isArray(want) && vals.every((v) => v === 0 || v === 1);
+    const y0 = i * RH + 4;
+    let lo = 0;
+    let hi = 1;
+    if (!digital) {
+      lo = Math.min(...vals, Array.isArray(want) ? want[0] : goalNum(want));
+      hi = Math.max(...vals, Array.isArray(want) ? want[1] : goalNum(want));
+      if (hi - lo < 1e-9) hi = lo + 1;
+    }
+    const y = (v) => y0 + RH - 6 - ((v - lo) / (hi - lo)) * (RH - 10);
+    let d = "";
+    pts.forEach((e, j) => {
+      const v = goalNum(e.r[k]);
+      d += j ? `H${x(e.t).toFixed(1)}V${y(v).toFixed(1)}` : `M${x(e.t).toFixed(1)} ${y(v).toFixed(1)}`;
+    });
+    if (Array.isArray(want)) rows += `<rect class="gc-want" x="${L}" y="${y(want[1]).toFixed(1)}" width="${W - L - 4}" height="${Math.max(1, y(want[0]) - y(want[1])).toFixed(1)}"/>`;
+    else rows += `<line class="gc-want-line" x1="${L}" x2="${W - 4}" y1="${y(goalNum(want)).toFixed(1)}" y2="${y(goalNum(want)).toFixed(1)}"/>`;
+    rows += `<text class="gc-key" x="2" y="${y0 + RH / 2 + 1}">${esc(k)}</text><path class="gc-line" d="${d}"/>`;
+  });
+  const axis = `<text class="gc-axis" x="${L}" y="${H - 2}">${(t0 / 1000).toFixed(1)} s</text><text class="gc-axis" x="${W - 4}" y="${H - 2}" text-anchor="end">${(t1 / 1000).toFixed(1)} s</text>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lecturas del objetivo en los últimos segundos">${bands}${rows}${axis}</svg>`;
+  // Explicación en palabras.
+  const hold = Number(g.hold_ms ?? 0);
+  let text;
+  if (!pts.some(ok)) {
+    const never = keys.filter((k) => !pts.some((e) => window.JwsimGoalMatch(e.r[k], g.when[k])));
+    text = never.length
+      ? `En estos segundos ${never.map((k) => `${k} nunca estuvo en ${fmtWant(k, g.when[k])}`).join(" y ")}.`
+      : "Cada condición se cumplió alguna vez, pero nunca todas a la vez.";
+  } else if (hold > 0 && best < hold) {
+    text = `Se cumplió a la vez como máximo ${(best / 1000).toFixed(1)} s seguidos; se piden ${(hold / 1000).toFixed(1)} s.`;
+  } else text = "Las franjas verdes marcan cuándo se cumplía todo a la vez.";
+  return { svg, text };
+}
 
 function fmtReading(key, v) {
   if (v === undefined) return "—";
@@ -1771,6 +2065,7 @@ function buildGoals() {
     html += `<li class="goal${g.extra ? " extra" : ""}" data-goal="${esc(g.id)}"><span class="goal-icon"></span><div class="goal-body">`;
     html += `<div class="goal-title">${esc(g.description)}${g.extra ? ` <span class="goal-extra">${extraLabel[g.extra]}</span>` : ""}</div><div class="goal-sigs">${sigs}</div>`;
     if (Number(g.hold_ms ?? 0) > 0 || g.period !== undefined || (g.delay !== undefined && (g.cycles ?? 1) > 1)) html += `<div class="goal-hold"><i></i><small></small></div>`;
+    if (g.when && Object.keys(g.when).length) html += `<details class="goal-time"><summary>Ver en el tiempo</summary><div class="goal-chart"></div><p class="goal-explain"></p></details>`;
     if (g.hint) html += `<details class="goal-hint"><summary>Pista</summary>${esc(g.hint)}</details>`;
     if (g.why) html += `<div class="goal-why" hidden>${esc(g.why)}</div>`;
     html += `</div></li>`;
@@ -1790,8 +2085,10 @@ function renderGoals() {
   box.querySelector(".goals-count").textContent = `${done}/${required.length}`;
   box.querySelector(".goals-time").textContent = p ? `t = ${(p.t_ms / 1000).toFixed(1)} s` : "Pulse Ejecutar para empezar";
   box.querySelector(".goals-bar i").style.width = `${required.length ? (100 * done) / required.length : 0}%`;
-  box.querySelector(".goals-done").hidden = !p?.complete;
-  if (p?.complete && !goalUi.reported && state.exercise?.id) {
+  // Lograda solo si están cumplidos los objetivos de ESTE ejercicio.
+  const complete = !!p && required.length > 0 && done === required.length;
+  box.querySelector(".goals-done").hidden = !complete;
+  if (complete && !goalUi.reported && state.exercise?.id) {
     goalUi.reported = true;
     reportDone("goals").then((r) => fillAfter(box.querySelector(".learn-after"), r));
   }
@@ -1817,6 +2114,16 @@ function renderGoals() {
     }
     const hint = li.querySelector(".goal-hint");
     if (hint) hint.hidden = st === "done";
+    const tl = li.querySelector(".goal-time");
+    if (tl) {
+      const h = goalUi.hist.get(g.id);
+      tl.hidden = st === "done" || st === "blocked" || !h || h.length < 2;
+      if (!tl.hidden && tl.open) {
+        const c = goalChart(g, h);
+        tl.querySelector(".goal-chart").innerHTML = c.svg;
+        tl.querySelector(".goal-explain").textContent = c.text;
+      }
+    }
     const why = li.querySelector(".goal-why");
     if (why) why.hidden = st !== "done";
     const hold = Number(g.hold_ms ?? 0);
@@ -1845,9 +2152,21 @@ window.JwsimGoalMatch = (got, want) => {
 };
 
 api.onGoalsProgress((p) => {
+  // Un avance de otros objetivos (los del ejercicio anterior, que seguían
+  // en el proceso principal) no cuenta: se descarta y se vuelven a mandar
+  // los de este ejercicio.
+  const mine = new Set(goalUi.goals.map((g) => g.id));
+  if (!p?.goals?.length || p.goals.some((g) => !mine.has(g.id))) {
+    if (goalUi.goals.length && !goalUi.resent) {
+      goalUi.resent = true;
+      api.setGoals(goalUi.goals);
+    }
+    return;
+  }
   // Al empezar a correr, la ficha se pliega para que se vean los objetivos.
   if (!goalUi.progress && !$("ex-brief").classList.contains("collapsed")) renderBrief(false);
   goalUi.progress = p;
+  recordGoalHistory(p);
   renderGoals();
 });
 
@@ -1856,6 +2175,9 @@ async function showExercise(file) {
   goalUi.goals = info?.goals ?? [];
   goalUi.error = info?.goalsError ?? null;
   goalUi.progress = null;
+  goalUi.resent = false;
+  goalUi.hist.clear();
+  goalUi.lastT = -1;
   await api.setGoals(goalUi.goals.length ? goalUi.goals : null);
   buildGoals();
   state.exercise = info ? { file, id: info.id, brief: info.brief, lesson: !!info.lesson } : null;
@@ -1864,14 +2186,20 @@ async function showExercise(file) {
   $("tab-exercise").hidden = !info;
   $("scene-tab-reto").hidden = !info;
   $("ex-reto-hint").hidden = !info;
-  renderTheory(info?.lesson ?? null);
+  // Un reto también trae su clase en Teoría: su enunciado, sin la parte de
+  // cómo se califica desde la línea de comandos.
+  const reto = info && !info.lesson && info.statement
+    ? { id: info.id, eyebrow: `Reto · Nivel ${info.level}`, title: info.title, readme: dropSection(info.statement.replace(/^#\s+[^\n]*\n/, ""), "Cómo se califica"), card: false }
+    : null;
+  renderTheory(info?.lesson ?? reto);
   const doneMsg = $("ex-goals").querySelector(".goals-done b");
   if (doneMsg && info?.lesson) doneMsg.textContent = "¡Práctica lograda!";
   mandosSig = "";
   placeReto();
-  if (info) window.JwsimShowReto?.();
-  // Una lección se hace en Programa: teoría a la izquierda, reto a la derecha.
-  if (info?.lesson) window.JwsimTabs?.select("program");
+  // En media pantalla el reto no se abre solo: taparía la placa.
+  if (info && !NARROW.matches) window.JwsimShowReto?.();
+  // Lecciones y retos se hacen en Programa: teoría a la izquierda, reto a la derecha.
+  if (info) window.JwsimTabs?.select("program");
   if (!info && document.querySelector(".scene-main").dataset.pane === "reto") window.JwsimScenePane && document.querySelector('.side-tab[data-pane="props"]').click();
   $("grade-result").innerHTML = "";
   $("grade-note").textContent = "";
@@ -1914,7 +2242,7 @@ function simGuide(md, l) {
 }
 
 function guideHtml(l, graded) {
-  const head = `<small class="th-eyebrow">Lección ${esc(String(l.num))}</small><h3>${esc(l.title)}</h3>`;
+  const head = `<small class="th-eyebrow">${esc(l.eyebrow ?? `Lección ${l.num}`)}</small><h3>${esc(l.title)}</h3>`;
   if (l.guia) {
     let md = l.guia.replace(/^<!--[\s\S]*?-->\s*/, "").replace(/^#\s+[^\n]*\n/, "");
     md = simGuide(md, l);
@@ -1948,19 +2276,26 @@ function renderTheory(l, graded = !!l) {
     showGuide();
     return;
   }
+  $("guide-card").hidden = l.card === false;
+  $("guide-reset").hidden = !state.exercise;
   const html = guideHtml(l, graded);
-  pane.innerHTML = `<div class="side-title">Teoría${READ_SIZE_HTML}</div>${html}`;
+  pane.innerHTML = `<div class="side-title">Teoría</div>${html}`;
   $("guide-body").innerHTML = html;
   $("guide-body").scrollTop = 0;
   for (const box of [pane, $("guide-body")]) markGuideSnippets(box);
   showGuide();
   // La ficha se abre al entrar a la lección, no cuando el proyecto se recarga.
-  if (prev?.id !== l.id) openLessonCard(l, graded);
+  if (prev?.id !== l.id && l.card !== false) openLessonCard(l, graded);
 }
 window.showLessonGuide = (l) => renderTheory(l, false);
+// Media pantalla (≤ 1280 px): la Teoría y el Reto de Programa se abren
+// encima del código y la placa en lugar de quitarles ancho; empiezan
+// cerrados, se abren con su botón y uno cierra al otro.
+const NARROW = window.matchMedia("(max-width: 1280px)");
+const narrowOpen = { guide: false, reto: false };
 function showGuide() {
   const has = !!state.guide;
-  const folded = storeGet(GUIDE_FOLD_KEY) === "1";
+  const folded = NARROW.matches ? !narrowOpen.guide : storeGet(GUIDE_FOLD_KEY) === "1";
   $("guide-pane").hidden = !has || folded;
   $("prog-rail-left").hidden = !has;
   $("guide-open").classList.toggle("active", has && !folded);
@@ -2005,8 +2340,10 @@ function snippetsOf(target) {
  */
 function findSnippetLines(code, snippet) {
   const clean = (x) => x.replace(/\/\/.*$/, "").trim();
-  const want = snippet.split("\n").map(clean).filter(Boolean);
-  const lines = code.split("\n").map(clean);
+  // \r\n en Windows: «.» no abarca \r, así que un comentario al final de un
+  // renglón con \r no se quitaba y el trozo «no estaba» en el programa.
+  const want = snippet.split(/\r?\n/).map(clean).filter(Boolean);
+  const lines = code.split(/\r?\n/).map(clean);
   if (!want.length) return null;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i] !== want[0]) continue;
@@ -2056,6 +2393,30 @@ function highlightFromGuide(target) {
   );
   state.guideHl = { name: main, ids };
   editor.revealLinesInCenterIfOutsideViewport(ranges[0][0], ranges[0][1]);
+}
+
+// «Reiniciar código»: vuelve cada archivo del sketch al código de partida del
+// ejercicio (el ejemplo de la lección o el .ino inicial del reto). Es una
+// edición más del editor: Ctrl+Z la deshace y queda sin guardar.
+async function resetToStarter() {
+  const ex = state.exercise;
+  if (!ex) return;
+  try {
+    const files = await api.exerciseStarter(ex.id, ex.lesson);
+    let n = 0;
+    for (const f of files) {
+      const model = state.models.get(f.name);
+      if (!model || model.getValue() === f.content) continue;
+      model.pushStackElement();
+      model.pushEditOperations([], [{ range: model.getFullModelRange(), text: f.content }], () => null);
+      model.pushStackElement();
+      n++;
+    }
+    clearGuideHighlight();
+    guideNote(n ? "Volviste al código de partida. Ctrl+Z lo deshace; guarda para quedarte con él." : "Tu programa ya es el código de partida.");
+  } catch (err) {
+    guideNote(`No se pudo reiniciar: ${cleanError(err)}`);
+  }
 }
 
 function guideNote(text) {
@@ -2120,19 +2481,30 @@ function wireGuide() {
       if (t) highlightFromGuide(t);
     });
   $("guide-card").addEventListener("click", () => window.jwsimLessonCard.open());
+  $("guide-reset").addEventListener("click", () => resetToStarter());
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && $("lesson-card")) closeLessonCard();
   });
   const saved = Number(storeGet(GUIDE_W_KEY));
   if (saved > 0) pane.style.setProperty("--guide-w", `${saved}px`);
   $("guide-fold").addEventListener("click", () => {
-    storeSet(GUIDE_FOLD_KEY, "1");
+    if (NARROW.matches) narrowOpen.guide = false;
+    else storeSet(GUIDE_FOLD_KEY, "1");
     showGuide();
   });
   // Botón «Teoría» de la barra izquierda de Programa: abre y pliega la clase.
   $("guide-open").addEventListener("click", () => {
-    storeSet(GUIDE_FOLD_KEY, $("guide-pane").hidden ? null : "1");
+    const open = $("guide-pane").hidden;
+    if (NARROW.matches) {
+      narrowOpen.guide = open;
+      if (open) narrowOpen.reto = false;
+      placeReto();
+    } else storeSet(GUIDE_FOLD_KEY, open ? null : "1");
     showGuide();
+  });
+  NARROW.addEventListener("change", () => {
+    showGuide();
+    placeReto();
   });
   const grip = $("guide-grip");
   grip.addEventListener("pointerdown", (e) => {
@@ -2163,12 +2535,11 @@ function wireGuide() {
   });
 }
 
-// ---- Tamaño de letra de la teoría y del reto (A− / A+), el mismo en los
-// dos paneles y en las dos pestañas; se recuerda.
+// ---- Tamaño de letra de la teoría, del reto y del código (A− / A+), el
+// mismo en los paneles, en las dos pestañas y en el editor; se recuerda.
+// En el tamaño por defecto el código va a 13 px.
 const READ_KEY = "jwsim.readZoom";
 const READ_DEF = 0.9;
-const READ_SIZE_HTML =
-  '<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>';
 function readZoom() {
   const z = Number(storeGet(READ_KEY));
   return z >= 0.7 && z <= 1.5 ? z : READ_DEF;
@@ -2177,7 +2548,11 @@ function setReadZoom(z) {
   z = Math.round(Math.max(0.7, Math.min(1.5, z)) * 10) / 10;
   storeSet(READ_KEY, z === READ_DEF ? null : String(z));
   document.documentElement.style.setProperty("--read-zoom", String(z));
+  editor?.updateOptions({ fontSize: codeFontSize(z) });
   for (const b of document.querySelectorAll("[data-read-size]")) b.disabled = (b.dataset.readSize === "-1" && z <= 0.7) || (b.dataset.readSize === "1" && z >= 1.5);
+}
+function codeFontSize(z = readZoom()) {
+  return Math.round((13 * z) / READ_DEF);
 }
 function wireReadSize() {
   setReadZoom(readZoom());
@@ -2197,7 +2572,7 @@ function placeReto() {
   const dest = prog ? $("prog-reto-slot") : document.querySelector(".reto-pane");
   if (body.parentElement !== dest) dest.appendChild(body);
   const has = !!state.exercise;
-  const open = has && storeGet(PROG_RETO_KEY) !== "0";
+  const open = has && (NARROW.matches ? narrowOpen.reto : storeGet(PROG_RETO_KEY) !== "0");
   $("prog-rail-right").hidden = !has;
   $("prog-side").hidden = !open;
   const t = $("prog-tab-reto");
@@ -2205,7 +2580,11 @@ function placeReto() {
   t.setAttribute("aria-pressed", String(open));
 }
 function setProgReto(open) {
-  storeSet(PROG_RETO_KEY, open ? null : "0");
+  if (NARROW.matches) {
+    narrowOpen.reto = open;
+    if (open) narrowOpen.guide = false;
+    showGuide();
+  } else storeSet(PROG_RETO_KEY, open ? null : "0");
   placeReto();
   window.dispatchEvent(new Event("resize"));
 }
@@ -2213,7 +2592,7 @@ function wireProgReto() {
   $("prog-tab-reto").addEventListener("click", () => setProgReto($("prog-side").hidden));
   new MutationObserver(placeReto).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
   placeReto();
-  setInterval(refreshMandos, 250);
+  setInterval(refreshMandos, 100);
 }
 
 // Mandos del banco: los pulsadores, selectores y demás equipos accionables de
@@ -2256,6 +2635,13 @@ function refreshMandos() {
   for (const b of $("ex-mandos").querySelectorAll(".mando")) {
     b.disabled = !run;
     const v = run ? Sc.actionState(b.dataset.dev, b.dataset.act) : undefined;
+    // Mientras se mantiene apretado, o hasta que la simulación confirme el
+    // cambio de un interruptor, manda lo que hizo el alumno.
+    if (b.classList.contains("held")) continue;
+    if (b.dataset.pending !== undefined) {
+      if (String(!!v) !== b.dataset.pending && run) continue;
+      delete b.dataset.pending;
+    }
     b.classList.toggle("on", v === true || (typeof v === "number" && v > 0));
     b.querySelector("small").textContent = typeof v === "number" ? ` · ${v}` : "";
   }
@@ -2269,22 +2655,29 @@ function wireMandos() {
     const Sc = window.JwsimScene;
     const kind = b.dataset.kind;
     if (kind === "momentary") {
+      // Se ve apretado al instante; la lectura real llega con la simulación.
+      b.classList.add("on", "held");
       act(b, true);
       b.setPointerCapture(e.pointerId);
       const up = () => {
+        b.classList.remove("on", "held");
         act(b, false);
         b.removeEventListener("pointerup", up);
         b.removeEventListener("pointercancel", up);
       };
       b.addEventListener("pointerup", up);
       b.addEventListener("pointercancel", up);
-    } else if (kind === "toggle") act(b, !Sc.actionState(b.dataset.dev, b.dataset.act));
+    } else if (kind === "toggle") {
+      const v = !Sc.actionState(b.dataset.dev, b.dataset.act);
+      b.classList.toggle("on", v);
+      b.dataset.pending = String(v);
+      act(b, v);
+    }
     else {
       const a = Sc.actionsOf(b.dataset.dev).find((x) => x.id === b.dataset.act);
       const opts = (a?.options ?? []).map(Number);
       if (opts.length) act(b, opts[(opts.indexOf(Number(Sc.actionState(b.dataset.dev, b.dataset.act) ?? opts[0])) + 1) % opts.length]);
     }
-    refreshMandos();
   });
 }
 
@@ -2329,9 +2722,9 @@ function fillAfter(el, r, lead = "") {
         : ` <span class="muted">Terminó todos los retos abiertos.</span>`);
 }
 
-window.openLessonById = async (id) => {
+window.openLessonById = async (id, lang) => {
   try {
-    applyProject(await api.openLesson(id));
+    applyProject(await api.openLesson(id, lang));
   } catch (err) {
     consoleWrite(`[jwsim] ${cleanError(err)}\n`, "fatal");
   }
@@ -2547,7 +2940,7 @@ const SCENE_SIDE_MIN = 240;
 const SCENE_SIDE_MAX = 560;
 // Paneles izquierdos disponibles: el diagrama de estados (escena con
 // cilindros) y la teoría de la lección abierta.
-const leftAvail = { states: false, teoria: false };
+const leftAvail = { states: false, teoria: false, ladder: false };
 const liveSideW = { left: null, right: null };
 
 function scenePaneWidth(side, fallback) {
@@ -2670,6 +3063,8 @@ function setLeftPane(pane, save = true) {
   }
   for (const p of document.querySelectorAll(".left-pane")) p.hidden = p.dataset.leftPane !== open;
   main.dataset.leftPane = open ?? "";
+  // Media pantalla: los paneles flotan sobre el lienzo, solo uno a la vez.
+  if (open && NARROW.matches && !main.classList.contains("side-collapsed")) setScenePane(null, false);
   if (save) storeSet(LEFT_KEY, pane || "none");
   clampSideWidths();
   window.JwsimStateDiag?.setVisible?.(open === "states");
@@ -2698,13 +3093,14 @@ function setScenePane(pane, save = true) {
   }
   for (const p of document.querySelectorAll(".side-pane")) p.hidden = p.dataset.pane !== pane;
   main.dataset.pane = pane ?? "";
+  if (pane && NARROW.matches && !main.classList.contains("left-collapsed")) setLeftPane(null, false);
   if (save) storeSet(SIDE_KEY, pane || "none");
   clampSideWidths();
   if (pane === "add") $("scene-add-filter").focus();
 }
 function wireSceneSide() {
   const saved = storeGet(SIDE_KEY);
-  setScenePane(saved === "none" ? null : saved === "add" ? "add" : "props", false);
+  setScenePane(NARROW.matches || saved === "none" ? null : saved === "add" ? "add" : "props", false);
   setLeftAvailability(false);
   wireSceneSplitter("scene-left-splitter", "left");
   wireSceneSplitter("scene-side-splitter", "right");
@@ -2738,8 +3134,19 @@ function wireSceneSide() {
     setTheoryAvailable(on) {
       leftAvail.teoria = !!on;
       $("scene-tab-teoria").hidden = !on;
-      if (on) setLeftPane("teoria", false);
+      if (on && !NARROW.matches) setLeftPane("teoria", false);
       else if (document.querySelector(".scene-main").dataset.leftPane === "teoria") setLeftPane(null, false);
+    },
+    // Ladder en vivo (ladder-edit.js): la pestaña aparece con un programa
+    // Ladder; se reabre si quedó abierta y no manda la teoría.
+    setLadderAvailable(on) {
+      on = !!on;
+      if (leftAvail.ladder === on) return;
+      leftAvail.ladder = on;
+      $("scene-tab-ladder").hidden = !on;
+      const cur = document.querySelector(".scene-main").dataset.leftPane;
+      if (on && !cur && storeGet(LEFT_KEY) === "ladder" && !NARROW.matches) setLeftPane("ladder", false);
+      else if (!on && cur === "ladder") setLeftPane(null, false);
     },
     isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
   };
@@ -2834,6 +3241,12 @@ function statusbarH() {
 }
 
 function wireUi() {
+  wirePlcForce();
+  $("plc-diagram-text").addEventListener("click", () => {
+    state.plcText = !state.plcText;
+    renderPlcDiagram(state.active);
+    if (state.plcText) editor.layout();
+  });
   wireSplitter();
   wireGuide();
   wireDock();
@@ -2914,6 +3327,40 @@ function wireUi() {
   });
   window.addEventListener("resize", () => !$("com-panel").hidden && comPlace());
   $("com-refresh").addEventListener("click", comRefresh);
+  $("btn-upload").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    await upPopover($("up-panel").hidden);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!$("up-panel").hidden && !e.target.closest("#up-panel, #btn-upload")) upPopover(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("up-panel").hidden) upPopover(false);
+  });
+  window.addEventListener("resize", () => !$("up-panel").hidden && upPlace());
+  $("up-refresh").addEventListener("click", upRefresh);
+  $("up-tools").addEventListener("click", upInstallTools);
+  $("up-go").addEventListener("click", upGo);
+  $("up-first").addEventListener("click", () => {
+    upPopover(false);
+    miJwplc(true);
+  });
+  $("mi-close").addEventListener("click", () => miJwplc(false));
+  $("mi-jwplc").addEventListener("pointerdown", (e) => e.target === e.currentTarget && miJwplc(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("mi-jwplc").hidden) miJwplc(false);
+  });
+  $("mi-open-test").addEventListener("click", async () => {
+    const { pruebaDir } = await api.equipoInfo();
+    loadSketch(await api.openExample(pruebaDir));
+    $("mi-note").textContent = "Prueba de recepción abierta. Ahora pulse «Subir al JWPLC».";
+  });
+  $("mi-upload").addEventListener("click", async () => {
+    miJwplc(false);
+    await upPopover(true);
+  });
+  $("mi-pdf").addEventListener("click", () => api.equipoOpen("pdf"));
+  $("mi-web").addEventListener("click", () => api.equipoOpen("web"));
   $("com-connect").addEventListener("click", comToggle);
   $("com-install").addEventListener("click", async () => {
     $("com-note").textContent = "Instalando el puerto COM virtual (acepta el permiso de administrador)…";
@@ -2938,6 +3385,40 @@ function wireUi() {
     storeSet(TS_KEY, state.serialTs ? "1" : "0");
   });
 
+  // Precalentado del compilador al abrir la app (app/main.mjs warmCompiler).
+  api.onBuildWarmup?.(({ state: st, ok }) => {
+    const sb = $("sb-build");
+    if (st === "start") {
+      sb.textContent = "Preparando el compilador…";
+      sb.dataset.warmup = "1";
+    } else if (sb.dataset.warmup) {
+      delete sb.dataset.warmup;
+      sb.textContent = ok ? "Compilador listo" : "";
+    }
+  });
+  // Actualización desde el programa: solo se muestra mientras hay algo que
+  // decir (descargando o lista para instalar).
+  const showUpdate = (u) => {
+    const b = $("sb-update");
+    if (!b || !u) return;
+    b.dataset.state = u.state;
+    if (u.state === "downloading" || u.state === "available") {
+      b.hidden = false;
+      b.disabled = true;
+      b.textContent = `Descargando JWPLC Sim ${u.version ?? ""}${u.percent != null ? ` · ${u.percent} %` : "…"}`;
+      b.title = "La nueva versión se descarga en segundo plano; puede seguir trabajando.";
+    } else if (u.state === "ready") {
+      b.hidden = false;
+      b.disabled = false;
+      b.textContent = `⟳ Actualizar a ${u.version}`;
+      b.title = "La nueva versión ya está descargada. Clic para reiniciar e instalar (o se instala sola al cerrar JWPLC Sim).";
+    } else {
+      b.hidden = true;
+    }
+  };
+  api.onUpdateState?.(showUpdate);
+  api.updateStatus?.().then(showUpdate).catch(() => {});
+  $("sb-update")?.addEventListener("click", () => api.updateInstall?.());
   api.onBuildLog((line) => {
     const log = $("build-log");
     log.textContent += `${line}\n`;
@@ -2966,6 +3447,7 @@ function wireUi() {
       if (s) loadSketch(s);
     } else if (cmd.startsWith("example:")) loadSketch(await api.openExample(cmd.slice(8)));
     else if (cmd === "save") saveSketch();
+    else if (cmd === "miJwplc") miJwplc(true);
     else if (cmd === "newFile") promptNewFile();
     else if (cmd === "importFiles") importSketchFiles();
     else if (cmd === "format") autoFormat();
@@ -3012,7 +3494,7 @@ function initMonaco() {
       editor = monacoRef.editor.create($("editor"), {
         theme: isDarkTheme() ? "jwsim-dark" : "jwsim-light",
         automaticLayout: true,
-        fontSize: 13,
+        fontSize: codeFontSize(),
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         // 4 espacios: el estilo de los ejemplos del package y del autoformato.
@@ -3108,6 +3590,99 @@ function comShow(current, note = "") {
   $("com-port").disabled = on;
   $("com-uart").disabled = on;
   $("com-note").textContent = note || (on ? `Conectado: el otro programa abre el par de ${current.path}.` : "");
+}
+
+// ------------------------------------------------------------- Subir al JWPLC
+// Panel bajo su botón: puerto USB, herramientas del ESP32 y «Compilar y subir».
+// El registro va al panel Compilación (app/main.mjs jwplc:upload).
+const UP_PORT_KEY = "jwsim.subir.puerto";
+let upBusy = false;
+function upPlace() {
+  const r = $("btn-upload").getBoundingClientRect();
+  const panel = $("up-panel");
+  panel.style.top = `${Math.round(r.bottom + 6)}px`;
+  panel.style.left = `${Math.max(8, Math.min(Math.round(r.left), window.innerWidth - panel.offsetWidth - 8))}px`;
+}
+async function upPopover(open) {
+  $("up-panel").hidden = !open;
+  $("btn-upload").setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  upPlace();
+  await upRefresh();
+}
+async function upRefresh() {
+  const info = await api.jwplcUploadInfo();
+  const sel = $("up-port");
+  const prev = sel.value || storeGet(UP_PORT_KEY);
+  sel.textContent = "";
+  for (const p of info.ports ?? []) {
+    const o = document.createElement("option");
+    o.value = p.path;
+    o.textContent = p.label;
+    sel.appendChild(o);
+  }
+  if (prev && info.ports?.some((p) => p.path === prev)) sel.value = prev;
+  const missing = info.missing ?? [];
+  $("up-tools").hidden = !missing.length || !info.cli;
+  $("up-tools").textContent = `Descargar herramientas del ESP32 (unos ${info.downloadMb ?? 500} MB, una sola vez)`;
+  $("up-go").disabled = upBusy || info.busy || !info.cli || !!missing.length || !info.ports?.length || !state.sketch;
+  $("up-note").textContent = info.error
+    ? info.error
+    : !info.cli
+      ? "Esta instalación no trae arduino-cli."
+      : missing.length
+        ? `Falta: ${missing.join(", ")}. Si ya usa el JWPLC en Arduino IDE, instale la placa JWPLC allí y vuelva a abrir este panel.`
+        : !info.ports?.length
+          ? "No se ve ningún puerto USB. Conecte el JWPLC y pulse ↻."
+          : !state.sketch
+            ? "Abra un programa para subirlo."
+            : `Se compila con el package ${info.version}, el mismo que usa el simulador.`;
+}
+async function upInstallTools() {
+  upBusy = true;
+  $("up-tools").disabled = true;
+  $("up-note").textContent = "Descargando… el avance se ve en el panel Compilación.";
+  setView("build");
+  setDockCollapsed(false);
+  $("build-log").textContent = "";
+  const r = await api.jwplcInstallTools();
+  upBusy = false;
+  $("up-tools").disabled = false;
+  await upRefresh();
+  if (!r.ok) $("up-note").textContent = r.message;
+}
+async function upGo() {
+  const port = $("up-port").value;
+  if (!port || !state.sketch || upBusy) return;
+  storeSet(UP_PORT_KEY, port);
+  upBusy = true;
+  $("up-go").disabled = true;
+  $("up-note").textContent = "Compilando para el ESP32 y cargando… (la primera vez tarda más)";
+  await saveSketch();
+  setView("build");
+  setDockCollapsed(false);
+  $("build-log").textContent = "";
+  $("sb-build").textContent = "Subiendo al JWPLC…";
+  const r = await api.jwplcUpload({ dir: state.sketch.dir, port });
+  upBusy = false;
+  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : "No se pudo subir al JWPLC";
+  $("up-note").textContent = r.ok ? `Listo en ${port}: el JWPLC ya corre el programa.` : r.message;
+  if (!r.ok && r.message) {
+    $("build-log").textContent += `\n${r.message}\n`;
+    $("build-log").scrollTop = $("build-log").scrollHeight;
+  }
+  if (r.needTools) await upRefresh();
+  else $("up-go").disabled = false;
+}
+
+// ------------------------------------------------------------- Mi JWPLC
+async function miJwplc(open) {
+  $("mi-jwplc").hidden = !open;
+  if (!open) return;
+  const info = await api.equipoInfo();
+  $("mi-pdf").title = info.pdf ? "Abre la ficha técnica incluida" : "Abre la ficha técnica en la página de JW Control";
+  $("mi-note").textContent = info.pdf ? "" : "La ficha técnica se abre en la página de JW Control (necesita internet).";
+  $("mi-close").focus();
 }
 
 // Panel del COM: se abre bajo su botón de la barra superior.
@@ -3220,6 +3795,8 @@ window.jwsimTest = {
   showAllBuses: (on) => showAllBuses(on),
   openProjectFile: async (file) => applyProject(await api.openProjectFile(file)),
   openSketchDir: async (dir) => loadSketch(await api.openExample(dir)),
+  miJwplc: (open = true) => miJwplc(open),
+  forced: (sig) => state.forced.get(sig),
   openExampleNamed: async (name) => loadSketch(await api.openExample(state.examples.find((e) => e.name === name).dir)),
   saveProject: () => saveProjectFile(),
   toggleBreakpoint: (name, line) => toggleBreakpoint(name, line),
@@ -3267,6 +3844,11 @@ window.jwsimTest = {
   deleteFile: (name) => deleteSketchFile(name, { ask: false }),
   showFile: (name) => showFile(name),
   language: () => editor.getModel()?.getLanguageId() ?? null,
+  // Proyectos OpenPLC: cualquier archivo por su nombre y si el editor lo deja cambiar.
+  setFile: (name, text) => state.models.get(name)?.setValue(text),
+  readOnly: () => editor.getOption(monacoRef.editor.EditorOption.readOnly),
+  // Nivel de una señal de la placa (I0_0…, Q0_0…) según el último snapshot.
+  level: (name) => !!state.levels.get(name),
 };
 
 async function main() {

@@ -121,12 +121,12 @@ try {
     heads: guide.heads,
   };
   log(`LESSON_SIM ${JSON.stringify(criteria.LESSON_SIM)}`);
-  await win.click('#guide-pane [data-read-size="1"]');
+  await win.click('.tb-read-size [data-read-size="1"]');
   const bigger = await guideOf();
-  await win.click('#guide-pane [data-read-size="-1"]');
-  await win.click('#guide-pane [data-read-size="-1"]');
+  await win.click('.tb-read-size [data-read-size="-1"]');
+  await win.click('.tb-read-size [data-read-size="-1"]');
   const smaller = await guideOf();
-  await win.click('#guide-pane [data-read-size="1"]');
+  await win.click('.tb-read-size [data-read-size="1"]');
   criteria.LESSON_SIZE = { ok: bigger.zoom > guide.zoom && smaller.zoom < guide.zoom, before: guide.zoom, bigger: bigger.zoom, smaller: smaller.zoom };
   log(`LESSON_SIZE ${JSON.stringify(criteria.LESSON_SIZE)}`);
 

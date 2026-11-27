@@ -1,0 +1,203 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-37",
+  "goals": [
+    {
+      "id": "vent",
+      "description": "A 47 °C el ventilador arranca por DO1",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 800,
+      "hint": "Mandos: sube la temperatura de TC1."
+    },
+    {
+      "id": "puerta",
+      "description": "Puerta abierta: el ventilador para y «Puerta abierta»",
+      "console": "Puerta abierta",
+      "after": "vent",
+      "hint": "readDiscreteInputsSync(MODULO, 0, 8, entradas); si el bit 0 está en 1, ventilador = false."
+    },
+    {
+      "id": "alarma",
+      "description": "A 55 °C, H2 encendida por DO2",
+      "when": {
+        "H2.lit": true
+      },
+      "hold_ms": 800,
+      "hint": "alarma = (registros[1] & 2) != 0; y el bit 1 de salidas."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Horno con puerta y alarma",
+      "until_ms": 14000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "TC1",
+          "action": "temp",
+          "value": 30
+        },
+        {
+          "at_ms": 2000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 47
+        },
+        {
+          "at_ms": 4000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 42
+        },
+        {
+          "at_ms": 6000,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 8000,
+          "device": "S1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 10000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 55
+        },
+        {
+          "at_ms": 12500,
+          "device": "TC1",
+          "action": "temp",
+          "value": 38
+        }
+      ],
+      "checks": [
+        {
+          "description": "A 30 °C el ventilador no arranca",
+          "points": 1,
+          "from_ms": 800,
+          "to_ms": 1900,
+          "never": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "A 47 °C arranca",
+          "points": 2,
+          "from_ms": 2000,
+          "to_ms": 3200,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "A 42 °C sigue (histéresis)",
+          "points": 1,
+          "at_ms": 5500,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Puerta abierta: el ventilador para",
+          "points": 4,
+          "from_ms": 6000,
+          "to_ms": 7200,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 600
+        },
+        {
+          "description": "«Puerta abierta», una vez",
+          "points": 3,
+          "console": "Puerta abierta",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Puerta cerrada a 42 °C: el ventilador no vuelve hasta 45 °C",
+          "points": 2,
+          "from_ms": 8000,
+          "to_ms": 9900,
+          "never": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "A 55 °C: H2 de alarma",
+          "points": 4,
+          "from_ms": 10000,
+          "to_ms": 12400,
+          "eventually": {
+            "H2.lit": true
+          },
+          "for_ms": 800
+        },
+        {
+          "description": "A 38 °C: ventilador y alarma apagados",
+          "points": 3,
+          "from_ms": 12500,
+          "to_ms": 13900,
+          "eventually": {
+            "KM1.closed": false,
+            "H2.lit": false
+          },
+          "for_ms": 500
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Horno",
+      "until_ms": 12000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "TC1",
+          "action": "temp",
+          "value": 30
+        },
+        {
+          "at_ms": 1500,
+          "device": "TC1",
+          "action": "temp",
+          "value": 47
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 6000,
+          "device": "S1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 7000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 55
+        },
+        {
+          "at_ms": 10000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 38
+        }
+      ]
+    }
+  ]
+}

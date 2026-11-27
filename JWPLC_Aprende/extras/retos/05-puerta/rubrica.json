@@ -1,6 +1,53 @@
 {
   "$schema": "../../../../schema/jwsim-rubric-1.json",
   "id": "05-puerta",
+  "goals": [
+    {
+      "id": "abre",
+      "description": "Pulsa S1: el portón abre (KM1) con la baliza encendida",
+      "when": {
+        "KM1.closed": true,
+        "KM2.closed": false,
+        "H1.lit": true
+      },
+      "hold_ms": 500
+    },
+    {
+      "id": "abierto",
+      "description": "Acciona B1 (abierto): el motor para y la baliza se apaga",
+      "when": {
+        "B1.actuated": true,
+        "KM1.closed": false,
+        "KM2.closed": false,
+        "H1.lit": false
+      },
+      "after": "abre",
+      "hold_ms": 500
+    },
+    {
+      "id": "cierra",
+      "description": "Pulsa S2: el portón cierra (KM2)",
+      "when": {
+        "KM2.closed": true,
+        "KM1.closed": false,
+        "H1.lit": true
+      },
+      "after": "abierto",
+      "hold_ms": 500
+    },
+    {
+      "id": "obstaculo",
+      "description": "Corta la fotocelda B3 mientras cierra: para y vuelve a abrir",
+      "when": {
+        "KM1.closed": true,
+        "KM2.closed": false
+      },
+      "after": "cierra",
+      "hold_ms": 300,
+      "hint": "Mientras KM2 cierra, B3 manda: abre KM2 y cierra KM1.",
+      "why": "La fotocelda protege a quien pasa: un portón nunca cierra sobre algo."
+    }
+  ],
   "cases": [
     {
       "name": "Apertura",
@@ -285,6 +332,62 @@
             "KM1.closed": false,
             "KM2.closed": false
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Abre, cierra y obstáculo",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "actuate",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3100,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3300,
+          "device": "B1",
+          "action": "actuate",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B3",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "B3",
+          "action": "target",
+          "value": false
         }
       ]
     }

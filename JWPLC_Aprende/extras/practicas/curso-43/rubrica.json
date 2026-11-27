@@ -1,0 +1,114 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-43",
+  "goals": [
+    {
+      "id": "control",
+      "description": "Marcha: la presión sube cerca de 4,0 bar",
+      "console": "Presión: 3\\.[3-9]",
+      "hint": "Aprieta S1 y espera unos segundos."
+    },
+    {
+      "id": "consigna",
+      "description": "UP sube la consigna: «Consigna: 4.5 bar»",
+      "console": "Consigna: 4\\.5 bar",
+      "hint": "JWPLC_Buttons.pressed(BTN_UP): consigna + 0,5 sin pasar de 6,0.",
+      "why": "La consigna es del operador; los límites son del programa."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Consigna que sube",
+      "until_ms": 40500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "20000 BTN_UP=1",
+        "20150 BTN_UP=0",
+        "20600 BTN_UP=1",
+        "20750 BTN_UP=0",
+        "21200 BTN_UP=1",
+        "21350 BTN_UP=0",
+        "21800 BTN_UP=1",
+        "21950 BTN_UP=0",
+        "22400 BTN_UP=1",
+        "22550 BTN_UP=0",
+        "23000 BTN_UP=1",
+        "23150 BTN_UP=0",
+        "23600 BTN_UP=1",
+        "23750 BTN_UP=0"
+      ],
+      "checks": [
+        {
+          "description": "Con 4,0 bar de consigna, la presión llega a 3,2…4,0 bar",
+          "points": 4,
+          "at_ms": 19000,
+          "expect": {
+            "RED1.presion": [
+              3.2,
+              4.0
+            ]
+          }
+        },
+        {
+          "description": "«Consigna: 4.5 bar»",
+          "points": 4,
+          "console": "Consigna: 4\\.5 bar",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Llega hasta «Consigna: 6.0 bar» y no pasa de ahí",
+          "points": 4,
+          "console": "Consigna: 6\\.0 bar",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Nunca más de 6,0 bar de consigna",
+          "points": 2,
+          "console": "Consigna: (6\\.[1-9]|[7-9]\\.)",
+          "count": [
+            0,
+            0
+          ],
+          "prerequisite": false
+        },
+        {
+          "description": "Con 6,0 bar de consigna la presión sube sobre 4,4 bar",
+          "points": 6,
+          "at_ms": 40000,
+          "expect": {
+            "RED1.presion": [
+              4.4,
+              7
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Presión constante",
+      "until_ms": 40000,
+      "actions": []
+    }
+  ]
+}

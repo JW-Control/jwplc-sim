@@ -1569,11 +1569,13 @@ function screen(w, h, { bg = "#0b0d10", fg = "#ff3b30", font = "bold 72px monosp
   const g2 = c.getContext("2d");
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+  const clear = /^rgba\(.*,\s*0\)$/.test(bg); // fondo transparente: solo el texto
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: clear, depthWrite: !clear }));
   let last = null;
   const paint = (text) => {
     if (text === last) return;
     last = text;
+    g2.clearRect(0, 0, c.width, c.height);
     g2.fillStyle = bg;
     g2.fillRect(0, 0, c.width, c.height);
     g2.fillStyle = fg;
@@ -1586,6 +1588,8 @@ function screen(w, h, { bg = "#0b0d10", fg = "#ff3b30", font = "bold 72px monosp
   return { plane, paint };
 }
 
+/** Color de una lente apagada: el mismo tono, oscurecido. */
+const dimHex = (hex) => new THREE.Color(hex).multiplyScalar(0.38).getHex();
 const LAMP_HEX = { verde: 0x2fd05a, rojo: 0xff3b30, amarillo: 0xffcc00, azul: 0x2f8cff, blanco: 0xf5f7fa };
 
 // Modelos de equipos de tablero (escala ×2 del real, para que se lean desde la
@@ -1680,11 +1684,20 @@ function dinContactor(overload) {
   body.position.z = 0.04;
   const face = box(w - 0.012, 0.07, 0.02, PM.white);
   face.position.set(0, 0, 0.09);
-  const win = box(0.03, 0.016, 0.004, PM.green);
-  win.position.set(0, 0.012, 0.101);
+  // Indicador de estado (como la ventanita de un contactor real): «O» sobre
+  // gris con el contactor abierto, «I» sobre verde encendido al cerrar. El
+  // portacontactos (pieza oscura de arriba) se hunde al cerrar.
+  const win = box(0.034, 0.02, 0.004, mat(0x5b6168, { roughness: 0.6 }));
+  win.position.set(0, 0.014, 0.101);
+  const sign = screen(0.03, 0.018, { bg: "rgba(0,0,0,0)", fg: "#ffffff", font: "bold 110px sans-serif" });
+  sign.paint("O");
+  sign.plane.position.set(0, 0.014, 0.1032);
+  const slider = box(0.03, 0.014, 0.012, mat(0x3a4048, { roughness: 0.5 }));
+  slider.position.set(0, 0.052, 0.086);
   const coil = plate(0.04, 0.012, "24VDC", { bg: "#ffffff", fg: "#1e2226", font: "bold 60px sans-serif" });
-  coil.position.set(0, -0.016, 0.1005);
-  g.add(body, face, win, coil);
+  coil.position.set(0, -0.018, 0.1005);
+  g.add(body, face, win, sign.plane, slider, coil);
+  const ind = { win, sign, slider, z0: 0.086, on: null };
   const xs = [-0.03, 0, 0.03];
   screwRow(g, xs, 0.066, 0.081);
   screwRow(g, xs, -0.066, 0.081);
@@ -1705,7 +1718,7 @@ function dinContactor(overload) {
     h = 0.26;
   }
   // Con térmico, el contactor sigue sobre el riel y el térmico cuelga debajo.
-  return { group: g, w, h, top: xs, bottom: xs, up: 0.08, down: overload ? 0.18 : 0.08 };
+  return { group: g, w, h, top: xs, bottom: xs, up: 0.08, down: overload ? 0.18 : 0.08, ind };
 }
 function dinPsu() {
   const g = new THREE.Group();
@@ -2406,6 +2419,7 @@ function buildPanel(spec, { bench = false } = {}) {
   // Modelos por fila (arriba: entrada y control; abajo: potencia).
   const vfds = [];
   const plcs = [];
+  const contactors = [];
   const make = (d) => {
     const t = base(d.type);
     if (t === "power-3ph" || t === "breaker" || t === "power-230vac" || t === "motor-protector") {
@@ -2423,7 +2437,11 @@ function buildPanel(spec, { bench = false } = {}) {
       vfds.push({ id: d.id, paint: m.screen.paint, led: m.led, plane: m.screen.plane });
       return m;
     }
-    if (t === "contactor") return dinContactor(mounted.has(d.id));
+    if (t === "contactor") {
+      const m = dinContactor(mounted.has(d.id));
+      contactors.push({ id: d.id, ...m.ind });
+      return m;
+    }
     return dinRelay();
   };
   const withId = (d) => Object.assign(make(d), { id: d.id });
@@ -2586,26 +2604,51 @@ function buildPanel(spec, { bench = false } = {}) {
   const doorAt = new Map();
   const hits = [];
   const controls = [];
+  if (bench && door.length) {
+    const top = yLow - y0 - 0.14 + 0.065;
+    const ph = (benchRows - 1) * 0.2 + 0.16;
+    const plateM = box(W - 0.06, ph, 0.012, mat(0xdfe3e7, { roughness: 0.5, metalness: 0.15 }));
+    plateM.position.set(W / 2, top - ph / 2, 0.005);
+    hinge.add(plateM);
+  }
   door.forEach((d, i) => {
     const cols = bench ? benchCols : Math.max(1, Math.min(4, door.length));
     const cx = ((i % cols) + 0.5) * (W / cols);
     const cy = bench ? yLow - y0 - 0.14 - Math.floor(i / cols) * 0.2 : H * 0.72 - Math.floor(i / cols) * 0.22;
     doorAt.set(d.id, { cx, cy });
     const t = base(d.type);
-    const ring = cyl(0.036, 0.02, mat(0x8b929b, { metalness: 0.6, roughness: 0.3 }), 24);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(cx, cy, 0.02);
-    hinge.add(ring);
+    const isPush = t === "pushbutton-no" || t === "pushbutton-nc" || t === "pushbutton-lit";
+    if (isPush || t.startsWith("selector")) {
+      // Mando de 22 mm: marco cuadrado oscuro y aro claro (así no se confunde con un piloto).
+      const frame = box(0.058, 0.058, 0.012, PM.black);
+      frame.position.set(cx, cy, 0.017);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0255, 0.0045, 10, 28), mat(0xd9dde2, { metalness: 0.55, roughness: 0.3 }));
+      ring.position.set(cx, cy, 0.024);
+      hinge.add(frame, ring);
+    } else if (t === "lamp") {
+      // Piloto: cuerpo angosto con aro negro y lente en cúpula.
+      const ring = cyl(0.026, 0.016, PM.black, 24);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(cx, cy, 0.019);
+      hinge.add(ring);
+    } else if (t !== "emergency-stop" && t !== "buzzer") {
+      const ring = cyl(0.036, 0.02, mat(0x8b929b, { metalness: 0.6, roughness: 0.3 }), 24);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(cx, cy, 0.02);
+      hinge.add(ring);
+    }
     if (t === "lamp" || t === "pushbutton-lit") {
       const hex = LAMP_HEX[d.params?.color] ?? LAMP_HEX.verde;
-      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.027, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(hex, { emissive: 0x000000, transparent: true, opacity: 0.9 }));
+      const r = t === "lamp" ? 0.02 : 0.021;
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(dimHex(hex), { emissive: 0x000000, transparent: true, opacity: 0.95, roughness: 0.25 }));
       lens.rotation.x = Math.PI / 2;
-      lens.position.set(cx, cy, 0.03);
+      lens.position.set(cx, cy, t === "lamp" ? 0.027 : 0.026);
+      if (t === "pushbutton-lit") lens.scale.set(1, 0.35, 1); // casi plano: es un botón
       hinge.add(lens);
       lamps.push({ id: d.id, lens, hex });
       if (t === "pushbutton-lit") {
         hits.push({ mesh: lens, id: d.id });
-        controls.push({ id: d.id, action: "press", kind: "push", mesh: lens, z0: 0.03 });
+        controls.push({ id: d.id, action: "press", kind: "push", mesh: lens, z0: 0.026 });
       }
     } else if (t === "emergency-stop") {
       const yb = box(0.09, 0.09, 0.004, mat(0xf2cf1d));
@@ -2630,7 +2673,7 @@ function buildPanel(spec, { bench = false } = {}) {
     } else if (t.startsWith("selector")) {
       const knob = cyl(0.026, 0.02, PM.black, 20);
       knob.rotation.x = Math.PI / 2;
-      knob.position.set(cx, cy, 0.035);
+      knob.position.set(cx, cy, 0.034);
       const bar = box(0.012, 0.045, 0.02, PM.black);
       bar.position.set(cx, cy, 0.05);
       bar.rotation.z = -0.6;
@@ -2639,12 +2682,18 @@ function buildPanel(spec, { bench = false } = {}) {
       controls.push({ id: d.id, action: "position", kind: "rot", mesh: bar });
     } else {
       const bc = { verde: 0x2fae4f, rojo: 0xd8282d, amarillo: 0xf2cf1d, azul: 0x2f8be0, blanco: 0xf0f2f4, negro: 0x23272d }[d.params?.color];
-      const btn = cyl(0.024, 0.02, bc != null ? mat(bc, { roughness: 0.5 }) : t === "pushbutton-nc" ? PM.red : PM.green, 16);
+      // Botón rasante dentro del aro, con su símbolo IEC: «I» marcha, «O» paro.
+      const nc = t === "pushbutton-nc";
+      const btn = cyl(0.021, 0.012, bc != null ? mat(bc, { roughness: 0.45 }) : nc ? PM.red : PM.green, 28);
       btn.rotation.x = Math.PI / 2;
-      btn.position.set(cx, cy, 0.035);
+      btn.position.set(cx, cy, 0.027);
+      const glyph = plate(0.026, 0.026, nc ? "O" : "I", { bg: "rgba(0,0,0,0)", fg: "#ffffff", font: "bold 120px sans-serif" });
+      glyph.rotation.x = -Math.PI / 2;
+      glyph.position.y = 0.0062;
+      btn.add(glyph);
       hinge.add(btn);
       hits.push({ mesh: btn, id: d.id });
-      controls.push({ id: d.id, action: "press", kind: "push", mesh: btn, z0: 0.035 });
+      controls.push({ id: d.id, action: "press", kind: "push", mesh: btn, z0: 0.027 });
     }
     // Por dentro de la puerta: los bloques de contacto del mando, con sus cables.
     const blk = box(0.05, 0.05, 0.04, PM.white);
@@ -2851,8 +2900,8 @@ function buildPanel(spec, { bench = false } = {}) {
     }
   }
   const glandX = (k, n) => -W / 2 + 0.12 + (k * (W - 0.24)) / Math.max(1, n - 1);
-  bakeStatic(g, [...folio, lock, ...lamps.map((l) => l.lens), ...hits.map((h) => h.mesh), ...controls.map((c) => c.mesh), ...vfds.flatMap((v) => [v.led, v.plane]), ...plcs.flatMap((p) => [...p.leds.map((l) => l.mesh), p.tftMesh])]);
-  return { group: g, W, D, H, legH, vfds, plcs, lamps, hits, controls, glandX, bottom: y0, diagTerms, lock, folio };
+  bakeStatic(g, [...folio, lock, ...lamps.map((l) => l.lens), ...hits.map((h) => h.mesh), ...controls.map((c) => c.mesh), ...vfds.flatMap((v) => [v.led, v.plane]), ...contactors.flatMap((k) => [k.win, k.sign.plane, k.slider]), ...plcs.flatMap((p) => [...p.leds.map((l) => l.mesh), p.tftMesh])]);
+  return { group: g, W, D, H, legH, vfds, plcs, contactors, lamps, hits, controls, glandX, bottom: y0, diagTerms, lock, folio };
 }
 
 // Electrobomba y válvulas de la sala de bombas. Eje de la bomba a lo largo de z
@@ -3778,11 +3827,25 @@ function frame(now) {
       v.led.material.color.setHex(o.running ? COL.on : COL.off);
       v.led.material.emissive.setHex(o.running ? 0x1f8a46 : 0x000000);
     }
-    for (const l of V.panel.lamps) l.lens.material.emissive.setHex(outOf(l.id).lit ? l.hex : 0x000000);
+    for (const l of V.panel.lamps) {
+      const lit = !!outOf(l.id).lit;
+      l.lens.material.emissive.setHex(lit ? l.hex : 0x000000);
+      l.lens.material.color.setHex(lit ? l.hex : dimHex(l.hex));
+    }
+    for (const k of V.panel.contactors ?? []) {
+      const on = !!outOf(k.id).closed;
+      if (k.on === on) continue;
+      k.on = on;
+      k.win.material.color.setHex(on ? 0x2fd05a : 0x5b6168);
+      k.win.material.emissive.setHex(on ? 0x1f8a46 : 0x000000);
+      k.sign.paint(on ? "I" : "O");
+      k.slider.position.z = k.z0 - (on ? 0.008 : 0);
+      k.slider.position.y = on ? 0.046 : 0.052;
+    }
     if (V.panel.lock) V.panel.lock.visible = !!(running && V.snap?.lockedOut);
     for (const c of V.panel.controls ?? []) {
       const on = !!window.JwsimScene?.actionState?.(c.id, c.action);
-      if (c.kind === "push") c.mesh.position.z = c.z0 - (on ? 0.012 : 0);
+      if (c.kind === "push") c.mesh.position.z = c.z0 - (on ? 0.007 : 0);
       else c.mesh.rotation.z = on ? -0.6 : 0.6;
     }
     for (const pl of V.panel.plcs) {
@@ -3923,6 +3986,7 @@ window.Jwsim3D = {
   lockShown: () => !!V.panel?.lock?.visible,
   /** Para pruebas: si el tablero es un banco de trabajo y qué pilotos están encendidos en 3D. */
   bench: () => !!V.panel?.bench,
+  contactorsClosed: () => (V.panel?.contactors ?? []).filter((k) => k.on).map((k) => k.id),
   lampsLit: () => (V.panel?.lamps ?? []).filter((l) => l.lens.material.emissive.getHex() !== 0).map((l) => l.id),
   /** Para pruebas: dónde quedaron las puntas (nombre del borne de cada una). */
   probesAt() {

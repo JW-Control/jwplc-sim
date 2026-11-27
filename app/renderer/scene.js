@@ -429,6 +429,7 @@
   function focusOn(x, y) {
     const r = svgRect();
     S.pan = { x: r.width / 2 - x * S.zoom, y: r.height / 2 - y * S.zoom };
+    S.manualView = true;
     render();
   }
 
@@ -2405,6 +2406,7 @@
       if (S.drag.kind === "pan") {
         if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
+        S.manualView = true;
         viewFast();
         // La punta del cable en curso sigue al puntero con la vista nueva.
         updateRubber(e);
@@ -2613,6 +2615,7 @@
         const z = Math.min(3, Math.max(0.2, S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
         S.pan = { x: mx - ((mx - S.pan.x) * z) / S.zoom, y: my - ((my - S.pan.y) * z) / S.zoom };
         S.zoom = z;
+        S.manualView = true;
         viewFast();
         updateRubber(e);
       },
@@ -2950,8 +2953,9 @@
       /* sin caja (vista oculta): basta con los equipos */
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
-    // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).
-    S.pan = { x: Math.max(20, (box.width - (x1 - x0) * S.zoom) / 2) - x0 * S.zoom, y: 20 - y0 * S.zoom };
+    // Centrado a lo ancho y a lo alto: al entrar, el esquema entero a la vista.
+    S.pan = { x: Math.max(20, (box.width - (x1 - x0) * S.zoom) / 2) - x0 * S.zoom, y: Math.max(20, (box.height - (y1 - y0) * S.zoom) / 2) - y0 * S.zoom };
+    S.manualView = false;
     render();
   }
 
@@ -3305,6 +3309,10 @@
       if (!S.fitted) {
         S.fitted = true;
         fit();
+        // Los paneles de teoría y reto y el trazado de los cables terminan de
+        // acomodarse después: se vuelve a encuadrar mientras no se haya
+        // movido la vista a mano.
+        for (const ms of [60, 250, 700]) setTimeout(() => S.view === "scene" && !S.manualView && fit(), ms);
       }
       copyTft();
       if (!S.snap && !S.running) analyze();
@@ -3519,6 +3527,7 @@
       view3d: () => window.Jwsim3D?.objects() ?? [],
       // Encuadre: zoom y punto de la escena que queda arriba a la izquierda.
       camera: (zoom, x, y) => {
+        S.manualView = true;
         S.zoom = zoom;
         S.pan = { x: -x * zoom, y: -y * zoom };
         commitView();
@@ -3637,7 +3646,9 @@
     window.JwsimSound?.onChange(paintSound);
     paintSound();
     api.onDisplay(() => requestAnimationFrame(copyTft));
-    new ResizeObserver(() => S.view === "scene" && !S.fitted && fit()).observe($("scene-svg"));
+    // Mientras no se movió la vista a mano, el esquema sigue encuadrado si
+    // cambia el espacio (paneles que se abren o pliegan, ventana).
+    new ResizeObserver(() => S.view === "scene" && (!S.fitted || !S.manualView) && fit()).observe($("scene-svg"));
   }
 
   init();

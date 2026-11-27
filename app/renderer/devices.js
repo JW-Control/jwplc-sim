@@ -241,7 +241,7 @@
     const title = st.view === "new" ? "Nuevo dispositivo" : "Dispositivos propios";
     el().innerHTML =
       `<div class="start-card devmgr-card">` +
-      `<header class="start-head"><span class="start-logo">JW</span><b>${title}</b>` +
+      `<header class="start-head"><img class="app-logo" src="../icon/icon.svg" alt="" width="24" height="24"/><b>${title}</b>` +
       `<button class="icon" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>` +
       `<div class="start-body">${st.view === "new" ? wizardView() : listView()}</div></div>`;
   }

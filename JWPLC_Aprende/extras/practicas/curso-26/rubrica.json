@@ -1,0 +1,286 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-26",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "MARCHA pone la bomba en marcha (KM1)",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 500,
+      "hint": "Da un toque a S1 en Mandos y mira la pestaña Placa."
+    },
+    {
+      "id": "arranques",
+      "description": "Cuenta los arranques: «Arranques: 2»",
+      "console": "Arranques: 2",
+      "hint": "Detecta el flanco del motor (motor && !motorAntes), suma 1 y escribe con Serial.printf(\"Arranques: %lu\\n\", arranques). Para la pantalla, dibújalo abajo en jwplcUIUpdate().",
+      "why": "El operador ve en el frente lo mismo que el técnico lee en la PC."
+    },
+    {
+      "id": "falla",
+      "description": "Abre el térmico F1: «Falla: térmico» y H1 (Q0.1) encendida",
+      "console": "Falla: térmico",
+      "hint": "termicoNormal = digitalRead(I0_2) == HIGH; falla = !termicoNormal; el motor pide !falla y H1 = falla."
+    },
+    {
+      "id": "para",
+      "description": "Con la falla, la bomba se detiene y H1 enciende",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "falla",
+      "why": "La pantalla muestra FALLA en naranja: el operador sabe por qué paró sin abrir el tablero."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Arranques",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3600,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3800,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "MARCHA arranca la bomba",
+          "points": 2,
+          "from_ms": 800,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "PARADA la detiene",
+          "points": 1,
+          "from_ms": 1800,
+          "to_ms": 2200,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Primer arranque: «Arranques: 1»",
+          "points": 3,
+          "console": "Arranques: 1",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Segundo arranque: «Arranques: 2»",
+          "points": 3,
+          "console": "Arranques: 2",
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Térmico",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2800,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3300,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "El térmico detiene la bomba",
+          "points": 3,
+          "from_ms": 2000,
+          "to_ms": 2300,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "H1 (Q0.1) enciende con la falla",
+          "points": 3,
+          "from_ms": 2000,
+          "to_ms": 2300,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "Avisa «Falla: térmico» una vez",
+          "points": 2,
+          "console": "Falla: térmico",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Con el térmico normal, MARCHA arranca de nuevo",
+          "points": 3,
+          "from_ms": 3300,
+          "to_ms": 3800,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 300
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

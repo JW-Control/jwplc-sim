@@ -10,6 +10,10 @@ import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 export const COURSE_DIR = "Curso_JWPLC_Basic";
+// Ruta IEC 61131-3: las mismas ideas en ST, Ladder y FBD (proyectos del
+// OpenPLC Editor). Vive en extras/ porque Arduino IDE no abre esos proyectos.
+export const IEC_DIR = "Curso_IEC_61131";
+export const IEC_LANGS = ["ST", "LD", "FBD"];
 
 const SECTIONS = {
   learn: /^qué vas a aprender/i,
@@ -102,7 +106,7 @@ export function parseLessonMd(text) {
       last = null;
       continue;
     }
-    const h1 = /^#\s+Curso JWPLC Basic\s*·\s*Lecci[oó]n\s*(\d+)\s*·\s*(.+)$/i.exec(line);
+    const h1 = /^#\s+Curso [^·]+·\s*Lecci[oó]n\s*(\d+)\s*·\s*(.+)$/i.exec(line);
     if (h1) {
       out.num = Number(h1[1]);
       out.title = h1[2].trim();
@@ -148,10 +152,20 @@ function readGuia(read, dir) {
 const UNIT_NAMES = {
   "Primeros pasos": "Primeros pasos",
   "Tiempo y logica": "El tiempo y la lógica",
+  "CPP para el tablero": "C++ para el tablero",
+  "El equipo por dentro": "El equipo por dentro",
   "Pantalla y botonera": "Pantalla y botonera",
+  "Pantalla y HMI": "Pantalla y HMI",
+  "RS485 y Modbus RTU": "RS-485 y Modbus RTU",
+  "Analogicas y control": "Analógicas y control",
+  "Oficio industrial": "Oficio industrial",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",
   Proyectos: "Proyectos",
+  "Contactos y logica": "Contactos y lógica",
+  "Tiempo y conteo": "Tiempo y conteo",
+  "Secuencias": "Secuencias",
+  "Comparar y calcular": "Comparar y calcular",
 };
 export function unitOf(folder) {
   const m = /^(\d+)\.(.+)$/.exec(folder);
@@ -166,11 +180,11 @@ export function unitOf(folder) {
  * @param {{ group: string, label: string, dir: string }[]} examples
  * @param {(file: string) => string} [read]
  */
-export function buildCourse(examples, read = (f) => readFileSync(f, "utf8")) {
+export function buildCourse(examples, read = (f) => readFileSync(f, "utf8"), { course = COURSE_DIR, prefix = "curso" } = {}) {
   const units = new Map();
   for (const ex of examples) {
     const parts = String(ex.label).split(" / ");
-    if (parts[0] !== COURSE_DIR || parts.length < 3) continue;
+    if (parts[0] !== course || parts.length < 3) continue;
     const u = unitOf(parts[1]);
     if (!u) continue;
     let info;
@@ -188,7 +202,7 @@ export function buildCourse(examples, read = (f) => readFileSync(f, "utf8")) {
     const num = info.num ?? Number(/^(\d+)/.exec(parts[2])?.[1] ?? 0);
     if (!units.has(u.unit)) units.set(u.unit, { unit: u.unit, name: u.name, lessons: [] });
     units.get(u.unit).lessons.push({
-      id: `curso-${String(num).padStart(2, "0")}`,
+      id: `${prefix}-${String(num).padStart(2, "0")}`,
       num,
       title: info.title || parts[2].replace(/^\d+\./, "").replace(/_/g, " "),
       dir: ex.dir,

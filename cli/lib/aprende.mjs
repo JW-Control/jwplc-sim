@@ -4,6 +4,8 @@
 // Librería JWPLC_Aprende: única fuente del material de aprendizaje.
 //   examples/Curso_JWPLC_Basic/…   lecciones del curso (ejemplos de Arduino IDE)
 //   extras/practicas/curso-NN/     práctica evaluada de cada lección (banco .jwsim, rubrica.json, sketch = el ejemplo, solucion)
+//   extras/Curso_IEC_61131/…      ruta IEC 61131-3: cada lección con su README.md y el
+//                                  programa en ST/, LD/ y FBD/ (proyectos del OpenPLC Editor)
 //   extras/retos/<id>/             retos calificables (.jwsim, ENUNCIADO.md, rubrica.json, sketch, solucion)
 //   extras/arquitecturas/<id>/     casos de la vitrina (.jwsim, VITRINA.md, sketch)
 //   extras/imagenes/               miniaturas (reto-<id>.jpg, arq-<id>.jpg)
@@ -13,7 +15,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
-import { buildCourse } from "./aprende-curso.mjs";
+import { buildCourse, IEC_DIR, IEC_LANGS } from "./aprende-curso.mjs";
 import { loadProject } from "./project.mjs";
 
 export const APRENDE = join(import.meta.dirname, "..", "..", "JWPLC_Aprende");
@@ -77,14 +79,50 @@ export const listCurso = (root = APRENDE) =>
     }),
   }));
 
-/** Una lección del curso con el código de su ejemplo (o null). */
+/** Lecciones de la ruta IEC (carpetas con README.md), como los ejemplos del curso. */
+export function listIecExamples(root = APRENDE) {
+  const base = join(root, "extras", IEC_DIR);
+  const out = [];
+  if (!existsSync(base)) return out;
+  for (const u of readdirSync(base, { withFileTypes: true }).filter((e) => e.isDirectory() && /^\d+\./.test(e.name)).map((e) => e.name).sort())
+    for (const l of readdirSync(join(base, u), { withFileTypes: true }).filter((e) => e.isDirectory() && /^\d+\./.test(e.name)).map((e) => e.name).sort()) {
+      const dir = join(base, u, l);
+      if (existsSync(join(dir, "README.md"))) out.push({ group: APRENDE_NAME, name: l, label: [IEC_DIR, u, l].join(" / "), dir });
+    }
+  return out;
+}
+
+/** Programa principal de un proyecto del OpenPLC Editor ("" si no hay). */
+function plcMain(/** @type {string} */ dir) {
+  for (const ext of ["st", "ld", "fbd"]) {
+    const f = join(dir, "pous", "programs", `main.${ext}`);
+    if (existsSync(f)) return readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+  }
+  return "";
+}
+
+/**
+ * Ruta IEC 61131-3: unidades con sus lecciones; cada una dice en qué
+ * lenguajes trae el programa (langs) y, si tiene práctica, sus objetivos.
+ */
+export const listCursoIec = (root = APRENDE) =>
+  buildCourse(listIecExamples(root), undefined, { course: IEC_DIR, prefix: "iec" }).map((u) => ({
+    ...u,
+    lessons: u.lessons.map((l) => {
+      const dir = join(root, "extras", "practicas", l.id);
+      const has = existsSync(join(dir, `${l.id}.jwsim`));
+      return { ...l, iec: true, langs: IEC_LANGS.filter((x) => existsSync(join(l.dir, x, "project.json"))), graded: has, goals: has ? goalsOf(dir) : [] };
+    }),
+  }));
+
+/** Una lección del curso (C++ o IEC) con el código de su ejemplo (o null). */
 export function lessonById(/** @type {string} */ id, root = APRENDE) {
-  for (const u of listCurso(root)) {
+  for (const u of [...listCurso(root), ...listCursoIec(root)]) {
     const l = u.lessons.find((x) => x.id === id);
     if (!l) continue;
     let code = "";
     try {
-      code = readFileSync(join(l.dir, `${l.dir.split(sep).pop()}.ino`), "utf8").replace(/\r\n/g, "\n");
+      code = "iec" in l ? plcMain(join(l.dir, "ST")) : readFileSync(join(l.dir, `${l.dir.split(sep).pop()}.ino`), "utf8").replace(/\r\n/g, "\n");
     } catch {}
     return { ...l, unit: u.unit, unitName: u.name, code };
   }
@@ -169,6 +207,23 @@ export function buildCatalog(root = APRENDE) {
         numero: l.num,
         titulo: l.title,
         ruta: rel(l.dir),
+        aprende: l.learn,
+        necesita: l.need,
+        secciones: l.sections.filter((s) => s.items.length).map((s) => ({ titulo: s.title, items: s.items })),
+        pasos: l.steps,
+        practica: l.practice,
+        ...(l.graded ? { practica_evaluada: { ruta: `extras/practicas/${l.id}`, objetivos_en_vivo: l.goals } } : {}),
+      })),
+    })),
+    curso_iec: listCursoIec(root).map((u) => ({
+      unidad: u.unit,
+      nombre: u.name,
+      lecciones: u.lessons.map((l) => ({
+        id: l.id,
+        numero: l.num,
+        titulo: l.title,
+        ruta: rel(l.dir),
+        lenguajes: l.langs,
         aprende: l.learn,
         necesita: l.need,
         secciones: l.sections.filter((s) => s.items.length).map((s) => ({ titulo: s.title, items: s.items })),

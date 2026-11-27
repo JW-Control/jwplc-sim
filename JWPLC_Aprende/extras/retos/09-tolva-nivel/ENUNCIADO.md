@@ -2,7 +2,7 @@
 
 **Nivel 3.** Una tolva cónica de 10 L entrega agua al proceso por gravedad y una bomba la vuelve a llenar. Dos sensores capacitivos detectan el agua a través de la pared de la tolva.
 
-Como la tolva es angosta abajo y ancha arriba, el nivel **no sube parejo**: con poca agua sube muy rápido y cerca del borde, despacio. Y como descarga por gravedad, sale más agua cuando la tolva está llena que cuando está casi vacía. Observe el tanque **T1** en el esquema eléctrico mientras corre la simulación.
+Como la tolva es angosta abajo y ancha arriba, el nivel **no sube parejo**: con poca agua sube muy rápido y cerca del borde, despacio. Y como descarga por gravedad, sale más agua cuando la tolva está llena que cuando está casi vacía. Mira el tanque **T1** en el esquema eléctrico mientras corre la simulación.
 
 ## Escena
 
@@ -28,8 +28,8 @@ El tablero ya está cableado. Solo hay que programar el JWPLC Basic.
 ## Para pensar
 
 - ¿Por qué la tolva tarda unos 18 s en llenarse del 10 % al 80 % y casi dos minutos en bajar del 80 % al 30 %?
-- Cambie en **T1** la forma a «cilindro vertical» (la ficha del equipo o sus propiedades) y compare los tiempos con la misma capacidad.
+- Cambia en **T1** la forma a «cilindro vertical» (la ficha del equipo o sus propiedades) y compara los tiempos con la misma capacidad.
 
 ## Cómo se califica
 
-`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/09-tolva-nivel` (o el botón **Calificar** de la app) corre su programa con la escena en varios casos y comprueba el estado de las salidas y de los equipos en ventanas de tiempo. La nota va de 0 a 20; el detalle dice qué verificación falló y cuándo.
+`node cli/jwsim-cli.mjs grade JWPLC_Aprende/extras/retos/09-tolva-nivel` (o el botón **Calificar** de la app) corre tu programa con la escena en varios casos y comprueba el estado de las salidas y de los equipos en ventanas de tiempo. La nota va de 0 a 20; el detalle dice qué verificación falló y cuándo.

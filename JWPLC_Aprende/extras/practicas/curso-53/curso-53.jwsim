@@ -1,0 +1,203 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 53 · Realimentación del contactor",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Realimentacion_del_contactor/Realimentacion_del_contactor.ino"
+  },
+  "exercise": {
+    "lesson": "curso-53",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Realimentacion_del_contactor",
+    "brief": {
+      "goal": "Detectar el contactor pegado: si se mandó abrir y a los 300 ms el auxiliar sigue cerrado, «Falla KM1: contactos pegados», H1 encendida y la marcha bloqueada.",
+      "steps": [
+        "Ejecuta el ejemplo y corta la bobina de KM1 (clic derecho → Falla → Bobina cortada): al dar marcha aparece «Falla KM1: no cierra».",
+        "Ahora elige Contactos soldados en KM1: el motor arranca, pero al parar sigue girando.",
+        "Con la orden en LOW, la realimentación en HIGH y el tiempo vencido: «Falla KM1: contactos pegados» una vez y H1 encendida."
+      ],
+      "uses": [
+        "I0_0 · S1, marcha (NA)",
+        "I0_1 · S2, parada (NC)",
+        "I0_2 · KM1 13-14, realimentación",
+        "Q0_0 · KM1",
+        "Q0_1 · H1, falla",
+        "Botonera: ESC reconoce"
+      ],
+      "teaches": "Mandar una salida no garantiza que la máquina obedezca. La realimentación compara la orden con lo que pasó y detecta la falla antes de que alguien la vea."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 380,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 580,
+        "y": 0
+      },
+      {
+        "id": "R",
+        "type": "jwsim/power-3ph",
+        "x": 840,
+        "y": 660
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 240,
+        "y": 1540
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla KM1"
+        },
+        "x": 560,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "R.L1",
+        "to": "KM1.1",
+        "ref": true
+      },
+      {
+        "from": "R.L2",
+        "to": "KM1.3",
+        "ref": true
+      },
+      {
+        "from": "R.L3",
+        "to": "KM1.5",
+        "ref": true
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.V1"
+      },
+      {
+        "from": "KM1.6",
+        "to": "M1.W1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "KM1.13",
+        "ref": true
+      },
+      {
+        "from": "KM1.14",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

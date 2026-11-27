@@ -22,5 +22,5 @@ if (process.argv.includes("--check")) {
 } else {
   writeFileSync(CATALOGO, text);
   const c = JSON.parse(text);
-  console.log(`[catalogo] ${c.curso.reduce((n, u) => n + u.lecciones.length, 0)} lecciones, ${c.retos.length} retos, ${c.arquitecturas.length} arquitecturas`);
+  console.log(`[catalogo] ${c.curso.reduce((n, u) => n + u.lecciones.length, 0)} lecciones C++, ${c.curso_iec.reduce((n, u) => n + u.lecciones.length, 0)} IEC, ${c.retos.length} retos, ${c.arquitecturas.length} arquitecturas`);
 }

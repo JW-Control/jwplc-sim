@@ -43,12 +43,14 @@ import { parseResult, parseTimeline, runExe } from "./lib/runner.mjs";
 import { formatGrade, gradeSketch, loadExercise } from "./lib/grade.mjs";
 import { findTests, loadTest, runTest } from "./lib/test.mjs";
 import { toolchain } from "./lib/toolchain.mjs";
+import { compileEsp32, installEsp32Tools, prepareEsp32, uploadEsp32 } from "./lib/esp32.mjs";
 import { fetchPackageRef, packageFromDir, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 
 export const EXIT = { OK: 0, FAIL: 1, USAGE: 2, BUILD: 3, SIM: 4, ENV: 5 };
 
 const USAGE = `uso:
   jwsim-cli build  <sketch_dir> [--target native|windows] [--out dir] [--package dir] [--library dir]... [--json]
+  jwsim-cli subir  <sketch_dir> [--port COM5] [--tools] [--json]   (compila para el JWPLC real y carga por USB)
   jwsim-cli run    <sketch_dir> [opciones de build] [--json] -- [opciones del runner]
   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
@@ -91,6 +93,8 @@ function parse(argv) {
     else if (a === "--report") opts.report = value(++i, a);
     else if (a === "--filter") opts.filter = value(++i, a);
     else if (a === "--index") opts.index = value(++i, a);
+    else if (a === "--port") opts.port = value(++i, a);
+    else if (a === "--tools") opts.tools = true;
     else if (a === "--json") opts.json = true;
     else if (a === "--update") opts.update = true;
     else if (a === "--record") opts.record = true;
@@ -181,6 +185,34 @@ async function main() {
     if (!opts.json) console.error(b.ok ? `[jwsim-cli] OK ${b.executable}` : `[jwsim-cli] ERROR: ${b.error}`);
     emit(b);
     return code;
+  }
+
+  // Subir al JWPLC (cli/lib/esp32.mjs): sin --port solo compila para el ESP32;
+  // --tools descarga las herramientas del ESP32 si faltan.
+  if (cmd === "subir") {
+    const dir = opts._[0];
+    if (!dir) throw new CliError(EXIT.USAGE, "falta la carpeta del sketch");
+    const log = opts.json ? () => {} : (l) => console.error(l);
+    const env = prepareEsp32({ dataDir: process.env.JWSIM_ARDUINO_DATA ?? join(ROOT, "build", "arduino") });
+    if (!env.cli) throw new CliError(EXIT.ENV, "no se encontró arduino-cli (node scripts/fetch-arduino-cli.mjs)");
+    if (env.missing.length && opts.tools) await installEsp32Tools(env, { log });
+    else if (env.missing.length) throw new CliError(EXIT.ENV, `faltan herramientas del ESP32: ${env.missing.map((t) => `${t.name} ${t.version}`).join(", ")} (agregue --tools para descargarlas)`);
+    const ready = env.missing.length ? prepareEsp32({ dataDir: env.dataDir }) : env;
+    const c = await compileEsp32(dir, ready, { log });
+    if (!c.ok) {
+      emit({ ok: false, stage: "compile" }, EXIT.BUILD);
+      return EXIT.BUILD;
+    }
+    for (const l of c.size) log(`[subir] ${l}`);
+    if (!opts.port) {
+      log(`[subir] compilado en ${c.buildDir} (sin --port no se carga)`);
+      emit({ ok: true, buildDir: c.buildDir, size: c.size });
+      return EXIT.OK;
+    }
+    const u = await uploadEsp32(dir, ready, { buildDir: c.buildDir, port: opts.port, log });
+    if (!u.ok && u.hint) log(`[subir] ${u.hint}`);
+    emit({ ok: u.ok, stage: u.ok ? "done" : "upload", buildDir: c.buildDir, size: c.size, hint: u.hint || undefined }, u.ok ? EXIT.OK : EXIT.FAIL);
+    return u.ok ? EXIT.OK : EXIT.FAIL;
   }
 
   if (cmd === "run") {

@@ -24,7 +24,7 @@ Cada paso empieza cuando el anterior llegó a su final de carrera **y** el senso
 
 ## Fallas
 
-Si un paso no llega a su final de carrera en 3 s, la máquina se detiene en falla y no sigue con el paso siguiente. Muestre el motivo en el monitor serie con una línea `FALLA <código>`:
+Si un paso no llega a su final de carrera en 3 s, la máquina se detiene en falla y no sigue con el paso siguiente. Muestra el motivo en el monitor serie con una línea `FALLA <código>`:
 
 - `T` + el sensor que no llegó, p. ej. `FALLA TB1` (B no salió: bobina cortada, cable suelto o sin aire).
 - `P` + el sensor del extremo opuesto que sigue activo, p. ej. `FALLA PA0` (sensor pegado o mal ubicado).
@@ -33,4 +33,4 @@ Opcional: muestre el mismo código en ERR de la pantalla con `JWPLC_Display.setE
 
 ## Para probar en el simulador
 
-En la escena, el inspector de cada electroválvula y de cada sensor tiene sus fallas: corte la bobina de Y2 o deje pegado A0 y vea qué hace su programa. La vista 3D muestra los cuatro cilindros sobre su panel, con la palanca de cada final de carrera bajando al llegar la cabeza del vástago.
+En la escena, el inspector de cada electroválvula y de cada sensor tiene sus fallas: corta la bobina de Y2 o deja pegado A0 y mira qué hace tu programa. La vista 3D muestra los cuatro cilindros sobre su panel, con la palanca de cada final de carrera bajando al llegar la cabeza del vástago.

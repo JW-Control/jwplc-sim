@@ -1,0 +1,230 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 13 · Arreglos de objetos: cuatro cintas",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Arreglos_de_objetos/Arreglos_de_objetos.ino"
+  },
+  "exercise": {
+    "lesson": "curso-13",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Arreglos_de_objetos",
+    "brief": {
+      "goal": "Una parada escalonada que vacía las cintas (de la 1 a la 4, una por segundo) y una lámpara mientras dura cada secuencia.",
+      "steps": [
+        "Ejecuta el ejemplo: MARCHA enciende de la cinta 4 a la 1, una cada 2 s.",
+        "Cambia PARADA: que apague de la cinta 1 a la 4, una cada segundo.",
+        "Enciende H1 (Q0.4) mientras dure el arranque o la parada escalonada.",
+        "Comprueba que H1 se apaga con las cuatro en marcha y con las cuatro detenidas."
+      ],
+      "uses": [
+        "I0_0 · S1, MARCHA (NA)",
+        "I0_1 · S2, PARADA (NC)",
+        "Q0_0 a Q0_3 · KM1 a KM4, cintas 1 a 4",
+        "Q0_4 · H1, secuencia en curso"
+      ],
+      "teaches": "Un arreglo guarda muchos objetos iguales bajo un nombre; un índice y un for los recorren sin repetir código."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 380,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 580,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 560,
+        "y": 1060
+      },
+      {
+        "id": "KM3",
+        "type": "jwsim/contactor",
+        "x": 840,
+        "y": 1060
+      },
+      {
+        "id": "KM4",
+        "type": "jwsim/contactor",
+        "x": 1120,
+        "y": 1060
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Secuencia"
+        },
+        "x": 1400,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "KM3.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM3.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "KM4.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM4.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_4.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

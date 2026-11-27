@@ -1,0 +1,212 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 44 · Control PI",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Control_PI/Control_PI.ino"
+  },
+  "exercise": {
+    "lesson": "curso-44",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Control_PI",
+    "brief": {
+      "goal": "Modo reposo: sin consumo, la bomba para y vuelve sola cuando la presión baja.",
+      "steps": [
+        "Ejecuta el ejemplo y aprieta S1: la presión llega a 4,0 bar. Baja el consumo de RED1 a 0: la bomba se queda girando a 20 Hz sin dar agua.",
+        "Si la frecuencia está en el mínimo 5 s seguidos y la presión llegó a la consigna: PARADA al variador y «Bomba en reposo».",
+        "En reposo, si la presión baja de 3,5 bar: «Bomba despierta» y el PI sigue."
+      ],
+      "uses": [
+        "I0_0 · S1, marcha (NA)",
+        "I0_1 · S2, parada (NC)",
+        "RS-485 · VF1, variador (1) · PT1, presión (2)",
+        "RED1 · consumo del edificio"
+      ],
+      "teaches": "El PI suma el error en el tiempo y llega a la consigna sin adivinar la base. Con límites en la integral (anti-windup) no se pasa al arrancar."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 380
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 380
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 280,
+        "y": 20
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 480,
+        "y": 20
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 780
+      },
+      {
+        "id": "VF1",
+        "type": "jwsim/vfd-el",
+        "x": 820,
+        "y": 380,
+        "params": {
+          "02-00": "3: RS-485",
+          "02-01": "3: RS-485, STOP/RESET del teclado habilitado",
+          "09-01": "1: 9600 bps",
+          "09-04": "6: RTU 8,N,1",
+          "09-02": "1: advertir y parar en rampa",
+          "09-03": 3,
+          "01-09": 3,
+          "01-10": 3,
+          "09-00": 1
+        }
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 980,
+        "y": 1200
+      },
+      {
+        "id": "PT1",
+        "type": "jwsim/pressure-rs485",
+        "params": {
+          "address": 2,
+          "source": "RED1.presion"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "RED1",
+        "type": "jwsim/building-water",
+        "params": {
+          "bombas": "M1",
+          "qMax": 150,
+          "consumo": 60,
+          "presion0": 3
+        },
+        "x": 1580,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "L1.L",
+        "to": "VF1.R",
+        "ref": true
+      },
+      {
+        "from": "L1.N",
+        "to": "VF1.S",
+        "ref": true
+      },
+      {
+        "from": "VF1.U",
+        "to": "M1.U1"
+      },
+      {
+        "from": "VF1.V",
+        "to": "M1.V1"
+      },
+      {
+        "from": "VF1.W",
+        "to": "M1.W1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "PT1.+",
+        "ref": true
+      },
+      {
+        "from": "PT1.-",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "VF1.SG+"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "VF1.SG-"
+      },
+      {
+        "from": "VF1.SG+",
+        "to": "PT1.A",
+        "ref": true
+      },
+      {
+        "from": "VF1.SG-",
+        "to": "PT1.B",
+        "ref": true
+      }
+    ]
+  }
+}

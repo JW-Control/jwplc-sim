@@ -14,5 +14,5 @@ void setup()
 
 void loop()
 {
-    // Escriba aquí su programa.
+    // Escribe aquí tu programa.
 }

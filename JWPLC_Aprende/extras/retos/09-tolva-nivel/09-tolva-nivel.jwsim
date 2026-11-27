@@ -21,9 +21,9 @@
     "brief": {
       "goal": "Mantener una tolva con descarga por gravedad entre B1 (30 %) y B2 (80 %) mientras el proceso está habilitado.",
       "steps": [
-        "Con S1 en 0 todo detenido; con S1 en I abra la descarga Y1.",
-        "Arranque la bomba bajo B1 y párela al llegar a B2 (histéresis).",
-        "Si S1 vuelve a 0, pare la bomba y cierre Y1.",
+        "Con S1 en 0 todo detenido; con S1 en I abre la descarga Y1.",
+        "Arranca la bomba bajo B1 y párala al llegar a B2 (histéresis).",
+        "Si S1 vuelve a 0, para la bomba y cierra Y1.",
         "H1 encendido con el agua bajo B1."
       ],
       "teaches": "Histéresis con un proceso continuo (tanque discretizado) y habilitación por selector.",

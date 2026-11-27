@@ -1,0 +1,378 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-25",
+  "goals": [
+    {
+      "id": "lote",
+      "description": "Seis toques a B1: «Lote 1 completo (6 piezas)»",
+      "console": "Lote \\d+ completo",
+      "hint": "El lote es de 6 piezas; cambia el tamaño con UP y DOWN."
+    },
+    {
+      "id": "espera",
+      "description": "Con el lote listo, la cinta KM1 (Q0.1) se detiene y H1 (Q0.2) parpadea",
+      "period": "Q0_2",
+      "on_ms": [
+        300,
+        500
+      ],
+      "off_ms": [
+        300,
+        500
+      ],
+      "cycles": 2,
+      "after": "lote",
+      "hint": "Un bool esperandoOk = true; en loteCompleto(); la cinta es digitalWrite(Q0_1, !esperandoOk);"
+    },
+    {
+      "id": "reconoce",
+      "description": "OK: «Lote reconocido» y la cinta sigue",
+      "console": "Lote reconocido",
+      "after": "lote"
+    },
+    {
+      "id": "turno",
+      "description": "A las 06:00:00: «Cambio de turno: N lotes»",
+      "console": "Cambio de turno: \\d+ lotes",
+      "hint": "Pasa la hora a segundos del día (lección 21) y detecta el instante en que cruza las 06:00:00: el segundo anterior era menor y el actual es mayor o igual.",
+      "why": "Comparar con el valor anterior detecta el momento justo, aunque el loop pase miles de veces por ese segundo."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lote completo",
+      "until_ms": 12000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "7000 BTN_OK=1",
+        "7150 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Completa el lote",
+          "points": 2,
+          "console": "Lote 1 completo \\(6 piezas\\)"
+        },
+        {
+          "description": "El empujador da su golpe",
+          "points": 2,
+          "from_ms": 3500,
+          "to_ms": 3800,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 800
+        },
+        {
+          "description": "La cinta espera al operador",
+          "points": 4,
+          "from_ms": 3800,
+          "to_ms": 6900,
+          "never": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H1 parpadea mientras espera",
+          "points": 3,
+          "from_ms": 3800,
+          "to_ms": 6900,
+          "period": "Q0_2",
+          "on_ms": [
+            300,
+            500
+          ],
+          "off_ms": [
+            300,
+            500
+          ],
+          "cycles": 2
+        },
+        {
+          "description": "Con OK la cinta sigue",
+          "points": 1,
+          "from_ms": 7100,
+          "to_ms": 7600,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 1000
+        }
+      ]
+    },
+    {
+      "name": "Cambio de turno",
+      "until_ms": 34000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "6000 BTN_OK=1",
+        "6150 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "A las 06:00:00 registra el turno",
+          "points": 6,
+          "console": "Cambio de turno: 1 lotes"
+        }
+      ]
+    },
+    {
+      "name": "Ajuste",
+      "until_ms": 3000,
+      "state": "aj",
+      "stim": [
+        "1000 BTN_UP=1",
+        "1150 BTN_UP=0"
+      ],
+      "checks": [
+        {
+          "description": "UP agranda el lote",
+          "points": 1,
+          "console": "Lote de 7"
+        }
+      ]
+    },
+    {
+      "name": "Ajuste guardado",
+      "until_ms": 3000,
+      "state": "aj",
+      "checks": [
+        {
+          "description": "El ajuste sobrevive al corte",
+          "points": 1,
+          "console": "Lote de 7 · 0 piezas"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 34000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "7000 BTN_OK=1",
+        "7150 BTN_OK=0"
+      ]
+    }
+  ]
+}

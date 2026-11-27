@@ -66,6 +66,8 @@ try {
 
   await t((i) => window.openLessonById(i), "curso-03");
   await sleep(1500);
+  // La ficha de la lección se abre encima: se cierra para pulsar Ejecutar.
+  await t(() => document.querySelector("#lesson-card button")?.click());
   const sol = readFileSync(join(ROOT, "JWPLC_Aprende", "extras", "practicas", "curso-03", "solucion", "Leer_una_entrada", "Leer_una_entrada.ino"), "utf8");
   await t((x) => window.jwsimTest.setSource(x), sol);
   await win.click("#btn-run");

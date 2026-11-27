@@ -1,0 +1,291 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-20",
+  "goals": [
+    {
+      "id": "aviso",
+      "description": "MARCHA: «Aviso de arranque» y el motor arranca 2 s después",
+      "console": "Motor en marcha",
+      "hint": "Da un toque a S1 en Mandos."
+    },
+    {
+      "id": "falla",
+      "description": "Abre el térmico F1: «Falla: térmico»",
+      "console": "Falla: térmico"
+    },
+    {
+      "id": "parpadeo",
+      "description": "Sin reconocer, H1 (Q0.1) parpadea",
+      "period": "Q0_1",
+      "on_ms": [
+        350,
+        650
+      ],
+      "off_ms": [
+        350,
+        650
+      ],
+      "cycles": 2,
+      "after": "falla",
+      "hint": "bool luz = falla && (reconocida || (millis() / 500) % 2 == 0); y digitalWrite(Q0_1, luz);",
+      "why": "Parpadeo = alarma nueva sin atender; fija = ya la vio alguien. Así se lee un tablero de un vistazo."
+    },
+    {
+      "id": "reconoce",
+      "description": "OK en la botonera: «Alarma reconocida»",
+      "console": "Alarma reconocida",
+      "after": "falla"
+    },
+    {
+      "id": "bloqueo",
+      "description": "Con la falla activa, MARCHA: «Bloqueado: térmico abierto»",
+      "console": "Bloqueado: térmico abierto",
+      "hint": "Detecta el flanco de MARCHA; si hay falla, escribe el aviso y da un beep grave: JWPLC_Buzzer.beep(300, 600)."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Aviso y marcha",
+      "until_ms": 7000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Avisa antes de arrancar",
+          "points": 1,
+          "console": "Aviso de arranque"
+        },
+        {
+          "description": "No arranca durante el aviso",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 2900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Arranca a los 2 s",
+          "points": 1,
+          "from_ms": 3100,
+          "to_ms": 3500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "PARO lo detiene",
+          "points": 1,
+          "from_ms": 5300,
+          "to_ms": 6900,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Falla y reconocimiento",
+      "until_ms": 14000,
+      "stim": [
+        "7000 BTN_OK=1",
+        "7150 BTN_OK=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9000,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "El térmico detiene el motor",
+          "points": 1,
+          "from_ms": 4300,
+          "to_ms": 13900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa la falla",
+          "points": 1,
+          "console": "Falla: térmico"
+        },
+        {
+          "description": "H1 parpadea mientras no se reconoce",
+          "points": 6,
+          "from_ms": 4300,
+          "to_ms": 6900,
+          "period": "Q0_1",
+          "on_ms": [
+            350,
+            650
+          ],
+          "off_ms": [
+            350,
+            650
+          ],
+          "cycles": 2
+        },
+        {
+          "description": "H1 fija después de reconocer",
+          "points": 1,
+          "from_ms": 7300,
+          "to_ms": 8900,
+          "always": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H1 se apaga al volver el térmico",
+          "points": 1,
+          "from_ms": 9300,
+          "to_ms": 13900,
+          "never": {
+            "Q0_1": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bloqueo",
+      "until_ms": 8000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "MARCHA con falla: «Bloqueado: térmico abierto»",
+          "points": 5,
+          "console": "Bloqueado: térmico abierto"
+        },
+        {
+          "description": "No arranca con el térmico abierto",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 7900,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 16000,
+      "stim": [
+        "9000 BTN_OK=1",
+        "9150 BTN_OK=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-15",
+  "goals": [
+    {
+      "id": "aviso",
+      "description": "A los 10 s de marcha H1 avisa y el motor sigue",
+      "when": {
+        "Q0_0": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 500,
+      "hint": "H1 := SEGUNDOS >= 10;"
+    },
+    {
+      "id": "bloqueo",
+      "description": "A los 20 s el motor se detiene",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 500,
+      "after": "aviso",
+      "hint": "Agrega AND SEGUNDOS < 20 a la marcha (en Ladder, un contacto del LT).",
+      "why": "El número del horómetro decide igual que un sensor: se compara y se usa en la lógica."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Horómetro y mantenimiento",
+      "until_ms": 26000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 24000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 24300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "A los 8 s de marcha: sin aviso",
+          "points": 2,
+          "at_ms": 9000,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "A los 10 s de marcha: aviso H1",
+          "points": 6,
+          "from_ms": 11000,
+          "to_ms": 12800,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 1
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "A los 15 s el motor sigue",
+          "points": 2,
+          "at_ms": 16000,
+          "expect": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "A los 20 s el motor se detiene",
+          "points": 6,
+          "from_ms": 21000,
+          "to_ms": 23500,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "Bloqueado: S1 no lo vuelve a arrancar",
+          "points": 4,
+          "from_ms": 24000,
+          "to_ms": 25800,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Marcha larga",
+      "until_ms": 25000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

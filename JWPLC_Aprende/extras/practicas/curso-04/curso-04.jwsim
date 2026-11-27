@@ -44,13 +44,13 @@
         "id": "PS1",
         "type": "jwsim/power-24vdc",
         "x": 0,
-        "y": 0
+        "y": 360
       },
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
-        "y": 0
+        "x": 280,
+        "y": 360
       },
       {
         "id": "SA1",
@@ -58,8 +58,8 @@
         "params": {
           "label": "Mano izq."
         },
-        "x": 0,
-        "y": 600
+        "x": 280,
+        "y": 0
       },
       {
         "id": "SA2",
@@ -67,8 +67,8 @@
         "params": {
           "label": "Mano der."
         },
-        "x": 220,
-        "y": 600
+        "x": 480,
+        "y": 0
       },
       {
         "id": "SA3",
@@ -76,8 +76,8 @@
         "params": {
           "label": "Tercera mano"
         },
-        "x": 440,
-        "y": 600
+        "x": 680,
+        "y": 0
       },
       {
         "id": "H1",
@@ -86,8 +86,8 @@
           "color": "verde",
           "label": "Q0.0"
         },
-        "x": 0,
-        "y": 900
+        "x": 280,
+        "y": 1060
       },
       {
         "id": "H2",
@@ -96,8 +96,8 @@
           "color": "amarillo",
           "label": "Q0.1"
         },
-        "x": 220,
-        "y": 900
+        "x": 480,
+        "y": 1060
       },
       {
         "id": "H3",
@@ -106,8 +106,8 @@
           "color": "rojo",
           "label": "Q0.2"
         },
-        "x": 440,
-        "y": 900
+        "x": 680,
+        "y": 1060
       },
       {
         "id": "H4",
@@ -116,8 +116,8 @@
           "color": "azul",
           "label": "Q0.3"
         },
-        "x": 0,
-        "y": 1200
+        "x": 880,
+        "y": 1060
       },
       {
         "id": "H5",
@@ -126,8 +126,8 @@
           "color": "blanco",
           "label": "Q0.4"
         },
-        "x": 220,
-        "y": 1200
+        "x": 1080,
+        "y": 1060
       }
     ],
     "wiring": [
@@ -149,7 +149,8 @@
       {
         "from": "PS1.+V1",
         "to": "SA1.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "SA1.14",
@@ -159,7 +160,8 @@
       {
         "from": "PS1.+V1",
         "to": "SA2.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "SA2.14",
@@ -169,7 +171,8 @@
       {
         "from": "PS1.+V1",
         "to": "SA3.13",
-        "color": "rojo"
+        "color": "rojo",
+        "ref": true
       },
       {
         "from": "SA3.14",
@@ -189,7 +192,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -204,7 +208,8 @@
       {
         "from": "H2.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -219,7 +224,8 @@
       {
         "from": "H3.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -234,7 +240,8 @@
       {
         "from": "H4.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -249,7 +256,8 @@
       {
         "from": "H5.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }

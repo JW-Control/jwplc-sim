@@ -27,5 +27,5 @@ El tablero ya está cableado. Solo hay que programar el JWPLC Basic.
 ## Cómo se califica
 
 `jwsim-cli grade JWPLC_Aprende/extras/retos/01-marcha-parada` (o el botón **Calificar** de
-la app) corre su programa con la escena y comprueba, en instantes
+la app) corre tu programa con la escena y comprueba, en instantes
 precisos, el estado de las salidas y de los equipos. La nota va de 0 a 20.

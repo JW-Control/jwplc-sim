@@ -1,0 +1,153 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-06",
+  "goals": [
+    {
+      "id": "baja",
+      "description": "Al soltar S1, H2 (Q0.1) cambia",
+      "when": {
+        "I0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "hint": "F_TRIG con CLK := S1, o un contacto de flanco de bajada."
+    },
+    {
+      "id": "baja_otra",
+      "description": "Otra pulsación completa vuelve a cambiar H2",
+      "when": {
+        "I0_0": 0,
+        "Q0_1": 0
+      },
+      "hold_ms": 300,
+      "after": "baja",
+      "why": "Cada flanco es un solo ciclo: la luz cambia una vez por cada vez que se suelta."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Flanco de bajada",
+      "until_ms": 4000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "H2 no cambia al apretar",
+          "points": 4,
+          "from_ms": 1000,
+          "to_ms": 1480,
+          "never": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H2 se enciende al soltar",
+          "points": 5,
+          "from_ms": 1500,
+          "to_ms": 1800,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "H2 sigue encendido mientras se aprieta otra vez",
+          "points": 3,
+          "from_ms": 2550,
+          "to_ms": 2980,
+          "always": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H2 se apaga al soltar otra vez",
+          "points": 5,
+          "from_ms": 3000,
+          "to_ms": 3300,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "H1 sigue cambiando al apretar",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Pulsaciones",
+      "until_ms": 7000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

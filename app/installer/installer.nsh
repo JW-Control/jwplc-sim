@@ -36,19 +36,87 @@
   Sleep 800
 !macroend
 
-!macro customCheckAppRunning
+; _EXIT es la orden para salir si el usuario cancela: Quit en una página o en
+; el desinstalador; Abort dentro de la sección de instalación, donde Quit no
+; detenía la instalación (la seguía después de Cancelar).
+!macro jwsimCheckRunning _EXIT
   !insertmacro jwsimListInstdirProcs "$INSTDIR" $R7
   ${if} $R7 != ""
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "JWPLC Sim tiene procesos abiertos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nAceptar los cierra y continúa." /SD IDOK IDOK +2
-    Quit
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "JWPLC Sim tiene procesos abiertos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nAceptar los cierra y continúa. Cancelar sale sin instalar." /SD IDOK IDOK +2
+    ${_EXIT}
     !insertmacro jwsimKillInstdirProcs "$INSTDIR"
     !insertmacro jwsimListInstdirProcs "$INSTDIR" $R7
     ${if} $R7 != ""
       MessageBox MB_OK|MB_ICONSTOP "No se pudieron cerrar estos procesos en $INSTDIR:$\r$\n$\r$\n$R7$\r$\n$\r$\nCiérrelos en el Administrador de tareas (pestaña Detalles) o reinicie Windows, y vuelva a ejecutar el instalador." /SD IDOK
-      Quit
+      ${_EXIT}
     ${endIf}
   ${endIf}
 !macroend
+
+; Borra una instalación anterior sin pasar por su desinstalador. Solo una
+; carpeta que contenga JWPLC Sim.exe; los datos del usuario (AppData\Roaming)
+; no se tocan.
+!macro jwsimRemoveInstall _DIR
+  ${if} ${FileExists} "${_DIR}\${APP_EXECUTABLE_FILENAME}"
+    !insertmacro jwsimKillInstdirProcs "${_DIR}"
+    SetOutPath $TEMP
+    RMDir /r "${_DIR}"
+    ${if} ${FileExists} "${_DIR}\*.*"
+      Sleep 1500
+      RMDir /r "${_DIR}"
+    ${endIf}
+  ${endIf}
+!macroend
+
+!ifdef BUILD_UNINSTALLER
+  !macro customCheckAppRunning
+    !insertmacro jwsimCheckRunning Quit
+  !macroend
+
+  ; Al actualizar, electron-builder mueve archivo por archivo la instalación a
+  ; %TEMP% y, si uno solo falla (ruta larga del toolchain, antivirus revisando
+  ; un archivo), aborta: el instalador nuevo reintentaba 5 veces y mostraba
+  ; «No se puede cerrar JWPLC Sim». Se borra la carpeta directamente.
+  !macro customRemoveFiles
+    !insertmacro jwsimRemoveInstall "$INSTDIR"
+  !macroend
+!else
+  ; Borra la instalación anterior antes de que el instalador llame a su
+  ; desinstalador (falla al actualizar, ver customRemoveFiles): sin él sigue
+  ; directo. Sus accesos y su registro los reescribe esta instalación.
+  !macro jwsimRemovePrevious
+    ReadRegStr $R5 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+    ${if} $R5 != ""
+      !insertmacro jwsimRemoveInstall "$R5"
+    ${endIf}
+  !macroend
+
+  ; En la sección de instalación: por si algo se abrió después de la página,
+  ; y en la actualización desde el programa (silenciosa, sin páginas).
+  !macro customCheckAppRunning
+    !insertmacro jwsimCheckRunning Abort
+    !insertmacro jwsimRemovePrevious
+  !macroend
+
+  ; Página invisible justo antes de instalar: la comprobación corre en la
+  ; ventana del instalador, donde Cancelar sí sale de inmediato.
+  !macro customPageAfterChangeDir
+    Page custom jwsimCheckRunningPage
+  Function jwsimCheckRunningPage
+    ; Misma carpeta que usará la instalación (instFilesPre le agrega
+    ; la subcarpeta de la app si el usuario eligió solo la carpeta madre).
+    StrCpy $R6 "$INSTDIR"
+    ${StrContains} $R5 "${APP_FILENAME}" $INSTDIR
+    ${if} $R5 == ""
+      StrCpy $INSTDIR "$INSTDIR\${APP_FILENAME}"
+    ${endIf}
+    !insertmacro jwsimCheckRunning Quit
+    StrCpy $INSTDIR $R6
+    !insertmacro jwsimRemovePrevious
+    Abort
+  FunctionEnd
+  !macroend
+!endif
 
 ; Si el desinstalador de la versión anterior falla (los instalados antes de
 ; esta comprobación traen la de electron-builder y salen con código 2), se

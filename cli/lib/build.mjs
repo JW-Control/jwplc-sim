@@ -201,13 +201,40 @@ export function unsupportedApiNotes(diagnostics, table) {
   return notes;
 }
 
+// Procesos del compilador en curso. Al cerrar la app hay que cortarlos con su
+// árbol: en Windows g++ lanza cc1plus/as, que siguen vivos aunque muera el
+// padre, y quedan corriendo desde la carpeta de instalación (el instalador
+// los ve después como «JWPLC Sim está abierto»).
+const liveChildren = new Set();
+let abortedBuilds = false;
+export function killBuildProcesses() {
+  abortedBuilds = true;
+  for (const child of liveChildren) {
+    if (process.platform === "win32") spawnSync("taskkill", ["/F", "/T", "/PID", String(child.pid)], { stdio: "ignore", windowsHide: true });
+    else {
+      spawnSync("pkill", ["-KILL", "-P", String(child.pid)], { stdio: "ignore" });
+      child.kill("SIGKILL");
+    }
+  }
+  liveChildren.clear();
+}
+
 function run(cmd, args, opts = {}) {
   return new Promise((resolvePromise) => {
-    const child = spawn(cmd, args, { ...opts, stdio: ["ignore", "pipe", "pipe"] });
+    if (abortedBuilds) return resolvePromise({ code: 1, out: "compilación cancelada al cerrar JWPLC Sim" });
+    const child = spawn(cmd, args, { windowsHide: true, ...opts, stdio: ["ignore", "pipe", "pipe"] });
+    liveChildren.add(child);
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));
-    child.on("close", (code) => resolvePromise({ code, out }));
+    child.on("error", (err) => {
+      liveChildren.delete(child);
+      resolvePromise({ code: 1, out: String(err.message) });
+    });
+    child.on("close", (code) => {
+      liveChildren.delete(child);
+      resolvePromise({ code, out });
+    });
   });
 }
 
@@ -260,6 +287,65 @@ function upToDate(obj, depFile, cmdHash, stampFile, cache) {
   return true;
 }
 
+// ------------------------------------------------- caché copiable
+// La clave de cada objeto (cmdHash) se calcula con las rutas de la app
+// reemplazadas por ${ROOT} (y ${PKG} si el package vive fuera): la misma
+// compilación da la misma clave en cualquier carpeta de instalación. Junto a
+// cada objeto queda un .deps con sus dependencias en esa misma forma.
+//
+// Caché semilla (JWSIM_CACHE_SEED, scripts/cache-seed.mjs): objetos ya
+// compilados que trae el instalador, de solo lectura. Se usan si su clave
+// coincide y sus dependencias existen; no se comparan fechas, porque viajan en
+// el mismo instalador que el package fijado y los fuentes del simulador (al
+// instalar, las fechas no se conservan).
+let canonRoots = [[ROOT, "${ROOT}"]];
+function setCanonRoots(pkgRoot) {
+  const roots = [[ROOT, "${ROOT}"]];
+  if (!resolve(pkgRoot).startsWith(ROOT + sep)) roots.unshift([resolve(pkgRoot), "${PKG}"]);
+  canonRoots = roots;
+}
+export function canonPath(text) {
+  let s = text;
+  for (const [abs, token] of canonRoots) {
+    s = s.split(abs).join(token);
+    if (sep === "\\") s = s.split(abs.replaceAll("\\", "/")).join(token);
+  }
+  return s;
+}
+function expandPath(text) {
+  let s = text;
+  for (const [abs, token] of canonRoots) s = s.split(token).join(abs);
+  return s;
+}
+function writeDeps(obj, depFile) {
+  if (!existsSync(depFile)) return;
+  const deps = parseDepFile(readFileSync(depFile, "utf8")).map((d) => canonPath(resolve(d)));
+  writeFileSync(obj + ".deps", deps.join("\n") + "\n");
+}
+function seedUpToDate(obj, cmdHash) {
+  if (!existsSync(obj) || !existsSync(obj + ".deps") || !existsSync(obj + ".cmd")) return false;
+  if (readFileSync(obj + ".cmd", "utf8") !== cmdHash) return false;
+  return readFileSync(obj + ".deps", "utf8")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .every((d) => existsSync(expandPath(d)));
+}
+// Carpeta de la semilla para este destino, si existe y es del package fijado.
+function seedDirFor(target, lock) {
+  const base = process.env.JWSIM_CACHE_SEED;
+  if (!base) return null;
+  const info = join(base, "seed.json");
+  if (!existsSync(info)) return null;
+  try {
+    const s = JSON.parse(readFileSync(info, "utf8"));
+    if (s.commit !== lock.JWPLC_PACKAGE_COMMIT) return null;
+  } catch {
+    return null;
+  }
+  const dir = join(base, target);
+  return existsSync(dir) ? dir : null;
+}
+
 // ------------------------------------------------------------ principal
 export async function buildSketch(sketchDir, options = {}) {
   const boardId = options.board ?? "jwplcbasic";
@@ -302,6 +388,9 @@ export async function buildSketch(sketchDir, options = {}) {
   // La app instalada no puede escribir junto a sus archivos (Program Files):
   // app/main.mjs pone la caché en sus datos con JWSIM_CACHE_DIR.
   const cacheDir = join(process.env.JWSIM_CACHE_DIR ?? join(ROOT, "build", "cache"), target);
+  setCanonRoots(pkgRoot);
+  const seedDir = seedDirFor(target, lock);
+  let seedHits = 0;
   mkdirSync(outDir, { recursive: true });
 
   // Coherencia del manifiesto del core contra el árbol del package.
@@ -382,7 +471,12 @@ export async function buildSketch(sketchDir, options = {}) {
     const opt = sketch ? "-O0" : isSimUnit(file) ? "-O2" : "-O1";
     const ownLib = isC ? null : libs.find((l) => l.cxxflags?.length && file.startsWith(l.srcDir + sep));
     const own = ownLib && !ownLib.cxxflagsExcept.includes(basename(file)) ? ownLib.cxxflags : [];
-    return [...base.map((f) => (f === "-O1" ? opt : sketch && f === "-std=gnu++2b" ? sketchStd : f)), ...defines, ...extra, ...own];
+    // Package (core, librerías, terceros) con -g1: alcanza para la pila de
+    // llamadas y el paso a paso por línea, y compila más rápido que -g. El
+    // sketch y el motor (sim/) conservan -g: el depurador evalúa sus
+    // variables y funciones (jwsim_now() al congelar el tiempo, G3).
+    const dbg = (f) => (f === "-g" && !sketch && !isSimUnit(file) ? "-g1" : f);
+    return [...base.map((f) => dbg(f === "-O1" ? opt : sketch && f === "-std=gnu++2b" ? sketchStd : f)), ...defines, ...extra, ...own];
   };
 
   phase("package, terceros y placa");
@@ -404,6 +498,42 @@ export async function buildSketch(sketchDir, options = {}) {
   if (existsSync(discoveryFile)) {
     const d = JSON.parse(readFileSync(discoveryFile, "utf8"));
     if (d.key === discoveryKey) cached = d.libraries.map((n) => libs.find((l) => l.name === n));
+  }
+  // Atajo con la base del package: el sketch mínimo (scripts/cache-seed)
+  // descubre las librerías que arrastra #include <Arduino.h> junto con todo lo
+  // que sus fuentes incluyen, con estos mismos defines. Si las fuentes del
+  // sketch preprocesan sin que falte ningún header con esas librerías, el
+  // resultado es el mismo y no hace falta preprocesar las ~100 fuentes de las
+  // librerías una por una (lo más lento de la primera compilación tras la
+  // caché del instalador). Si falta alguno, se descubre como siempre.
+  const baseKey = hash(
+    canonPath(JSON.stringify([lock.JWPLC_PACKAGE_COMMIT, target, tc.cxx, defines, (options.libraries ?? []).map((d) => (typeof d === "string" ? resolve(d) : { ...d, dir: resolve(d.dir) })), readFileSync(join(ROOT, "sim", "core-manifest.json"), "utf8"), sketchHasHeaders])),
+  );
+  const baseFiles = [join(cacheDir, "discovery-base.json"), ...(seedDir ? [join(seedDir, "discovery-base.json")] : [])];
+  if (!cached && !options.headerProbe) {
+    for (const f of baseFiles) {
+      if (!existsSync(f)) continue;
+      let base;
+      try {
+        base = JSON.parse(readFileSync(f, "utf8"));
+      } catch {
+        continue;
+      }
+      if (base.key !== baseKey) continue;
+      const baseLibs = base.libraries.map((n) => libs.find((l) => l.name === n));
+      if (baseLibs.includes(undefined)) continue;
+      const dirs = [...includeDirs, ...baseLibs.flatMap((l) => l.includeDirs)];
+      const complete = sketchSources.every((file) => {
+        const cc = file.endsWith(".c") ? tc.cc : tc.cxx;
+        const r = spawnSync(cc[0], [...cc.slice(1), "-E", "-o", join(outDir, "discovery.i"), ...flagsFor(file), ...sketchOnlyIncludes.concat(dirs).map((d) => `-I${d}`), file], {
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        return !/fatal error: [^:\s]+: No such file|' file not found/.test(r.stderr ?? "");
+      });
+      if (complete) cached = baseLibs;
+      break;
+    }
   }
   const queue = cached ? [] : [...sketchSources];
   for (const lib of cached && !cached.includes(undefined) ? cached : []) {
@@ -451,6 +581,10 @@ export async function buildSketch(sketchDir, options = {}) {
   }
 
   writeFileSync(discoveryFile, JSON.stringify({ key: discoveryKey, libraries: usedLibs.map((l) => l.name) }) + "\n");
+  if (options.seedDiscovery) {
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(baseFiles[0], JSON.stringify({ key: baseKey, libraries: usedLibs.map((l) => l.name) }) + "\n");
+  }
   phase(cached && !cached.includes(undefined) ? "descubrimiento (caché)" : "descubrimiento");
 
   // Sondeo de headers (jwsim-cli parity, G5): preprocesa con -M -MG las
@@ -576,7 +710,7 @@ export async function buildSketch(sketchDir, options = {}) {
     // referencias se redirigen al VFS y al reloj del simulador (la tabla
     // forma parte de la clave de la caché).
     const fwLibc = u.group !== "jwsim";
-    const cmdHash = hash(cc[0] + "\0" + halHeaders() + "\0" + compile.join("\0") + (fwLibc ? "\0" + fwSyms.hash : ""));
+    const cmdHash = hash(canonPath(cc[0] + "\0" + halHeaders() + "\0" + compile.join("\0") + (fwLibc ? "\0" + fwSyms.hash : "")));
     // Caché de objetos compartida entre sketches: la clave es el comando
     // completo (flags + include path + archivo). El sketch va en su carpeta.
     const obj =
@@ -586,6 +720,13 @@ export async function buildSketch(sketchDir, options = {}) {
     mkdirSync(dirname(obj), { recursive: true });
     const args = [...compile, "-o", obj];
     if (upToDate(obj, obj.replace(/\.o$/, ".d"), cmdHash, obj + ".cmd", mtimes)) return { ...u, obj };
+    if (seedDir && u.group !== "sketch") {
+      const seedObj = join(seedDir, basename(obj));
+      if (seedUpToDate(seedObj, cmdHash)) {
+        seedHits++;
+        return { ...u, obj: seedObj };
+      }
+    }
     const tUnit = performance.now();
     if (process.env.JWSIM_BUILD_VERBOSE) log(`[cmd] ${JSON.stringify([cc[0], ...args])}`);
     let r = await run(cc[0], args);
@@ -629,8 +770,10 @@ export async function buildSketch(sketchDir, options = {}) {
       phaseNote(`gcc ${basename(u.file)}: ${Math.round(performance.now() - tUnit)} ms${pchInfo}`);
     }
     writeFileSync(obj + ".cmd", cmdHash);
+    if (u.group !== "sketch") writeDeps(obj, obj.replace(/\.o$/, ".d"));
     return { ...u, obj };
   });
+  if (seedHits) log(`[build] ${seedHits} objetos de la caché del instalador`);
   if (failures.length && sketchStd !== "-std=gnu++2b" && failures.some((f) => f.sketch)) {
     // ¿Necesita C++23? Se repite como el package; los errores que se informan
     // son los de esa compilación.

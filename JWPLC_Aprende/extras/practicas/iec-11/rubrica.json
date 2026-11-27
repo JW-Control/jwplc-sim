@@ -1,0 +1,294 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-11",
+  "goals": [
+    {
+      "id": "b2",
+      "description": "La bomba 2 (Q0.1) arranca con S3, con su propia instancia de MOTOR",
+      "when": {
+        "Q0_1": 1
+      },
+      "hold_ms": 500,
+      "hint": "BOMBA2(MARCHA := S3, PARADA := S4); KM2 := BOMBA2.Q;"
+    },
+    {
+      "id": "h1_b1",
+      "description": "H1 (Q0.2) encendida con la bomba 1 en marcha",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "hint": "H1 := BOMBA1.Q OR BOMBA2.Q;"
+    },
+    {
+      "id": "h1_b2",
+      "description": "H1 sigue encendida con solo la bomba 2 en marcha",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "after": "h1_b1"
+    },
+    {
+      "id": "h1_off",
+      "description": "H1 se apaga con las dos bombas detenidas",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 0,
+        "Q0_2": 0
+      },
+      "hold_ms": 300,
+      "after": "h1_b2",
+      "why": "Cada instancia guarda su propio estado: detener una no toca a la otra."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Dos bombas con el mismo bloque",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S4",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S4",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La bomba 1 arranca con S1",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bomba 1 se detiene con S2",
+          "points": 2,
+          "from_ms": 2000,
+          "to_ms": 2600,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bomba 2 arranca con S3",
+          "points": 4,
+          "from_ms": 4000,
+          "to_ms": 4600,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bomba 2 sigue al detener la 1",
+          "points": 3,
+          "from_ms": 5000,
+          "to_ms": 5600,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "La bomba 2 se detiene con S4",
+          "points": 3,
+          "from_ms": 6500,
+          "to_ms": 7100,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 enciende con la bomba 1",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 sigue con solo la bomba 2",
+          "points": 2,
+          "from_ms": 5000,
+          "to_ms": 5600,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 se apaga con las dos detenidas",
+          "points": 2,
+          "from_ms": 6500,
+          "to_ms": 7100,
+          "eventually": {
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Dos bombas",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S4",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S4",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

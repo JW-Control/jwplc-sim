@@ -1,0 +1,130 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 33 · El bus RS-485: leer un controlador",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Leer_un_controlador/Leer_un_controlador.ino"
+  },
+  "exercise": {
+    "lesson": "curso-33",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Leer_un_controlador",
+    "brief": {
+      "goal": "Leer también el registro de estado del controlador: avisar cuándo calienta y encender H1 con su alarma.",
+      "steps": [
+        "Ejecuta el ejemplo: cada segundo el Monitor Serie muestra la temperatura que mide TC1. Cámbiala en Mandos.",
+        "Lee 2 registros desde el 0: el segundo es el estado. Escribe «Calentando» o «Resistencia apagada» cuando el bit 0 cambia.",
+        "Con el bit 1 (alarma), «Alarma de temperatura» una vez y H1 (Q0.0) encendida; sin alarma, H1 apagada."
+      ],
+      "uses": [
+        "RS-485 · TC1, controlador de temperatura, dirección 1, 9600 8N1",
+        "Registro input 0 · temperatura × 10",
+        "Registro input 1 · estado (bit 0 salida, bit 1 alarma)",
+        "Q0_0 · H1, alarma"
+      ],
+      "teaches": "Modbus RTU es preguntar y responder: el maestro pide registros a una dirección y el esclavo contesta. Un registro puede ser un número o un grupo de bits."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 420
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 420
+      },
+      {
+        "id": "TC1",
+        "type": "jwsim/temp-controller",
+        "params": {
+          "address": 1,
+          "baud": "9600",
+          "coil": "24VDC",
+          "sonda": "simulada",
+          "temp": 25,
+          "sv": 40,
+          "hist": 2,
+          "alarma": 10
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Alarma"
+        },
+        "x": 300,
+        "y": 1120
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "TC1.L",
+        "ref": true
+      },
+      {
+        "from": "TC1.N",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "TC1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "TC1.B"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

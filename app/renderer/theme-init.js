@@ -8,3 +8,15 @@
     if (m && (t === "light" || t === "dark")) m.content = t;
   } catch {}
 })();
+
+// Si al abrir va a salir Inicio, la ventana del editor no se pinta antes: se
+// oculta hasta que start.js decide (onReady). Por si algo falla, a los 15 s
+// se muestra igual.
+(() => {
+  try {
+    if (localStorage.getItem("jwsim.inicio") === "false") return;
+  } catch {}
+  const root = document.documentElement;
+  root.classList.add("booting");
+  setTimeout(() => root.classList.remove("booting"), 15000);
+})();

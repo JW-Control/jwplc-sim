@@ -17,7 +17,7 @@
   <body>
     <header class="toolbar">
       <div class="group tb-left">
-        <div class="brand"><span class="brand-mark">JW</span><span>JWPLC Sim</span></div>
+        <div class="brand"><img class="app-logo" src="../icon/icon.svg" alt="" width="26" height="26" /><span>JWPLC Sim</span></div>
         <span class="tb-sep" aria-hidden="true"></span>
         <div class="group tb-files">
           <button id="btn-projects" title="Inicio: nuevo proyecto, abrir, recientes, ruta de aprendizaje, arquitecturas y ejemplos">Inicio</button>
@@ -27,8 +27,9 @@
       </div>
       <div class="group tb-run">
         <button id="btn-run" class="primary" title="Compilar y ejecutar (F5)">▶ Ejecutar</button>
-        <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚ Pausa</button>
-        <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■ Detener</button>
+        <button id="btn-pause" title="Pausar / continuar (F6)" disabled>❚❚<span class="tb-lbl"> Pausa</span></button>
+        <button id="btn-stop" title="Detener (Mayús+F5)" disabled>■<span class="tb-lbl"> Detener</span></button>
+        <button id="btn-upload" title="Compilar para el JWPLC Basic real y cargarlo por USB" aria-haspopup="dialog" aria-expanded="false">⇪<span class="tb-lbl"> Subir al JWPLC</span></button>
       </div>
       <div class="group tb-right">
         <select id="sel-speed" class="speed" title="Velocidad de la simulación" aria-label="Velocidad">
@@ -45,6 +46,8 @@
           title="Une el USB o el RS-485 del JWPLC simulado con un puerto COM de la PC (JW Serial u otro programa)">
           <span class="com-dot" aria-hidden="true"></span><span id="com-label">Sin COM</span>
         </button>
+        <span class="read-size tb-read-size" role="group" aria-label="Tamaño de letra de la clase, el reto y el código"
+          title="Tamaño de letra de la clase, el reto y el código"><button class="icon" data-read-size="-1" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" aria-label="Letra más grande">A+</button></span>
         <button id="btn-theme" class="theme-btn" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar tema"></button>
       </div>
     </header>
@@ -53,7 +56,7 @@
          escena) al lado; las demás ocupan todo el ancho. -->
     <nav class="main-tabs" id="main-tabs" role="tablist" aria-label="Área de trabajo">
       <button class="mtab active" role="tab" aria-selected="true" data-tab="program" title="Código del programa con la placa al lado (Ctrl+1)">Programa</button>
-      <button class="mtab" role="tab" aria-selected="false" data-tab="schematic" title="Tablero: la placa cableada a los equipos (Ctrl+2)">Esquema eléctrico</button>
+      <button class="mtab" role="tab" aria-selected="false" data-tab="schematic" title="Tablero: la placa cableada a los equipos (Ctrl+2)">Esquema<span class="mt-lbl"> eléctrico</span></button>
       <button class="mtab" role="tab" aria-selected="false" data-tab="plant" title="Planta en 3D movida por la simulación (Ctrl+3)">Planta 3D</button>
       <button class="mtab" role="tab" aria-selected="false" data-tab="board" title="El JWPLC Basic de frente: pantalla, botonera y E/S (Ctrl+4)">Placa</button>
       <div class="mtab-sub" id="mtab-sub-program" role="radiogroup" aria-label="Lenguaje">
@@ -63,7 +66,7 @@
       </div>
       <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
         <button class="seg active" id="schem-color" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
-        <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado (IEC)</button>
+        <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado<span class="mt-lbl"> (IEC)</span></button>
         <button class="seg" id="schem-pneu" role="radio" aria-checked="false" title="Circuito neumático (ISO 1219) generado de la escena: válvulas, cilindros y aire en movimiento">Neumático</button>
       </div>
     </nav>
@@ -84,7 +87,8 @@
         <aside class="guide-pane" id="guide-pane" hidden aria-label="Guía de la lección">
           <div class="guide-head">
             <span class="guide-title">Teoría</span>
-            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+            
+            <button class="link small" id="guide-reset" hidden title="Volver al código de partida del ejercicio (Ctrl+Z lo deshace)">Reiniciar código</button>
             <button class="link small" id="guide-card" title="Volver a ver la ficha de la lección">Ficha</button>
             <button class="icon" id="guide-fold" title="Plegar la guía" aria-label="Plegar la guía">‹</button>
           </div>
@@ -102,6 +106,18 @@
             <button id="btn-dbg-out" class="icon" title="Salir de la función (Mayús+F11)" aria-label="Salir" disabled>↑</button>
             <button id="btn-dbg-pause" class="icon" title="Interrumpir el firmware en el código (Ctrl+F8)" aria-label="Interrumpir" disabled>⏸</button>
           </div>
+        </div>
+        <div id="plc-diagram" class="plc-diagram" hidden>
+          <div class="plc-diagram-head">
+            <span id="plc-diagram-hint"></span>
+            <button id="ld-bp-btn" class="small" hidden title="Backplane: nombres (alias) de las borneras del JWPLC, como en el OpenPLC Editor">⊞ Backplane</button>
+            <button id="ld-edit-btn" class="small" hidden title="Editar el Ladder en el Sim (mismo formato que el OpenPLC Editor)">✎ Editar</button>
+            <button id="plc-diagram-text" class="small" title="Ver el archivo como texto (JSON del editor)">Ver como texto</button>
+          </div>
+          <div id="ld-toolbar" class="ld-toolbar" hidden role="toolbar" aria-label="Elementos Ladder"></div>
+          <div id="plc-diagram-body" class="plc-diagram-body" title="Clic derecho en un contacto o bobina de E/S: forzar (Force True/False/Release)"></div>
+          <div id="plc-force-menu" class="iec-edit plc-force-menu" role="menu" hidden></div>
+          <div id="ld-pop" class="iec-edit ld-pop" role="dialog" hidden></div>
         </div>
         <div id="editor"></div>
         </div>
@@ -170,6 +186,18 @@
               <div class="io-row" id="outputs"></div>
             </div>
           </div>
+          <!-- Planta 3D con su barra izquierda: el Ladder en vivo (ladder-edit.js ldSide). -->
+          <div class="plant-row" id="plant-row">
+          <nav class="plant-rail" aria-label="Paneles izquierdos de la planta">
+            <button class="side-tab-left" id="plant-tab-ladder" type="button"
+              title="Ladder en vivo: el programa pintado mientras corre (Ctrl+L)" aria-label="Ladder en vivo" aria-pressed="false" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 4v16M21 4v16M3 9h4M10 9h4M17 9h4M7 6v6M10 6v6M3 16h7M15 16h6"/>
+                    <path d="M12 13.5c-1 1-1 4 0 5M15 13.5c1 1 1 4 0 5"/>
+                  </svg>
+            </button>
+          </nav>
+          <aside class="plant-left" id="plant-left"><div class="plant-left-grip" id="plant-left-grip" role="separator" aria-orientation="vertical" aria-label="Ancho del Ladder" title="Arrastrar para cambiar el ancho (doble clic: restablecer)"></div></aside>
           <div id="view3d" class="view3d" hidden>
             <canvas id="view3d-canvas"></canvas>
             <div id="view3d-empty" class="view3d-empty">
@@ -197,6 +225,7 @@
               <span class="mini-leds"><i data-led="led-pwr"></i>PWR<i data-led="led-run"></i>RUN<i data-led="led-err" class="err"></i>ERR<i data-led="led-buz" class="buz"></i>BUZ</span>
             </button>
           </div>
+          </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main left-collapsed">
               <!-- Barra lateral izquierda (tipo Altium): toggle del diagrama de estados. -->
@@ -207,6 +236,13 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M3 19V5M3 19h18"/>
                     <path d="M5 15h3l3-7h4l3 7h3"/>
+                  </svg>
+                </button>
+                <button class="side-tab-left" data-left-pane="ladder" id="scene-tab-ladder"
+                  title="Ladder en vivo: el programa pintado mientras corre (Ctrl+L)" aria-label="Ladder en vivo" aria-pressed="false" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 4v16M21 4v16M3 9h4M10 9h4M17 9h4M7 6v6M10 6v6M3 16h7M15 16h6"/>
+                    <path d="M12 13.5c-1 1-1 4 0 5M15 13.5c1 1 1 4 0 5"/>
                   </svg>
                 </button>
                 <button class="side-tab-left" data-left-pane="teoria" id="scene-tab-teoria"
@@ -220,6 +256,7 @@
               <aside class="scene-left" id="scene-left">
                 <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
                 <section class="left-pane theory-pane theory-body" id="theory-pane" data-left-pane="teoria" hidden></section>
+                <section class="left-pane ld-side-pane" id="ld-side-pane" data-left-pane="ladder" hidden></section>
               </aside>
               <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
                 aria-label="Ancho del diagrama de estados"
@@ -291,7 +328,7 @@
                 </section>
                 <!-- Reto del ejercicio abierto: ficha y objetivos en vivo, junto a la simulación. -->
                 <section class="side-pane reto-pane" data-pane="reto" hidden>
-                  <div class="side-title">Reto<span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span></div>
+                  <div class="side-title">Reto</div>
                   <!-- Se muda a Programa (#prog-reto-slot) mientras esa pestaña está a la vista. -->
                   <div class="reto-body" id="reto-body">
                     <section id="ex-brief" class="ex-brief" hidden></section>
@@ -332,7 +369,7 @@
         <!-- Reto en Programa: el mismo panel del esquema (ficha, objetivos y mandos), al lado de la placa. -->
         <aside class="prog-side" id="prog-side" hidden aria-label="Reto">
           <div class="prog-side-head"><span class="guide-title">Reto</span>
-            <span class="read-size" role="group" aria-label="Tamaño de letra"><button class="icon" data-read-size="-1" title="Letra más chica" aria-label="Letra más chica">A−</button><button class="icon" data-read-size="1" title="Letra más grande" aria-label="Letra más grande">A+</button></span>
+            
           </div>
           <div class="prog-side-body" id="prog-reto-slot"></div>
         </aside>
@@ -356,6 +393,7 @@
         <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console" title="Monitor serie del USB (UART0)">Serie</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses" title="Tramas de RS-485 y Modbus RTU/TCP">Tráfico</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch" title="Entradas, salidas y variables del sketch; forzado de E/S">E/S y variables</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="ldvars" id="tab-ldvars" hidden title="Variables del programa Ladder (VAR … END_VAR del .ld), como la tabla del OpenPLC Editor">Variables</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug" title="Pila de llamadas y variables al detenerse en un breakpoint">Depuración</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
         <span class="muted" id="view-note">UART0 · 115200</span>
@@ -407,6 +445,7 @@
             <tbody id="bus-rows"></tbody>
           </table>
         </div>
+        <div id="ld-vars" class="ld-vars view" data-view="ldvars" hidden></div>
         <div id="watch" class="watch view" data-view="watch" hidden>
           <div class="watch-col">
             <div class="watch-title">Entradas digitales</div>
@@ -467,10 +506,68 @@
       <span id="com-note" class="muted"></span>
     </div>
 
+    <div id="up-panel" class="com-panel up-panel" role="dialog" aria-label="Subir al JWPLC" hidden>
+      <strong class="up-title">Subir al JWPLC Basic</strong>
+      <label for="up-port">Puerto USB</label>
+      <select id="up-port"></select>
+      <button id="up-refresh" class="ghost small" title="Volver a buscar puertos">↻</button>
+      <p id="up-help" class="muted up-help">Conecte el JWPLC por USB-C y aliméntelo con 24 V. El JWPLC Basic v2.0 entra solo en modo de carga: no hace falta apretar BOOT.</p>
+      <button id="up-tools" class="small" hidden>Descargar herramientas del ESP32</button>
+      <button id="up-go" class="primary small">Compilar y subir</button>
+      <span id="up-note" class="muted"></span>
+      <button id="up-first" class="ghost small">Primer arranque y bornes…</button>
+    </div>
+
+    <!-- Mi JWPLC: primer arranque con el equipo real, bornes y documentación. -->
+    <div id="mi-jwplc" class="mi-jwplc" role="dialog" aria-modal="true" aria-labelledby="mi-title" hidden>
+      <div class="mi-box">
+        <header class="mi-head">
+          <h2 id="mi-title">Mi JWPLC Basic</h2>
+          <button id="mi-close" class="ghost" title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
+        </header>
+        <div class="mi-body">
+          <figure class="mi-fig">
+            <img src="assets/jwplc-basic.svg" alt="Bornes del JWPLC Basic: alimentación L+ y M, entradas I0.0 a I0.7 con común 1M, salidas a relé Q0.0 a Q0.7 (COM y NO) y bus RS-485" />
+            <figcaption>Bornes del JWPLC Basic (vista frontal).</figcaption>
+          </figure>
+          <div class="mi-cols">
+            <section>
+              <h3>Primer arranque</h3>
+              <ol class="mi-steps">
+                <li>Conecte 24 V DC: el positivo en <b>L+</b> y el negativo en <b>M</b>.</li>
+                <li>Conecte el USB-C a la PC con un cable de datos. El v2.0 no necesita BOOT para cargar.</li>
+                <li><button id="mi-open-test" class="small">Abrir la prueba de recepción</button> Barre las 8 salidas y repite cada entrada en su salida.</li>
+                <li><button id="mi-upload" class="small primary">⇪ Subir al JWPLC</button> Elija el puerto y cargue la prueba.</li>
+                <li>Escuche los 8 relés. Luego active cada entrada: el Monitor serie dice «PRUEBA COMPLETA» cuando respondieron las 8.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>Cableado</h3>
+              <ul class="mi-list">
+                <li><b>Entradas I0.0 a I0.7 (24 V DC):</b> el pulsador o sensor PNP lleva +24 V a la entrada; <b>1M</b>, el común de entradas, va a 0 V.</li>
+                <li><b>Salidas Q0.0 a Q0.7:</b> cada relé tiene su propia bornera <b>COM</b> y <b>NO</b>: un contacto seco normalmente abierto. Cablee la bobina del contactor o la lámpara en serie con su propia fuente.</li>
+                <li><b>RS-485:</b> A, B, GND y SH (malla). La malla a tierra en un solo extremo.</li>
+                <li><b>USB-C:</b> carga del programa y Monitor serie (Serial, UART0).</li>
+              </ul>
+              <h3>Documentación</h3>
+              <div class="mi-docs">
+                <button id="mi-pdf" class="small">Ficha técnica (PDF)</button>
+                <button id="mi-web" class="small ghost">Página del producto</button>
+              </div>
+              <p id="mi-note" class="muted"></p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer class="statusbar">
       <span id="sb-sketch">Sin sketch</span>
       <span id="sb-project"></span>
       <span id="sb-build"></span>
+      <!-- Actualización (app/lib/updater.mjs): descarga en segundo plano y,
+           al terminar, botón para reiniciar e instalar. -->
+      <button id="sb-update" class="sb-update" hidden></button>
       <!-- Puente de E/S (Modbus TCP): Open Industry Project u otro cliente.
            Solo se ve mientras el puente está abierto (Ejecutar). -->
       <span id="iob-status" class="iob-status" role="status" aria-live="polite" hidden>
@@ -493,11 +590,20 @@
         </div>
       </div>
     </div>
+    <div id="ld-bp" class="ld-bp" hidden role="dialog" aria-modal="true" aria-labelledby="ld-bp-title">
+      <div class="ld-bp-card">
+        <div class="ld-bp-head"><b id="ld-bp-title">Backplane</b><span id="ld-bp-board" class="muted"></span><button id="ld-bp-close" class="icon" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></div>
+        <div id="ld-bp-body" class="ld-bp-body"></div>
+        <div class="ld-bp-foot"><span class="muted">Se guarda en devices/configuration.json, igual que el Backplane del OpenPLC Editor. Una variable puede ir AT &lt;alias&gt;.</span><button id="ld-bp-cancel" class="small">Cancelar</button><button id="ld-bp-save" class="small primary">Guardar</button></div>
+      </div>
+    </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="../lib/bus-decode.cjs"></script>
+    <script src="../lib/plc-diagram.cjs"></script>
     <script src="editor-syntax.js"></script>
     <script src="completion.js"></script>
     <script src="app.js"></script>
+    <script src="ladder-edit.js"></script>
     <script src="start.js"></script>
     <script src="devices.js"></script>
     <script src="component-editor.js"></script>

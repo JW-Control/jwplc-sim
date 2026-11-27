@@ -1,0 +1,171 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 36 · Un variador por Modbus",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Un_variador_por_Modbus/Un_variador_por_Modbus.ino"
+  },
+  "exercise": {
+    "lesson": "curso-36",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Un_variador_por_Modbus",
+    "brief": {
+      "goal": "Cambiar la velocidad del ventilador desde la botonera: UP y DOWN de a 10 Hz, entre 10 y 60 Hz, enviada al variador al instante.",
+      "steps": [
+        "Ejecuta el ejemplo: S1 arranca el ventilador a 30 Hz y la consola muestra cómo sube la frecuencia con la rampa.",
+        "Escribe una función cambiarVelocidad(paso) que sume o reste 10 Hz sin salir de 10…60 y escriba el registro 2001H.",
+        "UP y DOWN la llaman con +10 y -10; escribe «Velocidad: N Hz»."
+      ],
+      "uses": [
+        "I0_0 · S1, marcha (NA)",
+        "I0_1 · S2, parada (NC)",
+        "RS-485 · VF1, variador, dirección 1",
+        "2000H · orden, 2001H · frecuencia × 100, 2103H · frecuencia de salida",
+        "Botonera: UP, DOWN"
+      ],
+      "teaches": "Un variador por Modbus recibe la orden y la velocidad como números en registros: el mismo par de hilos reemplaza el cableado de marcha y la señal analógica."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 380,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 580,
+        "y": 0
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 760
+      },
+      {
+        "id": "VF1",
+        "type": "jwsim/vfd-el",
+        "x": 820,
+        "y": 360,
+        "params": {
+          "02-00": "3: RS-485",
+          "02-01": "3: RS-485, STOP/RESET del teclado habilitado",
+          "09-01": "1: 9600 bps",
+          "09-04": "6: RTU 8,N,1",
+          "09-02": "1: advertir y parar en rampa",
+          "09-03": 3,
+          "01-09": 3,
+          "01-10": 3,
+          "09-00": 1
+        }
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 980,
+        "y": 1180
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "VF1.SG+"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "VF1.SG-"
+      },
+      {
+        "from": "L1.L",
+        "to": "VF1.R",
+        "ref": true
+      },
+      {
+        "from": "L1.N",
+        "to": "VF1.S",
+        "ref": true
+      },
+      {
+        "from": "VF1.U",
+        "to": "M1.U1"
+      },
+      {
+        "from": "VF1.V",
+        "to": "M1.V1"
+      },
+      {
+        "from": "VF1.W",
+        "to": "M1.W1"
+      }
+    ]
+  }
+}

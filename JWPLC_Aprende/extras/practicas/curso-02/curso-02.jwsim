@@ -47,7 +47,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
+        "x": 280,
         "y": 0
       },
       {
@@ -57,8 +57,8 @@
           "color": "verde",
           "label": "Q0.0"
         },
-        "x": 0,
-        "y": 600
+        "x": 280,
+        "y": 700
       },
       {
         "id": "H2",
@@ -67,8 +67,8 @@
           "color": "amarillo",
           "label": "Q0.1"
         },
-        "x": 220,
-        "y": 600
+        "x": 480,
+        "y": 700
       }
     ],
     "wiring": [
@@ -95,7 +95,8 @@
       {
         "from": "H1.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       },
       {
         "from": "PS1.+V1",
@@ -110,7 +111,8 @@
       {
         "from": "H2.X2",
         "to": "PS1.-V1",
-        "color": "azul"
+        "color": "azul",
+        "ref": true
       }
     ]
   }

@@ -46,7 +46,7 @@
       {
         "id": "plc",
         "type": "jwsim/jwplc-basic",
-        "x": 240,
+        "x": 280,
         "y": 0
       }
     ],

@@ -113,6 +113,11 @@
             }
           },
           "additionalProperties": false
+        },
+        "rtc": {
+          "type": "string",
+          "pattern": "^fijo:\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d$",
+          "description": "Hora del RTC al iniciar la simulación (p. ej. una práctica con horario). Sin ella, la hora de la PC."
         }
       }
     },
@@ -363,7 +368,7 @@
         },
         "lesson": {
           "type": "string",
-          "pattern": "^curso-\\d+$",
+          "pattern": "^(curso|iec)-\\d+$",
           "description": "Práctica evaluada de una lección del Curso JWPLC Basic (id curso-NN): la app muestra su teoría en el panel izquierdo y la da por hecha al cumplir los objetivos en vivo."
         },
         "statement": {

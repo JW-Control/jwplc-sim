@@ -18,7 +18,16 @@
   // Programa abierto (const state de app.js, global del documento).
   // eslint-disable-next-line no-undef
   const current = () => (typeof state !== "undefined" ? state.sketch : null);
-  const st = { learn: null, view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
+  // Ruta elegida: «cpp» (Curso JWPLC Basic en C++ y retos) o «iec» (IEC 61131-3).
+  const TRACK_KEY = "jwsim.ruta";
+  const readTrack = () => {
+    try {
+      return localStorage.getItem(TRACK_KEY) === "iec" ? "iec" : "cpp";
+    } catch {
+      return "cpp";
+    }
+  };
+  const st = { track: readTrack(), learn: null, view: "home", step: 1, kind: "openplc", name: "", parent: "", interval: "T#20ms", language: "ld", status: null, busy: false, error: "" };
 
   const store = {
     get(k, d) {
@@ -109,6 +118,12 @@
     bell: '<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20h4"/>',
     lock: '<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 016 0v3"/>',
     check: '<path d="M5 12l4 4 10-10"/>',
+    chip: '<rect x="7" y="7" width="10" height="10" rx="1"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+    gauge: '<path d="M4 17a8 8 0 0116 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.5"/>',
+    book: '<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/><path d="M4 19a2 2 0 012-2h13"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+    steps: '<path d="M4 20h4v-4h4v-4h4V8h4V4"/>',
+    trophy: '<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 21h8M9 17h6"/>',
     play: '<path d="M8 5l11 7-11 7z"/>',
   };
   const icon = (k, cls = "") => `<svg class="ini-ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] ?? ""}</svg>`;
@@ -117,11 +132,21 @@
     2: "Procesos con sensores: histéresis, máquinas de estado, secuencias temporizadas y contadores.",
     3: "Alarmas, procesos continuos y neumática con vigilancia por tiempo.",
   };
-  const TIER_ICON = ["lesson", "clock", "motor", "seq", "bell"];
+  // Cada etapa con su propio ícono: unidades y niveles de retos no se repiten.
+  const UNIT_ICON = ["lesson", "clock", "motor", "chip", "gauge", "seq", "book"];
+  const LEVEL_ICON = ["flag", "steps", "bell", "trophy"];
 
   /** La ruta completa: unidades del curso y después los retos por nivel. */
   function tiers() {
     const out = [];
+    if (st.track === "iec") {
+      // Ruta IEC 61131-3: cada lección en ST, Ladder o FBD con el mismo banco.
+      for (const u of st.courseIec ?? []) {
+        const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
+        out.push({ key: `i${u.unit}`, kind: "unit", tag: `Unidad ${u.unit}`, name: u.name, open: true, items, desc: `La misma práctica en texto estructurado (ST), Ladder (LD) o diagrama de bloques (FBD): elige el lenguaje al abrirla. Se programa en el OpenPLC Editor.` });
+      }
+      return numbered(out);
+    }
     for (const u of st.course ?? []) {
       const items = u.lessons.map((l) => ({ kind: "lesson", id: l.id, title: l.title, state: st.lessons?.[l.id] ? "done" : "open", lesson: l }));
       out.push({ key: `u${u.unit}`, kind: "unit", tag: `Unidad ${u.unit}`, name: u.name, open: true, items, desc: `Lecciones del Curso JWPLC Basic: se abren como ejemplo y se prueban en el simulador.` });
@@ -129,14 +154,38 @@
     for (const lv of st.learn?.levels ?? []) {
       out.push({ key: `n${lv.level}`, kind: "level", tag: `Retos · Nivel ${lv.level}`, name: lv.name, open: lv.open, items: lv.items.map((x) => ({ ...x, kind: "reto" })), desc: LEVEL_DESC[lv.level] ?? "" });
     }
+    return numbered(out);
+  }
+  function numbered(out) {
     out.forEach((t, i) => {
       t.n = i + 1;
-      t.icon = TIER_ICON[i % TIER_ICON.length];
+      const k = out.slice(0, i).filter((x) => x.kind === t.kind).length;
+      const set = t.kind === "level" ? LEVEL_ICON : UNIT_ICON;
+      t.icon = set[k % set.length];
       t.done = t.items.filter((x) => x.state === "done").length;
       t.total = t.items.length;
     });
     return out;
   }
+  /** Encabezado de Inicio según la ruta elegida. */
+  const HERO = {
+    cpp: {
+      eyebrow: "Ruta C++ · Curso JWPLC Basic",
+      title: "Empieza aquí",
+      lead: "<b>Programa un PLC en C++</b>, como en Arduino IDE, y después resuelve retos con tableros, motores y neumática.",
+    },
+    iec: {
+      eyebrow: "Ruta PLC · IEC 61131-3",
+      title: "Como en la industria",
+      lead: "<b>Ladder, ST y FBD</b>: los lenguajes IEC 61131-3 de cualquier PLC industrial, en el OpenPLC Editor.",
+    },
+  };
+  /** Selector de ruta: C++ o IEC 61131-3. */
+  const trackSwitch = () =>
+    `<div class="ini-track" role="tablist" aria-label="Ruta">` +
+    `<button role="tab" data-act="track" data-k="cpp" class="${st.track === "cpp" ? "on" : ""}" aria-selected="${st.track === "cpp"}"><b>Ruta C++</b><small>Código como en Arduino, con retos</small></button>` +
+    `<button role="tab" data-act="track" data-k="iec" class="${st.track === "iec" ? "on" : ""}" aria-selected="${st.track === "iec"}"><b>Ruta PLC · IEC 61131-3</b><small>Ladder, ST y FBD en OpenPLC</small></button>` +
+    `</div>`;
   /** Siguiente paso de la ruta: la primera lección sin ver; luego, el reto «a continuación». */
   function nextStep(T = tiers()) {
     for (const t of T) {
@@ -184,7 +233,7 @@
       b("archs", "archs", "Arquitecturas", "Casos industriales completos: bombeo, montacargas, tratamiento") +
       b("examples", "examples", "Ejemplos", "Ejemplos de las librerías del JWPLC Basic") +
       `</div></div>` +
-      `<div class="ini-brand"><span class="start-logo">JW</span><div><b>JWPLC Sim</b><small>JW Control</small></div>` +
+      `<div class="ini-brand"><img class="app-logo" src="../icon/icon.svg" alt="" width="32" height="32"/><div><b>JWPLC Sim</b><small>JW Control</small></div>` +
       `<button class="icon ini-close" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></div>` +
       `</nav>`
     );
@@ -203,20 +252,21 @@
     // ---- Empieza aquí
     html +=
       `<section class="ini-hero"${archs[0]?.img ? ` style="--img:url('${archs[0].img}')"` : ""}>` +
-      `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}Ruta de aprendizaje</span>` +
-      `<h1>Empieza aquí</h1><p class="ini-lead"><b>Aprende automatización</b> programando un PLC de verdad: tableros, motores, procesos y neumática.</p>` +
-      `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar la ruta" : "Comenzar la ruta"}</button>` +
+      `<div class="ini-hero-txt"><span class="ini-eyebrow">${icon("route")}${HERO[st.track].eyebrow}</span>` +
+      `<h1>${HERO[st.track].title}</h1><p class="ini-lead">${HERO[st.track].lead}</p>` +
+      trackSwitch() +
+      `<div class="ini-cta"><button class="ini-go" data-act="continue">${icon("play")}${tot.done ? "Continuar" : "Comenzar"} la ruta ${st.track === "iec" ? "PLC" : "C++"}</button>` +
       (nx ? `<span class="ini-next"><small>A continuación</small><b>${esc(nx.tier.tag)} · ${nx.item.kind === "lesson" ? "Lección" : "Reto"} ${pos} de ${nx.tier.total}</b><em>${esc(nx.item.title)}</em></span>` : `<span class="ini-next"><b>¡Ruta completa!</b></span>`) +
       `</div></div></section>`;
     // ---- Progreso
     html +=
-      `<aside class="ini-card ini-progress"><div class="ini-prog-head">${ring(tot.pct)}<div class="ini-prog-txt"><div class="ini-row"><b class="ini-h">Progreso</b><span class="ini-num">${tot.done} / ${tot.total}</span></div>` +
+      `<aside class="ini-card ini-progress"><div class="ini-prog-main"><div class="ini-prog-head">${ring(tot.pct)}<div class="ini-prog-txt"><div class="ini-row"><b class="ini-h">Progreso</b><span class="ini-num">${tot.done} / ${tot.total}</span></div>` +
       `<div class="learn-bar"><i style="width:${tot.pct}%"></i></div><small>${tot.total - tot.done} pasos por hacer</small></div></div>` +
       `<div class="ini-kv"><span>Etapas completas</span><b>${tot.tiersDone} / ${T.length}</b></div>` +
       `<div class="ini-kv"><span>Etapa actual</span><b>${esc(cur ? `${cur.tag} · ${cur.name}` : "—")}</b></div>` +
-      `<div class="ini-row ini-h2"><b class="ini-h">Logros</b><span class="ini-num">${tot.tiersDone} / ${T.length}</span></div>` +
+      `</div><div class="ini-prog-ach"><div class="ini-row ini-h2"><b class="ini-h">Logros</b><span class="ini-num">${tot.tiersDone} / ${T.length}</span></div>` +
       `<div class="ini-badges">${T.map((t) => `<span title="${esc(`${t.tag} · ${t.name}`)}">${hex(t, "sm")}</span>`).join("")}</div>` +
-      `<button class="link" data-act="route">Ver la ruta completa →</button></aside>`;
+      `<button class="link" data-act="route">Ver la ruta completa →</button></div></aside>`;
     // ---- Vitrina de arquitecturas
     html += `<section class="ini-card ini-show" id="ini-show"><div class="ini-show-txt"><span class="ini-eyebrow sm">En vitrina · Arquitecturas industriales</span>`;
     if (a) {
@@ -259,6 +309,7 @@
     let html =
       `<div class="ini-route"><div class="ini-strip">` +
       `<button class="ini-rb" data-act="home">${icon("home")}<span>Inicio</span></button>` +
+      trackSwitch() +
       `<div class="ini-strip-prog">${ring(tot.pct, "sm")}<div><b>${tot.done} / ${tot.total}</b><div class="learn-bar"><i style="width:${tot.pct}%"></i></div><small>${tot.total - tot.done} pasos por hacer</small></div></div>` +
       `<div class="ini-kv"><span>Etapas completas</span><b>${tot.tiersDone} / ${T.length}</b></div>` +
       `<div class="ini-badges">${T.map((t) => hex(t, "sm")).join("")}</div>` +
@@ -268,7 +319,7 @@
     for (const t of T) {
       html +=
         `<button class="ini-node learn-level ${t.key === tier.key ? "on" : ""} ${t.open ? "" : "locked"}" data-act="tier" data-k="${t.key}">${hex(t)}` +
-        `${t.key === nx?.tier.key ? `<i class="ini-now">ahora</i>` : ""}<b>${esc(t.kind === "level" ? `Nivel ${t.key.slice(1)} · ${t.name}` : `Unidad ${t.key.slice(1)} · ${t.name}`)}</b><small>${t.done}/${t.total}</small></button>`;
+        `${t.key === nx?.tier.key ? `<i class="ini-now">ahora</i>` : ""}<b>${esc(t.kind === "level" ? `Nivel ${t.key.slice(1)} · ${t.name}` : `${t.tag} · ${t.name}`)}</b><small>${t.done}/${t.total}</small></button>`;
     }
     html += `</div><label class="learn-unlock"><input type="checkbox" id="learn-unlock" ${st.learn?.unlockAll ? "checked" : ""}/> Desbloquear todos los niveles (docente)</label></section>`;
     // Columna 2: pasos de la etapa
@@ -291,7 +342,7 @@
               : "";
       html +=
         `<li><button class="learn-item ${x.kind} ${x.state} ${x === item ? "on" : ""}" data-act="pick" data-id="${esc(x.id)}" ${x.state === "locked" ? 'aria-disabled="true"' : ""}>` +
-        `<span class="ini-num">${String(i + 1).padStart(2, "0")}</span><b>${esc(x.title)}</b>${badge}</button></li>`;
+        `<span class="ini-num">${String(x.kind === "lesson" ? x.lesson.num : i + 1).padStart(2, "0")}</span><b>${esc(x.title)}</b>${badge}</button></li>`;
     });
     html += `</ol></section>`;
     // Columna 3: ficha
@@ -299,25 +350,44 @@
     return html;
   }
 
-  const ul = (arr, cls = "") => (arr?.length ? `<ul class="${cls}">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  // Renglón del README: **negrita** y `código`; un bloque de código (varias
+  // líneas) va tal cual en <pre>.
+  const md = (x) =>
+    String(x).includes("\n")
+      ? `<pre class="ini-pre">${esc(x)}</pre>`
+      : esc(x)
+          .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const ul = (arr, cls = "") => (arr?.length ? `<ul class="${cls}">${arr.map((x) => `<li>${md(x)}</li>`).join("")}</ul>` : "");
+  const SIM = /^En JWPLC Sim$/i;
+  const LANG_SHORT = { ST: "ST", LD: "Ladder", FBD: "FBD" };
+  const LANG_NAME = { ST: "Texto estructurado: se edita aquí mismo", LD: "Diagrama Ladder: se edita en el OpenPLC Editor", FBD: "Diagrama de bloques: se edita en el OpenPLC Editor" };
   function lessonBrief(tier, x) {
     const l = x.lesson;
     const pos = tier.items.indexOf(x) + 1;
     let html =
-      `<small class="ini-eyebrow sm">${esc(tier.tag)} · Lección ${pos} de ${tier.total}</small><h2>${esc(x.title)}</h2>` +
+      `<small class="ini-eyebrow sm">${esc(tier.tag)} · Lección ${esc(String(l.num))} · ${pos} de ${tier.total}</small><h2>${esc(x.title)}</h2>` +
       `<div class="ini-brief-body">` +
       (l.learn.length ? `<h4>Qué vas a aprender</h4>${ul(l.learn)}` : "") +
       (l.need.length ? `<h4>Qué necesitas</h4>${ul(l.need)}` : "") +
-      l.sections.filter((s) => s.items.length).map((s) => `<h4>${esc(s.title)}</h4>${ul(s.items)}`).join("") +
-      (l.steps.length ? `<h4>Cómo probarlo</h4><ol class="ini-ol">${l.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : "") +
+      l.sections.filter((s) => s.items.length && !SIM.test(s.title)).map((s) => `<h4>${esc(s.title)}</h4>${ul(s.items)}`).join("") +
+      // En el Sim se prueba con el banco: los pasos de «En JWPLC Sim» reemplazan
+      // a los del equipo físico cuando la lección los trae.
+      ((sim) => {
+        const steps = sim?.items.filter((s) => !s.includes("\n")) ?? l.steps;
+        return steps.length ? `<h4>${sim ? "Cómo probarlo en el simulador" : "Cómo probarlo"}</h4><ol class="ini-ol">${steps.map((s) => `<li>${md(s)}</li>`).join("")}</ol>` : "";
+      })(l.sections.find((s) => SIM.test(s.title) && s.items.length)) +
       (l.practice.length ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}` : "") +
       (l.graded && l.goals?.length
         ? `<h4>Objetivos que se evalúan</h4>${ul(l.goals.map((g) => g.text + (g.extra ? " (mérito)" : "")), "ini-practice")}`
         : l.practice.length
           ? `<h4>Para practicar</h4>${ul(l.practice, "ini-practice")}`
           : "") +
-      `<h4>En el simulador</h4><div class="ini-chips">${l.graded ? "<span>Banco de práctica</span><span>Objetivos en vivo</span>" : "<span>Ejemplo del Curso JWPLC Basic</span>"}<span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
-      `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : l.graded ? "Abrir práctica" : "Abrir lección"}</button>` +
+      (l.iec
+        ? `<h4>En el simulador</h4><div class="ini-chips"><span>Banco de práctica</span><span>Objetivos en vivo</span><span>OpenPLC Editor</span><span>Placa JWPLC Basic</span></div>` +
+          `</div><div class="ini-brief-foot"><div class="ini-langs"><small>Abrir la práctica en</small>${(l.langs ?? []).map((g) => `<button class="ini-go" data-act="lesson" data-id="${esc(x.id)}" data-lang="${g}" title="${esc(LANG_NAME[g] ?? g)}">${icon("play")}${esc(LANG_SHORT[g] ?? g)}</button>`).join("")}</div>`
+        : `<h4>En el simulador</h4><div class="ini-chips">${l.graded ? "<span>Banco de práctica</span><span>Objetivos en vivo</span>" : "<span>Ejemplo del Curso JWPLC Basic</span>"}<span>Placa JWPLC Basic</span><span>Monitor serie</span></div>` +
+          `</div><div class="ini-brief-foot"><button class="ini-go" data-act="lesson" data-id="${esc(x.id)}">${icon("play")}${x.state === "done" ? "Abrir de nuevo" : l.graded ? "Abrir práctica" : "Abrir lección"}</button>`) +
       `<small class="muted">${
         l.graded
           ? x.state === "done"
@@ -375,14 +445,16 @@
   }
 
   async function refreshLearn() {
-    const [learn, course, lessons, archs] = await Promise.all([
+    const [learn, course, courseIec, lessons, archs] = await Promise.all([
       api.learnState().catch(() => null),
       st.course ? Promise.resolve(st.course) : api.courseList?.().catch(() => []) ?? [],
+      st.courseIec ? Promise.resolve(st.courseIec) : api.courseListIec?.().catch(() => []) ?? [],
       api.learnLessons?.().catch(() => ({})) ?? {},
       st.archs ? Promise.resolve(st.archs) : api.listArchs().catch(() => []),
     ]);
     st.learn = learn;
     st.course = course ?? [];
+    st.courseIec = courseIec ?? [];
     st.lessons = lessons ?? {};
     st.archs = archs ?? [];
     if (!$("start")?.hidden && st.view !== "wizard") render();
@@ -430,6 +502,19 @@
     return !!st.language;
   }
 
+  // Fundido: al cambiar de vista o de ruta se funde todo; al cambiar de
+  // etapa, sus pasos y la ficha; al elegir un paso, solo la ficha.
+  let shown = {};
+  function fadeChanges(box) {
+    const now = { view: st.view, track: st.track, tier: st.tier, sel: st.sel, arch: st.archIdx };
+    const fade = (sel) => box.querySelectorAll(sel).forEach((e) => e.classList.add("ini-fade"));
+    if (now.view !== shown.view || now.track !== shown.track) fade(".ini-body");
+    else if (now.view === "learn" && now.tier !== shown.tier) fade(".ini-steps, .ini-brief");
+    else if (now.view === "learn" && now.sel !== shown.sel) fade(".ini-brief");
+    else if (now.view === "home" && now.arch !== shown.arch) fade(".ini-show-txt");
+    shown = now;
+  }
+
   function render() {
     const box = el();
     const focus = document.activeElement?.id;
@@ -442,14 +527,15 @@
       box.innerHTML =
         `<div class="ini">${st.view === "home" ? ribbon() : ""}<div class="ini-body">${body}</div>` +
         `<footer class="start-foot"><label><input type="checkbox" id="start-show" ${store.get(SHOW_KEY, true) ? "checked" : ""}/> Mostrar al iniciar</label>` +
-        `<span class="muted small">Vuelva aquí con «Inicio» en la barra de arriba o Archivo › Inicio.</span></footer></div>`;
+        `<span class="muted small">Vuelve aquí con el botón «Inicio» de la barra de arriba.</span></footer></div>`;
     } else {
       box.innerHTML =
         `<div class="start-card">` +
-        `<header class="start-head"><span class="start-logo">JW</span><b>Nuevo proyecto</b>` +
+        `<header class="start-head"><img class="app-logo" src="../icon/icon.svg" alt="" width="24" height="24"/><b>Nuevo proyecto</b>` +
         `<button class="icon" data-act="close" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></header>` +
         `<div class="start-body">${wizard()}</div></div>`;
     }
+    fadeChanges(box);
     if (focus && $(focus)) {
       $(focus).focus();
       if (caret !== undefined && $(focus).setSelectionRange) $(focus).setSelectionRange(caret, caret);
@@ -563,6 +649,14 @@
       st.tier = nx?.tier.key ?? null;
       st.view = "learn";
       render();
+    } else if (act === "track") {
+      st.track = b.dataset.k === "iec" ? "iec" : "cpp";
+      try {
+        localStorage.setItem(TRACK_KEY, st.track);
+      } catch {}
+      st.tier = null;
+      st.sel = null;
+      render();
     } else if (act === "tier") {
       st.tier = b.dataset.k;
       st.sel = null;
@@ -580,7 +674,7 @@
       if (!hit) return;
       close();
       // Con práctica evaluada se abre su banco; se da por hecha al cumplir los objetivos.
-      if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id);
+      if (hit.item.lesson.graded) return window.openLessonById?.(hit.item.id, b.dataset.lang);
       try {
         window.loadSketch(await api.openExample(hit.item.lesson.dir));
         window.showLessonGuide?.(hit.item.lesson);
@@ -694,8 +788,12 @@
     close,
     /** app.js al terminar de arrancar: la pantalla Proyectos, salvo si vino un proyecto del editor. */
     async onReady({ openedFromEditor }) {
-      if (openedFromEditor || !store.get(SHOW_KEY, true)) return;
-      if (await api.startScreen()) open("home");
+      try {
+        if (!openedFromEditor && store.get(SHOW_KEY, true) && (await api.startScreen())) open("home");
+      } finally {
+        // Ya se decidió qué se ve primero: se muestra la ventana (theme-init.js).
+        document.documentElement.classList.remove("booting");
+      }
     },
     state: () => ({ ...st, hidden: el().hidden }),
   };

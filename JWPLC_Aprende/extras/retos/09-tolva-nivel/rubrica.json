@@ -4,7 +4,7 @@
   "goals": [
     {
       "id": "habilita",
-      "description": "Ponga S1 en I: se abre la descarga Y1",
+      "description": "Pon S1 en I: se abre la descarga Y1",
       "when": {
         "S1.position": 1,
         "Y1.open": true
@@ -33,8 +33,7 @@
           29
         ]
       },
-      "after": "habilita",
-      "hold_ms": 500
+      "hold_ms": 100
     },
     {
       "id": "histeresis",
@@ -218,6 +217,20 @@
             "KM1.closed": false,
             "Y1.open": false
           }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Habilita, llena y queda llena",
+      "until_ms": 40000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "S1",
+          "action": "position",
+          "value": 1
         }
       ]
     }

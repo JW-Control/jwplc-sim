@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Proceso principal de JWPLC Sim (Electron): ventana, sketches del usuario,
 // compilación con jwsim-cli y ciclo de vida del runner (un PLC simulado).
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 
@@ -16,14 +17,15 @@ import { checkDeviceDir, installedDevices, linkDevice, localDevices, registryWit
 import { isOpenPlcProject } from "../cli/lib/openplc.mjs";
 import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
+import { compileEsp32, installEsp32Tools, prepareEsp32, TOOLS_DOWNLOAD_MB, uploadEsp32 } from "../cli/lib/esp32.mjs";
 import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
 import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
-import { syncExample, syncExercise } from "./lib/exercise-copy.mjs";
+import { MARK, syncExample, syncExercise } from "./lib/exercise-copy.mjs";
 import { checkGoals, GoalTracker } from "./lib/goals.mjs";
 import { levels, loadProgress, markDone, markLesson, nextAfter, saveProgress } from "./lib/learning.mjs";
-import { APRENDE, ARQUITECTURAS, imageOf, lessonById, listAprendeExamples, listArquitecturas, listCurso, listRetos, PRACTICAS, RETOS } from "../cli/lib/aprende.mjs";
+import { APRENDE, ARQUITECTURAS, imageOf, lessonById, listAprendeExamples, listArquitecturas, listCurso, listCursoIec, listRetos, PRACTICAS, RETOS } from "../cli/lib/aprende.mjs";
 import { DebugSession } from "./lib/debug-session.mjs";
 import { IoBridge } from "./lib/io-bridge.mjs";
 import { ComBridge, comAvailable, listComPorts } from "./lib/com-bridge.mjs";
@@ -39,20 +41,25 @@ import { symbolSvg } from "../scene/component-symbol.mjs";
 import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
 import { folderOf, readComponent, writeComponent } from "../cli/lib/component-files.mjs";
 import { ComponentBench } from "./lib/component-bench.mjs";
+import { createUpdater } from "./lib/updater.mjs";
+import { createLadderEditor } from "./lib/ladder-edit.mjs";
+import { PlcDebugLink, debugMapFor } from "./lib/plc-debug.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
 // "datos" dentro de su carpeta, no en el perfil del usuario.
-if (app.isPackaged && process.platform === "win32") {
+const PORTABLE = app.isPackaged && process.platform === "win32" && !readdirSync(dirname(process.execPath)).some((f) => /^Uninstall .*\.exe$/i.test(f));
+if (PORTABLE) {
   const dir = dirname(process.execPath);
-  if (!readdirSync(dir).some((f) => /^Uninstall .*\.exe$/i.test(f))) {
-    app.setPath("userData", join(dir, "datos"));
-    process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
-  }
+  app.setPath("userData", join(dir, "datos"));
+  process.env.JWSIM_HOME ??= join(dir, "datos", "jwsim");
 }
 // Instalada, la carpeta de la app puede ser de solo lectura (Program Files,
 // instalación para todos los usuarios): la caché de compilación va a los datos.
 if (app.isPackaged) process.env.JWSIM_CACHE_DIR ??= join(app.getPath("userData"), "cache");
+// Caché de compilación que trae el instalador (scripts/cache-seed.mjs): los
+// objetos del package y del motor ya compilados, de solo lectura.
+if (app.isPackaged && existsSync(join(process.resourcesPath, "cache-seed"))) process.env.JWSIM_CACHE_SEED ??= join(process.resourcesPath, "cache-seed");
 
 // Archivos del sketch que van al compilador: las pestañas .ino y los fuentes
 // de la raíz (cli/lib/build.mjs, como arduino-cli).
@@ -203,6 +210,29 @@ function listExamples() {
 function forward(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
+
+// Actualización desde el programa (app/lib/updater.mjs).
+const updater = createUpdater({
+  app,
+  dialog,
+  window: () => (win && !win.isDestroyed() ? win : null),
+  forward,
+  readPref,
+  writePref,
+  portable: PORTABLE,
+  beforeInstall: async () => {
+    await stopBuilder();
+    await stopRunner();
+    await comBridge?.close();
+  },
+});
+ipcMain.handle("update:status", () => updater.status);
+ipcMain.handle("update:check", () => updater.check(true));
+ipcMain.handle("update:install", () => updater.install());
+
+// Editor Ladder del Sim: las operaciones de peldaño del OpenPLC Editor.
+const ladderEditor = createLadderEditor({ onWrite: (p, content) => ownWrites.set(p, content) });
+ipcMain.handle("ld:op", (_e, req) => ladderEditor.op(req));
 
 // Suelta gdb (el proceso sigue) y luego cierra el runner.
 async function stopRunner() {
@@ -373,7 +403,7 @@ ipcMain.handle("learn:state", () => {
 // Lecciones con práctica evaluada, en el orden del curso.
 const gradedLessons = () => {
   try {
-    return listCurso().flatMap((u) => u.lessons.filter((l) => l.graded));
+    return [...listCurso(), ...listCursoIec()].flatMap((u) => u.lessons.filter((l) => l.graded));
   } catch {
     return [];
   }
@@ -381,7 +411,7 @@ const gradedLessons = () => {
 ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
   const p = loadProgress(progressFile());
   // Una lección del curso solo queda hecha al cumplir sus objetivos en vivo.
-  if (/^curso-\d+$/.test(String(id))) {
+  if (/^(curso|iec)-\d+$/.test(String(id))) {
     const changed = via === "goals" && markLesson(p, String(id));
     if (changed) saveProgress(progressFile(), p);
     const list = gradedLessons();
@@ -398,6 +428,14 @@ ipcMain.handle("learn:complete", (_e, { id, via, grade }) => {
 ipcMain.handle("course:list", () => {
   try {
     return listCurso();
+  } catch {
+    return [];
+  }
+});
+// Ruta IEC 61131-3 (las mismas ideas en ST, Ladder y FBD).
+ipcMain.handle("course:listIec", () => {
+  try {
+    return listCursoIec();
   } catch {
     return [];
   }
@@ -441,13 +479,48 @@ ipcMain.handle("shell:openExternal", (_e, url) => {
   shell.openExternal(String(url));
   return true;
 });
-ipcMain.handle("lessons:open", (_e, id) => {
-  if (!/^curso-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
+ipcMain.handle("lessons:open", (_e, id, lang) => {
+  if (!/^(curso|iec)-\d+$/.test(id)) throw new Error(`lección inválida: ${id}`);
   const src = join(PRACTICAS, id);
   if (!existsSync(src)) throw new Error(`la lección ${id} no tiene práctica evaluada`);
   const dst = join(workspaceDir(), "Curso", id);
   syncExercise(src, dst);
+  if (lang) chooseLanguage(dst, id, String(lang));
   return openProject(join(dst, `${id}.jwsim`));
+});
+
+// Práctica IEC: el banco apunta al programa en el lenguaje elegido
+// (iniciar/ST, LD o FBD). La copia anota el .jwsim como «sin tocar» para
+// que siga poniéndose al día con el Sim.
+function chooseLanguage(dst, id, lang) {
+  if (!/^(ST|LD|FBD)$/.test(lang) || !existsSync(join(dst, "iniciar", lang, "project.json"))) throw new Error(`lenguaje no disponible: ${lang}`);
+  const file = join(dst, `${id}.jwsim`);
+  const jw = JSON.parse(readFileSync(file, "utf8"));
+  const want = `./iniciar/${lang}`;
+  if (jw.program?.project === want) return;
+  jw.program = { ...jw.program, kind: "openplc", project: want };
+  const text = JSON.stringify(jw, null, 2) + "\n";
+  writeFileSync(file, text);
+  try {
+    const mf = join(dst, MARK);
+    const mark = JSON.parse(readFileSync(mf, "utf8"));
+    mark.files[`${id}.jwsim`] = createHash("sha256").update(Buffer.from(text)).digest("hex");
+    writeFileSync(mf, `${JSON.stringify(mark, null, 2)}\n`);
+  } catch {}
+}
+
+// Código de partida de una práctica de lección o de un reto (el ejemplo de la
+// lección o el .ino inicial del reto), para «Reiniciar código» en Teoría.
+ipcMain.handle("exercise:starter", (_e, id, lesson) => {
+  if (!/^[\w.-]+$/.test(String(id))) throw new Error(`ejercicio inválido: ${id}`);
+  const src = join(lesson ? PRACTICAS : EXERCISES, id);
+  const { project } = loadProject(join(src, `${id}.jwsim`));
+  const sketch = project.program?.sketch;
+  if (project.program?.kind === "openplc" || typeof sketch !== "string") return [];
+  const dir = dirname(resolve(src, sketch));
+  return readdirSync(dir)
+    .filter((f) => /\.(ino|h|hpp|c|cpp)$/i.test(f))
+    .map((name) => ({ name, content: readFileSync(join(dir, name), "utf8") }));
 });
 
 // ---------------------------------------------------------------- arquitecturas
@@ -563,7 +636,18 @@ ipcMain.handle("sketch:openDialog", async () => {
 ipcMain.handle("sketch:openPlc", (_e, target) => readSketch(openPlcDir(target)));
 
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
-  if (isOpenPlcProject(dir)) return true; // se edita en el OpenPLC Editor
+  if (isOpenPlcProject(dir)) {
+    // Proyecto OpenPLC: el texto estructurado (pous/**/*.st) y el Ladder
+    // (pous/**/*.ld, editor Ladder del Sim) se editan aquí también; FBD, en el
+    // OpenPLC Editor.
+    for (const f of files) {
+      const p = resolve(dir, f.name);
+      if (!/\.(st|ld)$/i.test(f.name) || relative(join(resolve(dir), "pous"), p).startsWith("..") || !existsSync(p)) continue;
+      ownWrites.set(p, f.content);
+      writeFileSync(p, f.content);
+    }
+    return true;
+  }
   for (const f of files) {
     const p = resolve(dir, f.name);
     if (dirname(p) !== resolve(dir)) throw new Error(`nombre de archivo inválido: ${f.name}`);
@@ -830,11 +914,11 @@ ipcMain.handle("watch:set", (_e, dir) => {
 let builder = null;
 let buildSeq = 0;
 const builds = new Map();
-function buildInWorker(dir, outDir) {
+function buildInWorker(dir, outDir, opts = {}) {
   if (!builder) {
     builder = new Worker(new URL("./lib/build-worker.mjs", import.meta.url));
     builder.on("message", ({ id, log, done }) => {
-      if (log !== undefined) forward("build:log", log);
+      if (log !== undefined && !quietBuilds.has(id)) forward("build:log", log);
       if (done) {
         builds.get(id)?.(done);
         builds.delete(id);
@@ -847,18 +931,124 @@ function buildInWorker(dir, outDir) {
     });
   }
   const id = ++buildSeq;
+  if (opts.quiet) quietBuilds.add(id);
   return new Promise((resolveBuild) => {
-    builds.set(id, resolveBuild);
-    builder.postMessage({ id, dir, outDir });
+    builds.set(id, (done) => {
+      quietBuilds.delete(id);
+      resolveBuild(done);
+    });
+    builder.postMessage({ id, dir, outDir, options: opts.options });
+  });
+}
+const quietBuilds = new Set();
+// Cierra el worker cortando antes los compiladores que tenga corriendo (si
+// no, quedan huérfanos en Windows y bloquean el instalador).
+async function stopBuilder() {
+  const w = builder;
+  if (!w) return;
+  builder = null;
+  await new Promise((done) => {
+    const t = setTimeout(done, 3000);
+    w.on("message", (m) => {
+      if (m?.aborted) {
+        clearTimeout(t);
+        done();
+      }
+    });
+    w.postMessage({ abort: true });
+  });
+  await w.terminate().catch(() => {});
+}
+
+// Precalentado al abrir la app: compila el sketch mínimo en segundo plano.
+// Con la caché del instalador solo arma el header precompilado (unos
+// segundos); sin ella (o tras cambiar el package) compila todo el package, que
+// es lo que igual tendría que hacer el primer Ejecutar. Las compilaciones del
+// usuario esperan a que termine, para no escribir los mismos objetos a la vez.
+// JWSIM_WARMUP=0 lo apaga (pruebas que miden la primera compilación).
+let warmup = null;
+let warmupDone = false;
+function warmCompiler() {
+  if (process.env.JWSIM_WARMUP === "0" || warmup) return;
+  const dir = join(import.meta.dirname, "..", "scripts", "cache-seed", "semilla");
+  if (!existsSync(dir)) return;
+  const t0 = Date.now();
+  forward("build:warmup", { state: "start" });
+  warmup = buildInWorker(dir, join(app.getPath("userData"), "build", "_semilla"), { quiet: true, options: { seedDiscovery: true } }).then((r) => {
+    warmupDone = true;
+    forward("build:warmup", { state: "done", ok: r.ok, ms: Date.now() - t0 });
+    return r;
+  });
+}
+
+// Windows Defender revisa cada .o que escribe GCC: en la primera compilación
+// eso puede duplicar el tiempo. Tras una compilación lenta (o desde
+// Herramientas) se ofrece excluir las carpetas de caché y de compilación de la
+// app. Agregar la exclusión pide permiso de administrador (UAC); sin él no
+// cambia nada.
+function readPref(key) {
+  try {
+    return JSON.parse(readFileSync(themeCfgFile(), "utf8"))?.[key];
+  } catch {
+    return undefined;
+  }
+}
+function writePref(key, value) {
+  try {
+    const cur = existsSync(themeCfgFile()) ? JSON.parse(readFileSync(themeCfgFile(), "utf8")) : {};
+    writeFileSync(themeCfgFile(), `${JSON.stringify({ ...cur, [key]: value }, null, 2)}\n`);
+  } catch {}
+}
+const AV_SLOW_MS = 20000;
+async function offerAvExclusion(auto) {
+  if (process.platform !== "win32" || !win) return;
+  if (auto && readPref("antivirusAviso")) return;
+  const dirs = [process.env.JWSIM_CACHE_DIR ?? join(app.getPath("userData"), "cache"), join(app.getPath("userData"), "build")];
+  const { response } = await dialog.showMessageBox(win, {
+    type: "info",
+    title: "Acelerar la compilación",
+    message: auto ? "La compilación tardó más de lo normal" : "Excluir las carpetas del compilador del antivirus",
+    detail:
+      "Windows Defender revisa cada archivo que crea el compilador, y eso puede duplicar el tiempo de la primera compilación.\n\n" +
+      "Puede excluir solo estas carpetas de JWPLC Sim (Windows pedirá permiso de administrador):\n" +
+      dirs.map((d) => `  ${d}`).join("\n") +
+      "\n\nSi usa otro antivirus, agregue las mismas carpetas en sus exclusiones.",
+    buttons: ["Excluir carpetas", "Ahora no", "No volver a preguntar"],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (response === 2) writePref("antivirusAviso", "no");
+  if (response !== 0) return;
+  for (const d of dirs) mkdirSync(d, { recursive: true });
+  // Start-Process -Verb RunAs abre la ventana de UAC. El comando interior va
+  // dentro de comillas simples: sus comillas se duplican (y las de una ruta,
+  // que ya van duplicadas, otra vez).
+  const list = dirs.map((d) => `''${d.replaceAll("'", "''''")}''`).join(",");
+  const inner = `Add-MpPreference -ExclusionPath ${list}`;
+  const ps = `try { Start-Process powershell.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','${inner}'; exit 0 } catch { exit 1 }`;
+  const p = spawn("powershell.exe", ["-NoProfile", "-Command", ps], { windowsHide: true });
+  p.on("exit", (code) => {
+    if (code === 0) writePref("antivirusAviso", "hecho");
+    dialog.showMessageBox(win, {
+      type: code === 0 ? "info" : "warning",
+      title: "Acelerar la compilación",
+      message: code === 0 ? "Listo: las carpetas quedaron excluidas de Windows Defender." : "No se agregó la exclusión (se canceló el permiso de administrador).",
+      noLink: true,
+    });
   });
 }
 
 ipcMain.handle("sketch:build", async (_e, dir) => {
   await stopRunner();
+  if (warmup && !warmupDone) forward("build:log", "[build] esperando a que termine la preparación del compilador (solo la primera vez)…");
+  await warmup;
   const outDir = join(app.getPath("userData"), "build", basename(dir));
   const t0 = Date.now();
   const r = await buildInWorker(dir, outDir);
-  return { ...r, ms: Date.now() - t0 };
+  const ms = Date.now() - t0;
+  if (r.ok && ms > AV_SLOW_MS && !readPref("antivirusAviso")) setTimeout(() => offerAvExclusion(true), 1500);
+  return { ...r, ms };
 });
 
 // Memoria no volátil de la placa (FRAM, NVS, SD): por proyecto (junto al
@@ -887,6 +1077,16 @@ let bridge = null;
 let ioBridge = null;
 // Puerto COM virtual (JW Serial u otro programa): queda abierto entre corridas.
 let comBridge = null;
+// Cliente del depurador OpenPLC sobre la UART0 del runner (app/lib/plc-debug.mjs).
+let plcDebug = null;
+ipcMain.handle("plcdbg:read", async (_e, names) => {
+  if (!plcDebug || !runner) return { error: "sin depurador" };
+  try {
+    return await plcDebug.read(names);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
 // Enlaces de la escena con la PC (conversor USB a RS-485, cable USB): se
 // abren al iniciar la simulación y se cierran al detenerla.
 let hostLinks = [];
@@ -912,6 +1112,16 @@ function ethernetConfig(projectFile) {
     }
   }
   return eth.present === false ? null : eth;
+}
+/** Hora fija del RTC al arrancar (simulation.rtc = "fijo:AAAA-MM-DDTHH:MM:SS"), p. ej. una práctica con horario. */
+function projectRtc(projectFile) {
+  if (!projectFile) return null;
+  try {
+    const r = loadProject(projectFile).project.simulation?.rtc;
+    return typeof r === "string" && /^fijo:\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(r) ? r : null;
+  } catch {
+    return null;
+  }
 }
 
 // stim: archivo .stim a reproducir desde t = 0 (grabación de una sesión).
@@ -943,6 +1153,9 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   // Los horizontes de la escena (cientos por segundo) y los bytes del enlace
   // Modbus son de SceneSession: no van a la interfaz.
   r.on("message", (m) => {
+    // Las respuestas del depurador OpenPLC salen por la misma UART0 que el
+    // Monitor serie: mientras se consulta, no se muestran.
+    if (m.type === "serial" && !m.port && plcDebug?.busy()) return;
     // Monitor Serie (puerto 0) para los objetivos de consola y de ritmo.
     if (m.type === "serial" && !m.port && goalTracker) goalTracker.serial(m.text, m.t_ns !== undefined ? Number(m.t_ns) / 1e6 : undefined);
     if (m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out") forward("sim:message", m);
@@ -964,6 +1177,8 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     if (runner === r) {
       runner = null;
       detachDebugger();
+      plcDebug?.detach();
+      plcDebug = null;
     }
     forward("sim:exit", info);
   });
@@ -976,7 +1191,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   } else {
     copyDir(st.dir, st.start);
   }
-  const rtcArg = rtc ?? localRtcNow();
+  const rtcArg = rtc ?? projectRtc(projectFile) ?? localRtcNow();
   // esp_restart(): el proceso nuevo tiene otro pid; con breakpoints, gdb se
   // vuelve a adjuntar antes de que el firmware reanude.
   const onRestart = async () => {
@@ -1029,6 +1244,18 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   }
   // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.
   if (comBridge && !stim) comBridge.attach(r);
+  // Depurador del OpenPLC (proyectos OpenPLC): variables internas y bloques.
+  plcDebug?.detach();
+  plcDebug = null;
+  const mapFile = stim ? null : debugMapFor(exe);
+  if (mapFile) {
+    try {
+      plcDebug = new PlcDebugLink({ ops: await ladderEditor.ops(), mapFile });
+      plcDebug.attach(r);
+    } catch (err) {
+      forward("sim:stderr", `[jwsim] depurador OpenPLC: ${err.message}\n`);
+    }
+  }
   if (sceneObj) await openHostLinks(sceneObj, r);
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {
@@ -1402,6 +1629,88 @@ ipcMain.handle("com:set", async (_e, cfg) => {
   return { current: comStatus() };
 });
 
+// ---------------------------------------------------------------- Subir al JWPLC
+// Compila el sketch para el ESP32 real con el package fijado y lo carga por
+// USB (cli/lib/esp32.mjs). Las herramientas del ESP32 se toman del Arduino15
+// del usuario o se descargan una vez a los datos de la app.
+const arduinoData = () => process.env.JWSIM_ARDUINO_DATA ?? join(app.getPath("userData"), "arduino");
+let uploading = false;
+async function uploadPorts() {
+  // Los puertos virtuales (com0com) no llevan a un equipo real.
+  return (await listComPorts()).filter((p) => !/com0com/i.test(p.label));
+}
+ipcMain.handle("jwplc:uploadInfo", async () => {
+  try {
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports: await uploadPorts(), busy: uploading, version: env.version };
+  } catch (err) {
+    return { error: err.message, ports: [], missing: [] };
+  }
+});
+ipcMain.handle("jwplc:installTools", async () => {
+  if (uploading) return { ok: false, message: "ya hay una carga en curso" };
+  uploading = true;
+  const log = (l) => forward("build:log", l);
+  try {
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    await installEsp32Tools(env, { log });
+    log("[subir] herramientas del ESP32 listas");
+    return { ok: true };
+  } catch (err) {
+    log(`[subir] ${err.message}`);
+    return { ok: false, message: err.message.split("\n")[0] };
+  } finally {
+    uploading = false;
+  }
+});
+ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
+  if (uploading) return { ok: false, message: "ya hay una carga en curso" };
+  if (isOpenPlcProject(dir)) return { ok: false, message: "Los proyectos IEC todavía se cargan desde el OpenPLC Editor. «Subir al JWPLC» por ahora es para sketches C++." };
+  uploading = true;
+  const t0 = Date.now();
+  const log = (l) => forward("build:log", l);
+  try {
+    // El monitor del COM virtual usa el puerto: se suelta antes de cargar.
+    if (comBridge && comBridge.path.toUpperCase() === String(port).toUpperCase()) {
+      const b = comBridge;
+      comBridge = null;
+      await b.close();
+      forward("com:closed", b.path);
+    }
+    const env = prepareEsp32({ dataDir: arduinoData() });
+    if (!env.cli) return { ok: false, message: "Esta instalación de JWPLC Sim no trae arduino-cli (node scripts/fetch-arduino-cli.mjs)." };
+    if (env.missing.length) return { ok: false, needTools: true, message: `Faltan las herramientas del ESP32 (${env.missing.map((t) => t.label).join(", ")}).` };
+    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log });
+    if (!c.ok) return { ok: false, stage: "compile", message: "No compiló para el JWPLC real. Revise el registro de Compilación.", ms: Date.now() - t0 };
+    for (const l of c.size) log(`[subir] ${l}`);
+    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log });
+    if (!u.ok) return { ok: false, stage: "upload", message: u.hint || "No se pudo cargar al JWPLC. Revise el registro de Compilación.", ms: Date.now() - t0 };
+    log("[subir] listo: el JWPLC se reinició con el programa nuevo");
+    return { ok: true, ms: Date.now() - t0, size: c.size };
+  } catch (err) {
+    log(`[subir] ${err.message}`);
+    return { ok: false, message: err.message.split("\n")[0], ms: Date.now() - t0 };
+  } finally {
+    uploading = false;
+  }
+});
+
+// Mi JWPLC: la prueba de recepción y la documentación del equipo. La ficha
+// técnica va en JWPLC_Aprende/extras/equipo/ (sin red); si no está, se abre la
+// página del producto.
+const EQUIPO_DIR = join(import.meta.dirname, "..", "JWPLC_Aprende", "extras", "equipo");
+const EQUIPO_PDF = join(EQUIPO_DIR, "JWPLC_Basic_ficha_tecnica.pdf");
+const EQUIPO_WEB = "https://jw-control.com/productos/JWPLC-Basic/";
+ipcMain.handle("equipo:info", () => ({ pruebaDir: join(EQUIPO_DIR, "prueba_recepcion"), pdf: existsSync(EQUIPO_PDF) }));
+ipcMain.handle("equipo:open", async (_e, kind) => {
+  if (kind === "pdf" && existsSync(EQUIPO_PDF)) {
+    const err = await shell.openPath(EQUIPO_PDF);
+    return err ? { error: err } : { ok: true };
+  }
+  await shell.openExternal(EQUIPO_WEB);
+  return { ok: true, web: true };
+});
+
 ipcMain.handle("sim:stop", async () => {
   await stopRunner();
   return true;
@@ -1603,6 +1912,16 @@ function buildMenu() {
           { label: "Dispositivos propios…", click: send("devices") },
           { label: "Nuevo dispositivo…", click: send("newDevice") },
           { label: "Editor de componentes…", click: send("componentEditor") },
+          ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
+          { type: "separator" },
+          { label: "Buscar actualizaciones…", click: () => updater.check(true) },
+          {
+            label: "Canal de actualizaciones",
+            submenu: [
+              { label: "Estable", type: "radio", checked: updater.channel() === "estable", click: () => updater.setChannel("estable") },
+              { label: "Pruebas (versiones alpha)", type: "radio", checked: updater.channel() === "pruebas", click: () => updater.setChannel("pruebas") },
+            ],
+          },
         ],
       },
       {
@@ -1648,6 +1967,7 @@ function buildMenu() {
           },
           { type: "separator" },
           { label: "JWPLC real (pantalla en vivo)…", accelerator: "CmdOrCtrl+Shift+R", click: openRealDevice },
+          { label: "Mi JWPLC (primer arranque y bornes)…", click: send("miJwplc") },
           { type: "separator" },
           { role: "reload", label: "Recargar" },
           { role: "toggleDevTools", label: "Herramientas de desarrollo" },
@@ -1712,9 +2032,12 @@ app.whenReady().then(() => {
   win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 960,
+    // 640: cabe a media pantalla aun en monitores de 1366 px o con escala de Windows alta.
+    minWidth: 640,
     minHeight: 600,
     title: "JWPLC Sim",
+    // Sin la barra de menús a la vista: los atajos siguen funcionando y Alt la muestra.
+    autoHideMenuBar: true,
     // Ícono de la ventana y de la barra de tareas (en Windows empaquetado lo da el .exe).
     icon: join(import.meta.dirname, "icon", process.platform === "win32" ? "icon.ico" : "icon.png"),
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa",
@@ -1726,11 +2049,15 @@ app.whenReady().then(() => {
     },
   });
   win.loadFile(join(import.meta.dirname, "renderer", "index.html"));
+  win.webContents.once("did-finish-load", () => {
+    setTimeout(warmCompiler, 1500);
+    updater.start();
+  });
 });
 
 app.on("window-all-closed", async () => {
   watcher?.close();
-  builder?.terminate();
+  await stopBuilder();
   await stopRunner();
   await comBridge?.close();
   app.quit();

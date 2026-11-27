@@ -1,0 +1,126 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-54",
+  "goals": [
+    {
+      "id": "aviso",
+      "description": "A los 20 s de marcha: «Mantenimiento: lubricar la bomba»",
+      "console": "Mantenimiento: lubricar",
+      "hint": "segundos - ultimoMantenimiento >= 20, y una bandera para avisar una vez."
+    },
+    {
+      "id": "ok",
+      "description": "OK: «Mantenimiento registrado»",
+      "console": "Mantenimiento registrado",
+      "after": "aviso",
+      "why": "Registrar el mantenimiento en la FRAM reinicia la cuenta sin borrar el horómetro."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Primer turno",
+      "until_ms": 13000,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Cuenta la marcha: «Marcha acumulada: 10 s»",
+          "points": 3,
+          "console": "Marcha acumulada: 10 s"
+        },
+        {
+          "description": "Antes de los 20 s, H2 apagada",
+          "points": 1,
+          "at_ms": 12500,
+          "expect": {
+            "H2.lit": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Segundo turno, después del corte",
+      "until_ms": 15500,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "13500 BTN_OK=1",
+        "13650 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Después del corte sigue la cuenta: «Marcha acumulada: 15 s»",
+          "points": 3,
+          "console": "Marcha acumulada: 15 s"
+        },
+        {
+          "description": "«Mantenimiento: lubricar la bomba», una vez",
+          "points": 4,
+          "console": "Mantenimiento: lubricar la bomba",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "H2 encendida al tocar mantenimiento",
+          "points": 3,
+          "at_ms": 12500,
+          "expect": {
+            "H2.lit": true
+          }
+        },
+        {
+          "description": "OK: «Mantenimiento registrado»",
+          "points": 3,
+          "console": "Mantenimiento registrado",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Registrado: H2 apagada",
+          "points": 3,
+          "at_ms": 15000,
+          "expect": {
+            "H2.lit": false
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Horómetro",
+      "until_ms": 40000,
+      "actions": []
+    }
+  ]
+}

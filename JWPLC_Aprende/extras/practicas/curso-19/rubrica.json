@@ -1,0 +1,214 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-19",
+  "goals": [
+    {
+      "id": "ajuste",
+      "description": "Ajusta el tiempo con UP o DOWN: «Tiempo: 4 s»",
+      "console": "Tiempo: \\d+ s",
+      "hint": "La botonera está en la pestaña Placa; también sirven las flechas del teclado."
+    },
+    {
+      "id": "dosis",
+      "description": "OK pone en marcha la bomba (Q0.0)",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 800
+    },
+    {
+      "id": "limite",
+      "description": "En el máximo, una sola vez: «Límite: 10 s»",
+      "console": "Límite: 10 s",
+      "hint": "Haz una función cambiarTiempo(int paso) que, si ya está en el límite, escriba el aviso en lugar de cambiar el número. Un bool enLimite evita repetirlo.",
+      "why": "La máquina responde siempre: si no puede subir más, lo dice en vez de quedarse callada."
+    },
+    {
+      "id": "repite",
+      "description": "Mantén UP apretado: el tiempo sube solo hasta 9 s o más",
+      "console": "Tiempo: (9|10) s",
+      "after": "ajuste",
+      "hint": "pressed() anota cuándo empezó la tecla; mientras isDown() siga en true y pasen 600 ms, cambia un paso cada 200 ms (lección 06).",
+      "why": "pressed() es un evento (una vez por pulsación); isDown() es un estado (mientras siga apretada)."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Ajuste y dosis",
+      "until_ms": 10500,
+      "stim": [
+        "1000 BTN_UP=1",
+        "1150 BTN_UP=0",
+        "1500 BTN_OK=1",
+        "1650 BTN_OK=0",
+        "7000 BTN_OK=1",
+        "7150 BTN_OK=0",
+        "8000 BTN_ESC=1",
+        "8150 BTN_ESC=0"
+      ],
+      "checks": [
+        {
+          "description": "UP sube el tiempo",
+          "points": 1,
+          "console": "Tiempo: 4 s"
+        },
+        {
+          "description": "OK dosifica el tiempo ajustado",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 3900
+        },
+        {
+          "description": "La bomba para al terminar",
+          "points": 1,
+          "from_ms": 5800,
+          "to_ms": 6900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa el fin de la dosis",
+          "points": 1,
+          "console": "Dosis completa"
+        },
+        {
+          "description": "ESC detiene la dosis",
+          "points": 1,
+          "from_ms": 8300,
+          "to_ms": 10000,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa la cancelación",
+          "points": 1,
+          "console": "Dosis cancelada"
+        }
+      ]
+    },
+    {
+      "name": "Límites",
+      "until_ms": 8000,
+      "stim": [
+        "1000 BTN_UP=1",
+        "1150 BTN_UP=0",
+        "1300 BTN_UP=1",
+        "1450 BTN_UP=0",
+        "1600 BTN_UP=1",
+        "1750 BTN_UP=0",
+        "1900 BTN_UP=1",
+        "2050 BTN_UP=0",
+        "2200 BTN_UP=1",
+        "2350 BTN_UP=0",
+        "2500 BTN_UP=1",
+        "2650 BTN_UP=0",
+        "2800 BTN_UP=1",
+        "2950 BTN_UP=0",
+        "3100 BTN_UP=1",
+        "3250 BTN_UP=0",
+        "3400 BTN_UP=1",
+        "3550 BTN_UP=0",
+        "4000 BTN_DOWN=1",
+        "4150 BTN_DOWN=0",
+        "4300 BTN_DOWN=1",
+        "4450 BTN_DOWN=0",
+        "4600 BTN_DOWN=1",
+        "4750 BTN_DOWN=0",
+        "4900 BTN_DOWN=1",
+        "5050 BTN_DOWN=0",
+        "5200 BTN_DOWN=1",
+        "5350 BTN_DOWN=0",
+        "5500 BTN_DOWN=1",
+        "5650 BTN_DOWN=0",
+        "5800 BTN_DOWN=1",
+        "5950 BTN_DOWN=0",
+        "6100 BTN_DOWN=1",
+        "6250 BTN_DOWN=0",
+        "6400 BTN_DOWN=1",
+        "6550 BTN_DOWN=0",
+        "6700 BTN_DOWN=1",
+        "6850 BTN_DOWN=0",
+        "7000 BTN_DOWN=1",
+        "7150 BTN_DOWN=0"
+      ],
+      "checks": [
+        {
+          "description": "Aviso en el máximo, una sola vez",
+          "points": 3,
+          "console": "Límite: 10 s",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Aviso en el mínimo, una sola vez",
+          "points": 2,
+          "console": "Límite: 1 s",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Nunca pasa de 10 s",
+          "points": 1,
+          "console": "Tiempo: 11 s",
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mantener apretado",
+      "until_ms": 16000,
+      "stim": [
+        "1000 BTN_UP=1",
+        "2800 BTN_UP=0",
+        "3500 BTN_OK=1",
+        "3650 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Con UP apretado 1,8 s el tiempo sube solo hasta 9 s",
+          "points": 4,
+          "console": "Tiempo: 9 s",
+          "from_ms": 1000,
+          "to_ms": 2950
+        },
+        {
+          "description": "La dosis dura el tiempo alcanzado",
+          "points": 3,
+          "from_ms": 3500,
+          "to_ms": 4100,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 8500
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 16000,
+      "stim": [
+        "1000 BTN_UP=1",
+        "3500 BTN_UP=0",
+        "3800 BTN_UP=1",
+        "3950 BTN_UP=0",
+        "4300 BTN_OK=1",
+        "4450 BTN_OK=0"
+      ]
+    }
+  ]
+}

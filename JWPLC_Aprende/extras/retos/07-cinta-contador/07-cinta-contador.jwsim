@@ -22,8 +22,8 @@
       "goal": "Una cinta que se detiene al completar un lote de 3 piezas.",
       "steps": [
         "S1 arranca la cinta (enclavada); S0 la detiene.",
-        "Cuente cada pieza en B1 una sola vez (flanco de subida).",
-        "Con 3 piezas pare la cinta y encienda H1.",
+        "Cuenta cada pieza en B1 una sola vez (flanco de subida).",
+        "Con 3 piezas para la cinta y enciende H1.",
         "Con el lote completo, S1 empieza un lote nuevo desde cero."
       ],
       "teaches": "Detección de flanco y contador.",

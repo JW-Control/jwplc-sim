@@ -1,0 +1,93 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 19 · La botonera del frente: ajustar sin la PC",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/La_botonera_del_frente/La_botonera_del_frente.ino"
+  },
+  "exercise": {
+    "lesson": "curso-19",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/La_botonera_del_frente",
+    "brief": {
+      "goal": "Que el tiempo avise al llegar a un límite y que cambie solo al mantener UP o DOWN apretado.",
+      "steps": [
+        "Ejecuta el ejemplo y usa la botonera de la pestaña Placa (o las flechas, Enter y Esc del teclado).",
+        "Al llegar a 10 s o a 1 s, escribe una sola vez «Límite: 10 s» (o «Límite: 1 s») en lugar de no hacer nada.",
+        "Al mantener UP o DOWN apretado, después de 600 ms el tiempo cambia solo cada 200 ms."
+      ],
+      "uses": [
+        "Botonera: UP, DOWN, OK, ESC",
+        "Q0_0 · KM1, bomba dosificadora"
+      ],
+      "teaches": "pressed() da una pulsación por vez y isDown() dice si la tecla sigue apretada: con las dos se arma la repetición de un control remoto."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 700
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

@@ -31,6 +31,48 @@
       "items": {
         "$ref": "#/$defs/case"
       }
+    },
+    "goal_runs": {
+      "description": "Corridas de demostración para comprobar que la solución cumple los objetivos en vivo (scripts/gate-objetivos.mjs): como un caso, pero sin verificaciones. Cada una empieza con los objetivos en cero.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "until_ms"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "until_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "actions": {
+            "type": "array"
+          },
+          "faults": {},
+          "stim": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "$defs": {
@@ -69,6 +111,18 @@
           "items": {
             "$ref": "#/$defs/check"
           }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
         }
       }
     },
@@ -116,8 +170,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "always": {
@@ -127,8 +188,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "never": {
@@ -138,8 +206,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "eventually": {
@@ -149,8 +224,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "console": {
@@ -239,6 +321,16 @@
         "within_ms": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "count": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Con 'console': cuántas líneas deben coincidir, [min, max]; [0, 0] = ninguna."
         }
       },
       "oneOf": [

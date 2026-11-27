@@ -1,0 +1,133 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-56",
+  "goals": [
+    {
+      "id": "primera",
+      "description": "«Primera falla: TERMICO»",
+      "console": "Primera falla: TERMICO"
+    },
+    {
+      "id": "explica",
+      "description": "ESC con una causa activa: «No se puede reconocer: NIVEL DE ACEITE sigue activa»",
+      "console": "No se puede reconocer",
+      "hint": "Usa causaActiva(): devuelve el índice de la primera causa activa.",
+      "why": "Una tecla que no responde sin explicar parece una máquina rota."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Térmico y después nivel",
+      "until_ms": 13500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7000,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3600,
+          "device": "B3",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10000,
+          "device": "B3",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "8000 BTN_ESC=1",
+        "8150 BTN_ESC=0",
+        "11000 BTN_ESC=1",
+        "11150 BTN_ESC=0"
+      ],
+      "checks": [
+        {
+          "description": "«Primera falla: TERMICO»",
+          "points": 2,
+          "console": "Primera falla: TERMICO"
+        },
+        {
+          "description": "«También: NIVEL DE ACEITE»",
+          "points": 2,
+          "console": "También: NIVEL DE ACEITE"
+        },
+        {
+          "description": "ESC con el nivel activo: «No se puede reconocer: NIVEL DE ACEITE sigue activa»",
+          "points": 10,
+          "console": "No se puede reconocer: NIVEL DE ACEITE sigue activa",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Con la causa activa, la falla sigue (H1)",
+          "points": 2,
+          "at_ms": 9000,
+          "expect": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Sin causas, ESC reconoce: «Fallas reconocidas»",
+          "points": 2,
+          "console": "Fallas reconocidas",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Reconocida, arranca otra vez",
+          "points": 2,
+          "at_ms": 12800,
+          "expect": {
+            "KM1.closed": true
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Compresor",
+      "until_ms": 40000,
+      "actions": []
+    }
+  ]
+}

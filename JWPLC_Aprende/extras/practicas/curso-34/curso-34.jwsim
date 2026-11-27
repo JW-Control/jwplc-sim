@@ -1,0 +1,130 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 34 · Escribir la consigna",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Escribir_la_consigna/Escribir_la_consigna.ino"
+  },
+  "exercise": {
+    "lesson": "curso-34",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Escribir_la_consigna",
+    "brief": {
+      "goal": "Leer la consigna que ya tiene el controlador al arrancar y confirmar cada envío leyéndola de vuelta.",
+      "steps": [
+        "Ejecuta el ejemplo: UP sube la consigna, OK la envía y la pantalla de TC1 la muestra.",
+        "Al arrancar, lee el holding 0 y empieza desde ese valor: «Consigna actual: 35 °C».",
+        "Después de enviar, lee de vuelta el holding 0: «Consigna confirmada: N °C»."
+      ],
+      "uses": [
+        "RS-485 · TC1, controlador de temperatura, dirección 1",
+        "Holding 0 · consigna × 10 (03 lee, 06 escribe)",
+        "Input 0 · temperatura × 10",
+        "Botonera: UP, DOWN, OK"
+      ],
+      "teaches": "Escribir es otra función de Modbus (06). Un maestro prolijo no supone: lee el valor actual antes de cambiarlo y confirma después de escribir."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 420
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 420
+      },
+      {
+        "id": "TC1",
+        "type": "jwsim/temp-controller",
+        "params": {
+          "address": 1,
+          "baud": "9600",
+          "coil": "24VDC",
+          "sonda": "simulada",
+          "temp": 25,
+          "sv": 35,
+          "hist": 2,
+          "alarma": 10
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Alarma"
+        },
+        "x": 300,
+        "y": 1120
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "TC1.L",
+        "ref": true
+      },
+      {
+        "from": "TC1.N",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "TC1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "TC1.B"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

@@ -18,6 +18,8 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const CURSO = join(ROOT, "JWPLC_Aprende", "examples", "Curso_JWPLC_Basic");
+// Ruta IEC 61131-3: misma wiki, otra sección; las lecciones viven en extras/.
+const CURSO_IEC = join(ROOT, "JWPLC_Aprende", "extras", "Curso_IEC_61131");
 const SITE = "https://jw-control.com";
 
 const page = resolve(process.argv[2] ?? join(ROOT, "..", "jw-page"));
@@ -38,6 +40,9 @@ export function mdxToGuia(mdx, source) {
   s = s.replace(/^import .*\n/gm, "");
   s = s.replace(/\{\/\*\s*programa:inicio\s*\*\/\}[\s\S]*?\{\/\*\s*programa:fin\s*\*\/\}/, "<!-- programa -->");
   s = s.replace(/\{\/\*[\s\S]*?\*\/\}\n?/g, "");
+  // Pestañas (ruta IEC: el programa en ST, Ladder y FBD): un título por pestaña.
+  s = s.replace(/<Tabs[^>]*>\n?/g, "").replace(/<\/Tabs>\n?/g, "").replace(/<\/TabItem>\n?/g, "");
+  s = s.replace(/<TabItem\s+label="([^"]+)"[^>]*>/g, "#### $1");
   s = s.replace(/<Aside(?:\s+type="(\w+)")?(?:\s+title="([^"]*)")?\s*>\n?([\s\S]*?)\n?<\/Aside>/g, (_m, type, t, body) => {
     const head = `> [!${ALERT[type ?? "note"] ?? "NOTE"}]${t ? ` ${t}` : ""}`;
     return [head, ...body.trim().split("\n").map((l) => (l ? `> ${l}` : ">"))].join("\n");
@@ -63,6 +68,24 @@ for (const unit of readdirSync(WIKI).filter((d) => /^unidad-\d+$/.test(d)).sort(
     const out = mdxToGuia(readFileSync(join(WIKI, unit, f), "utf8"), `wiki/curso-jwplc-basic/${unit}/${f}`);
     writeFileSync(join(dir, "GUIA.md"), out);
     n++;
+  }
+}
+// Ruta IEC: wiki/curso-iec-61131/unidad-N/NN-*.mdx → extras/Curso_IEC_61131/<unidad>/NN.*/GUIA.md
+const WIKI_IEC = join(page, "src", "content", "docs", "wiki", "curso-iec-61131");
+if (existsSync(WIKI_IEC) && existsSync(CURSO_IEC)) {
+  const iec = new Map();
+  for (const unit of readdirSync(CURSO_IEC).filter((d) => /^\d+\./.test(d)))
+    for (const l of readdirSync(join(CURSO_IEC, unit)).filter((d) => /^\d+\./.test(d))) iec.set(l.slice(0, 2), join(CURSO_IEC, unit, l));
+  for (const unit of readdirSync(WIKI_IEC).filter((d) => /^unidad-\d+$/.test(d)).sort()) {
+    for (const f of readdirSync(join(WIKI_IEC, unit)).filter((x) => /^\d+-.*\.mdx$/.test(x)).sort()) {
+      const dir = iec.get(f.slice(0, 2));
+      if (!dir) {
+        console.warn(`[wiki] IEC ${unit}/${f}: no hay lección ${f.slice(0, 2)} en la ruta IEC; se omite`);
+        continue;
+      }
+      writeFileSync(join(dir, "GUIA.md"), mdxToGuia(readFileSync(join(WIKI_IEC, unit, f), "utf8"), `wiki/curso-iec-61131/${unit}/${f}`));
+      n++;
+    }
   }
 }
 console.log(`[wiki] ${n} lecciones → GUIA.md`);

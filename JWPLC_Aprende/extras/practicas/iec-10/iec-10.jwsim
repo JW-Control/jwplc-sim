@@ -1,0 +1,212 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 10 · Etapa numerada: CASE, comparar y MOVE",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-10",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Pausa de 100 ms con KM2 y KM3 abiertos entre estrella y triángulo, y piloto H1 (Q0.3) encendido en marcha.",
+      "steps": [
+        "Ejecuta el ejemplo: con S1 cierran KM1 y KM2 (estrella) y a los 3 s pasa a KM3 (triángulo).",
+        "Agrega una etapa 2, PAUSA, de 100 ms con KM2 y KM3 abiertos; el triángulo pasa a ser la etapa 3.",
+        "Enciende H1 en cualquier etapa menos la 0.",
+        "Comprueba que S0 detiene todo en cualquier etapa."
+      ],
+      "uses": [
+        "%IX0.0 · S1, marcha",
+        "%IX0.1 · S0, parada NC",
+        "%QX0.0 · KM1, línea",
+        "%QX0.1 · KM2, estrella",
+        "%QX0.2 · KM3, triángulo",
+        "%QX0.3 · H1, en marcha"
+      ],
+      "teaches": "Con un número de etapa, CASE (ST) o una comparación por etapa (Ladder y FBD) elige qué condiciones revisar, y MOVE o SEL escriben la etapa siguiente."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Marcha",
+          "color": "verde"
+        },
+        "x": 820,
+        "y": 0
+      },
+      {
+        "id": "S0",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "label": "Parada",
+          "color": "rojo"
+        },
+        "x": 980,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 1240,
+        "y": 0
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 1500,
+        "y": 0
+      },
+      {
+        "id": "KM3",
+        "type": "jwsim/contactor",
+        "x": 1760,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 2000,
+        "y": 0
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 440
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "x": 1180,
+        "y": 420
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S0.11"
+      },
+      {
+        "from": "S0.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "KM3.A1"
+      },
+      {
+        "from": "KM3.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "L1.L",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "M1.U2",
+        "to": "L1.N"
+      }
+    ]
+  }
+}

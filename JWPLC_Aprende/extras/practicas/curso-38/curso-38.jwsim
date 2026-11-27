@@ -1,0 +1,151 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 38 · Tiempos y errores",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Tiempos_y_errores/Tiempos_y_errores.ino"
+  },
+  "exercise": {
+    "lesson": "curso-38",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Tiempos_y_errores",
+    "brief": {
+      "goal": "Falla segura: tras 3 preguntas sin respuesta, apagar la resistencia, encender H1 y avisar; al volver la comunicación, retomar el control.",
+      "steps": [
+        "Ejecuta el ejemplo y corta el cable A del bus en el Esquema: la consola cuenta las preguntas sin respuesta, pero la resistencia sigue prendida.",
+        "Con 3 fallas seguidas: «Falla de comunicación con TC1» una vez, resistencia apagada y H1 (Q0.1) encendida.",
+        "Con la primera respuesta buena: «Comunicación recuperada», H1 apagada y el control vuelve."
+      ],
+      "uses": [
+        "RS-485 · TC1, controlador, dirección 1",
+        "Q0_0 · KM1, resistencia",
+        "Q0_1 · H1, alarma de comunicación"
+      ],
+      "teaches": "Un maestro no espera parado: lanza la pregunta, sigue trabajando y revisa el resultado. Si un equipo deja de responder, el programa lo detecta por tiempo y lleva la máquina a un estado seguro."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 420
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 420
+      },
+      {
+        "id": "TC1",
+        "type": "jwsim/temp-controller",
+        "params": {
+          "address": 1,
+          "baud": "9600",
+          "coil": "24VDC",
+          "sonda": "simulada",
+          "temp": 30,
+          "sv": 40,
+          "hist": 2,
+          "alarma": 10
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "params": {
+          "label": "Resistencia"
+        },
+        "x": 280,
+        "y": 1120
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Comunicación"
+        },
+        "x": 560,
+        "y": 1120
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "TC1.L",
+        "ref": true
+      },
+      {
+        "from": "TC1.N",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "TC1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "TC1.B"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

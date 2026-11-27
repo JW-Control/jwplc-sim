@@ -1,0 +1,116 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-38",
+  "goals": [
+    {
+      "id": "control",
+      "description": "A 30 °C la resistencia KM1 se enciende",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 800
+    },
+    {
+      "id": "falla",
+      "description": "Cable cortado: «Falla de comunicación con TC1» y resistencia apagada",
+      "console": "Falla de comunicación",
+      "hint": "Cuenta las fallas seguidas; con 3, sinComunicacion = true y resistencia = false.",
+      "why": "Sin saber la temperatura, lo seguro es apagar: el último dato conocido ya no vale."
+    },
+    {
+      "id": "vuelve",
+      "description": "Cable reparado: «Comunicación recuperada»",
+      "console": "Comunicación recuperada",
+      "after": "falla"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Cable cortado y reparado",
+      "until_ms": 12000,
+      "faults": [
+        {
+          "kind": "open",
+          "wire": "plc.RS485_A TC1.A",
+          "at_ms": 4000,
+          "until_ms": 8500
+        }
+      ],
+      "checks": [
+        {
+          "description": "Antes de la falla, la resistencia calienta",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 3900,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "«Falla de comunicación con TC1», una vez",
+          "points": 4,
+          "console": "Falla de comunicación con TC1",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Sin comunicación, la resistencia se apaga",
+          "points": 5,
+          "from_ms": 4000,
+          "to_ms": 8400,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 2000
+        },
+        {
+          "description": "H1 encendida sin comunicación",
+          "points": 3,
+          "from_ms": 4000,
+          "to_ms": 8400,
+          "eventually": {
+            "H1.lit": true
+          },
+          "for_ms": 2000
+        },
+        {
+          "description": "«Comunicación recuperada»",
+          "points": 3,
+          "console": "Comunicación recuperada",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Recuperada: H1 apagada y la resistencia calienta otra vez",
+          "points": 3,
+          "from_ms": 8500,
+          "to_ms": 11900,
+          "eventually": {
+            "KM1.closed": true,
+            "H1.lit": false
+          },
+          "for_ms": 1000
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Cable cortado",
+      "until_ms": 12000,
+      "faults": [
+        {
+          "kind": "open",
+          "wire": "plc.RS485_A TC1.A",
+          "at_ms": 4000,
+          "until_ms": 8500
+        }
+      ]
+    }
+  ]
+}

@@ -42,6 +42,7 @@ import { buildSketch, ROOT } from "./build.mjs";
 import { cosim } from "./cosim.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./openplc.mjs";
 import { loadProject } from "./project.mjs";
+import { GoalTracker } from "../../app/lib/goals.mjs";
 import { expandFaults } from "./test.mjs";
 
 /** Carga un ejercicio desde su .jwsim o su carpeta. */
@@ -66,8 +67,9 @@ export function loadExercise(path) {
     level: ex.level,
     statement: ex.statement ? resolve(base, ex.statement) : null,
     solution: ex.solution ? resolve(base, ex.solution) : null,
-    sketch: links.sketch ? dirname(links.sketch) : null,
+    sketch: links.sketch ? dirname(links.sketch) : (links.plcProject ?? null),
     scene: project.scene,
+    rtc: typeof project.simulation?.rtc === "string" ? project.simulation.rtc : null,
     rubric,
   };
 }
@@ -86,9 +88,12 @@ function checkRubric(r, file) {
       if (kinds[0] === "expect" && !(k.at_ms >= 0)) throw bad(`cases[${i}].checks[${j}]: 'expect' requiere 'at_ms'`);
       if (["always", "never", "eventually"].includes(kinds[0]) && !(k.to_ms > (k.from_ms ?? 0))) throw bad(`cases[${i}].checks[${j}]: requiere from_ms < to_ms`);
       if (kinds[0] === "period") checkPeriod(k, (m) => bad(`cases[${i}].checks[${j}]: ${m}`));
+      if (k.count !== undefined && !(kinds[0] === "console" && isRange(k.count))) throw bad(`cases[${i}].checks[${j}]: 'count' es [min, max] y solo vale con 'console'`);
       if (kinds[0] === "responds") checkResponds(k, (m) => bad(`cases[${i}].checks[${j}]: ${m}`));
     });
     expandFaults(c.faults, true);
+    if (c.args !== undefined && !(Array.isArray(c.args) && c.args.every((l) => typeof l === "string"))) throw bad(`cases[${i}]: 'args' debe ser una lista de opciones del runner`);
+    if (c.state !== undefined && !(typeof c.state === "string" && c.state)) throw bad(`cases[${i}]: 'state' debe ser un nombre`);
     if (c.stim !== undefined && !(Array.isArray(c.stim) && c.stim.every((l) => typeof l === "string"))) throw bad(`cases[${i}]: 'stim' debe ser una lista de líneas`);
   });
 }
@@ -144,7 +149,8 @@ function valueAt(tl, key, t) {
 }
 
 const num = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
-const same = (got, want) => Math.abs(num(got) - num(want)) < 1e-6;
+// Un valor esperado puede ser un rango [min, max] (medidas analógicas: presión, frecuencia).
+const same = (got, want) => (isRange(want) ? num(got) >= Number(want[0]) && num(got) <= Number(want[1]) : Math.abs(num(got) - num(want)) < 1e-6);
 
 // Instantes donde puede cambiar el estado de las claves dentro de [a, b].
 function instants(tl, keys, a, b) {
@@ -251,6 +257,13 @@ export function evalCheck(k, tl, res, consoleLines) {
   if ("responds" in k) return evalResponds(k, tl, from, to, holds);
   if ("console" in k) {
     const re = new RegExp(k.console);
+    // Con "count": [min, max], cuántas líneas coinciden (p. ej. [0, 0]: que
+    // no aparezca nunca; [1, 1]: una sola vez).
+    if (k.count) {
+      const n = consoleLines.filter(([t, l]) => t >= from && t <= to && re.test(l)).length;
+      const ok = n >= k.count[0] && n <= k.count[1];
+      return { ok, detail: `${n} ${n === 1 ? "línea coincide" : "líneas coinciden"} con /${k.console}/` };
+    }
     const hit = consoleLines.find(([t, l]) => t >= from && t <= to && re.test(l));
     return hit ? { ok: true, detail: `a los ${fmtMs(hit[0])}` } : { ok: false, detail: `ninguna línea de la consola coincide con /${k.console}/` };
   }
@@ -266,7 +279,7 @@ const round1 = (x) => Math.round(x * 10) / 10;
  * Califica un sketch con la rúbrica del ejercicio. Nunca lanza por fallas
  * del sketch: si no compila, la nota es 0 con los errores.
  */
-export async function gradeSketch(ex, sketchDir, { pkg, target = "native", buildRoot = join(ROOT, "build", "grade"), log = () => {} }) {
+export async function gradeSketch(ex, sketchDir, { pkg, target = "native", buildRoot = join(ROOT, "build", "grade"), log = () => {}, goals = false }) {
   const t0 = Date.now();
   const max = ex.rubric.cases.reduce((s, c) => s + c.checks.reduce((x, k) => x + (k.points ?? 1), 0), 0);
   const out = { exercise: ex.id, title: ex.title, sketch: sketchDir, ok: false, score: 0, max, grade: 0, cases: [] };
@@ -284,9 +297,20 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
   const work = join(buildRoot, "work", ex.id.replace(/[^\w.-]/g, "_"));
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
-  for (const [i, c] of ex.rubric.cases.entries()) {
+  // Con goals: los objetivos en vivo se siguen en cada caso y en las corridas
+  // de demostración (goal_runs); cada corrida empieza con los objetivos en cero.
+  const goalDefs = goals ? (ex.rubric.goals ?? []) : [];
+  const goalsDone = new Set();
+  const runs = [...ex.rubric.cases.map((c) => ({ c, graded: true })), ...(goals ? (ex.rubric.goal_runs ?? []).map((c) => ({ c, graded: false })) : [])];
+  for (const [i, { c, graded }] of runs.entries()) {
+    const tracker = goalDefs.length ? new GoalTracker(goalDefs) : null;
     const fx = expandFaults(c.faults, true);
-    const args = [...fx.args];
+    // Hora del RTC: la del proyecto (simulation.rtc) salvo que el caso traiga
+    // su propio --rtc en "args" (el último gana). "state": los casos con el
+    // mismo nombre comparten la memoria no volátil (FRAM, SD, RTC), en orden:
+    // cada caso es un nuevo encendido de la placa.
+    const args = [...(ex.rtc ? ["--rtc", ex.rtc] : []), ...fx.args, ...(c.args ?? [])];
+    if (c.state) args.push("--state", join(work, `state-${String(c.state).replace(/[^\w-]/g, "_")}`));
     // Estímulos de la placa: los de las fallas y los del caso (botones del frente).
     const stimLines = [...fx.stim, ...(c.stim ?? [])].sort((a, b) => parseFloat(a) - parseFloat(b));
     if (stimLines.length) {
@@ -307,16 +331,25 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
         untilNs: ns(c.until_ms),
         actions: [...(c.actions ?? []), ...fx.actions].map((a) => ({ ...a, at_ns: ns(a.at_ms) })),
         maxStepNs: 5_000_000n,
+        onStep: tracker
+          ? (scene, t) => {
+              const snap = scene.snapshot();
+              for (const g of tracker.update({ ...snap, t_ms: Number(t) / 1e6 }).goals) if (g.state === "done") goalsDone.add(g.id);
+            }
+          : undefined,
         onSerial: (port, text, t) => {
+          if (port === 0) tracker?.serial(text, Number(t) / 1e6);
           const parts = (partial[port] + text).split(/\r?\n/);
           partial[port] = parts.pop();
           for (const l of parts) consoleLines.push([BigInt(t), l]);
         },
       });
     } catch (err) {
+      if (!graded) continue;
       out.cases.push({ name: c.name, score: 0, max: c.checks.reduce((x, k) => x + (k.points ?? 1), 0), error: err.message, checks: [] });
       continue;
     }
+    if (!graded) continue;
     const tl = timeline(res);
     const checks = c.checks.map((k) => {
       const r = res.exit && res.exit.code !== 0 ? { ok: false, detail: `el firmware terminó (código ${res.exit.code})` } : evalCheck(k, tl, res, consoleLines);
@@ -329,6 +362,10 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
     }
     const score = checks.reduce((s, k) => s + (k.ok ? k.points : 0), 0);
     out.cases.push({ name: c.name, score, max: checks.reduce((s, k) => s + k.points, 0), trace_hash: res.hash, checks });
+  }
+  if (goals) {
+    const need = goalDefs.filter((g) => !g.extra).map((g) => g.id);
+    out.goals = { done: [...goalsDone], missing: need.filter((id) => !goalsDone.has(id)), extra: goalDefs.filter((g) => g.extra && !goalsDone.has(g.id)).map((g) => g.id) };
   }
   out.score = out.cases.reduce((s, c) => s + c.score, 0);
   out.grade = round1((20 * out.score) / max);

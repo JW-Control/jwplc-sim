@@ -21,7 +21,7 @@
     "brief": {
       "goal": "Un motor que gira a la izquierda con S1 o a la derecha con S2, sin que KM1 y KM2 cierren juntos.",
       "steps": [
-        "Enclave KM1 con S1 y KM2 con S2.",
+        "Enclava KM1 con S1 y KM2 con S2.",
         "Para cambiar de sentido hay que pasar por parada (S0).",
         "Enclavamiento: nunca KM1 y KM2 a la vez; con S1 y S2 juntos, ninguno.",
         "H1 encendido mientras el motor gira."

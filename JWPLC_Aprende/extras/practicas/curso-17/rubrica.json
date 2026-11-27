@@ -1,0 +1,258 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-17",
+  "goals": [
+    {
+      "id": "reporte",
+      "description": "Arranca el motor: cada 5 s, «En marcha hh:mm:ss | total hh:mm:ss»",
+      "console": "En marcha 00:00:05 \\| total",
+      "hint": "Ya lo hace el ejemplo: déjalo en marcha 5 segundos."
+    },
+    {
+      "id": "mant",
+      "description": "A los 30 s de marcha total: «Mantenimiento: 00:00:30 de marcha»",
+      "console": "Mantenimiento: 00:00:30 de marcha",
+      "hint": "Un bool mantenimiento = false; y en loop(): if (!mantenimiento && marchaTotal() >= 30000) { mantenimiento = true; Serial.printf(...); }"
+    },
+    {
+      "id": "h1",
+      "description": "H1 (Q0.1) queda encendida desde el aviso",
+      "when": {
+        "Q0_1": 1
+      },
+      "hold_ms": 1000,
+      "after": "mant"
+    },
+    {
+      "id": "uso",
+      "description": "Al parar, el uso con un decimal: «Uso: 92.3 %»",
+      "console": "Uso: \\d{1,3}\\.\\d %",
+      "hint": "float uso = marchaAnterior * 100.0 / millis(); y Serial.printf(\"Uso: %.1f %%\\n\", uso); (%% escribe un signo %).",
+      "why": "printf arma el texto entero con su formato: cifras, ceros a la izquierda y decimales, en una sola línea."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Horómetro",
+      "until_ms": 36000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 34000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 34200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "MARCHA arranca el motor",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Cuenta el arranque",
+          "points": 1,
+          "console": "Arranque 1"
+        },
+        {
+          "description": "Reporte a los 5 s con hh:mm:ss",
+          "points": 2,
+          "console": "En marcha 00:00:05 \\| total 00:00:05"
+        },
+        {
+          "description": "Al parar, el tiempo de ese arranque",
+          "points": 2,
+          "console": "Detenido tras 00:00:1[12]"
+        }
+      ]
+    },
+    {
+      "name": "Mantenimiento y uso",
+      "until_ms": 36000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 34000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 34200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Aviso de mantenimiento a los 30 s de marcha",
+          "points": 5,
+          "console": "Mantenimiento: 00:00:30 de marcha"
+        },
+        {
+          "description": "H1 apagada antes de los 30 s de marcha",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 31500,
+          "never": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "H1 encendida desde el aviso",
+          "points": 3,
+          "from_ms": 32000,
+          "to_ms": 33500,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "Uso con un decimal al parar",
+          "points": 4,
+          "console": "Uso: \\d{1,3}\\.\\d %"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Dos arranques",
+      "until_ms": 36000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 34000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 34200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

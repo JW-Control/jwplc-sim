@@ -1,0 +1,170 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 41 · Control on-off",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Control_on_off/Control_on_off.ino"
+  },
+  "exercise": {
+    "lesson": "curso-41",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Control_on_off",
+    "brief": {
+      "goal": "Tiempo mínimo de marcha: una vez que arranca, la bomba trabaja al menos 10 s aunque la presión llegue a 5,0 bar.",
+      "steps": [
+        "Ejecuta el ejemplo y baja el consumo del edificio (RED1) a 0: la bomba llega a 5,0 bar enseguida y para.",
+        "Guarda en arranque = millis() el instante en que la bomba arranca.",
+        "Para por presión solo si pasaron 10 s desde el arranque: «Bomba parada tras N s»."
+      ],
+      "uses": [
+        "RS-485 · PT1, transmisor 0-10 bar, dirección 1",
+        "Q0_0 · KM1, contactor de la bomba",
+        "RED1 · consumo del edificio"
+      ],
+      "teaches": "El control on-off con histéresis es el presostato hecho programa. Un tiempo mínimo de marcha protege al motor de arrancar y parar seguido."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 380
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 380
+      },
+      {
+        "id": "R",
+        "type": "jwsim/power-3ph",
+        "x": 820,
+        "y": 680
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1080
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 240,
+        "y": 1560
+      },
+      {
+        "id": "PT1",
+        "type": "jwsim/pressure-rs485",
+        "params": {
+          "address": 1,
+          "source": "RED1.presion"
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "RED1",
+        "type": "jwsim/building-water",
+        "params": {
+          "bombas": "M1",
+          "qMax": 150,
+          "consumo": 60,
+          "presion0": 2.5
+        },
+        "x": 1180,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "R.L1",
+        "to": "KM1.1",
+        "ref": true
+      },
+      {
+        "from": "R.L2",
+        "to": "KM1.3",
+        "ref": true
+      },
+      {
+        "from": "R.L3",
+        "to": "KM1.5",
+        "ref": true
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.V1"
+      },
+      {
+        "from": "KM1.6",
+        "to": "M1.W1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "PT1.+",
+        "ref": true
+      },
+      {
+        "from": "PT1.-",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "PT1.A"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "PT1.B"
+      }
+    ]
+  }
+}
