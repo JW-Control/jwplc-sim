@@ -64,7 +64,6 @@
         <button class="seg" id="lang-iec" role="radio" aria-checked="false" disabled
           title="Proyecto del OpenPLC Editor: se edita en el editor; la vista Ladder con depuración en vivo llega en la fase 4">Ladder / IEC</button>
       </div>
-      <button class="ld-float-btn" id="ld-float-btn" type="button" hidden aria-pressed="false" title="Ver el programa Ladder en vivo en una ventana flotante (Ctrl+L)">▤ Ladder en vivo</button>
       <div class="mtab-sub" id="mtab-sub-schematic" role="radiogroup" aria-label="Símbolos" hidden>
         <button class="seg active" id="schem-color" role="radio" aria-checked="true" title="Equipos reales a colores, con el cableado">A colores</button>
         <button class="seg" id="schem-iec" role="radio" aria-checked="false" title="Esquema normalizado (IEC 60617) generado del mismo circuito: potencia, mando, entradas y salidas del PLC">Normalizado<span class="mt-lbl"> (IEC)</span></button>
@@ -187,6 +186,18 @@
               <div class="io-row" id="outputs"></div>
             </div>
           </div>
+          <!-- Planta 3D con su barra izquierda: el Ladder en vivo (ladder-edit.js ldSide). -->
+          <div class="plant-row" id="plant-row">
+          <nav class="plant-rail" aria-label="Paneles izquierdos de la planta">
+            <button class="side-tab-left" id="plant-tab-ladder" type="button"
+              title="Ladder en vivo: el programa pintado mientras corre (Ctrl+L)" aria-label="Ladder en vivo" aria-pressed="false" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 4v16M21 4v16M3 9h4M10 9h4M17 9h4M7 6v6M10 6v6M3 16h7M15 16h6"/>
+                    <path d="M12 13.5c-1 1-1 4 0 5M15 13.5c1 1 1 4 0 5"/>
+                  </svg>
+            </button>
+          </nav>
+          <aside class="plant-left" id="plant-left"><div class="plant-left-grip" id="plant-left-grip" role="separator" aria-orientation="vertical" aria-label="Ancho del Ladder" title="Arrastrar para cambiar el ancho (doble clic: restablecer)"></div></aside>
           <div id="view3d" class="view3d" hidden>
             <canvas id="view3d-canvas"></canvas>
             <div id="view3d-empty" class="view3d-empty">
@@ -214,6 +225,7 @@
               <span class="mini-leds"><i data-led="led-pwr"></i>PWR<i data-led="led-run"></i>RUN<i data-led="led-err" class="err"></i>ERR<i data-led="led-buz" class="buz"></i>BUZ</span>
             </button>
           </div>
+          </div>
           <div id="scene-view" class="scene-view" hidden>
             <div class="scene-main left-collapsed">
               <!-- Barra lateral izquierda (tipo Altium): toggle del diagrama de estados. -->
@@ -224,6 +236,13 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M3 19V5M3 19h18"/>
                     <path d="M5 15h3l3-7h4l3 7h3"/>
+                  </svg>
+                </button>
+                <button class="side-tab-left" data-left-pane="ladder" id="scene-tab-ladder"
+                  title="Ladder en vivo: el programa pintado mientras corre (Ctrl+L)" aria-label="Ladder en vivo" aria-pressed="false" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 4v16M21 4v16M3 9h4M10 9h4M17 9h4M7 6v6M10 6v6M3 16h7M15 16h6"/>
+                    <path d="M12 13.5c-1 1-1 4 0 5M15 13.5c1 1 1 4 0 5"/>
                   </svg>
                 </button>
                 <button class="side-tab-left" data-left-pane="teoria" id="scene-tab-teoria"
@@ -237,6 +256,7 @@
               <aside class="scene-left" id="scene-left">
                 <section class="left-pane" id="state-diag-pane" data-left-pane="states"></section>
                 <section class="left-pane theory-pane theory-body" id="theory-pane" data-left-pane="teoria" hidden></section>
+                <section class="left-pane ld-side-pane" id="ld-side-pane" data-left-pane="ladder" hidden></section>
               </aside>
               <div class="scene-splitter" id="scene-left-splitter" role="separator" aria-orientation="vertical"
                 aria-label="Ancho del diagrama de estados"

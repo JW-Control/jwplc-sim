@@ -47,18 +47,19 @@ mismo que abre el OpenPLC Editor: se puede pasar de uno a otro.
 
 ## Ladder en vivo en Esquema y Planta 3D
 
-En las pestañas **Esquema eléctrico** y **Planta 3D**, el botón **▤ Ladder en
-vivo** (o Ctrl+L) abre el programa Ladder del proyecto en una ventana
-flotante, pintada en vivo igual que la vista del programa:
+En las pestañas **Esquema eléctrico** y **Planta 3D**, la barra lateral
+izquierda tiene la pestaña **Ladder en vivo** (o Ctrl+L), junto a Teoría.
+Abre el programa Ladder del proyecto en el panel izquierdo, pintado en vivo
+igual que la vista del programa:
 
-- se mueve arrastrando la cabecera, se agranda por la esquina y se minimiza
-  con — (o doble clic en la cabecera);
-- recuerda su lugar, su tamaño y si estaba abierta;
+- en el Esquema es un panel más de su barra (como Teoría o el diagrama de
+  estados); en la Planta 3D el panel empuja el 3D, no lo tapa;
+- el ancho se cambia arrastrando el borde del panel;
 - con clic derecho en un contacto o bobina de E/S se fuerza (Force True,
   Force False, Release), como en la vista del programa.
 
-Prueba: `node tests/e2e-ladder-flotante.mjs` (capturas en
-`build/gates/ladder-flotante/`).
+Prueba: `node tests/e2e-ladder-lateral.mjs` (capturas en
+`build/gates/ladder-lateral/`).
 
 ## Depurador: bloques y variables internas en vivo
 
@@ -78,7 +79,7 @@ con el **depurador del OpenPLC Editor**, igual que el editor al depurar:
 - las peticiones entran por `uart_rx`, así que no quedan en la grabación, y
   sus respuestas no se muestran en el Monitor serie.
 
-Con eso, en la vista del programa y en la ventana flotante:
+Con eso, en la vista del programa y en la pestaña Ladder en vivo:
 
 - junto a cada bloque con instancia aparecen sus pines en vivo (IN, PT, Q,
   ET de un TON; CU, PV, Q, CV de un CTU);

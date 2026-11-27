@@ -691,7 +691,7 @@ const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name)
 
 // Contactos y bobinas de E/S de la placa en el diagrama: en verde con la señal en 1.
 function paintPlcDiagram(names) {
-  if (typeof ldFloatPaint === "function") ldFloatPaint();
+  if (typeof ldSidePaint === "function") ldSidePaint();
   const box = $("plc-diagram-body");
   if (!box || $("plc-diagram").hidden) return;
   if (state.ldView) return paintLadder();
@@ -765,7 +765,7 @@ function openPlcForce(sig, ev) {
     `<button data-v="x"${running && now !== undefined ? "" : " disabled"}>Release (liberar)</button>` +
     `<div class="iec-edit-foot">${running ? "Queda forzada hasta liberarla, como en OpenPLC." : "Pulse ▶ Ejecutar para forzar."}</div>`;
   menu.dataset.sig = sig;
-  // También se abre desde el Ladder flotante (Esquema y Planta 3D), donde el
+  // También se abre desde el Ladder en vivo lateral (Esquema y Planta 3D), donde el
   // panel del programa está oculto: el menú vive en <body>.
   if (menu.parentElement !== document.body) document.body.appendChild(menu);
   menu.hidden = false;
@@ -2940,7 +2940,7 @@ const SCENE_SIDE_MIN = 240;
 const SCENE_SIDE_MAX = 560;
 // Paneles izquierdos disponibles: el diagrama de estados (escena con
 // cilindros) y la teoría de la lección abierta.
-const leftAvail = { states: false, teoria: false };
+const leftAvail = { states: false, teoria: false, ladder: false };
 const liveSideW = { left: null, right: null };
 
 function scenePaneWidth(side, fallback) {
@@ -3136,6 +3136,17 @@ function wireSceneSide() {
       $("scene-tab-teoria").hidden = !on;
       if (on && !NARROW.matches) setLeftPane("teoria", false);
       else if (document.querySelector(".scene-main").dataset.leftPane === "teoria") setLeftPane(null, false);
+    },
+    // Ladder en vivo (ladder-edit.js): la pestaña aparece con un programa
+    // Ladder; se reabre si quedó abierta y no manda la teoría.
+    setLadderAvailable(on) {
+      on = !!on;
+      if (leftAvail.ladder === on) return;
+      leftAvail.ladder = on;
+      $("scene-tab-ladder").hidden = !on;
+      const cur = document.querySelector(".scene-main").dataset.leftPane;
+      if (on && !cur && storeGet(LEFT_KEY) === "ladder" && !NARROW.matches) setLeftPane("ladder", false);
+      else if (!on && cur === "ladder") setLeftPane(null, false);
     },
     isLeftOpen: () => !document.querySelector(".scene-main")?.classList.contains("left-collapsed"),
   };

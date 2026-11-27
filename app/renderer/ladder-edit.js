@@ -175,8 +175,8 @@ function ldVarMap() {
   return ldVarsMemo.map;
 }
 // Texto del .ld que se está mostrando (aunque no se esté editando).
-// ldCtxText: el .ld que se dibuja o pinta en este momento (la ventana
-// flotante muestra el programa aunque la pestaña activa sea otra).
+// ldCtxText: el .ld que se dibuja o pinta en este momento (el panel
+// lateral muestra el programa aunque la pestaña activa sea otra).
 let ldCtxText = null;
 const ldModelText = () => ldCtxText ?? ((state.active && state.models.get(state.active)?.getValue()) || "");
 function ldWithText(text, fn) {
@@ -189,18 +189,22 @@ function ldWithText(text, fn) {
   }
 }
 
-// ------------------------------------------------------------ Ladder en vivo flotante
+// ------------------------------------------------------------ Ladder en vivo lateral
 // En Esquema eléctrico y Planta 3D: el programa Ladder del proyecto en una
-// ventana flotante que se mueve, se agranda y se minimiza, pintada en vivo
+// pestaña de la barra lateral izquierda (junto a Teoría), pintado en vivo
 // igual que la vista del programa (paintLadder) y con forzado (clic derecho).
-const ldFloat = { el: null, text: null, open: false, min: false };
-const LD_FLOAT_KEY = "jwsim.ldFloat";
-function ldFloatPrefs(save) {
+// Un solo panel (#ld-side) que se pasa al lado izquierdo de la pestaña activa:
+// en Esquema es un panel más de su barra (app.js setLeftPane "ladder"); en
+// Planta 3D, su propia barra a la izquierda del 3D.
+const ldSide = { el: null, text: null, plantOpen: false };
+const LD_SIDE_KEY = "jwsim.ldSide.plant";
+const LD_SIDE_W = "jwsim.ldSide.plantW";
+function ldPref(k, v) {
   try {
-    if (save) localStorage.setItem(LD_FLOAT_KEY, JSON.stringify(save));
-    else return JSON.parse(localStorage.getItem(LD_FLOAT_KEY) || "{}");
+    if (v === undefined) return localStorage.getItem(k);
+    localStorage.setItem(k, String(v));
   } catch {
-    return {};
+    return null;
   }
 }
 /** El .ld del programa: el abierto si es Ladder, si no main.ld o el primero. */
@@ -210,80 +214,32 @@ function ldProgramFile() {
   if (state.active && /\.ld$/i.test(state.active)) return state.active;
   return names.find((n) => /(^|\/)main\.ld$/i.test(n)) ?? names[0] ?? null;
 }
-function ldFloatEnsure() {
-  if (ldFloat.el) return ldFloat.el;
-  const el = document.createElement("section");
-  el.id = "ld-float";
-  el.className = "ld-float";
-  el.hidden = true;
-  el.setAttribute("aria-label", "Ladder en vivo");
+function ldSideEnsure() {
+  if (ldSide.el) return ldSide.el;
+  const el = document.createElement("div");
+  el.id = "ld-side";
+  el.className = "ld-side";
   el.innerHTML =
-    '<header class="ld-float-h"><span class="ld-float-dot"></span><b>Ladder en vivo</b><span class="ld-float-file muted"></span>' +
-    '<button class="icon" data-f="min" title="Minimizar">—</button><button class="icon" data-f="close" title="Cerrar (Ctrl+L)">✕</button></header>' +
-    '<div class="ld-float-body plc-diagram-body is-ladder" title="Clic derecho en un contacto o bobina de E/S: forzar"></div>';
-  document.body.appendChild(el);
-  const p = ldFloatPrefs();
-  if (p.w) el.style.width = `${p.w}px`;
-  if (p.h) el.style.height = `${p.h}px`;
-  if (p.x != null) el.style.left = `${p.x}px`;
-  if (p.y != null) el.style.top = `${p.y}px`;
-  const head = el.querySelector("header");
-  head.addEventListener("pointerdown", (ev) => {
-    if (ev.target.closest("button")) return;
-    const r = el.getBoundingClientRect();
-    const dx = ev.clientX - r.left;
-    const dy = ev.clientY - r.top;
-    head.setPointerCapture(ev.pointerId);
-    const move = (e) => {
-      el.style.left = `${Math.max(0, Math.min(window.innerWidth - 120, e.clientX - dx))}px`;
-      el.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, e.clientY - dy))}px`;
-      el.style.right = "auto";
-      el.style.bottom = "auto";
-    };
-    const up = () => {
-      head.removeEventListener("pointermove", move);
-      ldFloatSave();
-    };
-    head.addEventListener("pointermove", move);
-    head.addEventListener("pointerup", up, { once: true });
-  });
-  head.addEventListener("click", (ev) => {
-    const f = ev.target.closest("[data-f]")?.dataset.f;
-    if (f === "close") ldFloatToggle(false);
-    else if (f === "min") {
-      ldFloat.min = !ldFloat.min;
-      el.classList.toggle("min", ldFloat.min);
-      ldFloatSave();
-    }
-  });
-  head.addEventListener("dblclick", () => {
-    ldFloat.min = !ldFloat.min;
-    el.classList.toggle("min", ldFloat.min);
-  });
-  new ResizeObserver(() => {
-    if (!el.hidden && !ldFloat.min) {
-      ldFloatFit();
-      ldFloatSave();
-    }
-  }).observe(el);
-  el.querySelector(".ld-float-body").addEventListener("contextmenu", (ev) => {
+    '<header class="ld-side-h"><span class="ld-side-dot" title="En vivo mientras corre la simulación"></span><b>Ladder en vivo</b><span class="ld-side-file muted"></span></header>' +
+    '<div class="ld-side-body plc-diagram-body is-ladder" title="Clic derecho en un contacto o bobina de E/S: forzar"></div>';
+  el.querySelector(".ld-side-body").addEventListener("contextmenu", (ev) => {
     const sig = ev.target.closest("[data-sig]")?.dataset.sig;
     if (!sig) return;
     ev.preventDefault();
     openPlcForce(sig, ev);
   });
-  ldFloat.el = el;
+  new ResizeObserver(() => ldSideFit()).observe(el);
+  ldSide.el = el;
   return el;
 }
-function ldFloatSave() {
-  const el = ldFloat.el;
-  if (!el) return;
-  const r = el.getBoundingClientRect();
-  ldFloatPrefs({ open: ldFloat.open, min: ldFloat.min, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: ldFloat.min ? ldFloatPrefs().h : Math.round(r.height) });
+/** ¿Se ve el panel? (pestaña activa con su lado izquierdo abierto) */
+function ldSideShown() {
+  const el = ldSide.el;
+  return !!el && el.isConnected && el.offsetParent !== null && el.clientWidth > 0;
 }
-function ldFloatFit() {
-  const body = ldFloat.el?.querySelector(".ld-float-body");
-  if (!body) return;
+function ldSideFit() {
+  const body = ldSide.el?.querySelector(".ld-side-body");
+  if (!body || !ldSideShown()) return;
   const svgs = [...body.querySelectorAll("svg")];
   if (!svgs.length) return;
   const widest = Math.max(...svgs.map((s) => s.viewBox.baseVal.width || 0));
@@ -294,63 +250,87 @@ function ldFloatFit() {
     svg.style.height = `${Math.round(vb.height * k)}px`;
   }
 }
-/** ¿Se puede mostrar? Proyecto OpenPLC con Ladder, en Esquema o Planta 3D. */
-const ldFloatTab = () => ["schematic", "plant"].includes(document.body.dataset.tab);
-function ldFloatSync() {
-  const btn = $("ld-float-btn");
+function ldSideSync() {
   const file = ldProgramFile();
-  const can = !!file && ldFloatTab();
-  btn.hidden = !can;
-  btn.setAttribute("aria-pressed", String(ldFloat.open));
-  btn.classList.toggle("on", ldFloat.open);
-  const el = ldFloatEnsure();
-  const show = can && ldFloat.open;
-  el.hidden = !show;
-  el.classList.toggle("min", ldFloat.min);
-  if (!show) return;
+  window.JwsimScenePane?.setLadderAvailable?.(!!file);
+  const btn = $("plant-tab-ladder");
+  const plantOn = !!file && ldSide.plantOpen;
+  btn.hidden = !file;
+  btn.classList.toggle("active", plantOn);
+  btn.setAttribute("aria-pressed", String(plantOn));
+  $("plant-row").classList.toggle("left-open", plantOn);
+  const el = ldSideEnsure();
+  const host = document.body.dataset.tab === "plant" ? $("plant-left") : $("ld-side-pane");
+  if (el.parentElement !== host) host.appendChild(el);
+  if (!file || !ldSideShown()) return;
   const text = state.models.get(file)?.getValue() ?? "";
-  el.querySelector(".ld-float-file").textContent = file.split("/").pop();
-  if (text !== ldFloat.text) {
-    ldFloat.text = text;
-    const body = el.querySelector(".ld-float-body");
+  el.querySelector(".ld-side-file").textContent = file.split("/").pop();
+  if (text !== ldSide.text) {
+    ldSide.text = text;
+    const body = el.querySelector(".ld-side-body");
     try {
       body.innerHTML = ldWithText(text, () => window.JwsimPlcDiagram.ladderView(text, { sigOf: ldSig, addrOf: ldAddrOf }));
     } catch (err) {
       body.textContent = `No se pudo dibujar el Ladder: ${err.message}`;
     }
-    ldFloatFit();
   }
-  ldFloatPaint();
+  ldSideFit();
+  ldSidePaint();
 }
-function ldFloatToggle(on = !ldFloat.open) {
-  ldFloat.open = on;
-  ldFloat.text = null;
-  ldFloatSync();
-  ldFloatSave();
-}
-/** Lo llama paintPlcDiagram: pinta la ventana flotante si está a la vista. */
-function ldFloatPaint() {
-  const el = ldFloat.el;
-  if (!el || el.hidden || ldFloat.min || ldFloat.text == null) return;
-  const body = el.querySelector(".ld-float-body");
-  ldWithText(ldFloat.text, () => paintLadder(body, ldFloat.text));
+/** Lo llama paintPlcDiagram: pinta el panel si está a la vista. */
+function ldSidePaint() {
+  if (!ldSideShown() || ldSide.text == null) return;
+  const el = ldSide.el;
+  ldWithText(ldSide.text, () => paintLadder(el.querySelector(".ld-side-body"), ldSide.text));
   el.classList.toggle("live", ["running", "paused", "break"].includes(state.sim));
 }
-function wireLdFloat() {
-  const p = ldFloatPrefs();
-  ldFloat.open = !!p.open;
-  ldFloat.min = !!p.min;
-  $("ld-float-btn").addEventListener("click", () => ldFloatToggle());
-  // Cambio de pestaña (tabs.js marca body.dataset.tab) o de proyecto/archivos.
-  new MutationObserver(() => ldFloatSync()).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+function ldSideToggle() {
+  if (!ldProgramFile()) return;
+  if (document.body.dataset.tab === "plant") {
+    ldSide.plantOpen = !ldSide.plantOpen;
+    ldPref(LD_SIDE_KEY, ldSide.plantOpen ? 1 : 0);
+    ldSideSync();
+  } else if (document.body.dataset.tab === "schematic") {
+    const open = document.querySelector(".scene-main")?.dataset.leftPane === "ladder";
+    window.JwsimScenePane?.setLeftPane(open ? null : "ladder", true);
+  }
+}
+function wireLdSide() {
+  ldSide.plantOpen = ldPref(LD_SIDE_KEY) === "1";
+  const w = Number(ldPref(LD_SIDE_W));
+  if (w > 0) $("plant-row").style.setProperty("--plant-left-w", `${w}px`);
+  $("plant-tab-ladder").addEventListener("click", ldSideToggle);
+  // Cambio de pestaña (tabs.js marca body.dataset.tab) o del panel izquierdo
+  // del esquema (setLeftPane muestra u oculta #ld-side-pane).
+  new MutationObserver(() => ldSideSync()).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+  new MutationObserver(() => ldSideSync()).observe($("ld-side-pane"), { attributes: true, attributeFilter: ["hidden"] });
+  // Ancho del panel en Planta 3D: se arrastra su borde derecho.
+  const grip = $("plant-left-grip");
+  grip.addEventListener("pointerdown", (ev) => {
+    const row = $("plant-row");
+    const x0 = ev.clientX;
+    const w0 = $("plant-left").getBoundingClientRect().width;
+    grip.setPointerCapture(ev.pointerId);
+    const move = (e) => row.style.setProperty("--plant-left-w", `${Math.max(240, Math.min(row.clientWidth - 260, w0 + e.clientX - x0))}px`);
+    const up = () => {
+      grip.removeEventListener("pointermove", move);
+      ldPref(LD_SIDE_W, Math.round($("plant-left").getBoundingClientRect().width));
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up, { once: true });
+  });
+  grip.addEventListener("dblclick", () => {
+    $("plant-row").style.removeProperty("--plant-left-w");
+    ldPref(LD_SIDE_W, 0);
+  });
   document.addEventListener("keydown", (ev) => {
-    if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === "l" && ldFloatTab() && ldProgramFile()) {
+    if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === "l" && ["schematic", "plant"].includes(document.body.dataset.tab) && ldProgramFile()) {
       ev.preventDefault();
-      ldFloatToggle();
+      ldSideToggle();
     }
   });
 }
-wireLdFloat();
+wireLdSide();
 /** Dirección IEC real de una variable (por su ubicación o el alias). */
 function ldResolve(name) {
   const v = ldVarMap().get(String(name ?? "").toUpperCase());
@@ -446,7 +426,7 @@ async function ldBackplaneSave() {
 }
 function ldRefresh() {
   if (state.active) renderPlcDiagram(state.active);
-  ldFloatSync();
+  ldSideSync();
   ldRenderToolbar();
   if (state.view === "ldvars") ldVarsRender();
 }
@@ -1144,7 +1124,7 @@ function plcFmt(v) {
 }
 function plcLiveWanted() {
   if (!state.sketch?.openplc || state.sim !== "running" || document.hidden) return false;
-  const float = ldFloat.el && !ldFloat.el.hidden && !ldFloat.min;
+  const float = ldSideShown();
   const diagram = state.ldView && !$("plc-diagram")?.hidden && document.body.dataset.tab === "program";
   return !!(float || diagram || state.view === "ldvars");
 }
@@ -1272,5 +1252,5 @@ if (window.jwsimTest) {
   window.jwsimTest.ldEditing = () => ldEdit.on;
   window.jwsimTest.sketchDir = () => state.sketch?.dir ?? null;
   window.jwsimTest.ldIo = () => ldIo.entries;
-  window.jwsimTest.ldFloat = () => ({ open: ldFloat.open, shown: !!ldFloat.el && !ldFloat.el.hidden });
+  window.jwsimTest.ldSide = () => ({ shown: ldSideShown(), host: ldSide.el?.parentElement?.id ?? null });
 }

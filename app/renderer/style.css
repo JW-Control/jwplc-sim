@@ -7494,117 +7494,105 @@ html.booting body {
 .ld-vt-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .ld-vt-foot .muted { font-size: 11px; }
 
-/* ---- Ladder en vivo flotante (ladder-edit.js ldFloat): en Esquema eléctrico
-   y Planta 3D, el programa Ladder pintado en vivo en una ventana que se mueve
-   (arrastrando la cabecera), se agranda (esquina) y se minimiza. */
-.ld-float-btn {
-  margin-left: auto;
-  align-self: center;
-  margin-bottom: 4px;
-  padding: 3px 10px;
-  font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-}
-.ld-float-btn[hidden] {
-  display: none;
-}
-.ld-float-btn.on {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-  color: var(--text-strong);
-}
-/* Con el botón a la vista, él empuja el grupo a la derecha y «Fallas» y los
-   símbolos van pegados a él. */
-.main-tabs .ld-float-btn:not([hidden]) {
-  margin-right: 8px;
-}
-.main-tabs .ld-float-btn:not([hidden]) ~ .faults-menu {
-  margin-left: 0;
-}
-.ld-float {
-  position: fixed;
-  right: 18px;
-  bottom: 44px;
-  width: 560px;
-  height: 340px;
-  min-width: 260px;
-  min-height: 120px;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100vh - 16px);
-  z-index: 30;
+/* ---- Ladder en vivo lateral (ladder-edit.js ldSide): pestaña de la barra
+   izquierda en Esquema eléctrico (un panel más, como Teoría) y en Planta 3D
+   (su propia barra a la izquierda del 3D). */
+.ld-side {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  resize: both;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 10px;
   background: var(--panel);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  /* Apenas translúcida a propósito: si es opaca, Chromium la toma como
-     tapa del lienzo WebGL de la Planta 3D y deja de dibujar un recuadro del
-     3D por encima de ella (queda en blanco). */
-  opacity: 0.99;
 }
-.ld-float[hidden] {
-  display: none;
+.ld-side-pane:not([hidden]) {
+  display: flex;
+  flex-direction: column;
 }
-.ld-float.min {
-  height: auto !important;
-  min-height: 0;
-  resize: none;
-}
-.ld-float.min .ld-float-body {
-  display: none;
-}
-.ld-float-h {
+.ld-side-h {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 6px 5px 10px;
+  padding: 6px 10px;
   font-size: 12px;
-  cursor: move;
-  user-select: none;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
-.ld-float.min .ld-float-h {
-  border-bottom: none;
-}
-.ld-float-h b {
+.ld-side-h b {
   color: var(--text-strong);
 }
-.ld-float-file {
+.ld-side-file {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ld-float-h .icon {
-  cursor: pointer;
-  padding: 1px 7px;
-}
-.ld-float-dot {
+.ld-side-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--muted);
 }
-.ld-float.live .ld-float-dot {
+.ld-side.live .ld-side-dot {
   background: #2fd05a;
   box-shadow: 0 0 6px #2fd05a;
 }
-.ld-float-body {
+.ld-side-body {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
-.ld-float .plc-diagram-body.is-ladder {
+.ld-side .plc-diagram-body.is-ladder {
   padding: 10px 12px 14px;
 }
-/* El menú de forzado se abre también sobre la ventana flotante. */
+/* Planta 3D: barra izquierda + panel + el 3D. Fuera de la planta, la fila no
+   existe (el 3D queda como siempre en su contenedor). */
+.plant-row {
+  display: contents;
+}
+.plant-rail,
+.plant-left {
+  display: none;
+}
+body[data-tab="plant"] .plant-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+body[data-tab="plant"] .plant-rail:has(> :not([hidden])) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  width: 36px;
+  flex: none;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+body[data-tab="plant"] .plant-row.left-open .plant-left {
+  display: flex;
+  position: relative;
+  flex: none;
+  width: var(--plant-left-w, 460px);
+  max-width: 60%;
+  min-width: 240px;
+  border-right: 1px solid var(--border);
+}
+.plant-left-grip {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 3;
+}
+.plant-row > .view3d {
+  min-width: 0;
+}
+/* El menú de forzado se abre también desde el Ladder lateral (Esquema, Planta 3D). */
 #plc-force-menu {
   position: fixed;
   z-index: 50;
@@ -7625,4 +7613,7 @@ html.booting body {
 }
 .ld-vt-live.on {
   color: light-dark(#0a8a2a, #2fd05a);
+}
+.ld-side .ld-view {
+  min-width: 0;
 }

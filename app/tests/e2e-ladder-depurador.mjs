@@ -10,7 +10,7 @@
 //                        en vivo y cambia con el parpadeo
 //   TABLA_EN_VIVO        la columna «En vivo» de la tabla de variables muestra
 //                        Q y ET de los TON y el valor de las BOOL
-//   FLOTANTE_CON_VALORES la ventana flotante en Esquema muestra los mismos
+//   LATERAL_CON_VALORES  la pestaña Ladder del Esquema muestra los mismos
 //   SERIE_LIMPIO         las respuestas del depurador no ensucian el Monitor serie
 // Capturas en build/gates/ladder-depurador/.
 //   cd app && xvfb-run -a node tests/e2e-ladder-depurador.mjs
@@ -92,12 +92,12 @@ try {
   criteria.TABLA_EN_VIVO = { pass: !!tv && /^Q=(TRUE|FALSE) ET=\d+m?s$/.test(tv.T_ON) && /^(TRUE|FALSE)$/.test(tv.ENCENDIDO ?? ""), T_ON: tv?.T_ON, ENCENDIDO: tv?.ENCENDIDO };
 
   await win.click('.mtab[data-tab="schematic"]');
-  await until(() => t(() => !document.getElementById("ld-float-btn").hidden), 3000);
-  await win.click("#ld-float-btn");
-  const fv = await until(() => live("#ld-float").then((v) => (v["T_ON.ET"] ? v : null)), 4000);
+  await until(() => t(() => !document.getElementById("scene-tab-ladder").hidden), 3000);
+  await win.click("#scene-tab-ladder");
+  const fv = await until(() => live("#ld-side").then((v) => (v["T_ON.ET"] ? v : null)), 4000);
   await win.waitForTimeout(300);
   await win.screenshot({ path: join(OUT, "03-esquema.png") });
-  criteria.FLOTANTE_CON_VALORES = { pass: !!fv && !!(await contact("#ld-float", "ENCENDIDO"))?.match(/on|off/), ET: fv?.["T_ON.ET"] };
+  criteria.LATERAL_CON_VALORES = { pass: !!fv && !!(await contact("#ld-side", "ENCENDIDO"))?.match(/on|off/), ET: fv?.["T_ON.ET"] };
 
   const serie = await t(() => document.getElementById("console").textContent);
   criteria.SERIE_LIMPIO = { pass: !/[\x00-\x08\x0e-\x1f\x7f-\x9f�]/.test(serie), muestra: JSON.stringify(serie.slice(-80)) };
