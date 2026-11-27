@@ -1680,6 +1680,7 @@ ipcMain.handle("com:set", async (_e, cfg) => {
 // del usuario o se descargan una vez a los datos de la app.
 const arduinoData = () => process.env.JWSIM_ARDUINO_DATA ?? join(app.getPath("userData"), "arduino");
 let uploading = false;
+let uploadAbort = null;
 async function uploadPorts() {
   // Los puertos virtuales (com0com) no llevan a un equipo real.
   return (await listComPorts()).filter((p) => !/com0com/i.test(p.label));
@@ -1714,8 +1715,14 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
   if (uploading) return { ok: false, message: "ya hay una carga en curso" };
   if (isOpenPlcProject(dir)) return { ok: false, message: "Los proyectos IEC todavía se cargan desde el OpenPLC Editor. «Subir al JWPLC» por ahora es para sketches C++." };
   uploading = true;
+  uploadAbort = new AbortController();
+  const { signal } = uploadAbort;
   const t0 = Date.now();
   const log = (l) => forward("build:log", l);
+  const cancelled = () => {
+    log("[subir] cancelado");
+    return { ok: false, cancelled: true, message: "Cancelado: no se cargó nada al JWPLC.", ms: Date.now() - t0 };
+  };
   try {
     // El monitor del COM virtual usa el puerto: se suelta antes de cargar.
     if (comBridge && comBridge.path.toUpperCase() === String(port).toUpperCase()) {
@@ -1727,10 +1734,12 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
     const env = prepareEsp32({ dataDir: arduinoData() });
     if (!env.cli) return { ok: false, message: "Esta instalación de JWPLC Sim no trae arduino-cli (node scripts/fetch-arduino-cli.mjs)." };
     if (env.missing.length) return { ok: false, needTools: true, message: `Faltan las herramientas del ESP32 (${env.missing.map((t) => t.label).join(", ")}).` };
-    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log });
+    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log, signal });
+    if (c.cancelled) return cancelled();
     if (!c.ok) return { ok: false, stage: "compile", message: "No compiló para el JWPLC real. Revise el registro de Compilación.", ms: Date.now() - t0 };
     for (const l of c.size) log(`[subir] ${l}`);
-    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log });
+    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log, signal });
+    if (u.cancelled) return cancelled();
     if (!u.ok) return { ok: false, stage: "upload", message: u.hint || "No se pudo cargar al JWPLC. Revise el registro de Compilación.", ms: Date.now() - t0 };
     log("[subir] listo: el JWPLC se reinició con el programa nuevo");
     return { ok: true, ms: Date.now() - t0, size: c.size };
@@ -1739,7 +1748,14 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
     return { ok: false, message: err.message.split("\n")[0], ms: Date.now() - t0 };
   } finally {
     uploading = false;
+    uploadAbort = null;
   }
+});
+// Cancelar la compilación o la carga (como en Arduino IDE), p. ej. si el
+// puerto elegido no era el del JWPLC.
+ipcMain.handle("jwplc:uploadCancel", () => {
+  uploadAbort?.abort();
+  return { ok: !!uploadAbort };
 });
 
 // Mi JWPLC: la prueba de recepción y la documentación del equipo. La ficha

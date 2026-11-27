@@ -13,7 +13,7 @@
 // Las herramientas se toman, por enlace, del Arduino15 del usuario si ya
 // tiene el JWPLC Basic instalado en Arduino IDE u OpenPLC Editor. Si no, se
 // descargan una sola vez con arduino-cli (core install jwplc:esp32).
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, delimiter, join, resolve } from "node:path";
@@ -177,9 +177,27 @@ export function carpetaVersion(ref) {
 
 const NOISE = /^(Downloading index|Error initializing instance: (Loading index file|Error downloading index|Error loading hardware platform: discovery))/;
 
-function runCli(cli, args, { log = () => {}, cwd } = {}) {
+// Corta el proceso y sus hijos (arduino-cli lanza el compilador y esptool).
+function killTree(p) {
+  if (p.exitCode !== null || !p.pid) return;
+  if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(p.pid), "/T", "/F"], { windowsHide: true });
+  else {
+    try {
+      process.kill(-p.pid, "SIGTERM");
+    } catch {
+      p.kill("SIGTERM");
+    }
+  }
+}
+
+// `signal` (AbortSignal) cancela: el resultado lleva cancelled: true.
+function runCli(cli, args, { log = () => {}, cwd, signal } = {}) {
   return new Promise((done) => {
-    const p = spawn(cli, args, { cwd, windowsHide: true });
+    if (signal?.aborted) return done({ code: -1, out: "", cancelled: true });
+    // En Linux/macOS, grupo propio para cortar también a los hijos.
+    const p = spawn(cli, args, { cwd, windowsHide: true, detached: process.platform !== "win32" });
+    const onAbort = () => killTree(p);
+    signal?.addEventListener("abort", onAbort, { once: true });
     let out = "";
     let buf = "";
     const onData = (d) => {
@@ -192,10 +210,14 @@ function runCli(cli, args, { log = () => {}, cwd } = {}) {
     };
     p.stdout.on("data", onData);
     p.stderr.on("data", onData);
-    p.on("error", (err) => done({ code: -1, out: `${out}\n${err.message}` }));
+    p.on("error", (err) => {
+      signal?.removeEventListener("abort", onAbort);
+      done({ code: -1, out: `${out}\n${err.message}`, cancelled: !!signal?.aborted });
+    });
     p.on("close", (code) => {
+      signal?.removeEventListener("abort", onAbort);
       if (buf.trim() && !NOISE.test(buf)) log(buf);
-      done({ code, out });
+      done({ code, out, cancelled: !!signal?.aborted });
     });
   });
 }
@@ -226,23 +248,24 @@ function extraProps() {
 
 // Compila el sketch para el JWPLC Basic real. Devuelve { ok, buildDir, out,
 // size } (size: líneas de uso de flash y RAM que informa arduino-cli).
-export async function compileEsp32(sketchDir, env, { buildDir, log = () => {} } = {}) {
+export async function compileEsp32(sketchDir, env, { buildDir, log = () => {}, signal } = {}) {
   if (!env.cli) throw new Error("no se encontró arduino-cli");
   if (env.missing.length) throw new Error(`faltan herramientas del ESP32: ${env.missing.map((t) => t.label).join(", ")}`);
   buildDir = resolve(buildDir ?? join(env.dataDir, "build", basename(resolve(sketchDir))));
   mkdirSync(buildDir, { recursive: true });
   log(`[subir] compilando ${basename(resolve(sketchDir))} para el JWPLC Basic (package ${env.version})…`);
-  const r = await runCli(env.cli, ["--config-file", env.config, "compile", "--fqbn", FQBN, "--build-path", buildDir, ...extraProps(), resolve(sketchDir)], { log });
+  const r = await runCli(env.cli, ["--config-file", env.config, "compile", "--fqbn", FQBN, "--build-path", buildDir, ...extraProps(), resolve(sketchDir)], { log, signal });
   const size = r.out.split(/\r?\n/).filter((l) => /^(El sketch usa|Sketch uses|Las variables|Global variables)/.test(l));
-  return { ok: r.code === 0, buildDir, out: r.out, size };
+  return { ok: r.code === 0 && !r.cancelled, cancelled: !!r.cancelled, buildDir, out: r.out, size };
 }
 
 // Comando de carga del platform.txt, ya resuelto por arduino-cli
 // (--show-properties=expanded): esptool con los .bin de buildDir. Se ejecuta
 // directo, sin «arduino-cli upload», porque este necesita el descubrimiento de
 // puertos de arduino-cli (herramientas builtin que se descargan de internet).
-export async function uploadCommand(sketchDir, env, buildDir) {
-  const r = await runCli(env.cli, ["--config-file", env.config, "compile", "--fqbn", FQBN, "--build-path", buildDir, ...extraProps(), "--show-properties=expanded", resolve(sketchDir)]);
+export async function uploadCommand(sketchDir, env, buildDir, { signal } = {}) {
+  const r = await runCli(env.cli, ["--config-file", env.config, "compile", "--fqbn", FQBN, "--build-path", buildDir, ...extraProps(), "--show-properties=expanded", resolve(sketchDir)], { signal });
+  if (r.cancelled) return null;
   if (r.code !== 0) throw new Error(`arduino-cli no informó el comando de carga\n${r.out.trim()}`);
   const props = new Map();
   for (const line of r.out.split(/\r?\n/)) {
@@ -260,11 +283,14 @@ export async function uploadCommand(sketchDir, env, buildDir) {
 }
 
 // Carga lo compilado por el puerto serie del USB.
-export async function uploadEsp32(sketchDir, env, { buildDir, port, log = () => {} } = {}) {
+export async function uploadEsp32(sketchDir, env, { buildDir, port, log = () => {}, signal } = {}) {
   if (!port) throw new Error("elija el puerto del JWPLC");
-  const { exe: esptool, args } = await uploadCommand(sketchDir, env, buildDir);
+  const cmd = await uploadCommand(sketchDir, env, buildDir, { signal });
+  if (!cmd) return { ok: false, cancelled: true, out: "", hint: "" };
+  const { exe: esptool, args } = cmd;
   log(`[subir] cargando al JWPLC en ${port}…`);
-  const r = await runCli(esptool, args.map((a) => a.replaceAll("{serial.port}", port)), { log });
+  const r = await runCli(esptool, args.map((a) => a.replaceAll("{serial.port}", port)), { log, signal });
+  if (r.cancelled) return { ok: false, cancelled: true, out: r.out, hint: "" };
   let hint = "";
   if (r.code !== 0) {
     if (/could not open port|PermissionError|Access is denied|Acceso denegado|busy|Permission denied/i.test(r.out)) hint = "El puerto está ocupado o no se pudo abrir: cierre el Monitor serie, Arduino IDE u otro programa que lo use.";

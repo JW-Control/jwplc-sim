@@ -39,7 +39,8 @@ Novedades de 0.6.0:
   en el plano IEC y en la Planta 3D), bloqueo del general y puntaje.
 - **Planta 3D**: entorno con luz y sombras, montacargas y tanque detallados, banco de trabajo de las prácticas y
   modo **Armar**.
-- **«Subir al JWPLC»**: compila para el ESP32 real y carga por USB ([docs/SUBIR_JWPLC.md](docs/SUBIR_JWPLC.md)).
+- **«Subir al JWPLC»**: compila para el ESP32 real y carga por USB, con **Cancelar** ([docs/SUBIR_JWPLC.md](docs/SUBIR_JWPLC.md)).
+- **Package JWPLC publicado o local**, como en el OpenPLC Editor: la etiqueta junto al logo dice cuál se usa y lo cambia.
 - **Primera compilación en segundos**: la caché del package viene dentro del instalador.
 - Neumática ISO 1219 y diagrama de estados mejorados, tema claro/oscuro, colores del código como Arduino IDE 2,
   `jwsim-cli scene` para armar escenas desde JSON.

@@ -3341,6 +3341,11 @@ function wireUi() {
   $("up-refresh").addEventListener("click", upRefresh);
   $("up-tools").addEventListener("click", upInstallTools);
   $("up-go").addEventListener("click", upGo);
+  $("up-cancel").addEventListener("click", () => {
+    $("up-cancel").disabled = true;
+    $("up-note").textContent = "Cancelando…";
+    api.jwplcUploadCancel();
+  });
   $("up-first").addEventListener("click", () => {
     upPopover(false);
     miJwplc(true);
@@ -3663,9 +3668,14 @@ async function upGo() {
   setDockCollapsed(false);
   $("build-log").textContent = "";
   $("sb-build").textContent = "Subiendo al JWPLC…";
+  $("up-go").hidden = true;
+  $("up-cancel").hidden = false;
+  $("up-cancel").disabled = false;
   const r = await api.jwplcUpload({ dir: state.sketch.dir, port });
   upBusy = false;
-  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : "No se pudo subir al JWPLC";
+  $("up-go").hidden = false;
+  $("up-cancel").hidden = true;
+  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : r.cancelled ? "Subida cancelada" : "No se pudo subir al JWPLC";
   $("up-note").textContent = r.ok ? `Listo en ${port}: el JWPLC ya corre el programa.` : r.message;
   if (!r.ok && r.message) {
     $("build-log").textContent += `\n${r.message}\n`;

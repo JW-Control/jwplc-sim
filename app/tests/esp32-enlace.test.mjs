@@ -59,3 +59,19 @@ test("prepareEsp32 cambia de carpeta de versión sin borrar el package en vivo",
   prepareEsp32({ dataDir, package: { ...pkg, lock: { ...pkg.lock, JWPLC_PACKAGE_REF: "feature/x" } } });
   for (const f of ["platform.txt", "boards.txt", join("cores", "esp32", "Arduino.h")]) assert.ok(existsSync(join(tree, f)), f);
 });
+
+test("cancelar la compilación corta arduino-cli (botón Cancelar de Subir)", { skip: process.platform === "win32" }, async () => {
+  const { compileEsp32 } = await import("../../cli/lib/esp32.mjs");
+  const { chmodSync } = await import("node:fs");
+  const base = mkdtempSync(join(tmpdir(), "jwsim-cancelar-"));
+  const cli = join(base, "arduino-cli");
+  writeFileSync(cli, "#!/bin/sh\necho compilando\nsleep 30\n");
+  chmodSync(cli, 0o755);
+  const ac = new AbortController();
+  const t0 = Date.now();
+  setTimeout(() => ac.abort(), 300);
+  const r = await compileEsp32(base, { cli, missing: [], config: join(base, "c.yaml"), version: "x", dataDir: base }, { buildDir: join(base, "b"), signal: ac.signal });
+  assert.equal(r.cancelled, true);
+  assert.equal(r.ok, false);
+  assert.ok(Date.now() - t0 < 5000);
+});

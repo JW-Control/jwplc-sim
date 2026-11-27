@@ -77,6 +77,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   jwplcUploadInfo: () => ipcRenderer.invoke("jwplc:uploadInfo"),
   jwplcInstallTools: () => ipcRenderer.invoke("jwplc:installTools"),
   jwplcUpload: (args) => ipcRenderer.invoke("jwplc:upload", args),
+  jwplcUploadCancel: () => ipcRenderer.invoke("jwplc:uploadCancel"),
   equipoInfo: () => ipcRenderer.invoke("equipo:info"),
   equipoOpen: (kind) => ipcRenderer.invoke("equipo:open", kind),
   formatCode: (text, name, dir) => ipcRenderer.invoke("code:format", { text, name, dir }),
