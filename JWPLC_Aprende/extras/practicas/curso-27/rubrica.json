@@ -1,0 +1,166 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-27",
+  "goals": [
+    {
+      "id": "llena",
+      "description": "S1 en I: la bomba llena el tanque hasta B2",
+      "console": "Tanque lleno",
+      "hint": "Pon S1 en I en Mandos y mira los campos en la pestaña Placa."
+    },
+    {
+      "id": "tiempo",
+      "description": "Al llenarse: «Llenado en N s» y el campo «Último llenado»",
+      "console": "Llenado en \\d+ s",
+      "after": "llena",
+      "hint": "Al pasar la bomba de marcha a parada por B2, calcula (millis() - inicioBomba) / 1000, escríbelo con Serial.printf y muéstralo con setValue() en un campo nuevo.",
+      "why": "Un llenado que cada día tarda más avisa de una bomba gastada antes de que falle."
+    },
+    {
+      "id": "vigila",
+      "description": "Si la bomba pasa de 20 s sin llegar a B2: «Falla: llenado lento»",
+      "console": "Falla: llenado lento",
+      "hint": "Con la bomba en marcha, si millis() - inicioBomba >= 20000: para la bomba, falla = true y el estado dice FALLA. La falla se borra con S1 en 0. Pruébalo quemando el motor M1 (clic derecho, Fallas)."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Llenado normal",
+      "until_ms": 21000,
+      "actions": [
+        {
+          "at_ms": 500,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "La bomba arranca con el tanque bajo",
+          "points": 2,
+          "from_ms": 500,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "Para al llegar a B2",
+          "points": 2,
+          "from_ms": 17000,
+          "to_ms": 20000,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "Informa el tiempo del llenado (17 a 19 s)",
+          "points": 5,
+          "console": "Llenado en 1[7-9] s",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Un llenado normal no da falla",
+          "points": 1,
+          "console": "Falla",
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bomba quemada",
+      "until_ms": 29000,
+      "actions": [
+        {
+          "at_ms": 500,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 26000,
+          "device": "S1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 27000,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "faults": [
+        {
+          "kind": "burnt",
+          "device": "M1",
+          "at_ms": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "La bomba intenta llenar",
+          "points": 1,
+          "from_ms": 500,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "A los 20 s sin llenar: «Falla: llenado lento»",
+          "points": 4,
+          "console": "Falla: llenado lento",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "La bomba para con la falla",
+          "points": 3,
+          "from_ms": 20000,
+          "to_ms": 21500,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 4000
+        },
+        {
+          "description": "S1 en 0 y en I reconoce la falla: vuelve a intentar",
+          "points": 2,
+          "from_ms": 27000,
+          "to_ms": 28500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 300
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 22000,
+      "actions": [
+        {
+          "at_ms": 500,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

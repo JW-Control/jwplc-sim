@@ -1781,6 +1781,465 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 5,
+      "nombre": "Pantalla y HMI",
+      "lecciones": [
+        {
+          "id": "curso-26",
+          "numero": 26,
+          "titulo": "La pantalla: el estado de la máquina a la vista",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/26.La_pantalla",
+          "aprende": [
+            "Dibujar en la pantalla del equipo con el objeto JWPLC_TFT: texto, colores y recuadros.",
+            "Las dos funciones que llama el package: jwplcUIEnter() para lo fijo y jwplcUIUpdate() para lo que cambia.",
+            "Redibujar solo cuando algo cambia, para que la pantalla no parpadee.",
+            "La pantalla de estado (IDLE) del equipo y la tuya (USER): cómo se pasa de una a otra."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA), desde +24 V.",
+                "I0.1: pulsador de PARADA (NC), desde +24 V.",
+                "Q0.0: bobina del contactor de la bomba."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**: la pantalla muestra **PARADA** en rojo. **S2** es NC: en reposo `I0.1` ya está activa.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra y la pantalla pasa a **MARCHA** en verde.",
+                "**S2 Parada** la detiene. En la Placa, **ESC** muestra la pantalla de estado del equipo y **OK** vuelve a la de la bomba.",
+                "Lección 26: la pantalla, bomba P1 marcha I0.0, parada NC I0.1\nMotor en marcha\nMotor detenido"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: al arrancar, la pantalla pasa sola a la vista de la bomba.",
+            "PARADA en rojo; MARCHA la pone en verde.",
+            "ESC vuelve a la pantalla de estado del equipo; OK abre otra vez la de la bomba."
+          ],
+          "practica": [
+            "Cuenta los arranques: muéstralos abajo en la pantalla y escríbelos en el Monitor Serie («Arranques: 2»).",
+            "Agrega el térmico (I0.2, NC): abierto, la bomba para, la lámpara de falla Q0.1 enciende, el Monitor Serie dice «Falla: térmico» y la pantalla muestra FALLA en naranja."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-26",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "MARCHA pone la bomba en marcha (KM1)",
+                "extra": false
+              },
+              {
+                "id": "arranques",
+                "text": "Cuenta los arranques: «Arranques: 2»",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Abre el térmico F1: «Falla: térmico» y H1 (Q0.1) encendida",
+                "extra": false
+              },
+              {
+                "id": "para",
+                "text": "Con la falla, la bomba se detiene y H1 enciende",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-27",
+          "numero": 27,
+          "titulo": "Campos HMI: el tanque en la pantalla",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/27.Campos_HMI",
+          "aprende": [
+            "Declarar los campos de la pantalla (texto, piloto, valor y barra) en una tabla, sin dibujar a mano.",
+            "Actualizarlos con setText(), setBool(), setValue() y setBar(): el package repinta solo lo que cambió.",
+            "Elegir el refresco ON_DEMAND para que la pantalla no gaste tiempo si nada cambia.",
+            "Mostrar el avance de un proceso con una barra."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: sensor B1, nivel bajo (30 %). I0.1: sensor B2, tanque lleno (80 %).",
+                "I0.2: selector «Habilitar».",
+                "Q0.0: contactor KM1 de la bomba. Q0.1: electroválvula Y1 de descarga. Q0.2: lámpara H1 de nivel bajo."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa** para ver los campos.",
+                "En **Mandos** (panel **Reto**) pon **S1** en **I**: la bomba arranca, el estado dice **LLENANDO** y la barra avanza. El tanque se ve en **Esquema eléctrico**.",
+                "A los 18 s el agua llega a **B2**: la bomba para y **Llenados** pasa a 1.",
+                "Para probar la vigilancia de la práctica, en el esquema quema el motor **M1** (clic derecho, **Fallas**).",
+                "Lección 27: campos HMI, tanque B1 I0.0, B2 I0.1, selector I0.2\nBomba en marcha\nTanque lleno. Llenados: 1"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y pon el selector en I.",
+            "La bomba llena hasta B2: la pantalla dice LLENANDO, el piloto pasa a MARCHA y la barra avanza.",
+            "Al llenarse, el estado pasa a EN NIVEL y el contador de llenados sube."
+          ],
+          "practica": [
+            "Agrega un campo «Último llenado» en segundos y escribe «Llenado en N s» en el Monitor Serie cada vez que el tanque se llena.",
+            "Vigila el llenado: si la bomba pasa de 20 s sin llegar a B2, escribe «Falla: llenado lento», para la bomba y muestra FALLA hasta que el selector vuelva a 0."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-27",
+            "objetivos_en_vivo": [
+              {
+                "id": "llena",
+                "text": "S1 en I: la bomba llena el tanque hasta B2",
+                "extra": false
+              },
+              {
+                "id": "tiempo",
+                "text": "Al llenarse: «Llenado en N s» y el campo «Último llenado»",
+                "extra": false
+              },
+              {
+                "id": "vigila",
+                "text": "Si la bomba pasa de 20 s sin llegar a B2: «Falla: llenado lento»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-28",
+          "numero": 28,
+          "titulo": "Páginas: la botonera recorre la pantalla",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/28.Paginas_y_botonera",
+          "aprende": [
+            "Repartir los campos en páginas: cada campo dice en qué página va.",
+            "Cambiar de página con setUserPage() y la botonera (LEFT y RIGHT).",
+            "Mostrar duraciones (mm:ss) y la fecha y hora del RTC sin escribir código para formatearlas.",
+            "Que la misma tecla haga cosas distintas según la página."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "El tanque de la lección 27: B1 en I0.0, B2 en I0.1, selector en I0.2.",
+                "Q0.0: bomba (KM1). Q0.1: descarga (Y1). Q0.2: lámpara de nivel bajo (H1)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "Aprieta **RIGHT** en la botonera (o la flecha derecha del teclado): pasas a **CONTADORES** y luego a **RELOJ**. **LEFT** vuelve.",
+                "En **Mandos** (panel **Reto**) pon **S1** en **I** y vuelve a **CONTADORES**: el horómetro de la bomba avanza.",
+                "Lección 28: páginas, LEFT y RIGHT; tanque B1 I0.0, B2 I0.1, selector I0.2\nPágina 1\nPágina 2\nPágina 3\nPágina 2"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: la pantalla muestra la página PROCESO.",
+            "RIGHT pasa a CONTADORES (llenados y horómetro de la bomba) y luego a RELOJ.",
+            "LEFT vuelve atrás. ESC lleva a la pantalla de estado del equipo y OK regresa."
+          ],
+          "practica": [
+            "Haz que las páginas den la vuelta: RIGHT en la última va a la primera y LEFT en la primera va a la última. Escribe «Página N de 4».",
+            "Agrega una página 4, MANTENIMIENTO: con OK en esa página, llenados y horómetro vuelven a cero y se escribe «Contadores a cero». En las otras páginas OK no hace nada."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-28",
+            "objetivos_en_vivo": [
+              {
+                "id": "pasa",
+                "text": "RIGHT pasa a la página 2",
+                "extra": false
+              },
+              {
+                "id": "vuelta",
+                "text": "RIGHT en la última página vuelve a la primera: «Página 1 de 4»",
+                "extra": false
+              },
+              {
+                "id": "cero",
+                "text": "En MANTENIMIENTO, OK: «Contadores a cero»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-29",
+          "numero": 29,
+          "titulo": "Ajustar parámetros desde el frente",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/29.Ajustar_parametros",
+          "aprende": [
+            "Editar un parámetro en la pantalla como en un equipo comercial: OK edita, UP y DOWN cambian, OK guarda, ESC cancela.",
+            "Editar sobre una copia: la máquina sigue con el valor viejo hasta que se confirma.",
+            "Límites y pasos fijos para que el operador no ponga valores absurdos.",
+            "Liberar ESC (IDLE_RETURN_DISABLED) cuando la pantalla lo necesita para cancelar."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA). I0.1: pulsador de PARADA (NC).",
+                "Q0.0: contactor de la mezcladora."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "Aprieta **OK** (o **Enter**): el aviso **EDITA** se pone amarillo. Sube con **UP** (flecha arriba) y guarda con **OK**. **ESC** cancela.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra y **Falta** cuenta hacia atrás.",
+                "Para probar la FRAM de la práctica, detén la simulación y vuelve a ejecutar: el Sim conserva la memoria como el equipo real.",
+                "Lección 29: ajustar desde el frente, marcha I0.0, parada NC I0.1\nTiempo: 20 s\nEditando\nTiempo: 25 s\nMezclando 25 s\nMezcla terminada"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: la pantalla muestra la mezcladora y el tiempo de mezcla, 20 s.",
+            "OK: el aviso EDITA se pone amarillo. UP sube de a 5 s; OK guarda.",
+            "MARCHA: la mezcladora marcha el tiempo ajustado y el campo «Falta» cuenta hacia atrás."
+          ],
+          "practica": [
+            "Guarda el tiempo en la FRAM al confirmarlo y recupéralo al arrancar («Recuperado: 30 s»).",
+            "Con la mezcladora en marcha, OK no entra a editar: escribe «Detén la mezcladora para ajustar»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-29",
+            "objetivos_en_vivo": [
+              {
+                "id": "edita",
+                "text": "Ajusta el tiempo: OK, UP y OK: «Tiempo: 25 s»",
+                "extra": false
+              },
+              {
+                "id": "mezcla",
+                "text": "MARCHA mezcla el tiempo ajustado",
+                "extra": false
+              },
+              {
+                "id": "recupera",
+                "text": "Al volver a ejecutar: «Recuperado: 25 s»",
+                "extra": false
+              },
+              {
+                "id": "bloquea",
+                "text": "Con la mezcladora en marcha, OK: «Detén la mezcladora para ajustar»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-30",
+          "numero": 30,
+          "titulo": "Alarmas en pantalla",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/30.Alarmas_en_pantalla",
+          "aprende": [
+            "Declarar ventanas de alarma con `setPopups()` y abrirlas con `showPopup()`.",
+            "Los dos estados de una alarma: si la causa sigue y si alguien la reconoció.",
+            "Detectar el reconocimiento: la ventana CRIT se cierra con OK y `popupActive()` pasa a `false`.",
+            "La lámpara de falla según la norma: parpadea sin reconocer, fija si la causa sigue, apagada cuando todo pasó."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA). I0.1: pulsador de PARADA (NC). I0.2: contacto del térmico (NC).",
+                "Q0.0: contactor de la bomba. Q0.1: lámpara de falla."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra.",
+                "Abre **F1 Térmico**: aparece la ventana **A01 TERMICO** y **H1** parpadea.",
+                "Aprieta **OK** (o **Enter**) para reconocerla: **H1** queda fija hasta que cierres **F1**.",
+                "Lección 30: alarmas, marcha I0.0, parada NC I0.1, térmico NC I0.2, falla Q0.1\nBomba en marcha\nAlarma A01: térmico\nBomba detenida\nA01 reconocida\nA01: térmico normal"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca la bomba con MARCHA.",
+            "Abre el térmico: la bomba para, aparece la ventana roja A01 TERMICO y H1 parpadea.",
+            "OK cierra la ventana: H1 queda fija mientras el térmico siga abierto y se apaga cuando vuelve a cerrar."
+          ],
+          "practica": [
+            "Con una alarma sin reconocer, MARCHA no arranca: escribe «Reconozca la alarma A01» (como mucho una vez por segundo).",
+            "Aviso A02 (ventana WARN): con la bomba más de 15 s en marcha, «Alarma A02: marcha larga», una vez por arranque. La bomba sigue."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-30",
+            "objetivos_en_vivo": [
+              {
+                "id": "a01",
+                "text": "Abre F1: ventana A01 y «Alarma A01: térmico»",
+                "extra": false
+              },
+              {
+                "id": "reconoce",
+                "text": "OK en la Placa: «A01 reconocida»",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Sin reconocer, MARCHA: «Reconozca la alarma A01»",
+                "extra": false
+              },
+              {
+                "id": "a02",
+                "text": "Bomba más de 15 s en marcha: «Alarma A02: marcha larga»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-31",
+          "numero": 31,
+          "titulo": "Tendencias: el ritmo de la cinta en una gráfica",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/31.Tendencias",
+          "aprende": [
+            "Un campo de tendencia (`JWPLC_UITrendField`) y `setTrend()`: una curva que avanza con el tiempo.",
+            "Armar la configuración de la gráfica con nombres (`grafica.sampleIntervalMs = 1000;`) en lugar de una lista larga de números.",
+            "Medir un ritmo con una ventana que se desliza: 6 casilleros de 5 s en un arreglo.",
+            "Por qué una tendencia dice más que un número: cómo viene la máquina, no solo cómo está."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA). I0.1: pulsador de PARADA (NC). I0.2: sensor de piezas al final de la cinta.",
+                "Q0.0: contactor del motor de la cinta."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha**: **KM1** se cierra.",
+                "Da toques a **B1** (una pieza cada uno): cada 5 s sube el ritmo y la curva avanza un punto por segundo.",
+                "Lección 31: tendencias, marcha I0.0, parada NC I0.1, sensor B1 I0.2\nCinta en marcha\nRitmo: 6 piezas/min, total 3\nRitmo: 14 piezas/min, total 7\nRitmo: 22 piezas/min, total 11"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y arranca la cinta con MARCHA.",
+            "Pasa piezas frente al sensor: cada 5 s el Monitor Serie informa el ritmo y la curva sube.",
+            "Deja de pasar piezas: en 30 s el ritmo baja a cero y la curva lo muestra."
+          ],
+          "practica": [
+            "Con la ventana de 30 s llena y menos de 12 piezas por minuto, escribe «Ritmo bajo: N piezas/min» una vez y enciende H1 (Q0.1). Al volver a 12 o más, «Ritmo normal» y H1 apagada.",
+            "Dibuja el mínimo como una línea roja punteada en la gráfica (`thresholdCount`, `thr1Value`)."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-31",
+            "objetivos_en_vivo": [
+              {
+                "id": "ritmo",
+                "text": "Cinta en marcha: «Ritmo: N piezas/min» cada 5 s",
+                "extra": false
+              },
+              {
+                "id": "bajo",
+                "text": "Ritmo bajo con la ventana llena: «Ritmo bajo: N piezas/min»",
+                "extra": false
+              },
+              {
+                "id": "normal",
+                "text": "El ritmo se recupera: «Ritmo normal»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-32",
+          "numero": 32,
+          "titulo": "Proyecto: la HMI de una cinta de lotes",
+          "ruta": "examples/Curso_JWPLC_Basic/5.Pantalla_y_HMI/32.Proyecto_HMI_cinta_de_lotes",
+          "aprende": [
+            "Juntar toda la Unidad 5 en una máquina: campos, páginas, ajustes, tendencia y alarmas.",
+            "Ordenar el `loop()` en funciones: `leerBotonera()`, `contarRitmo()` y el bloque de la cinta.",
+            "Repartir la botonera: la ventana de alarma primero, después la edición, y recién después las páginas.",
+            "Un atasco detectado por tiempo: 20 s en marcha sin piezas."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Borne 1M a 0 V.",
+                "I0.0: pulsador de MARCHA (NA). I0.1: pulsador de PARADA (NC). I0.2: sensor de piezas al final de la cinta.",
+                "Q0.0: contactor del motor de la cinta. Q0.1: lámpara de falla."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "En **Mandos** (panel **Reto**) da un toque a **S1 Marcha** y diez toques a **B1**: el lote se completa y **KM1** se abre.",
+                "Recorre las páginas con **LEFT** y **RIGHT** (flechas del teclado). En **AJUSTES**, **OK** edita, **UP** y **DOWN** cambian, **OK** guarda y **ESC** cancela.",
+                "Arranca con **S1** y no toques **B1**: a los 20 s aparece **A01 ATASCO**. **OK** (o **Enter**) la reconoce.",
+                "Lección 32: cinta de lotes, marcha I0.0, parada NC I0.1, sensor B1 I0.2, falla Q0.1\nLote: 10 piezas\nCinta en marcha\nLote completo: 10 piezas\nCinta en marcha\nAlarma A01: atasco\nA01 reconocida"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: la página PROCESO muestra la cinta, el lote (0 / 10), el total y el ritmo.",
+            "MARCHA y pasa diez piezas: la cinta para sola con «Lote completo: 10 piezas».",
+            "RIGHT: la página RITMO con la curva. RIGHT otra vez: AJUSTES; OK, UP y OK cambian el lote y lo guardan en la FRAM.",
+            "MARCHA sin pasar piezas: a los 20 s la cinta para, salta la ventana A01 ATASCO y H1 parpadea. OK la reconoce."
+          ],
+          "practica": [
+            "Al completar cada lote, escribe «Lote N completo en mm:ss», con N contando desde el encendido.",
+            "Con la ventana A01 abierta, MARCHA no arranca: «Reconozca la alarma A01», como mucho una vez por segundo."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-32",
+            "objetivos_en_vivo": [
+              {
+                "id": "lote",
+                "text": "Completa un lote: «Lote completo: 10 piezas»",
+                "extra": false
+              },
+              {
+                "id": "tiempo",
+                "text": "«Lote N completo en mm:ss»",
+                "extra": false
+              },
+              {
+                "id": "atasco",
+                "text": "20 s sin piezas: «Alarma A01: atasco»",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "Sin reconocer, MARCHA: «Reconozca la alarma A01»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "curso_iec": [

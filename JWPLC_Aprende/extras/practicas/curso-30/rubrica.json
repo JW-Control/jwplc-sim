@@ -1,0 +1,242 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-30",
+  "goals": [
+    {
+      "id": "a01",
+      "description": "Abre F1: ventana A01 y «Alarma A01: térmico»",
+      "console": "Alarma A01: térmico",
+      "hint": "Arranca con S1 y mantén apretado F1 en Mandos; mira la pestaña Placa."
+    },
+    {
+      "id": "reconoce",
+      "description": "OK en la Placa: «A01 reconocida»",
+      "console": "A01 reconocida",
+      "after": "a01"
+    },
+    {
+      "id": "bloqueo",
+      "description": "Sin reconocer, MARCHA: «Reconozca la alarma A01»",
+      "console": "Reconozca la alarma A01",
+      "hint": "Agrega && reconocida a la regla del motor; si apretan MARCHA sin reconocer, escribe el aviso (no más de una vez por segundo).",
+      "why": "Reconocer obliga a alguien a mirar la causa antes de volver a arrancar."
+    },
+    {
+      "id": "a02",
+      "description": "Bomba más de 15 s en marcha: «Alarma A02: marcha larga»",
+      "console": "Alarma A02: marcha larga",
+      "hint": "Anota millis() al arrancar; si pasan 15000 ms con la bomba en marcha y aún no avisaste, JWPLC_Display.showPopup(AVISO_MARCHA_LARGA) con una ventana JWPLC_UIPopupWarn."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Reconocer antes de arrancar",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3400,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "4000 BTN_OK=1",
+        "4150 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "F1 detiene la bomba",
+          "points": 1,
+          "from_ms": 1800,
+          "to_ms": 2100,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "Sin reconocer, MARCHA no arranca",
+          "points": 4,
+          "from_ms": 3200,
+          "to_ms": 3900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa «Reconozca la alarma A01»",
+          "points": 3,
+          "console": "Reconozca la alarma A01"
+        },
+        {
+          "description": "OK reconoce: «A01 reconocida»",
+          "points": 1,
+          "console": "A01 reconocida"
+        },
+        {
+          "description": "Reconocida, MARCHA arranca",
+          "points": 3,
+          "from_ms": 4600,
+          "to_ms": 5100,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 300
+        }
+      ]
+    },
+    {
+      "name": "Marcha larga",
+      "until_ms": 18500,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "A los 15 s: «Alarma A02: marcha larga», una vez",
+          "points": 5,
+          "console": "Alarma A02: marcha larga",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "No antes de los 15 s",
+          "points": 1,
+          "console": "Alarma A02",
+          "from_ms": 0,
+          "to_ms": 15500,
+          "count": [
+            0,
+            0
+          ]
+        },
+        {
+          "description": "El aviso no detiene la bomba",
+          "points": 2,
+          "from_ms": 16000,
+          "to_ms": 18500,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 2000
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "5500 BTN_OK=1",
+        "5650 BTN_OK=0"
+      ]
+    }
+  ]
+}

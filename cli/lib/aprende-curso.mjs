@@ -155,6 +155,7 @@ const UNIT_NAMES = {
   "CPP para el tablero": "C++ para el tablero",
   "El equipo por dentro": "El equipo por dentro",
   "Pantalla y botonera": "Pantalla y botonera",
+  "Pantalla y HMI": "Pantalla y HMI",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",
   Proyectos: "Proyectos",

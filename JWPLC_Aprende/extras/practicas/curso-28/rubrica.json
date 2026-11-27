@@ -1,0 +1,142 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-28",
+  "goals": [
+    {
+      "id": "pasa",
+      "description": "RIGHT pasa a la página 2",
+      "console": "Página 2",
+      "hint": "Abre la pestaña Placa y aprieta RIGHT (o la flecha derecha del teclado)."
+    },
+    {
+      "id": "vuelta",
+      "description": "RIGHT en la última página vuelve a la primera: «Página 1 de 4»",
+      "console": "Página 1 de 4",
+      "after": "pasa",
+      "hint": "mostrarPagina((pagina + 1) % PAGINAS): el resto de dividir da la vuelta. Para LEFT: (pagina + PAGINAS - 1) % PAGINAS.",
+      "why": "El operador no tiene que recordar en qué extremo está: siempre puede seguir apretando la misma tecla."
+    },
+    {
+      "id": "cero",
+      "description": "En MANTENIMIENTO, OK: «Contadores a cero»",
+      "console": "Contadores a cero",
+      "hint": "Agrega CAMPO_TITULO_3 y un texto en la página 3; con pressed(BTN_OK) y pagina == 3, llenados = 0, segundosBomba = 0.",
+      "why": "Una acción que borra datos va en su propia página, no en una tecla que se aprieta sin querer."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Recorrer las páginas",
+      "until_ms": 4500,
+      "stim": [
+        "1500 BTN_RIGHT=1",
+        "1650 BTN_RIGHT=0",
+        "2000 BTN_RIGHT=1",
+        "2150 BTN_RIGHT=0",
+        "2500 BTN_RIGHT=1",
+        "2650 BTN_RIGHT=0",
+        "3000 BTN_RIGHT=1",
+        "3150 BTN_RIGHT=0",
+        "3500 BTN_LEFT=1",
+        "3650 BTN_LEFT=0"
+      ],
+      "checks": [
+        {
+          "description": "RIGHT avanza: «Página 2 de 4»",
+          "points": 2,
+          "console": "Página 2 de 4"
+        },
+        {
+          "description": "Llega a la página 4",
+          "points": 3,
+          "console": "Página 4 de 4"
+        },
+        {
+          "description": "RIGHT en la 4 da la vuelta a la 1",
+          "points": 4,
+          "console": "Página 1 de 4",
+          "from_ms": 3000,
+          "to_ms": 3400
+        },
+        {
+          "description": "LEFT en la 1 va a la 4",
+          "points": 4,
+          "console": "Página 4 de 4",
+          "from_ms": 3500,
+          "to_ms": 3900
+        }
+      ]
+    },
+    {
+      "name": "Mantenimiento",
+      "until_ms": 4500,
+      "stim": [
+        "1500 BTN_OK=1",
+        "1650 BTN_OK=0",
+        "2000 BTN_LEFT=1",
+        "2150 BTN_LEFT=0",
+        "2500 BTN_OK=1",
+        "2650 BTN_OK=0",
+        "3000 BTN_RIGHT=1",
+        "3150 BTN_RIGHT=0",
+        "3500 BTN_OK=1",
+        "3650 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "OK en la página 1 no borra nada",
+          "points": 2,
+          "console": "Contadores a cero",
+          "from_ms": 0,
+          "to_ms": 1900,
+          "count": [
+            0,
+            0
+          ]
+        },
+        {
+          "description": "OK en MANTENIMIENTO pone a cero",
+          "points": 3,
+          "console": "Contadores a cero",
+          "from_ms": 2400,
+          "to_ms": 2900,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Ya fuera de MANTENIMIENTO, OK no borra",
+          "points": 2,
+          "console": "Contadores a cero",
+          "from_ms": 3400,
+          "to_ms": 4500,
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 9000,
+      "stim": [
+        "1500 BTN_RIGHT=1",
+        "1650 BTN_RIGHT=0",
+        "2000 BTN_RIGHT=1",
+        "2150 BTN_RIGHT=0",
+        "2500 BTN_RIGHT=1",
+        "2650 BTN_RIGHT=0",
+        "3000 BTN_RIGHT=1",
+        "3150 BTN_RIGHT=0",
+        "3500 BTN_LEFT=1",
+        "3650 BTN_LEFT=0",
+        "5000 BTN_OK=1",
+        "5150 BTN_OK=0"
+      ]
+    }
+  ]
+}

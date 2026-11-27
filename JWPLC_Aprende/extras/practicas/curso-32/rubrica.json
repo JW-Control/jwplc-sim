@@ -1,0 +1,562 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-32",
+  "goals": [
+    {
+      "id": "lote",
+      "description": "Completa un lote: «Lote completo: 10 piezas»",
+      "console": "Lote completo",
+      "hint": "S1 en Mandos y diez toques a B1."
+    },
+    {
+      "id": "tiempo",
+      "description": "«Lote N completo en mm:ss»",
+      "console": "completo en",
+      "hint": "Anota millis() cuando empieza un lote (lote == 0 al arrancar) y, al completarlo, imprime los segundos como mm:ss con %02lu."
+    },
+    {
+      "id": "atasco",
+      "description": "20 s sin piezas: «Alarma A01: atasco»",
+      "console": "Alarma A01: atasco"
+    },
+    {
+      "id": "bloqueo",
+      "description": "Sin reconocer, MARCHA: «Reconozca la alarma A01»",
+      "console": "Reconozca la alarma A01",
+      "after": "atasco",
+      "hint": "Si alarmaAbierta, MARCHA no arranca la cinta: avisa como mucho una vez por segundo.",
+      "why": "La causa del atasco hay que verla antes de volver a arrancar."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lotes con tiempo",
+      "until_ms": 25000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 8200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 15000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 15200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 16000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 16200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 17000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 17200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 18000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 18200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 19000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 19200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 20000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 20200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 21000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 21200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 22000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 22200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 23000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 23200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La cinta para al completar el lote",
+          "points": 2,
+          "from_ms": 11500,
+          "to_ms": 12800,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "«Lote 1 completo en 00:10»",
+          "points": 4,
+          "console": "Lote 1 completo en 00:(09|10)"
+        },
+        {
+          "description": "El segundo lote cuenta: «Lote 2 completo en 00:10»",
+          "points": 3,
+          "console": "Lote 2 completo en 00:(09|10)"
+        }
+      ]
+    },
+    {
+      "name": "Atasco sin reconocer",
+      "until_ms": 29000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 23000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 23200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 26500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 26700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "25000 BTN_OK=1",
+        "25150 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "20 s sin piezas: «Alarma A01: atasco»",
+          "points": 1,
+          "console": "Alarma A01: atasco"
+        },
+        {
+          "description": "Sin reconocer, MARCHA no arranca",
+          "points": 4,
+          "from_ms": 22000,
+          "to_ms": 24900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Avisa «Reconozca la alarma A01»",
+          "points": 3,
+          "console": "Reconozca la alarma A01",
+          "count": [
+            1,
+            2
+          ]
+        },
+        {
+          "description": "OK reconoce: «A01 reconocida»",
+          "points": 1,
+          "console": "A01 reconocida"
+        },
+        {
+          "description": "Reconocida, MARCHA arranca",
+          "points": 2,
+          "from_ms": 26600,
+          "to_ms": 28000,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 500
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 5200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 8200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 12200,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

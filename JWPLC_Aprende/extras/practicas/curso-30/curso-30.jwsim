@@ -1,0 +1,213 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 30 · Alarmas en pantalla",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Alarmas_en_pantalla/Alarmas_en_pantalla.ino"
+  },
+  "exercise": {
+    "lesson": "curso-30",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Alarmas_en_pantalla",
+    "brief": {
+      "goal": "Que la bomba no arranque con una alarma sin reconocer y que avise con una ventana si marcha demasiado tiempo.",
+      "steps": [
+        "Ejecuta el ejemplo, arranca con S1 y abre F1: aparece la ventana A01 y H1 parpadea. OK en la Placa la reconoce.",
+        "Sin reconocer A01, MARCHA no arranca: escribe «Reconozca la alarma A01».",
+        "Agrega el aviso A02 (ventana WARN): con la bomba más de 15 s en marcha, «Alarma A02: marcha larga», una vez por arranque. La bomba sigue."
+      ],
+      "uses": [
+        "I0_0 · S1, MARCHA (NA)",
+        "I0_1 · S2, PARADA (NC)",
+        "I0_2 · F1, térmico (NC)",
+        "Q0_0 · KM1, bomba",
+        "Q0_1 · H1, falla",
+        "Botonera: OK reconoce",
+        "Pantalla TFT: ventanas de alarma"
+      ],
+      "teaches": "Una alarma tiene dos estados: si la causa sigue y si alguien la reconoció. La lámpara y la ventana muestran los dos, como pide la norma de alarmas."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 560,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 760,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "F1.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}
