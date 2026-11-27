@@ -197,6 +197,29 @@ select:focus-visible {
   font-weight: 600;
   letter-spacing: 0.2px;
 }
+.pkg-badge {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--muted, #9aa4b0);
+  background: transparent;
+  border: 1px solid currentColor;
+}
+.pkg-badge.is-local {
+  color: #ffd58a;
+  background: #4a3410;
+  border-color: #8a6420;
+}
+@media (prefers-color-scheme: light) {
+  .pkg-badge.is-local {
+    color: #7a4b00;
+    background: #ffe1a8;
+    border-color: #e0a83a;
+  }
+}
 .brand-mark {
   display: inline-grid;
   place-items: center;

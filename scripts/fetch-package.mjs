@@ -15,10 +15,15 @@
 //   JWPLC_PACKAGE_DIR  ruta a un checkout local de platform-jwplc. Si es un repo
 //                      git se verifica que HEAD o el tag coincidan con el commit
 //                      fijado; nunca se modifica ese checkout.
+//   JWSIM_PACKAGE      «publicado» (el de package.lock, como el instalador) o
+//                      «local» (el de desarrollo: JWPLC_PACKAGE_DIR, el
+//                      checkout hermano o el de la placa jwplc_local del
+//                      Arduino15). Sin definir: el orden de siempre.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -102,15 +107,11 @@ function markCommit(dir, commit) {
 export function resolvePackageRoot({ fetch = true, fijado = false } = {}) {
   const lock = readLock();
   if (fijado) return lockedPackage(lock, fetch);
-  const override = process.env.JWPLC_PACKAGE_DIR;
-
-  if (override) {
-    return packageFromDir(override);
-  }
-
-  const sibling = resolve(ROOT, "..", "platform-jwplc");
-  if (existsSync(join(sibling, lock.JWPLC_PACKAGE_TREE))) {
-    return packageFromDir(sibling);
+  const modo = process.env.JWSIM_PACKAGE;
+  if (modo !== "publicado") {
+    const local = localPackageDir(lock, { arduino15: modo === "local" });
+    if (local) return packageFromDir(local);
+    if (modo === "local") throw new Error("No se encontró el package local (jwplc_local). Elija «JWPLC (publicado)» en Herramientas → Package JWPLC.");
   }
 
   const dest = join(ROOT, ".jwsim", "package", lock.JWPLC_PACKAGE_REF.replaceAll("/", "_"));
@@ -124,6 +125,48 @@ export function resolvePackageRoot({ fetch = true, fijado = false } = {}) {
   }
   if (!fetch) throw new Error(`Package no descargado. Ejecute: node scripts/fetch-package.mjs`);
   return fetchPackageRef(lock.JWPLC_PACKAGE_REF);
+}
+
+// Arduino15 del usuario (como el OpenPLC Editor y Arduino IDE 2).
+function arduino15Dir() {
+  if (process.env.JWSIM_ARDUINO15) return process.env.JWSIM_ARDUINO15;
+  if (process.platform === "win32") return process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Arduino15");
+  return process.platform === "darwin" ? join(homedir(), "Library", "Arduino15") : join(homedir(), ".arduino15");
+}
+
+// Raíz del package de desarrollo (la carpeta que contiene JWPLC/2.1.0), o null:
+//   1. JWPLC_PACKAGE_DIR.
+//   2. Checkout hermano ../platform-jwplc (copia del repo de jwplc-sim).
+//   3. Con `arduino15`, la placa «jwplc_local» del Arduino15: la junction
+//      packages/jwplc_local/hardware/esp32/<versión> → platform-jwplc/JWPLC/2.1.0.
+export function localPackageDir(lock = readLock(), { arduino15 = true } = {}) {
+  const tree = lock.JWPLC_PACKAGE_TREE;
+  const override = process.env.JWPLC_PACKAGE_DIR;
+  if (override) return resolve(override);
+  const sibling = resolve(ROOT, "..", "platform-jwplc");
+  if (existsSync(join(sibling, tree))) return sibling;
+  if (!arduino15) return null;
+  const a15 = arduino15Dir();
+  const hw = a15 && join(a15, "packages", "jwplc_local", "hardware", "esp32");
+  if (!hw || !existsSync(hw)) return null;
+  const depth = tree.split(/[\\/]/).filter(Boolean).length;
+  for (const v of readdirSync(hw)) {
+    let dir;
+    try {
+      dir = realpathSync(join(hw, v));
+    } catch {
+      try {
+        dir = resolve(hw, readlinkSync(join(hw, v)));
+      } catch {
+        continue;
+      }
+    }
+    if (!existsSync(join(dir, "platform.txt"))) continue;
+    let root = dir;
+    for (let i = 0; i < depth; i++) root = dirname(root);
+    if (existsSync(join(root, tree, "platform.txt"))) return root;
+  }
+  return null;
 }
 
 // Package exacto de package.lock en .jwsim/package/<REF>/, con la marca de

@@ -3,10 +3,14 @@
 ## Subir al JWPLC (C++)
 
 El botón **⇪ Subir al JWPLC** de la barra superior compila el programa abierto
-para el ESP32 real y lo carga por USB. Usa el **mismo package fijado** que el
-simulador (`package.lock`), así que lo que se probó en el Sim es lo que corre
-en el equipo. El JWPLC Basic v2.0 entra solo en modo de carga (RC en EN): no
-hace falta apretar BOOT.
+para el ESP32 real y lo carga por USB. Usa el **mismo package que el
+simulador**: el publicado (`package.lock`) o el local de desarrollo, según
+**Package JWPLC** (la etiqueta junto al logo). Lo que se probó en el Sim es lo
+que corre en el equipo. El JWPLC Basic v2.0 entra solo en modo de carga (RC en
+EN): no hace falta apretar BOOT.
+
+Mientras compila o carga, **Cancelar** detiene arduino-cli o esptool (como en
+Arduino IDE), por ejemplo si el puerto elegido no era el del JWPLC.
 
 Cómo funciona (`cli/lib/esp32.mjs`):
 
@@ -16,9 +20,11 @@ Cómo funciona (`cli/lib/esp32.mjs`):
 - El Sim usa su propio directorio de datos de arduino-cli
   (`%APPDATA%\JWPLC Sim\arduino`; en desarrollo `build/arduino`, o
   `JWSIM_ARDUINO_DATA`). No toca el Arduino15 del usuario.
-- La plataforma es un enlace al árbol del package fijado:
+- La plataforma es un enlace (junction en Windows) al árbol del package:
   `packages/jwplc_sim/hardware/esp32/<versión>`, FQBN
-  `jwplc_sim:esp32:jwplcbasic`.
+  `jwplc_sim:esp32:jwplcbasic`. Al cambiar de versión se quita **solo el
+  enlace** (`removeEntry`): un borrado recursivo atravesaría la junction y
+  borraría el package enlazado (en modo local, el checkout del usuario).
 - Herramientas (`esp-x32 2601`, `esp32-libs 3.3.8`, `esptool_py 5.2.0`): si el
   usuario ya instaló la placa JWPLC en Arduino IDE u OpenPLC Editor, se enlazan
   desde su Arduino15. Si no, el panel ofrece descargarlas una vez (unos 540 MB,

@@ -19,7 +19,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { compileEsp32, installEsp32Tools, prepareEsp32, TOOLS_DOWNLOAD_MB, uploadEsp32 } from "../cli/lib/esp32.mjs";
 import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
-import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
+import { localPackageDir, readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { MARK, syncExample, syncExercise } from "./lib/exercise-copy.mjs";
@@ -349,14 +349,59 @@ function applyThemePref(mode, persist = true) {
 ipcMain.handle("app:getTheme", () => ({ theme: nativeTheme.themeSource, dark: nativeTheme.shouldUseDarkColors }));
 ipcMain.handle("app:setTheme", (_e, theme) => applyThemePref(theme, true));
 
-ipcMain.handle("app:info", () => {
+// ---------------------------------------------------------------- Package JWPLC
+// Como en el OpenPLC Editor: «JWPLC (publicado)» = el package de esta versión
+// del Sim (package.lock; el que trae el instalador) o «JWPLC local
+// (desarrollo)» = el checkout de platform-jwplc (la placa jwplc_local del
+// Arduino15, JWPLC_PACKAGE_DIR o el repo hermano). La app instalada arranca
+// en publicado; la copia del repo, en local si lo encuentra.
+function packageMode() {
+  const m = readPref("paquete");
+  if (m === "publicado" || m === "local") return m;
+  return app.isPackaged || !localPackageDir(readLock(), { arduino15: false }) ? "publicado" : "local";
+}
+function applyPackageMode(m = packageMode()) {
+  process.env.JWSIM_PACKAGE = m;
+  return m;
+}
+function packageInfo() {
+  const mode = process.env.JWSIM_PACKAGE ?? packageMode();
   try {
-    const { lock } = resolvePackageRoot({ fetch: false });
-    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
-  } catch {
+    const { root, lock, source } = resolvePackageRoot({ fetch: false });
+    return { mode, local: source === "dir", root, packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+  } catch (err) {
     const lock = readLock();
-    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+    return { mode, local: false, error: err.message, packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
   }
+}
+function setPackageMode(m) {
+  if (m === "local" && !localPackageDir()) {
+    dialog.showMessageBox(win, { type: "warning", message: "No se encontró el package local", detail: "Instale la placa «JWPLC local» (jwplc_local) en el Arduino15 enlazada a su copia de platform-jwplc, o defina JWPLC_PACKAGE_DIR." });
+    buildMenu();
+    return;
+  }
+  writePref("paquete", m);
+  applyPackageMode(m);
+  apiCatalog = null;
+  buildMenu();
+  forward("app:packageChanged", packageInfo());
+}
+
+function packageMenuItems() {
+  const mode = process.env.JWSIM_PACKAGE ?? packageMode();
+  const local = localPackageDir();
+  return [
+    { label: `JWPLC (publicado, ${readLock().JWPLC_PACKAGE_REF})`, type: "radio", checked: mode === "publicado", click: () => setPackageMode("publicado") },
+    { label: local ? "JWPLC local (desarrollo)" : "JWPLC local (desarrollo): no encontrado", type: "radio", checked: mode === "local", enabled: !!local || mode === "local", click: () => setPackageMode("local") },
+    ...(local ? [{ label: local, enabled: false }] : []),
+  ];
+}
+
+ipcMain.handle("app:info", () => packageInfo());
+// La etiqueta junto al logo abre el mismo selector (la barra de menús se oculta).
+ipcMain.handle("app:packageMenu", (e, at) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  Menu.buildFromTemplate(packageMenuItems()).popup({ window: w, x: Math.round(at?.x ?? 0), y: Math.round(at?.y ?? 0) });
 });
 
 ipcMain.handle("examples:list", () => listExamples());
@@ -1635,16 +1680,19 @@ ipcMain.handle("com:set", async (_e, cfg) => {
 // del usuario o se descargan una vez a los datos de la app.
 const arduinoData = () => process.env.JWSIM_ARDUINO_DATA ?? join(app.getPath("userData"), "arduino");
 let uploading = false;
+let uploadAbort = null;
 async function uploadPorts() {
   // Los puertos virtuales (com0com) no llevan a un equipo real.
   return (await listComPorts()).filter((p) => !/com0com/i.test(p.label));
 }
 ipcMain.handle("jwplc:uploadInfo", async () => {
+  // Los puertos se listan aunque falle la preparación de la plataforma.
+  const ports = await uploadPorts().catch(() => []);
   try {
     const env = prepareEsp32({ dataDir: arduinoData() });
-    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports: await uploadPorts(), busy: uploading, version: env.version };
+    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports, busy: uploading, version: env.version };
   } catch (err) {
-    return { error: err.message, ports: [], missing: [] };
+    return { error: err.message, ports, missing: [] };
   }
 });
 ipcMain.handle("jwplc:installTools", async () => {
@@ -1667,8 +1715,14 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
   if (uploading) return { ok: false, message: "ya hay una carga en curso" };
   if (isOpenPlcProject(dir)) return { ok: false, message: "Los proyectos IEC todavía se cargan desde el OpenPLC Editor. «Subir al JWPLC» por ahora es para sketches C++." };
   uploading = true;
+  uploadAbort = new AbortController();
+  const { signal } = uploadAbort;
   const t0 = Date.now();
   const log = (l) => forward("build:log", l);
+  const cancelled = () => {
+    log("[subir] cancelado");
+    return { ok: false, cancelled: true, message: "Cancelado: no se cargó nada al JWPLC.", ms: Date.now() - t0 };
+  };
   try {
     // El monitor del COM virtual usa el puerto: se suelta antes de cargar.
     if (comBridge && comBridge.path.toUpperCase() === String(port).toUpperCase()) {
@@ -1680,10 +1734,12 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
     const env = prepareEsp32({ dataDir: arduinoData() });
     if (!env.cli) return { ok: false, message: "Esta instalación de JWPLC Sim no trae arduino-cli (node scripts/fetch-arduino-cli.mjs)." };
     if (env.missing.length) return { ok: false, needTools: true, message: `Faltan las herramientas del ESP32 (${env.missing.map((t) => t.label).join(", ")}).` };
-    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log });
+    const c = await compileEsp32(dir, env, { buildDir: join(arduinoData(), "build", basename(dir)), log, signal });
+    if (c.cancelled) return cancelled();
     if (!c.ok) return { ok: false, stage: "compile", message: "No compiló para el JWPLC real. Revise el registro de Compilación.", ms: Date.now() - t0 };
     for (const l of c.size) log(`[subir] ${l}`);
-    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log });
+    const u = await uploadEsp32(dir, env, { buildDir: c.buildDir, port, log, signal });
+    if (u.cancelled) return cancelled();
     if (!u.ok) return { ok: false, stage: "upload", message: u.hint || "No se pudo cargar al JWPLC. Revise el registro de Compilación.", ms: Date.now() - t0 };
     log("[subir] listo: el JWPLC se reinició con el programa nuevo");
     return { ok: true, ms: Date.now() - t0, size: c.size };
@@ -1692,7 +1748,14 @@ ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
     return { ok: false, message: err.message.split("\n")[0], ms: Date.now() - t0 };
   } finally {
     uploading = false;
+    uploadAbort = null;
   }
+});
+// Cancelar la compilación o la carga (como en Arduino IDE), p. ej. si el
+// puerto elegido no era el del JWPLC.
+ipcMain.handle("jwplc:uploadCancel", () => {
+  uploadAbort?.abort();
+  return { ok: !!uploadAbort };
 });
 
 // Mi JWPLC: la prueba de recepción y la documentación del equipo. La ficha
@@ -1914,6 +1977,8 @@ function buildMenu() {
           { label: "Editor de componentes…", click: send("componentEditor") },
           ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
           { type: "separator" },
+          { label: "Package JWPLC", submenu: packageMenuItems() },
+          { type: "separator" },
           { label: "Buscar actualizaciones…", click: () => updater.check(true) },
           {
             label: "Canal de actualizaciones",
@@ -2022,6 +2087,7 @@ ipcMain.handle("app:takeOpenTarget", () => {
 app.whenReady().then(() => {
   if (!primary && pendingOpen) return;
   nativeTheme.themeSource = loadThemePref();
+  applyPackageMode();
   nativeTheme.on("updated", () => {
     const bg = nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa";
     win?.setBackgroundColor?.(bg);

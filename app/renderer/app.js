@@ -3341,6 +3341,11 @@ function wireUi() {
   $("up-refresh").addEventListener("click", upRefresh);
   $("up-tools").addEventListener("click", upInstallTools);
   $("up-go").addEventListener("click", upGo);
+  $("up-cancel").addEventListener("click", () => {
+    $("up-cancel").disabled = true;
+    $("up-note").textContent = "Cancelando…";
+    api.jwplcUploadCancel();
+  });
   $("up-first").addEventListener("click", () => {
     upPopover(false);
     miJwplc(true);
@@ -3663,9 +3668,14 @@ async function upGo() {
   setDockCollapsed(false);
   $("build-log").textContent = "";
   $("sb-build").textContent = "Subiendo al JWPLC…";
+  $("up-go").hidden = true;
+  $("up-cancel").hidden = false;
+  $("up-cancel").disabled = false;
   const r = await api.jwplcUpload({ dir: state.sketch.dir, port });
   upBusy = false;
-  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : "No se pudo subir al JWPLC";
+  $("up-go").hidden = false;
+  $("up-cancel").hidden = true;
+  $("sb-build").textContent = r.ok ? `Subido al JWPLC en ${(r.ms / 1000).toFixed(0)} s` : r.cancelled ? "Subida cancelada" : "No se pudo subir al JWPLC";
   $("up-note").textContent = r.ok ? `Listo en ${port}: el JWPLC ya corre el programa.` : r.message;
   if (!r.ok && r.message) {
     $("build-log").textContent += `\n${r.message}\n`;
@@ -3870,11 +3880,28 @@ async function main() {
     syncThemeUi(storedTheme());
   }
   setStatus("idle", "Detenido");
-  const info = await api.info();
-  state.packageRef = info.packageRef;
-  // La versión del package va solo en la ayuda emergente del logo (antes era
-  // un texto fijo en la cabecera de la placa y en la barra de estado).
-  document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})`;
+  // La versión del package va en la ayuda emergente del logo; con el package
+  // local (Herramientas → Package JWPLC) se ve además la etiqueta «JWPLC local».
+  const showPackage = (info) => {
+    state.packageRef = info.packageRef;
+    document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})${info.local ? ` · local: ${info.root}` : ""}`;
+    const badge = document.getElementById("pkg-badge");
+    if (badge) {
+      badge.textContent = info.local ? "JWPLC local" : "JWPLC publicado";
+      badge.classList.toggle("is-local", !!info.local);
+      badge.title = `${info.local ? `Package de desarrollo: ${info.root}` : "Package publicado"} (${info.packageRef}). Clic para cambiar.`;
+    }
+  };
+  document.getElementById("pkg-badge")?.addEventListener("click", (ev) => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    api.packageMenu?.({ x: r.left, y: r.bottom + 2 });
+  });
+  showPackage(await api.info());
+  api.onPackageChanged?.((info) => {
+    showPackage(info);
+    if (info.error) consoleWrite(`[jwsim] ${info.error}\n`, "sys");
+    else consoleWrite(`[jwsim] package: ${info.local ? `JWPLC local (${info.root}, ${info.packageRef})` : `JWPLC publicado (${info.packageRef})`}. Se usa desde la próxima compilación.\n`, "sys");
+  });
   await initMonaco();
   renderWatch();
   clearDebugView();
