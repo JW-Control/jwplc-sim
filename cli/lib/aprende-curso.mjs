@@ -156,6 +156,7 @@ const UNIT_NAMES = {
   "El equipo por dentro": "El equipo por dentro",
   "Pantalla y botonera": "Pantalla y botonera",
   "Pantalla y HMI": "Pantalla y HMI",
+  "RS485 y Modbus RTU": "RS-485 y Modbus RTU",
   "Reloj memoria y registro": "Reloj, memoria y registro",
   Comunicaciones: "Comunicaciones",
   Proyectos: "Proyectos",

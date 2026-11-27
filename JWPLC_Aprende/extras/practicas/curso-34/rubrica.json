@@ -1,0 +1,80 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-34",
+  "goals": [
+    {
+      "id": "envia",
+      "description": "UP y OK: «Consigna enviada»",
+      "console": "Consigna enviada",
+      "hint": "En la Placa: UP una vez y OK."
+    },
+    {
+      "id": "actual",
+      "description": "Al arrancar: «Consigna actual: 35 °C»",
+      "console": "Consigna actual: 35",
+      "hint": "En setup(), readHoldingRegistersSync(CONTROLADOR, 0, 1, registros) y consigna = registros[0] / 10."
+    },
+    {
+      "id": "confirma",
+      "description": "Después de enviar: «Consigna confirmada»",
+      "console": "Consigna confirmada",
+      "after": "envia",
+      "hint": "Tras el envío, lee otra vez el holding 0.",
+      "why": "El esclavo puede rechazar o recortar un valor: lo que vale es lo que quedó en él."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Leer, cambiar y confirmar",
+      "until_ms": 5000,
+      "stim": [
+        "2000 BTN_UP=1",
+        "2150 BTN_UP=0",
+        "3000 BTN_OK=1",
+        "3150 BTN_OK=0"
+      ],
+      "checks": [
+        {
+          "description": "Lee la consigna del controlador: «Consigna actual: 35 °C»",
+          "points": 5,
+          "console": "Consigna actual: 35"
+        },
+        {
+          "description": "UP desde 35: «Consigna enviada: 40 °C»",
+          "points": 3,
+          "console": "Consigna enviada: 40"
+        },
+        {
+          "description": "El controlador queda en 40 °C",
+          "points": 5,
+          "at_ms": 4500,
+          "expect": {
+            "TC1.sv": 40
+          }
+        },
+        {
+          "description": "Confirma: «Consigna confirmada: 40 °C»",
+          "points": 5,
+          "console": "Consigna confirmada: 40"
+        },
+        {
+          "description": "Sigue leyendo la temperatura",
+          "points": 2,
+          "console": "Temperatura: 25\\.0"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Cambiar la consigna",
+      "until_ms": 6000,
+      "stim": [
+        "2000 BTN_UP=1",
+        "2150 BTN_UP=0",
+        "3000 BTN_OK=1",
+        "3150 BTN_OK=0"
+      ]
+    }
+  ]
+}

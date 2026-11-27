@@ -1,0 +1,144 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-33",
+  "goals": [
+    {
+      "id": "temp",
+      "description": "El Monitor Serie muestra «Temperatura: 25.0 °C»",
+      "console": "Temperatura: 25\\.0",
+      "hint": "Ejecuta: el JWPLC pregunta al controlador cada segundo."
+    },
+    {
+      "id": "calienta",
+      "description": "«Calentando» al leer el bit 0 del estado",
+      "console": "Calentando",
+      "hint": "Lee 2 registros (0 y 1); calentando = (registros[1] & 1) != 0; avisa cuando cambia."
+    },
+    {
+      "id": "alarma",
+      "description": "Temperatura de 55 °C: «Alarma de temperatura» y H1",
+      "console": "Alarma de temperatura",
+      "hint": "alarma = (registros[1] & 2) != 0; digitalWrite(Q0_0, alarma);",
+      "why": "Un registro de estado junta varios avisos en un número: cada bit es uno."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Calentar y alarma",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "TC1",
+          "action": "temp",
+          "value": 25
+        },
+        {
+          "at_ms": 3500,
+          "device": "TC1",
+          "action": "temp",
+          "value": 45
+        },
+        {
+          "at_ms": 6000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 55
+        }
+      ],
+      "checks": [
+        {
+          "description": "Lee la temperatura: «Temperatura: 25.0 °C»",
+          "points": 2,
+          "console": "Temperatura: 25\\.0"
+        },
+        {
+          "description": "Sigue el cambio: «Temperatura: 45.0 °C»",
+          "points": 1,
+          "console": "Temperatura: 45\\.0"
+        },
+        {
+          "description": "A 25 °C (bajo la consigna): «Calentando»",
+          "points": 3,
+          "console": "Calentando",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Sobre la consigna: «Resistencia apagada»",
+          "points": 3,
+          "console": "Resistencia apagada",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "A 55 °C: «Alarma de temperatura», una vez",
+          "points": 4,
+          "console": "Alarma de temperatura",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "H1 encendida con la alarma",
+          "points": 3,
+          "from_ms": 6000,
+          "to_ms": 8800,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 800
+        },
+        {
+          "description": "H1 apagada sin alarma",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 5900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Sin errores del bus",
+          "points": 2,
+          "console": "Sin respuesta",
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Horno",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "TC1",
+          "action": "temp",
+          "value": 25
+        },
+        {
+          "at_ms": 3500,
+          "device": "TC1",
+          "action": "temp",
+          "value": 45
+        },
+        {
+          "at_ms": 6000,
+          "device": "TC1",
+          "action": "temp",
+          "value": 55
+        }
+      ]
+    }
+  ]
+}

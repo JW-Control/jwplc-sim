@@ -1,0 +1,150 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-36",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "S1: el ventilador arranca por Modbus",
+      "console": "Ventilador en marcha",
+      "hint": "Mandos: S1."
+    },
+    {
+      "id": "sube",
+      "description": "UP: «Velocidad: 40 Hz» y el variador a 40 Hz",
+      "console": "Velocidad: 40",
+      "hint": "cambiarVelocidad(10): velocidad + 10 y writeSingleRegisterSync(VARIADOR, REG_FRECUENCIA, velocidad * 100)."
+    },
+    {
+      "id": "tope",
+      "description": "No pasa de 60 Hz",
+      "when": {
+        "VF1.fRef": 60
+      },
+      "hold_ms": 500,
+      "after": "sube",
+      "why": "El límite lo pone el programa: el variador acepta cualquier número que le escriban."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Velocidad desde la botonera",
+      "until_ms": 10500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "3000 BTN_UP=1",
+        "3150 BTN_UP=0",
+        "5000 BTN_DOWN=1",
+        "5150 BTN_DOWN=0",
+        "5300 BTN_DOWN=1",
+        "5450 BTN_DOWN=0",
+        "7000 BTN_UP=1",
+        "7150 BTN_UP=0",
+        "7300 BTN_UP=1",
+        "7450 BTN_UP=0",
+        "7600 BTN_UP=1",
+        "7750 BTN_UP=0",
+        "7900 BTN_UP=1",
+        "8050 BTN_UP=0",
+        "8200 BTN_UP=1",
+        "8350 BTN_UP=0",
+        "8500 BTN_UP=1",
+        "8650 BTN_UP=0"
+      ],
+      "checks": [
+        {
+          "description": "S1 arranca el variador",
+          "points": 2,
+          "from_ms": 1000,
+          "to_ms": 2500,
+          "eventually": {
+            "VF1.running": true
+          },
+          "for_ms": 500
+        },
+        {
+          "description": "UP: «Velocidad: 40 Hz»",
+          "points": 3,
+          "console": "Velocidad: 40"
+        },
+        {
+          "description": "El variador recibe 40 Hz",
+          "points": 5,
+          "at_ms": 4000,
+          "expect": {
+            "VF1.fRef": 40
+          }
+        },
+        {
+          "description": "DOWN dos veces: «Velocidad: 20 Hz»",
+          "points": 2,
+          "console": "Velocidad: 20"
+        },
+        {
+          "description": "El variador recibe 20 Hz",
+          "points": 4,
+          "at_ms": 6500,
+          "expect": {
+            "VF1.fRef": 20
+          }
+        },
+        {
+          "description": "UP seis veces se queda en 60 Hz",
+          "points": 4,
+          "at_ms": 10000,
+          "expect": {
+            "VF1.fRef": 60
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Ventilador",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "stim": [
+        "3000 BTN_UP=1",
+        "3150 BTN_UP=0",
+        "3500 BTN_UP=1",
+        "3650 BTN_UP=0",
+        "5000 BTN_UP=1",
+        "5150 BTN_UP=0",
+        "5300 BTN_UP=1",
+        "5450 BTN_UP=0",
+        "5600 BTN_UP=1",
+        "5750 BTN_UP=0",
+        "5900 BTN_UP=1",
+        "6050 BTN_UP=0",
+        "6200 BTN_UP=1",
+        "6350 BTN_UP=0"
+      ]
+    }
+  ]
+}

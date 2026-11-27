@@ -2240,6 +2240,429 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 6,
+      "nombre": "RS-485 y Modbus RTU",
+      "lecciones": [
+        {
+          "id": "curso-33",
+          "numero": 33,
+          "titulo": "El bus RS-485: leer un controlador de temperatura",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/33.Leer_un_controlador",
+          "aprende": [
+            "Qué son el bus RS-485 y el protocolo Modbus RTU: un maestro que pregunta y esclavos que responden.",
+            "A arrancar el JWPLC como maestro con `JWPLC_ModbusRTU.begin(247, 9600, SERIAL_8N1)`.",
+            "A leer registros input (función 04) con `readInputRegistersSync()`.",
+            "A convertir un registro en décimas a grados, con signo."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Bornes RS-485 del JWPLC: A con A y B con B del controlador de temperatura (dirección 1, 9600 8N1).",
+                "Alimentación del controlador según su modelo.",
+                "Q0.0: lámpara de alarma (para la práctica)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: cada segundo, la consola muestra la temperatura de **TC1**.",
+                "En **Mandos** (panel **Reto**) cambia la temperatura de **TC1**: la lectura siguiente la muestra.",
+                "Su consigna es 40 °C: bajo 38 °C su salida calienta; desde 50 °C da alarma.",
+                "Lección 33: Modbus RTU, controlador de temperatura en la dirección 1\nTemperatura: 25.0 °C\nTemperatura: 25.0 °C\nTemperatura: 45.0 °C"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie a 115200 baudios.",
+            "Cada segundo aparece la temperatura que mide el controlador.",
+            "Desconecta el cable A o B: aparece «Sin respuesta del controlador» con el motivo."
+          ],
+          "practica": [
+            "Lee 2 registros desde el 0. El segundo es el estado: escribe «Calentando» o «Resistencia apagada» cuando cambia el bit 0.",
+            "Con el bit 1 (alarma), escribe «Alarma de temperatura» una vez y enciende H1 (Q0.0)."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-33",
+            "objetivos_en_vivo": [
+              {
+                "id": "temp",
+                "text": "El Monitor Serie muestra «Temperatura: 25.0 °C»",
+                "extra": false
+              },
+              {
+                "id": "calienta",
+                "text": "«Calentando» al leer el bit 0 del estado",
+                "extra": false
+              },
+              {
+                "id": "alarma",
+                "text": "Temperatura de 55 °C: «Alarma de temperatura» y H1",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-34",
+          "numero": 34,
+          "titulo": "Escribir un registro: la consigna del horno",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/34.Escribir_la_consigna",
+          "aprende": [
+            "La diferencia entre registros input (solo lectura) y holding (lectura y escritura).",
+            "A escribir un registro con la función 06: `writeSingleRegisterSync()`.",
+            "A leer un holding con la función 03: `readHoldingRegistersSync()`.",
+            "A ajustar localmente y enviar solo al confirmar."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "El bus de la lección 33: A con A, B con B, controlador en la dirección 1, 9600 8N1."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y abre la pestaña **Placa**.",
+                "**UP** (flecha arriba) sube la consigna; **OK** (Enter) la envía.",
+                "En la pestaña **Esquema**, la pantalla de **TC1** muestra la consigna nueva (SV).",
+                "Lección 34: escribir la consigna, UP/DOWN cambian, OK envía\nConsigna: 40 °C\nTemperatura: 25.0 °C\nConsigna: 45 °C (OK para enviar)\nConsigna enviada: 45 °C"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie.",
+            "UP: la consigna sube a 45 °C, todavía sin enviar.",
+            "OK: «Consigna enviada: 45 °C» y el controlador la muestra en su pantalla."
+          ],
+          "practica": [
+            "Al arrancar, lee la consigna que ya tiene el controlador (holding 0) y empieza desde ella: «Consigna actual: 35 °C».",
+            "Después de enviar, lee de vuelta el holding 0 y escribe «Consigna confirmada: N °C»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-34",
+            "objetivos_en_vivo": [
+              {
+                "id": "envia",
+                "text": "UP y OK: «Consigna enviada»",
+                "extra": false
+              },
+              {
+                "id": "actual",
+                "text": "Al arrancar: «Consigna actual: 35 °C»",
+                "extra": false
+              },
+              {
+                "id": "confirma",
+                "text": "Después de enviar: «Consigna confirmada»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-35",
+          "numero": 35,
+          "titulo": "El módulo de E/S remotas: 8 entradas y 8 salidas más",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/35.Modulo_de_E_S_remotas",
+          "aprende": [
+            "Para qué sirve un módulo de E/S remotas: llevar entradas y salidas lejos del tablero con dos hilos.",
+            "A leer sus 8 entradas con la función 02 (`readDiscreteInputsSync()`) y escribir sus 8 salidas con la 15 (`writeMultipleCoilsSync()`).",
+            "A trabajar con los 8 bits de un byte: máscaras con `&` para leer y `|` para encender.",
+            "El ciclo de un PLC con E/S remotas: leer, decidir, escribir."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Módulo de E/S remotas en el bus RS-485 (A con A, B con B), dirección 3, 9600 8N1, alimentado con 24 V DC.",
+                "DI1: pulsador de marcha (NA). DI2: pulsador de parada (NC). Común DC al 0 V.",
+                "DO1: contactor de la bomba. DO2: lámpara de marcha. Común C1 al +24 V."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. En **Mandos** (panel **Reto**), **S1** y **S2** están cableados al módulo **IO1**, no al JWPLC.",
+                "Toca **S1**: **KM1** cierra a través de DO1. **S2** lo detiene.",
+                "En la pestaña **Esquema**, el bus RS-485 une el JWPLC con **IO1**.",
+                "Lección 35: E/S remotas en la dirección 3, bomba en DO1\nBomba en marcha\nBomba detenida"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: el JWPLC pregunta al módulo 10 veces por segundo.",
+            "Marcha en DI1: el contactor en DO1 cierra y la lámpara DO2 enciende.",
+            "Parada en DI2: los dos se apagan."
+          ],
+          "practica": [
+            "Suma el térmico de la bomba en DI3 (NC): si abre, la bomba para, no arranca y se escribe «Falla: térmico» una vez.",
+            "Enciende una lámpara de falla en DO3 mientras dure la falla."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-35",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1 en el módulo: la bomba arranca por el bus",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Abre F1: «Falla: térmico», bomba parada y H2",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-36",
+          "numero": 36,
+          "titulo": "Un variador por Modbus: marcha y velocidad",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/36.Un_variador_por_Modbus",
+          "aprende": [
+            "A mandar un variador de frecuencia por Modbus: la orden en 2000H y la frecuencia en 2001H.",
+            "A leer la frecuencia real del motor (2103H) mientras sube con la rampa.",
+            "Qué hay que programar en el variador para que obedezca al bus (fuente de marcha y de frecuencia: RS-485).",
+            "A escribir direcciones y bits en hexadecimal y binario (`0x2000`, `0b00010010`)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Variador en el bus RS-485: SG+ al A del JWPLC y SG- al B. Dirección 1, 9600 bps, RTU 8N1; parámetros 02.00 = 3 y 02.01 = 3.",
+                "Motor trifásico a U, V, W del variador; red monofásica a R y S.",
+                "I0.0: pulsador de marcha (NA). I0.1: pulsador de parada (NC)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y toca **S1** en **Mandos** (panel **Reto**).",
+                "La pantalla de **VF1** en el **Esquema** muestra la frecuencia subiendo; el motor **M1** gira.",
+                "**S2** lo detiene en rampa.",
+                "Lección 36: variador por Modbus, marcha I0.0, parada NC I0.1\nVentilador en marcha a 30 Hz\nFrecuencia: 7.3 Hz\nFrecuencia: 17.3 Hz\nFrecuencia: 27.3 Hz\nFrecuencia: 30.0 Hz\nVentilador detenido"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie.",
+            "Marcha: «Ventilador en marcha a 30 Hz» y la frecuencia sube con la rampa hasta 30,0 Hz.",
+            "Parada: el variador frena en rampa hasta 0 Hz."
+          ],
+          "practica": [
+            "UP y DOWN cambian la velocidad de a 10 Hz, entre 10 y 60 Hz, y la envían al variador al instante: «Velocidad: 40 Hz»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-36",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1: el ventilador arranca por Modbus",
+                "extra": false
+              },
+              {
+                "id": "sube",
+                "text": "UP: «Velocidad: 40 Hz» y el variador a 40 Hz",
+                "extra": false
+              },
+              {
+                "id": "tope",
+                "text": "No pasa de 60 Hz",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-37",
+          "numero": 37,
+          "titulo": "Varios equipos en el bus: un horno con ventilación",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/37.Varios_equipos_en_el_bus",
+          "aprende": [
+            "Que en un mismo bus RS-485 conviven varios esclavos, cada uno con su dirección.",
+            "A preguntar por turno: primero el controlador, después el módulo de E/S.",
+            "El cableado en cadena: A con A y B con B de un equipo al siguiente.",
+            "Una histéresis con una medición que llega por el bus."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "El bus en cadena: JWPLC → controlador de temperatura (dirección 1) → módulo de E/S remotas (dirección 3), A con A y B con B.",
+                "DO1 del módulo: contactor del ventilador de extracción.",
+                "Para la práctica: DI1, el interruptor de la puerta; DO2, una lámpara de alarma."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. En **Mandos** (panel **Reto**), sube la temperatura de **TC1** a 47 °C: **KM1** cierra a través de **IO1**.",
+                "Bájala a 42 °C: el ventilador sigue (histéresis). A 40 °C se apaga.",
+                "En el **Esquema**, el bus sale del JWPLC, pasa por **TC1** y llega a **IO1**.",
+                "Lección 37: dos equipos en el bus, TC1 dirección 1, IO1 dirección 3\nVentilador encendido a 47.0 °C\nVentilador apagado a 38.0 °C"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y calienta la sonda del controlador.",
+            "A 45 °C: «Ventilador encendido a 45.0 °C» y el contactor cierra.",
+            "Al bajar a 40 °C: «Ventilador apagado»."
+          ],
+          "practica": [
+            "Lee DI1 del módulo (la puerta): con la puerta abierta el ventilador para y se escribe «Puerta abierta» una vez.",
+            "Con el bit de alarma del controlador, enciende la lámpara en DO2."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-37",
+            "objetivos_en_vivo": [
+              {
+                "id": "vent",
+                "text": "A 47 °C el ventilador arranca por DO1",
+                "extra": false
+              },
+              {
+                "id": "puerta",
+                "text": "Puerta abierta: el ventilador para y «Puerta abierta»",
+                "extra": false
+              },
+              {
+                "id": "alarma",
+                "text": "A 55 °C, H2 encendida por DO2",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-38",
+          "numero": 38,
+          "titulo": "Tiempos y errores: cuando un equipo no responde",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/38.Tiempos_y_errores",
+          "aprende": [
+            "Qué es el timeout de una pregunta Modbus y qué pasa con el programa mientras espera.",
+            "La API cooperativa: `requestReadInputRegisters()`, `task()`, `masterDone()`, `masterSucceeded()` y `clearMasterResult()`.",
+            "A contar fallas seguidas para distinguir un error suelto de un equipo perdido.",
+            "Falla segura: qué hace la máquina cuando deja de saber."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "El controlador de temperatura en el bus (dirección 1), como en la lección 33.",
+                "Q0.0: contactor de la resistencia. Q0.1: lámpara de alarma de comunicación."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: a 30 °C, **KM1** (la resistencia) se cierra.",
+                "En el **Esquema**, corta el cable entre **RS485 A** y **TC1.A** (clic derecho sobre el cable): la consola cuenta las preguntas sin respuesta.",
+                "Vuelve a conectarlo: las lecturas siguen.",
+                "Lección 38: control por el bus, resistencia Q0.0, alarma Q0.1\nResistencia encendida a 30.0 °C\nTC1 no responde (1): Timeout\nTC1 no responde (2): Timeout\nTC1 no responde (3): Timeout"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: la resistencia se enciende bajo 38 °C y se apaga en 40 °C.",
+            "Desconecta el cable A del bus: cada medio segundo aparece «TC1 no responde» con el motivo.",
+            "Fíjate en el problema: la resistencia sigue como estaba, con un dato viejo."
+          ],
+          "practica": [
+            "Con 3 fallas seguidas: «Falla de comunicación con TC1» una vez, la resistencia apagada y H1 (Q0.1) encendida.",
+            "Con la primera respuesta buena: «Comunicación recuperada», H1 apagada y el control vuelve."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-38",
+            "objetivos_en_vivo": [
+              {
+                "id": "control",
+                "text": "A 30 °C la resistencia KM1 se enciende",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Cable cortado: «Falla de comunicación con TC1» y resistencia apagada",
+                "extra": false
+              },
+              {
+                "id": "vuelve",
+                "text": "Cable reparado: «Comunicación recuperada»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-39",
+          "numero": 39,
+          "titulo": "Proyecto: el extractor de un horno, todo por Modbus",
+          "ruta": "examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/39.Proyecto_extractor_por_Modbus",
+          "aprende": [
+            "A tener tres equipos en el mismo bus: variador, controlador de temperatura y módulo de E/S remotas.",
+            "A recorrer el bus por turnos, una pregunta a la vez, sin detener el `loop()`.",
+            "Por qué al variador se le escribe en todas las vueltas: para si pasa 3 s sin noticias del maestro.",
+            "A decidir la falla segura según la máquina: en un horno, ventilar es lo seguro."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "VF1 (variador del extractor) en la dirección 1, TC1 (controlador del horno) en la 2 e IO1 (E/S remotas) en la 3, todos en el mismo par A/B.",
+                "IO1: DI1 selector «Automático», DO1 lámpara de marcha."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y gira **S1** a automático.",
+                "Sube la temperatura de **TC1** a 45 °C: **VF1** arranca a 30 Hz y la lámpara de marcha se enciende.",
+                "En el **Esquema**, corta el cable **A** entre **IO1** y **TC1**: la consola muestra el turno 0 sin respuesta, pero el variador y el módulo siguen contestando.",
+                "Lección 39: extractor por Modbus, VF1 dir. 1, TC1 dir. 2, IO1 dir. 3\nExtractor: 0 Hz (30.0 °C)\nExtractor: 30 Hz (45.0 °C)\nExtractor: 60 Hz (55.0 °C)\nTurno 0 sin respuesta: Timeout"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa con el selector en manual: el extractor queda parado.",
+            "Pasa a automático y calienta el horno: a 40 °C arranca a 30 Hz y desde 50 °C va a 60 Hz.",
+            "Fíjate en la consola: cada turno sin respuesta dice cuál fue y por qué."
+          ],
+          "practica": [
+            "Con 3 fallas seguidas al leer TC1: «Sin temperatura: extractor al máximo» una vez, el extractor a 60 Hz y H2 (DO2) encendida.",
+            "Con la primera lectura buena: «Temperatura recuperada», H2 apagada y la velocidad vuelve a seguir a la temperatura."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-39",
+            "objetivos_en_vivo": [
+              {
+                "id": "auto",
+                "text": "Automático y 45 °C: el extractor a 30 Hz",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "TC1 sin respuesta: «Sin temperatura: extractor al máximo»",
+                "extra": false
+              },
+              {
+                "id": "vuelve",
+                "text": "«Temperatura recuperada»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "curso_iec": [
