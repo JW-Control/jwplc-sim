@@ -14,7 +14,7 @@
 // tiene el JWPLC Basic instalado en Arduino IDE u OpenPLC Editor. Si no, se
 // descargan una sola vez con arduino-cli (core install jwplc:esp32).
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, delimiter, join, resolve } from "node:path";
 
@@ -56,13 +56,46 @@ export function userArduino15() {
   return cands.find((c) => c && existsSync(c)) ?? null;
 }
 
+// ¿Es un enlace (symlink o, en Windows, junction)? Node informa las
+// junctions como symlink; readlink cubre las que no.
+function isLink(p) {
+  const st = lstatSync(p, { throwIfNoEntry: false });
+  if (!st) return false;
+  if (st.isSymbolicLink()) return true;
+  try {
+    readlinkSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Quita una entrada de los datos de la app. Si es un enlace se quita SOLO el
+// enlace: nunca se borra en recursivo a través de él. En Windows, rmSync
+// recursivo sobre una junction entra en la carpeta enlazada y borra los
+// archivos reales (en modo en vivo, el package del usuario: jwplc_local).
+export function removeEntry(p) {
+  if (!lstatSync(p, { throwIfNoEntry: false })) return;
+  if (isLink(p)) {
+    try {
+      unlinkSync(p);
+    } catch {
+      rmdirSync(p);
+    }
+    return;
+  }
+  // Carpeta real: primero se sueltan los enlaces que tenga dentro.
+  if (lstatSync(p).isDirectory()) for (const e of readdirSync(p)) removeEntry(join(p, e));
+  rmSync(p, { recursive: true, force: true });
+}
+
 function linkDir(target, link) {
   try {
     if (lstatSync(link, { throwIfNoEntry: false })) {
       try {
         if (resolve(readlinkSync(link)) === resolve(target)) return true;
       } catch {}
-      rmSync(link, { recursive: true, force: true });
+      removeEntry(link);
     }
     mkdirSync(join(link, ".."), { recursive: true });
     symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
@@ -106,7 +139,7 @@ export function prepareEsp32({ dataDir, package: pkg } = {}) {
   // Plataforma: una sola versión, la del package fijado.
   const hwBase = join(dataDir, "packages", "jwplc_sim", "hardware", "esp32");
   const version = carpetaVersion(lock.JWPLC_PACKAGE_REF);
-  if (existsSync(hwBase)) for (const v of readdirSync(hwBase)) if (v !== version) rmSync(join(hwBase, v), { recursive: true, force: true });
+  if (existsSync(hwBase)) for (const v of readdirSync(hwBase)) if (v !== version) removeEntry(join(hwBase, v));
   const hw = join(hwBase, version);
   if (!linkDir(tree, hw) && !existsSync(join(hw, "platform.txt"))) cpSync(tree, hw, { recursive: true });
   // Herramientas.
@@ -179,7 +212,7 @@ export async function installEsp32Tools(env, { log = () => {} } = {}) {
   r = await runCli(env.cli, ["--config-file", env.config, "core", "install", "jwplc:esp32"], { log });
   if (r.code !== 0) throw new Error(`no se pudieron instalar las herramientas del ESP32\n${r.out.trim()}`);
   // Los archivos descargados ya no hacen falta (unos 500 MB).
-  rmSync(join(env.dataDir, "staging"), { recursive: true, force: true });
+  removeEntry(join(env.dataDir, "staging"));
   const still = ESP32_TOOLS.filter((t) => !toolReady(toolDir(env.dataDir, t)));
   if (still.length) throw new Error(`faltan herramientas tras la descarga: ${still.map((t) => `${t.name} ${t.version}`).join(", ")}`);
 }

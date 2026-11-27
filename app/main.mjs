@@ -1640,11 +1640,13 @@ async function uploadPorts() {
   return (await listComPorts()).filter((p) => !/com0com/i.test(p.label));
 }
 ipcMain.handle("jwplc:uploadInfo", async () => {
+  // Los puertos se listan aunque falle la preparación de la plataforma.
+  const ports = await uploadPorts().catch(() => []);
   try {
     const env = prepareEsp32({ dataDir: arduinoData() });
-    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports: await uploadPorts(), busy: uploading, version: env.version };
+    return { cli: !!env.cli, missing: env.missing.map((t) => t.label), downloadMb: TOOLS_DOWNLOAD_MB, fromArduino15: !!env.arduino15, ports, busy: uploading, version: env.version };
   } catch (err) {
-    return { error: err.message, ports: [], missing: [] };
+    return { error: err.message, ports, missing: [] };
   }
 });
 ipcMain.handle("jwplc:installTools", async () => {
