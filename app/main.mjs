@@ -19,7 +19,7 @@ import { loadProject, saveProject } from "../cli/lib/project.mjs";
 import { toolchain } from "../cli/lib/toolchain.mjs";
 import { compileEsp32, installEsp32Tools, prepareEsp32, TOOLS_DOWNLOAD_MB, uploadEsp32 } from "../cli/lib/esp32.mjs";
 import { checkProjectName, closeEditor, createProject, LANGUAGES, locateEditor, openInEditor } from "./lib/openplc-editor.mjs";
-import { readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
+import { localPackageDir, readLock, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 import { formatSource } from "./lib/autoformat.mjs";
 import { openArg, openPlcDir } from "./lib/open-arg.mjs";
 import { MARK, syncExample, syncExercise } from "./lib/exercise-copy.mjs";
@@ -349,15 +349,45 @@ function applyThemePref(mode, persist = true) {
 ipcMain.handle("app:getTheme", () => ({ theme: nativeTheme.themeSource, dark: nativeTheme.shouldUseDarkColors }));
 ipcMain.handle("app:setTheme", (_e, theme) => applyThemePref(theme, true));
 
-ipcMain.handle("app:info", () => {
+// ---------------------------------------------------------------- Package JWPLC
+// Como en el OpenPLC Editor: «JWPLC (publicado)» = el package de esta versión
+// del Sim (package.lock; el que trae el instalador) o «JWPLC local
+// (desarrollo)» = el checkout de platform-jwplc (la placa jwplc_local del
+// Arduino15, JWPLC_PACKAGE_DIR o el repo hermano). La app instalada arranca
+// en publicado; la copia del repo, en local si lo encuentra.
+function packageMode() {
+  const m = readPref("paquete");
+  if (m === "publicado" || m === "local") return m;
+  return app.isPackaged || !localPackageDir(readLock(), { arduino15: false }) ? "publicado" : "local";
+}
+function applyPackageMode(m = packageMode()) {
+  process.env.JWSIM_PACKAGE = m;
+  return m;
+}
+function packageInfo() {
+  const mode = process.env.JWSIM_PACKAGE ?? packageMode();
   try {
-    const { lock } = resolvePackageRoot({ fetch: false });
-    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
-  } catch {
+    const { root, lock, source } = resolvePackageRoot({ fetch: false });
+    return { mode, local: source === "dir", root, packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+  } catch (err) {
     const lock = readLock();
-    return { packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
+    return { mode, local: false, error: err.message, packageRef: lock.JWPLC_PACKAGE_REF, packageCommit: lock.JWPLC_PACKAGE_COMMIT.slice(0, 12), version: app.getVersion() };
   }
-});
+}
+function setPackageMode(m) {
+  if (m === "local" && !localPackageDir()) {
+    dialog.showMessageBox(win, { type: "warning", message: "No se encontró el package local", detail: "Instale la placa «JWPLC local» (jwplc_local) en el Arduino15 enlazada a su copia de platform-jwplc, o defina JWPLC_PACKAGE_DIR." });
+    buildMenu();
+    return;
+  }
+  writePref("paquete", m);
+  applyPackageMode(m);
+  apiCatalog = null;
+  buildMenu();
+  forward("app:packageChanged", packageInfo());
+}
+
+ipcMain.handle("app:info", () => packageInfo());
 
 ipcMain.handle("examples:list", () => listExamples());
 
@@ -1916,6 +1946,19 @@ function buildMenu() {
           { label: "Editor de componentes…", click: send("componentEditor") },
           ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
           { type: "separator" },
+          {
+            label: "Package JWPLC",
+            submenu: (() => {
+              const mode = process.env.JWSIM_PACKAGE ?? packageMode();
+              const local = localPackageDir();
+              return [
+                { label: `JWPLC (publicado, ${readLock().JWPLC_PACKAGE_REF})`, type: "radio", checked: mode === "publicado", click: () => setPackageMode("publicado") },
+                { label: local ? "JWPLC local (desarrollo)" : "JWPLC local (desarrollo): no encontrado", type: "radio", checked: mode === "local", enabled: !!local || mode === "local", click: () => setPackageMode("local") },
+                ...(local ? [{ label: local, enabled: false }] : []),
+              ];
+            })(),
+          },
+          { type: "separator" },
           { label: "Buscar actualizaciones…", click: () => updater.check(true) },
           {
             label: "Canal de actualizaciones",
@@ -2024,6 +2067,7 @@ ipcMain.handle("app:takeOpenTarget", () => {
 app.whenReady().then(() => {
   if (!primary && pendingOpen) return;
   nativeTheme.themeSource = loadThemePref();
+  applyPackageMode();
   nativeTheme.on("updated", () => {
     const bg = nativeTheme.shouldUseDarkColors ? "#16191d" : "#f5f7fa";
     win?.setBackgroundColor?.(bg);

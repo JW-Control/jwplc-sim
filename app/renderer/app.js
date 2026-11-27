@@ -3870,11 +3870,23 @@ async function main() {
     syncThemeUi(storedTheme());
   }
   setStatus("idle", "Detenido");
-  const info = await api.info();
-  state.packageRef = info.packageRef;
-  // La versión del package va solo en la ayuda emergente del logo (antes era
-  // un texto fijo en la cabecera de la placa y en la barra de estado).
-  document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})`;
+  // La versión del package va en la ayuda emergente del logo; con el package
+  // local (Herramientas → Package JWPLC) se ve además la etiqueta «JWPLC local».
+  const showPackage = (info) => {
+    state.packageRef = info.packageRef;
+    document.querySelector(".brand").title = `JWPLC Sim · package platform-jwplc ${info.packageRef} (${info.packageCommit})${info.local ? ` · local: ${info.root}` : ""}`;
+    const badge = document.getElementById("pkg-badge");
+    if (badge) {
+      badge.hidden = !info.local;
+      badge.title = info.local ? `Package de desarrollo: ${info.root} (${info.packageRef})` : "";
+    }
+  };
+  showPackage(await api.info());
+  api.onPackageChanged?.((info) => {
+    showPackage(info);
+    if (info.error) consoleWrite(`[jwsim] ${info.error}\n`, "sys");
+    else consoleWrite(`[jwsim] package: ${info.local ? `JWPLC local (${info.root}, ${info.packageRef})` : `JWPLC publicado (${info.packageRef})`}. Se usa desde la próxima compilación.\n`, "sys");
+  });
   await initMonaco();
   renderWatch();
   clearDebugView();
