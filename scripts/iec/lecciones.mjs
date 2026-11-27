@@ -13,6 +13,11 @@ const press = (dev, at, ms) => [
   { at_ms: at, device: dev, action: "press", value: true },
   { at_ms: at + ms, device: dev, action: "press", value: false },
 ];
+// Un sensor (inductivo, fotoeléctrico) se acciona con «target», no con «press».
+const sensor = (dev, at, ms) => [
+  { at_ms: at, device: dev, action: "target", value: true },
+  { at_ms: at + ms, device: dev, action: "target", value: false },
+];
 const pos = (dev, at, value) => ({ at_ms: at, device: dev, action: "position", value });
 const ev = (description, points, from_ms, to_ms, eventually, for_ms = 100) => ({ description, points, from_ms, to_ms, eventually, for_ms });
 const never = (description, points, from_ms, to_ms, n) => ({ description, points, from_ms, to_ms, never: n });
@@ -1294,5 +1299,489 @@ H1 := BOMBA1.Q OR BOMBA2.Q;`,
       teaches: "Una máquina real se ordena en etapas: cada una revisa solo sus salidas posibles, y la seguridad (parada, obstáculo) es una transición más.",
     },
     rubricFrom: "retos/05-puerta",
+  },
+  // ======================================================== Unidad 4
+  {
+    id: "iec-13",
+    unit: "4.Comparar_y_calcular",
+    folder: "13.Comparar_numeros",
+    project: "comparar",
+    title: "Comparar números: GE, LT y EQ",
+    bench: "curso-10",
+    vars: [
+      { name: "B1", type: "BOOL", at: "%IX0.0", doc: "sensor de piezas" },
+      { name: "S1", type: "BOOL", at: "%IX0.1", doc: "RESET" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "motor de la cinta" },
+      { name: "H1", type: "BOOL", at: "%QX0.1", doc: "aviso" },
+      { name: "PIEZAS", type: "CTU" },
+      { name: "CUENTA", type: "INT", doc: "piezas en la caja" },
+    ],
+    example: {
+      st: `(* El contador solo cuenta: PV no importa, las decisiones las toman las comparaciones. *)
+PIEZAS(CU := B1, R := S1, PV := 100);
+CUENTA := PIEZAS.CV;
+
+(* Comparar: el resultado es un BOOL. *)
+KM1 := CUENTA < 10;   (* la cinta sigue mientras falten piezas *)
+H1 := CUENTA >= 10;   (* caja llena *)`,
+      ld: {
+        rungs: [
+          { comment: "Cuenta piezas; S1 vuelve a cero", elements: ["B1", { fb: "CTU", inst: "PIEZAS", pins: { R: "S1", PV: "100", CV: "CUENTA" } }] },
+          { comment: "La cinta sigue mientras CUENTA < 10", elements: [{ fb: "LT", en: true, pins: { IN1: "CUENTA", IN2: "10", OUT: "KM1" } }] },
+          { comment: "Caja llena: CUENTA >= 10", elements: [{ fb: "GE", en: true, pins: { IN1: "CUENTA", IN2: "10", OUT: "H1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "CTU", inst: "PIEZAS", in: { CU: "B1", R: "S1", PV: "100" }, out: { CV: "CUENTA" } },
+          { out: "KM1", expr: ["LT", "CUENTA", "10"] },
+          { out: "H1", expr: ["GE", "CUENTA", "10"] },
+        ],
+      },
+    },
+    solution: {
+      st: `PIEZAS(CU := B1, R := S1, PV := 100);
+CUENTA := PIEZAS.CV;
+
+(* Cajas de 12; el aviso empieza 4 piezas antes. *)
+KM1 := CUENTA < 12;
+H1 := CUENTA >= 8;`,
+      ld: {
+        rungs: [
+          { comment: "Cuenta piezas; S1 vuelve a cero", elements: ["B1", { fb: "CTU", inst: "PIEZAS", pins: { R: "S1", PV: "100", CV: "CUENTA" } }] },
+          { comment: "La cinta sigue mientras CUENTA < 12", elements: [{ fb: "LT", en: true, pins: { IN1: "CUENTA", IN2: "12", OUT: "KM1" } }] },
+          { comment: "Aviso desde la pieza 8", elements: [{ fb: "GE", en: true, pins: { IN1: "CUENTA", IN2: "8", OUT: "H1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "CTU", inst: "PIEZAS", in: { CU: "B1", R: "S1", PV: "100" }, out: { CV: "CUENTA" } },
+          { out: "KM1", expr: ["LT", "CUENTA", "12"] },
+          { out: "H1", expr: ["GE", "CUENTA", "8"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Cajas de 12 piezas y el aviso H1 desde la pieza 8, para que el operador prepare la caja siguiente.",
+      steps: ["Ejecuta el ejemplo: cada toque a B1 es una pieza; con 10 la cinta para y H1 avisa.", "Cambia la meta a 12 piezas en la comparación de KM1.", "Haz que H1 encienda desde la pieza 8 (GE con 8).", "Llena una caja y vuelve a cero con S1."],
+      uses: ["%IX0.0 · B1, sensor de piezas", "%IX0.1 · S1, RESET", "%QX0.0 · KM1, motor de la cinta", "%QX0.1 · H1, aviso"],
+      teaches: "Un contador da un número; las comparaciones (LT, GE, EQ…) lo convierten en decisiones, y con varias comparaciones sobre la misma cuenta se arman avisos por etapas.",
+    },
+    rubric: {
+      goals: [
+        { id: "aviso", description: "Con 8 piezas H1 avisa y la cinta sigue", when: { Q0_0: 1, Q0_1: 1 }, hold_ms: 300, hint: "H1 := CUENTA >= 8; (en Ladder y FBD, un bloque GE con IN2 = 8)." },
+        { id: "llena", description: "Con 12 piezas la cinta para", when: { Q0_0: 0, Q0_1: 1 }, hold_ms: 300, after: "aviso", hint: "KM1 := CUENTA < 12;", why: "La misma cuenta sirve para varias decisiones: cada una es una comparación." },
+      ],
+      cases: [
+        {
+          name: "Caja de 12 con aviso",
+          until_ms: 5200,
+          actions: [...Array.from({ length: 12 }, (_, i) => press("B1", 1000 + i * 250, 100)).flat(), ...press("S1", 4600, 200)],
+          checks: [
+            expect("Con 7 piezas: sin aviso", 3, 2700, { Q0_0: 1, Q0_1: 0 }),
+            expect("Con 8 piezas: aviso y la cinta sigue", 5, 2950, { Q0_0: 1, Q0_1: 1 }),
+            expect("Con 11 piezas la cinta sigue", 4, 3700, { Q0_0: 1 }),
+            ev("Con 12 piezas la cinta para", 5, 3800, 4500, { Q0_0: 0, Q0_1: 1 }),
+            ev("RESET: cinta en marcha y sin aviso", 3, 4600, 5100, { Q0_0: 1, Q0_1: 0 }),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Una caja", until_ms: 6000, actions: [...Array.from({ length: 12 }, (_, i) => press("B1", 1000 + i * 300, 120)).flat(), ...press("S1", 5200, 300)] }],
+    },
+  },
+  {
+    id: "iec-14",
+    unit: "4.Comparar_y_calcular",
+    folder: "14.Sumar_y_restar",
+    project: "estacionamiento",
+    title: "Sumar y restar: un estacionamiento",
+    bench: "curso-03",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "barrera de entrada: entra un auto" },
+      { name: "S2", type: "BOOL", at: "%IX0.1", doc: "barrera de salida: sale un auto" },
+      { name: "H1", type: "BOOL", at: "%QX0.0", doc: "verde: hay lugar" },
+      { name: "H2", type: "BOOL", at: "%QX0.1", doc: "amarillo: lleno" },
+      { name: "F_ENTRA", type: "R_TRIG" },
+      { name: "F_SALE", type: "R_TRIG" },
+      { name: "AUTOS", type: "INT", doc: "autos adentro" },
+      { name: "LIBRES", type: "INT", doc: "lugares libres" },
+      { name: "ENTRA", type: "BOOL", doc: "flanco de S1", langs: ["fbd"] },
+      { name: "SALE", type: "BOOL", doc: "flanco de S2", langs: ["fbd"] },
+      { name: "HAY_LUGAR", type: "BOOL", doc: "AUTOS < capacidad", langs: ["ld", "fbd"] },
+      { name: "HAY_AUTOS", type: "BOOL", doc: "AUTOS > 0", langs: ["ld", "fbd"] },
+    ],
+    example: {
+      st: `(* Un auto por flanco: si no, sumaría en cada vuelta mientras la barrera esté abierta. *)
+F_ENTRA(CLK := S1);
+F_SALE(CLK := S2);
+
+IF F_ENTRA.Q THEN
+  AUTOS := AUTOS + 1;
+END_IF;
+IF F_SALE.Q THEN
+  AUTOS := AUTOS - 1;
+END_IF;
+
+(* Capacidad: 5 lugares. *)
+LIBRES := 5 - AUTOS;
+H1 := LIBRES > 0;
+H2 := LIBRES <= 0;`,
+      ld: {
+        rungs: [
+          { comment: "Entra un auto: AUTOS + 1 en el flanco de S1", elements: ["^S1", { fb: "ADD", en: true, pins: { IN1: "AUTOS", IN2: "1", OUT: "AUTOS" } }] },
+          { comment: "Sale un auto: AUTOS - 1 en el flanco de S2", elements: ["^S2", { fb: "SUB", en: true, pins: { IN1: "AUTOS", IN2: "1", OUT: "AUTOS" } }] },
+          { comment: "Lugares libres: 5 - AUTOS", elements: [{ fb: "SUB", en: true, pins: { IN1: "5", IN2: "AUTOS", OUT: "LIBRES" } }] },
+          { comment: "Verde: hay lugar", elements: [{ fb: "GT", en: true, pins: { IN1: "LIBRES", IN2: "0", OUT: "H1" } }] },
+          { comment: "Amarillo: lleno", elements: [{ fb: "LE", en: true, pins: { IN1: "LIBRES", IN2: "0", OUT: "H2" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_ENTRA", in: { CLK: "S1" }, out: { Q: "ENTRA" } },
+          { fb: "R_TRIG", inst: "F_SALE", in: { CLK: "S2" }, out: { Q: "SALE" } },
+          { out: "AUTOS", expr: ["SEL", "ENTRA", "AUTOS", ["ADD", "AUTOS", "1"]] },
+          { out: "AUTOS", expr: ["SEL", "SALE", "AUTOS", ["SUB", "AUTOS", "1"]] },
+          { out: "LIBRES", expr: ["SUB", "5", "AUTOS"] },
+          { out: "H1", expr: ["GT", "LIBRES", "0"] },
+          { out: "H2", expr: ["LE", "LIBRES", "0"] },
+        ],
+      },
+    },
+    solution: {
+      st: `F_ENTRA(CLK := S1);
+F_SALE(CLK := S2);
+
+(* Capacidad 3, y la cuenta nunca sale de 0…3. *)
+IF F_ENTRA.Q AND AUTOS < 3 THEN
+  AUTOS := AUTOS + 1;
+END_IF;
+IF F_SALE.Q AND AUTOS > 0 THEN
+  AUTOS := AUTOS - 1;
+END_IF;
+
+LIBRES := 3 - AUTOS;
+H1 := LIBRES > 0;
+H2 := LIBRES = 0;`,
+      ld: {
+        rungs: [
+          { comment: "¿Queda lugar? AUTOS < 3", elements: [{ fb: "LT", en: true, pins: { IN1: "AUTOS", IN2: "3", OUT: "HAY_LUGAR" } }] },
+          { comment: "¿Hay autos? AUTOS > 0", elements: [{ fb: "GT", en: true, pins: { IN1: "AUTOS", IN2: "0", OUT: "HAY_AUTOS" } }] },
+          { comment: "Entra un auto, si hay lugar", elements: ["^S1", "HAY_LUGAR", { fb: "ADD", en: true, pins: { IN1: "AUTOS", IN2: "1", OUT: "AUTOS" } }] },
+          { comment: "Sale un auto, si había alguno", elements: ["^S2", "HAY_AUTOS", { fb: "SUB", en: true, pins: { IN1: "AUTOS", IN2: "1", OUT: "AUTOS" } }] },
+          { comment: "Lugares libres: 3 - AUTOS", elements: [{ fb: "SUB", en: true, pins: { IN1: "3", IN2: "AUTOS", OUT: "LIBRES" } }] },
+          { comment: "Verde: hay lugar", elements: [{ fb: "GT", en: true, pins: { IN1: "LIBRES", IN2: "0", OUT: "H1" } }] },
+          { comment: "Amarillo: lleno", elements: [{ fb: "EQ", en: true, pins: { IN1: "LIBRES", IN2: "0", OUT: "H2" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_ENTRA", in: { CLK: "S1" }, out: { Q: "ENTRA" } },
+          { fb: "R_TRIG", inst: "F_SALE", in: { CLK: "S2" }, out: { Q: "SALE" } },
+          { out: "HAY_LUGAR", expr: ["LT", "AUTOS", "3"] },
+          { out: "HAY_AUTOS", expr: ["GT", "AUTOS", "0"] },
+          { out: "AUTOS", expr: ["SEL", ["AND", "ENTRA", "HAY_LUGAR"], "AUTOS", ["ADD", "AUTOS", "1"]] },
+          { out: "AUTOS", expr: ["SEL", ["AND", "SALE", "HAY_AUTOS"], "AUTOS", ["SUB", "AUTOS", "1"]] },
+          { out: "LIBRES", expr: ["SUB", "3", "AUTOS"] },
+          { out: "H1", expr: ["GT", "LIBRES", "0"] },
+          { out: "H2", expr: ["EQ", "LIBRES", "0"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Un estacionamiento de 3 lugares cuya cuenta nunca pasa de 3 ni baja de 0, aunque las barreras se accionen de más.",
+      steps: ["Ejecuta el ejemplo: S1 es un auto que entra y S2 uno que sale; con 5 adentro, H2 avisa lleno.", "Cambia la capacidad a 3.", "Suma solo si AUTOS < 3 y resta solo si AUTOS > 0.", "Prueba de más: entra un cuarto auto y salen más autos de los que hay; la cuenta no se sale de 0…3."],
+      uses: ["%IX0.0 · S1, entra un auto", "%IX0.1 · S2, sale un auto", "%QX0.0 · H1, hay lugar", "%QX0.1 · H2, lleno"],
+      teaches: "ADD y SUB cambian una cuenta en el flanco de un evento; una comparación antes de sumar o restar mantiene el número dentro de sus límites.",
+    },
+    rubric: {
+      goals: [
+        { id: "lleno", description: "Con 3 autos adentro, H2 avisa lleno", when: { Q0_0: 0, Q0_1: 1 }, hold_ms: 300, hint: "LIBRES := 3 - AUTOS; H2 := LIBRES = 0;" },
+        { id: "tope", description: "Un cuarto auto no cuenta: al salir uno vuelve a haber lugar", when: { Q0_0: 1, Q0_1: 0 }, hold_ms: 300, after: "lleno", hint: "Suma solo si AUTOS < 3.", why: "Una cuenta que se pasa de su límite deja de representar la realidad." },
+      ],
+      cases: [
+        {
+          name: "Tres lugares y límites",
+          until_ms: 7000,
+          actions: [
+            ...press("S1", 1000, 150), ...press("S1", 1400, 150), ...press("S1", 1800, 150),
+            ...press("S1", 2600, 150), ...press("S2", 3200, 150),
+            ...press("S2", 3600, 150), ...press("S2", 4000, 150), ...press("S2", 4400, 150), ...press("S2", 4800, 150),
+            ...press("S1", 5400, 150), ...press("S1", 5800, 150), ...press("S1", 6200, 150),
+          ],
+          checks: [
+            expect("Vacío: verde", 2, 800, { Q0_0: 1, Q0_1: 0 }),
+            expect("Con 2 autos todavía hay lugar", 2, 1650, { Q0_0: 1, Q0_1: 0 }),
+            ev("Con 3 autos: lleno", 5, 2000, 2500, { Q0_0: 0, Q0_1: 1 }),
+            ev("Un cuarto auto no cuenta: al salir uno hay lugar", 5, 3300, 3500, { Q0_0: 1, Q0_1: 0 }),
+            ev("Salidas de más no bajan de 0: con 3 entradas, lleno otra vez", 6, 6300, 6900, { Q0_0: 0, Q0_1: 1 }),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Entradas y salidas", until_ms: 5000, actions: [...press("S1", 1000, 200), ...press("S1", 1500, 200), ...press("S1", 2000, 200), ...press("S1", 2600, 200), ...press("S2", 3400, 200)] }],
+    },
+  },
+  {
+    id: "iec-15",
+    unit: "4.Comparar_y_calcular",
+    folder: "15.Horometro",
+    project: "horometro",
+    title: "Contar el tiempo: un horómetro con mantenimiento",
+    bench: "curso-17",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "marcha, NA" },
+      { name: "S2", type: "BOOL", at: "%IX0.1", doc: "paro, NC: TRUE sin pulsar" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "motor" },
+      { name: "H1", type: "BOOL", at: "%QX0.1", doc: "mantenimiento" },
+      { name: "T_SEG", type: "TON" },
+      { name: "PULSO", type: "BOOL", doc: "TRUE una vuelta por segundo de marcha" },
+      { name: "SEGUNDOS", type: "INT", doc: "horómetro: segundos de marcha" },
+      { name: "HAY_TIEMPO", type: "BOOL", doc: "SEGUNDOS < 20", langs: ["ld", "fbd"] },
+    ],
+    example: {
+      st: `(* Marcha y parada con enclavamiento. *)
+KM1 := (KM1 OR S1) AND S2;
+
+(* Un pulso por segundo de marcha: el TON se reinicia solo con su propia salida. *)
+T_SEG(IN := KM1 AND NOT PULSO, PT := T#1s);
+PULSO := T_SEG.Q;
+
+(* El horómetro suma un segundo por pulso. *)
+IF PULSO THEN
+  SEGUNDOS := SEGUNDOS + 1;
+END_IF;
+
+(* Mantenimiento a los 20 s de marcha (en una planta serían horas). *)
+H1 := SEGUNDOS >= 20;`,
+      ld: {
+        rungs: [
+          { comment: "Marcha y parada con enclavamiento", elements: ["S1", "S2", "=KM1"], branches: [{ at: 0, elements: ["KM1"] }] },
+          { comment: "Un pulso por segundo de marcha", elements: ["KM1", "!PULSO", { fb: "TON", inst: "T_SEG", pins: { PT: "T#1s" } }, "=PULSO"] },
+          { comment: "Horómetro: un segundo más por pulso", elements: ["PULSO", { fb: "ADD", en: true, pins: { IN1: "SEGUNDOS", IN2: "1", OUT: "SEGUNDOS" } }] },
+          { comment: "Mantenimiento a los 20 s", elements: [{ fb: "GE", en: true, pins: { IN1: "SEGUNDOS", IN2: "20", OUT: "H1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { out: "KM1", expr: ["AND", ["OR", "KM1", "S1"], "S2"] },
+          { fb: "TON", inst: "T_SEG", in: { IN: ["AND", "KM1", ["NOT", "PULSO"]], PT: "T#1s" }, out: { Q: "PULSO" } },
+          { out: "SEGUNDOS", expr: ["SEL", "PULSO", "SEGUNDOS", ["ADD", "SEGUNDOS", "1"]] },
+          { out: "H1", expr: ["GE", "SEGUNDOS", "20"] },
+        ],
+      },
+    },
+    solution: {
+      st: `(* A los 20 s el motor queda bloqueado hasta el mantenimiento. *)
+KM1 := (KM1 OR S1) AND S2 AND SEGUNDOS < 20;
+
+T_SEG(IN := KM1 AND NOT PULSO, PT := T#1s);
+PULSO := T_SEG.Q;
+IF PULSO THEN
+  SEGUNDOS := SEGUNDOS + 1;
+END_IF;
+
+(* Aviso a los 10 s: se puede programar el mantenimiento. *)
+H1 := SEGUNDOS >= 10;`,
+      ld: {
+        rungs: [
+          { comment: "¿Queda tiempo de marcha? SEGUNDOS < 20", elements: [{ fb: "LT", en: true, pins: { IN1: "SEGUNDOS", IN2: "20", OUT: "HAY_TIEMPO" } }] },
+          { comment: "Marcha y parada; bloqueo a los 20 s", elements: ["S1", "S2", "HAY_TIEMPO", "=KM1"], branches: [{ at: 0, elements: ["KM1"] }] },
+          { comment: "Un pulso por segundo de marcha", elements: ["KM1", "!PULSO", { fb: "TON", inst: "T_SEG", pins: { PT: "T#1s" } }, "=PULSO"] },
+          { comment: "Horómetro: un segundo más por pulso", elements: ["PULSO", { fb: "ADD", en: true, pins: { IN1: "SEGUNDOS", IN2: "1", OUT: "SEGUNDOS" } }] },
+          { comment: "Aviso a los 10 s", elements: [{ fb: "GE", en: true, pins: { IN1: "SEGUNDOS", IN2: "10", OUT: "H1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { out: "HAY_TIEMPO", expr: ["LT", "SEGUNDOS", "20"] },
+          { out: "KM1", expr: ["AND", ["OR", "KM1", "S1"], "S2", "HAY_TIEMPO"] },
+          { fb: "TON", inst: "T_SEG", in: { IN: ["AND", "KM1", ["NOT", "PULSO"]], PT: "T#1s" }, out: { Q: "PULSO" } },
+          { out: "SEGUNDOS", expr: ["SEL", "PULSO", "SEGUNDOS", ["ADD", "SEGUNDOS", "1"]] },
+          { out: "H1", expr: ["GE", "SEGUNDOS", "10"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Aviso de mantenimiento H1 a los 10 s de marcha y, a los 20 s, el motor se detiene y no vuelve a arrancar.",
+      steps: ["Ejecuta el ejemplo: con S1 el motor marcha y SEGUNDOS sube uno por segundo (míralo en las variables en vivo).", "Adelanta el aviso H1 a los 10 s.", "Agrega el bloqueo: el motor marcha solo mientras SEGUNDOS < 20.", "Pasados los 20 s, S1 ya no lo arranca."],
+      uses: ["%IX0.0 · S1, marcha", "%IX0.1 · S2, paro NC", "%QX0.0 · KM1, motor", "%QX0.1 · H1, mantenimiento"],
+      teaches: "Un TON que se reinicia con su propia salida da un pulso por segundo; sumar esos pulsos convierte el tiempo en un número que se puede comparar, como un horómetro.",
+    },
+    rubric: {
+      goals: [
+        { id: "aviso", description: "A los 10 s de marcha H1 avisa y el motor sigue", when: { Q0_0: 1, Q0_1: 1 }, hold_ms: 500, hint: "H1 := SEGUNDOS >= 10;" },
+        { id: "bloqueo", description: "A los 20 s el motor se detiene", when: { Q0_0: 0, Q0_1: 1 }, hold_ms: 500, after: "aviso", hint: "Agrega AND SEGUNDOS < 20 a la marcha (en Ladder, un contacto del LT).", why: "El número del horómetro decide igual que un sensor: se compara y se usa en la lógica." },
+      ],
+      cases: [
+        {
+          name: "Horómetro y mantenimiento",
+          until_ms: 26000,
+          actions: [...press("S1", 1000, 200), ...press("S1", 24000, 300)],
+          checks: [
+            expect("A los 8 s de marcha: sin aviso", 2, 9000, { Q0_0: 1, Q0_1: 0 }),
+            ev("A los 10 s de marcha: aviso H1", 6, 11000, 12800, { Q0_0: 1, Q0_1: 1 }, 300),
+            expect("A los 15 s el motor sigue", 2, 16000, { Q0_0: 1 }),
+            ev("A los 20 s el motor se detiene", 6, 21000, 23500, { Q0_0: 0 }, 300),
+            never("Bloqueado: S1 no lo vuelve a arrancar", 4, 24000, 25800, { Q0_0: 1 }),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Marcha larga", until_ms: 25000, actions: press("S1", 1000, 300) }],
+    },
+  },
+  {
+    id: "iec-16",
+    unit: "4.Comparar_y_calcular",
+    folder: "16.Proyecto_cinta_de_lotes",
+    project: "cinta_lotes",
+    title: "Proyecto: lotes y turno en una cinta",
+    bench: "retos/07-cinta-contador",
+    vars: [
+      { name: "S1", type: "BOOL", at: "%IX0.0", doc: "marcha / lote nuevo, NA" },
+      { name: "S0", type: "BOOL", at: "%IX0.1", doc: "parada, NC: TRUE sin pulsar" },
+      { name: "B1", type: "BOOL", at: "%IX0.2", doc: "sensor de piezas" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "motor de la cinta" },
+      { name: "H1", type: "BOOL", at: "%QX0.1", doc: "lote completo" },
+      { name: "F_PIEZA", type: "R_TRIG" },
+      { name: "PIEZA", type: "BOOL", doc: "flanco de B1", langs: ["fbd"] },
+      { name: "PIEZAS", type: "INT", doc: "piezas del lote" },
+      { name: "COMPLETO", type: "BOOL", doc: "lote completo" },
+      { name: "F_LOTE", type: "R_TRIG" },
+      { name: "LOTE_NUEVO", type: "BOOL", doc: "flanco de COMPLETO", langs: ["fbd"] },
+      { name: "LOTES", type: "INT", doc: "lotes completos en el turno" },
+      { name: "TURNO", type: "BOOL", doc: "turno completo" },
+    ],
+    example: {
+      st: `(* Cada pieza cuenta una vez y solo con la cinta en marcha. *)
+F_PIEZA(CLK := B1);
+IF F_PIEZA.Q AND KM1 THEN
+  PIEZAS := PIEZAS + 1;
+END_IF;
+
+(* S1 con el lote completo empieza uno nuevo. *)
+IF S1 AND COMPLETO THEN
+  PIEZAS := 0;
+END_IF;
+
+COMPLETO := PIEZAS >= 3;
+
+(* La cinta: marcha, parada NC y para sola con el lote completo. *)
+KM1 := (KM1 OR S1) AND S0 AND NOT COMPLETO;
+H1 := COMPLETO;`,
+      ld: {
+        rungs: [
+          { comment: "Una pieza más, con la cinta en marcha", elements: ["^B1", "KM1", { fb: "ADD", en: true, pins: { IN1: "PIEZAS", IN2: "1", OUT: "PIEZAS" } }] },
+          { comment: "S1 con el lote completo: lote nuevo", elements: ["S1", "COMPLETO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "PIEZAS" } }] },
+          { comment: "Lote completo: 3 piezas", elements: [{ fb: "GE", en: true, pins: { IN1: "PIEZAS", IN2: "3", OUT: "COMPLETO" } }] },
+          { comment: "La cinta", elements: ["S1", "S0", "!COMPLETO", "=KM1"], branches: [{ at: 0, elements: ["KM1"] }] },
+          { comment: "Piloto de lote completo", elements: ["COMPLETO", "=H1"] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_PIEZA", in: { CLK: "B1" }, out: { Q: "PIEZA" } },
+          { out: "PIEZAS", expr: ["SEL", ["AND", "PIEZA", "KM1"], "PIEZAS", ["ADD", "PIEZAS", "1"]] },
+          { out: "PIEZAS", expr: ["SEL", ["AND", "S1", "COMPLETO"], "PIEZAS", "0"] },
+          { out: "COMPLETO", expr: ["GE", "PIEZAS", "3"] },
+          { out: "KM1", expr: ["AND", ["OR", "KM1", "S1"], "S0", ["NOT", "COMPLETO"]] },
+          { out: "H1", expr: "COMPLETO" },
+        ],
+      },
+    },
+    solution: {
+      st: `F_PIEZA(CLK := B1);
+IF F_PIEZA.Q AND KM1 THEN
+  PIEZAS := PIEZAS + 1;
+END_IF;
+
+(* El turno: 3 lotes. Con el turno completo, S1 ya no empieza otro. *)
+TURNO := LOTES >= 3;
+IF S1 AND COMPLETO AND NOT TURNO THEN
+  PIEZAS := 0;
+END_IF;
+
+(* Lotes de 4; cada lote que se completa suma uno (flanco de COMPLETO). *)
+COMPLETO := PIEZAS >= 4;
+F_LOTE(CLK := COMPLETO);
+IF F_LOTE.Q THEN
+  LOTES := LOTES + 1;
+END_IF;
+
+KM1 := (KM1 OR S1) AND S0 AND NOT COMPLETO;
+H1 := COMPLETO;`,
+      ld: {
+        rungs: [
+          { comment: "Una pieza más, con la cinta en marcha", elements: ["^B1", "KM1", { fb: "ADD", en: true, pins: { IN1: "PIEZAS", IN2: "1", OUT: "PIEZAS" } }] },
+          { comment: "Turno completo: 3 lotes", elements: [{ fb: "GE", en: true, pins: { IN1: "LOTES", IN2: "3", OUT: "TURNO" } }] },
+          { comment: "S1 con el lote completo: lote nuevo, si el turno sigue", elements: ["S1", "COMPLETO", "!TURNO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "PIEZAS" } }] },
+          { comment: "Lote completo: 4 piezas", elements: [{ fb: "GE", en: true, pins: { IN1: "PIEZAS", IN2: "4", OUT: "COMPLETO" } }] },
+          { comment: "Cada lote completo suma uno", elements: ["^COMPLETO", { fb: "ADD", en: true, pins: { IN1: "LOTES", IN2: "1", OUT: "LOTES" } }] },
+          { comment: "La cinta", elements: ["S1", "S0", "!COMPLETO", "=KM1"], branches: [{ at: 0, elements: ["KM1"] }] },
+          { comment: "Piloto de lote completo", elements: ["COMPLETO", "=H1"] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_PIEZA", in: { CLK: "B1" }, out: { Q: "PIEZA" } },
+          { out: "PIEZAS", expr: ["SEL", ["AND", "PIEZA", "KM1"], "PIEZAS", ["ADD", "PIEZAS", "1"]] },
+          { out: "TURNO", expr: ["GE", "LOTES", "3"] },
+          { out: "PIEZAS", expr: ["SEL", ["AND", "S1", "COMPLETO", ["NOT", "TURNO"]], "PIEZAS", "0"] },
+          { out: "COMPLETO", expr: ["GE", "PIEZAS", "4"] },
+          { fb: "R_TRIG", inst: "F_LOTE", in: { CLK: "COMPLETO" }, out: { Q: "LOTE_NUEVO" } },
+          { out: "LOTES", expr: ["SEL", "LOTE_NUEVO", "LOTES", ["ADD", "LOTES", "1"]] },
+          { out: "KM1", expr: ["AND", ["OR", "KM1", "S1"], "S0", ["NOT", "COMPLETO"]] },
+          { out: "H1", expr: "COMPLETO" },
+        ],
+      },
+    },
+    brief: {
+      goal: "Lotes de 4 piezas y un turno de 3 lotes: con el turno completo, S1 ya no empieza otro lote.",
+      steps: ["Ejecuta el ejemplo: S1 arranca, cada toque a B1 es una pieza y con 3 la cinta para; S1 empieza otro lote.", "Cambia el lote a 4 piezas.", "Cuenta los lotes completos (LOTES, en el flanco de COMPLETO) y calcula TURNO := LOTES >= 3.", "Con el turno completo, S1 no vuelve a cero las piezas: la cinta queda parada y H1 encendido."],
+      uses: ["%IX0.0 · S1, marcha / lote nuevo", "%IX0.1 · S0, parada NC", "%IX0.2 · B1, sensor de piezas", "%QX0.0 · KM1, motor de la cinta", "%QX0.1 · H1, lote completo"],
+      teaches: "Dos cuentas encadenadas (piezas por lote y lotes por turno) se arman con sumas en el flanco del evento y comparaciones; cada comparación es una condición más de la lógica.",
+    },
+    rubric: {
+      goals: [
+        { id: "lote4", description: "Con 3 piezas la cinta sigue; con 4, para", when: { Q0_0: 0, Q0_1: 1 }, hold_ms: 300, hint: "COMPLETO := PIEZAS >= 4;" },
+        { id: "turno", description: "Tras 3 lotes, S1 ya no arranca la cinta", when: { I0_0: 1, Q0_0: 0, Q0_1: 1 }, hold_ms: 100, after: "lote4", hint: "LOTES suma en el flanco de COMPLETO; TURNO := LOTES >= 3; y el lote nuevo necesita NOT TURNO.", why: "La segunda cuenta usa a la primera como evento: así se encadenan contadores." },
+      ],
+      cases: [
+        {
+          name: "Lote de 4",
+          until_ms: 4200,
+          actions: [...press("S1", 1000, 150), ...sensor("B1", 1500, 120), ...sensor("B1", 1900, 120), ...sensor("B1", 2300, 120), ...sensor("B1", 2700, 120), ...press("S1", 3600, 150)],
+          checks: [
+            expect("Con 3 piezas la cinta sigue", 3, 2600, { Q0_0: 1, Q0_1: 0 }),
+            ev("Con 4 piezas para y H1 avisa", 3, 2800, 3400, { Q0_0: 0, Q0_1: 1 }),
+            ev("S1 empieza un lote nuevo", 2, 3600, 4100, { Q0_0: 1, Q0_1: 0 }),
+          ],
+        },
+        {
+          name: "Turno de 3 lotes",
+          until_ms: 8200,
+          actions: [
+            ...press("S1", 1000, 150), ...[1500, 1800, 2100, 2400].flatMap((t) => sensor("B1", t, 120)),
+            ...press("S1", 3000, 150), ...[3500, 3800, 4100, 4400].flatMap((t) => sensor("B1", t, 120)),
+            ...press("S1", 5000, 150), ...[5500, 5800, 6100, 6400].flatMap((t) => sensor("B1", t, 120)),
+            ...press("S1", 7000, 300),
+          ],
+          checks: [
+            expect("Segundo lote en marcha", 2, 3300, { Q0_0: 1 }),
+            expect("Tercer lote en marcha", 2, 5300, { Q0_0: 1 }),
+            never("Turno completo: S1 no arranca la cinta", 6, 7000, 8100, { Q0_0: 1 }),
+            expect("Turno completo: H1 sigue encendido", 2, 7600, { Q0_1: 1 }),
+          ],
+        },
+      ],
+      goal_runs: [{
+        name: "Un turno",
+        until_ms: 9000,
+        actions: [
+          ...press("S1", 1000, 200), ...[1500, 1900, 2300, 2700].flatMap((t) => sensor("B1", t, 150)),
+          ...press("S1", 3300, 200), ...[3800, 4200, 4600, 5000].flatMap((t) => sensor("B1", t, 150)),
+          ...press("S1", 5600, 200), ...[6100, 6500, 6900, 7300].flatMap((t) => sensor("B1", t, 150)),
+          ...press("S1", 8000, 400),
+        ],
+      }],
+    },
   },
 ];

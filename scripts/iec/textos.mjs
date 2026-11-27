@@ -319,4 +319,102 @@ KM1 y KM2 juntos serían un cortocircuito en el motor. Como cada uno sale de una
     como: `El programa es el de la lección 10 con otras etapas. La parada va después del CASE para que mande sobre cualquier transición. En la práctica falta una transición: **CERRANDO → ABRIENDO con B3**, la barrera. Es una línea más en el CASE (un ELSIF), un peldaño más en Ladder o un SEL más en FBD.`,
     sim: ["Pulsa **Ejecutar** y aprieta **S1**: el portón abre hasta B1.", "Aprieta **S2**: cierra hasta B2. **S0** lo detiene donde esté.", ABRIR],
   },
+  "iec-13": {
+    descripcion: "Comparadores en IEC 61131-3: GE, LT, EQ y compañía convierten un número en una decisión. Una cinta que llena cajas con aviso previo, en ST, Ladder y FBD.",
+    intro: `En la lección 07 el contador decidía solo: su salida Q se activaba al llegar a PV. Pero una máquina suele tomar **varias decisiones con la misma cuenta**: avisar cuando falta poco, parar al completar, encender otra cosa a mitad de camino. Para eso se compara la cuenta con cada número que importa.`,
+    aprende: ["Los comparadores de la norma: EQ, NE, GT, GE, LT y LE; el resultado es un BOOL.", "A usar la cuenta (CV) de un contador en varias comparaciones.", "En Ladder, los comparadores se conectan por EN/ENO y dejan su resultado en un bit."],
+    idea: `### Seis comparaciones
+
+| Bloque | En ST | TRUE cuando |
+|---|---|---|
+| **EQ** | \`A = B\` | son iguales |
+| **NE** | \`A <> B\` | son distintos |
+| **GT** | \`A > B\` | A es mayor |
+| **GE** | \`A >= B\` | A es mayor o igual |
+| **LT** | \`A < B\` | A es menor |
+| **LE** | \`A <= B\` | A es menor o igual |
+
+### Un número, varias decisiones
+
+\`\`\`pascal
+KM1 := CUENTA < 10;   (* la cinta sigue mientras falten piezas *)
+H1 := CUENTA >= 10;   (* caja llena *)
+\`\`\`
+
+Cada línea es una pregunta sobre el mismo número. Agregar un aviso a las 8 piezas es agregar una comparación, sin tocar el contador.`,
+    como: `El contador queda con un PV alto (100): solo se usa su cuenta **CV**, que se copia a \`CUENTA\`. Las decisiones salen de las comparaciones. En Ladder cada comparación es un bloque **LT** o **GE** con *Execution control* (EN/ENO) en el riel, que escribe su resultado en un bit (KM1, H1). En FBD, el bloque recibe la cuenta y el número y su salida va directo a la variable.`,
+    sim: ["Pulsa **Ejecutar**: la cinta (KM1) marcha.", "Toca **B1** diez veces: con la décima, la cinta para y H1 se enciende.", "**S1** vuelve la cuenta a cero.", ABRIR],
+  },
+  "iec-14": {
+    descripcion: "Sumar y restar en IEC 61131-3: ADD y SUB en el flanco de un evento, con límites. Un estacionamiento con lugares libres, en ST, Ladder y FBD.",
+    intro: `Un estacionamiento tiene una barrera de entrada y otra de salida. Cada auto que entra suma uno; cada uno que sale, resta uno. Con la cuenta se calcula cuántos lugares quedan y se enciende el cartel de **lleno**. Es la cuenta más simple que sube y baja, y la base de cualquier inventario.`,
+    aprende: ["ADD y SUB: sumar y restar enteros (INT).", "A sumar en el flanco del evento, no mientras dure la señal.", "A calcular un valor a partir de otro (LIBRES := 5 - AUTOS) y compararlo."],
+    idea: `### Sumar en el flanco
+
+Si se escribe \`AUTOS := AUTOS + 1;\` con la barrera abierta, el programa suma uno **en cada vuelta**: cincuenta autos por segundo. Hay que sumar solo en el instante en que la barrera se abre, su **flanco de subida** (lección 06):
+
+\`\`\`pascal
+F_ENTRA(CLK := S1);
+IF F_ENTRA.Q THEN
+  AUTOS := AUTOS + 1;
+END_IF;
+\`\`\`
+
+En Ladder, el contacto de flanco **^S1** (P) deja pasar corriente una sola vuelta y alimenta la entrada EN de un bloque **ADD**. En FBD, un **R_TRIG** da el flanco y un **SEL** elige entre la cuenta y la cuenta + 1.
+
+### Calcular y comparar
+
+\`LIBRES := 5 - AUTOS;\` es otro número que se calcula en cada vuelta. Con él, \`H1 := LIBRES > 0;\` y \`H2 := LIBRES <= 0;\`.`,
+    como: `El ejemplo no tiene límites: un auto que entra con el estacionamiento lleno suma igual, y una salida de más deja la cuenta en negativo. En la vida real pasa (un sensor que rebota, un operador que prueba la barrera) y la cuenta deja de representar lo que hay. La práctica agrega una comparación antes de sumar y otra antes de restar.`,
+    sim: ["Pulsa **Ejecutar**: H1 (verde) encendido.", "Toca **S1** cinco veces: con el quinto auto, H2 (lleno).", "Toca **S2**: sale un auto y vuelve el verde.", ABRIR],
+  },
+  "iec-15": {
+    descripcion: "Contar el tiempo en IEC 61131-3: un TON que se reinicia solo da un pulso por segundo y ADD lo acumula. Un horómetro con aviso y bloqueo de mantenimiento, en ST, Ladder y FBD.",
+    intro: `Los motores, compresores y bombas se mantienen por **horas de marcha**: cambio de aceite cada 500 h, rodamientos cada 2 000 h. El PLC lleva la cuenta con un **horómetro**, un número que sube mientras el equipo trabaja. En el Sim se cuenta en segundos para no esperar horas.`,
+    aprende: ["Un generador de pulsos: un TON que se reinicia con su propia salida.", "A acumular tiempo en un INT sumando pulsos.", "A usar ese número en comparaciones: aviso y bloqueo de mantenimiento."],
+    idea: `### Un pulso por segundo
+
+\`\`\`pascal
+T_SEG(IN := KM1 AND NOT PULSO, PT := T#1s);
+PULSO := T_SEG.Q;
+\`\`\`
+
+Con el motor en marcha, el TON cuenta 1 s y pone PULSO en TRUE. En la vuelta siguiente, \`NOT PULSO\` corta su entrada: el TON vuelve a cero y empieza otro segundo. PULSO dura **una sola vuelta**, justo lo que hace falta para sumar uno.
+
+### Sumar los pulsos
+
+\`\`\`pascal
+IF PULSO THEN
+  SEGUNDOS := SEGUNDOS + 1;
+END_IF;
+\`\`\`
+
+Con el motor parado no hay pulsos y el horómetro se queda quieto: cuenta solo tiempo de marcha.`,
+    como: `El ejemplo enciende H1 (mantenimiento) a los 20 s. En una planta, el aviso llega antes de que haga falta parar, para programar el trabajo, y el bloqueo llega después, si nadie lo hizo. La práctica arma las dos cosas con dos comparaciones sobre el mismo número: \`>= 10\` avisa y \`< 20\` deja marchar al motor. En Ladder, el bloqueo es un contacto más en el peldaño de la marcha, alimentado por un bloque LT.`,
+    sim: ["Pulsa **Ejecutar** y aprieta **S1**: el motor marcha.", "Mira **SEGUNDOS** en las variables en vivo: sube uno por segundo.", "A los 20 s, H1 (mantenimiento) se enciende.", ABRIR],
+  },
+  "iec-16": {
+    descripcion: "Proyecto de la unidad Comparar y calcular en IEC 61131-3: una cinta que arma lotes de piezas y cuenta los lotes de un turno, con sumas, comparaciones y flancos, en ST, Ladder y FBD.",
+    intro: `El proyecto junta la unidad: una cinta que arma **lotes**. Cada pieza suma en el lote; con el lote completo la cinta para y avisa; el operador retira la caja y empieza otro con S1. En la práctica se agrega una segunda cuenta encima de la primera: los **lotes del turno**.`,
+    aprende: ["A encadenar dos cuentas: piezas por lote y lotes por turno.", "A sumar en el flanco de una condición calculada (COMPLETO), no solo de una entrada.", "A ordenar el programa: contar, decidir, comparar y, al final, las salidas."],
+    idea: `### Dos cuentas encadenadas
+
+| Cuenta | Suma uno cuando | Se usa para |
+|---|---|---|
+| PIEZAS | pasa una pieza por B1, con la cinta en marcha | COMPLETO := PIEZAS >= 4 |
+| LOTES | COMPLETO pasa de FALSE a TRUE | TURNO := LOTES >= 3 |
+
+La segunda cuenta no mira un sensor: mira el **flanco de COMPLETO**, una variable del programa. Un R_TRIG (en Ladder, el contacto **^COMPLETO**) sirve igual con cualquier BOOL.
+
+### El orden del programa
+
+1. Contar las piezas.
+2. Decidir si empieza un lote nuevo (S1 con el lote completo vuelve PIEZAS a 0).
+3. Comparar: COMPLETO, TURNO.
+4. Las salidas: la cinta y el piloto.
+
+Con ese orden, todo lo que se decide en una vuelta se ve en las salidas de la misma vuelta.`,
+    como: `\`IF F_PIEZA.Q AND KM1\` cuenta solo con la cinta en marcha: una pieza que se mueve con la cinta parada no es parte del lote. \`IF S1 AND COMPLETO THEN PIEZAS := 0\` es el lote nuevo; en Ladder es un **MOVE** de 0 a PIEZAS, y en FBD un **SEL** que elige 0. Como COMPLETO se calcula después, en la misma vuelta ya vale FALSE y la cinta arranca.`,
+    sim: ["Pulsa **Ejecutar** y aprieta **S1**: la cinta marcha.", "Toca **B1** tres veces: el lote se completa, la cinta para y H1 se enciende.", "**S1** empieza un lote nuevo.", ABRIR],
+  },
 };

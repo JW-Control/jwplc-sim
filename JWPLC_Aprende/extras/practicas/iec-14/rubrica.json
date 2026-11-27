@@ -1,0 +1,301 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-14",
+  "goals": [
+    {
+      "id": "lleno",
+      "description": "Con 3 autos adentro, H2 avisa lleno",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "hint": "LIBRES := 3 - AUTOS; H2 := LIBRES = 0;"
+    },
+    {
+      "id": "tope",
+      "description": "Un cuarto auto no cuenta: al salir uno vuelve a haber lugar",
+      "when": {
+        "Q0_0": 1,
+        "Q0_1": 0
+      },
+      "hold_ms": 300,
+      "after": "lleno",
+      "hint": "Suma solo si AUTOS < 3.",
+      "why": "Una cuenta que se pasa de su límite deja de representar la realidad."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Tres lugares y límites",
+      "until_ms": 7000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1150,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1400,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1550,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1950,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2750,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3200,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3350,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3600,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3750,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4150,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4400,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4550,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4800,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4950,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5400,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5550,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5950,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6200,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6350,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Vacío: verde",
+          "points": 2,
+          "at_ms": 800,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con 2 autos todavía hay lugar",
+          "points": 2,
+          "at_ms": 1650,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con 3 autos: lleno",
+          "points": 5,
+          "from_ms": 2000,
+          "to_ms": 2500,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Un cuarto auto no cuenta: al salir uno hay lugar",
+          "points": 5,
+          "from_ms": 3300,
+          "to_ms": 3500,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Salidas de más no bajan de 0: con 3 entradas, lleno otra vez",
+          "points": 6,
+          "from_ms": 6300,
+          "to_ms": 6900,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Entradas y salidas",
+      "until_ms": 5000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3400,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3600,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

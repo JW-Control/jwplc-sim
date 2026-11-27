@@ -3146,6 +3146,277 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 4,
+      "nombre": "Comparar y calcular",
+      "lecciones": [
+        {
+          "id": "iec-13",
+          "numero": 13,
+          "titulo": "Comparar números: GE, LT y EQ",
+          "ruta": "extras/Curso_IEC_61131/4.Comparar_y_calcular/13.Comparar_numeros",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Los comparadores de la norma: EQ, NE, GT, GE, LT y LE; el resultado es un BOOL.",
+            "A usar la cuenta (CV) de un contador en varias comparaciones.",
+            "En Ladder, los comparadores se conectan por EN/ENO y dejan su resultado en un bit."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El contador queda con un PV alto (100): solo se usa su cuenta **CV**, que se copia a `CUENTA`. Las decisiones salen de las comparaciones. En Ladder cada comparación es un bloque **LT** o **GE** con *Execution control* (EN/ENO) en el riel, que escribe su resultado en un bit (KM1, H1). En FBD, el bloque recibe la cuenta y el número y su salida va directo a la variable."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · B1, sensor de piezas",
+                "%IX0.1 · S1, RESET",
+                "%QX0.0 · KM1, motor de la cinta",
+                "%QX0.1 · H1, aviso"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: la cinta (KM1) marcha.",
+                "Toca **B1** diez veces: con la décima, la cinta para y H1 se enciende.",
+                "**S1** vuelve la cuenta a cero.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Cajas de 12 piezas y el aviso H1 desde la pieza 8, para que el operador prepare la caja siguiente.",
+            "Ejecuta el ejemplo: cada toque a B1 es una pieza; con 10 la cinta para y H1 avisa.",
+            "Cambia la meta a 12 piezas en la comparación de KM1.",
+            "Haz que H1 encienda desde la pieza 8 (GE con 8).",
+            "Llena una caja y vuelve a cero con S1."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-13",
+            "objetivos_en_vivo": [
+              {
+                "id": "aviso",
+                "text": "Con 8 piezas H1 avisa y la cinta sigue",
+                "extra": false
+              },
+              {
+                "id": "llena",
+                "text": "Con 12 piezas la cinta para",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-14",
+          "numero": 14,
+          "titulo": "Sumar y restar: un estacionamiento",
+          "ruta": "extras/Curso_IEC_61131/4.Comparar_y_calcular/14.Sumar_y_restar",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "ADD y SUB: sumar y restar enteros (INT).",
+            "A sumar en el flanco del evento, no mientras dure la señal.",
+            "A calcular un valor a partir de otro (LIBRES := 5 - AUTOS) y compararlo."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El ejemplo no tiene límites: un auto que entra con el estacionamiento lleno suma igual, y una salida de más deja la cuenta en negativo. En la vida real pasa (un sensor que rebota, un operador que prueba la barrera) y la cuenta deja de representar lo que hay. La práctica agrega una comparación antes de sumar y otra antes de restar."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, entra un auto",
+                "%IX0.1 · S2, sale un auto",
+                "%QX0.0 · H1, hay lugar",
+                "%QX0.1 · H2, lleno"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: H1 (verde) encendido.",
+                "Toca **S1** cinco veces: con el quinto auto, H2 (lleno).",
+                "Toca **S2**: sale un auto y vuelve el verde.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Un estacionamiento de 3 lugares cuya cuenta nunca pasa de 3 ni baja de 0, aunque las barreras se accionen de más.",
+            "Ejecuta el ejemplo: S1 es un auto que entra y S2 uno que sale; con 5 adentro, H2 avisa lleno.",
+            "Cambia la capacidad a 3.",
+            "Suma solo si AUTOS < 3 y resta solo si AUTOS > 0.",
+            "Prueba de más: entra un cuarto auto y salen más autos de los que hay; la cuenta no se sale de 0…3."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-14",
+            "objetivos_en_vivo": [
+              {
+                "id": "lleno",
+                "text": "Con 3 autos adentro, H2 avisa lleno",
+                "extra": false
+              },
+              {
+                "id": "tope",
+                "text": "Un cuarto auto no cuenta: al salir uno vuelve a haber lugar",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-15",
+          "numero": 15,
+          "titulo": "Contar el tiempo: un horómetro con mantenimiento",
+          "ruta": "extras/Curso_IEC_61131/4.Comparar_y_calcular/15.Horometro",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "Un generador de pulsos: un TON que se reinicia con su propia salida.",
+            "A acumular tiempo en un INT sumando pulsos.",
+            "A usar ese número en comparaciones: aviso y bloqueo de mantenimiento."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "El ejemplo enciende H1 (mantenimiento) a los 20 s. En una planta, el aviso llega antes de que haga falta parar, para programar el trabajo, y el bloqueo llega después, si nadie lo hizo. La práctica arma las dos cosas con dos comparaciones sobre el mismo número: `>= 10` avisa y `< 20` deja marchar al motor. En Ladder, el bloqueo es un contacto más en el peldaño de la marcha, alimentado por un bloque LT."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, marcha",
+                "%IX0.1 · S2, paro NC",
+                "%QX0.0 · KM1, motor",
+                "%QX0.1 · H1, mantenimiento"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: el motor marcha.",
+                "Mira **SEGUNDOS** en las variables en vivo: sube uno por segundo.",
+                "A los 20 s, H1 (mantenimiento) se enciende.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Aviso de mantenimiento H1 a los 10 s de marcha y, a los 20 s, el motor se detiene y no vuelve a arrancar.",
+            "Ejecuta el ejemplo: con S1 el motor marcha y SEGUNDOS sube uno por segundo (míralo en las variables en vivo).",
+            "Adelanta el aviso H1 a los 10 s.",
+            "Agrega el bloqueo: el motor marcha solo mientras SEGUNDOS < 20.",
+            "Pasados los 20 s, S1 ya no lo arranca."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-15",
+            "objetivos_en_vivo": [
+              {
+                "id": "aviso",
+                "text": "A los 10 s de marcha H1 avisa y el motor sigue",
+                "extra": false
+              },
+              {
+                "id": "bloqueo",
+                "text": "A los 20 s el motor se detiene",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "iec-16",
+          "numero": 16,
+          "titulo": "Proyecto: lotes y turno en una cinta",
+          "ruta": "extras/Curso_IEC_61131/4.Comparar_y_calcular/16.Proyecto_cinta_de_lotes",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A encadenar dos cuentas: piezas por lote y lotes por turno.",
+            "A sumar en el flanco de una condición calculada (COMPLETO), no solo de una entrada.",
+            "A ordenar el programa: contar, decidir, comparar y, al final, las salidas."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "`IF F_PIEZA.Q AND KM1` cuenta solo con la cinta en marcha: una pieza que se mueve con la cinta parada no es parte del lote. `IF S1 AND COMPLETO THEN PIEZAS := 0` es el lote nuevo; en Ladder es un **MOVE** de 0 a PIEZAS, y en FBD un **SEL** que elige 0. Como COMPLETO se calcula después, en la misma vuelta ya vale FALSE y la cinta arranca."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "%IX0.0 · S1, marcha / lote nuevo",
+                "%IX0.1 · S0, parada NC",
+                "%IX0.2 · B1, sensor de piezas",
+                "%QX0.0 · KM1, motor de la cinta",
+                "%QX0.1 · H1, lote completo"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: la cinta marcha.",
+                "Toca **B1** tres veces: el lote se completa, la cinta para y H1 se enciende.",
+                "**S1** empieza un lote nuevo.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Lotes de 4 piezas y un turno de 3 lotes: con el turno completo, S1 ya no empieza otro lote.",
+            "Ejecuta el ejemplo: S1 arranca, cada toque a B1 es una pieza y con 3 la cinta para; S1 empieza otro lote.",
+            "Cambia el lote a 4 piezas.",
+            "Cuenta los lotes completos (LOTES, en el flanco de COMPLETO) y calcula TURNO := LOTES >= 3.",
+            "Con el turno completo, S1 no vuelve a cero las piezas: la cinta queda parada y H1 encendido."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-16",
+            "objetivos_en_vivo": [
+              {
+                "id": "lote4",
+                "text": "Con 3 piezas la cinta sigue; con 4, para",
+                "extra": false
+              },
+              {
+                "id": "turno",
+                "text": "Tras 3 lotes, S1 ya no arranca la cinta",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "retos": [

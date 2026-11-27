@@ -1,0 +1,575 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-16",
+  "goals": [
+    {
+      "id": "lote4",
+      "description": "Con 3 piezas la cinta sigue; con 4, para",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "hint": "COMPLETO := PIEZAS >= 4;"
+    },
+    {
+      "id": "turno",
+      "description": "Tras 3 lotes, S1 ya no arranca la cinta",
+      "when": {
+        "I0_0": 1,
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 100,
+      "after": "lote4",
+      "hint": "LOTES suma en el flanco de COMPLETO; TURNO := LOTES >= 3; y el lote nuevo necesita NOT TURNO.",
+      "why": "La segunda cuenta usa a la primera como evento: así se encadenan contadores."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lote de 4",
+      "until_ms": 4200,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1150,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1620,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 1900,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2020,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2420,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2820,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3750,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con 3 piezas la cinta sigue",
+          "points": 3,
+          "at_ms": 2600,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con 4 piezas para y H1 avisa",
+          "points": 3,
+          "from_ms": 2800,
+          "to_ms": 3400,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "S1 empieza un lote nuevo",
+          "points": 2,
+          "from_ms": 3600,
+          "to_ms": 4100,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    },
+    {
+      "name": "Turno de 3 lotes",
+      "until_ms": 8200,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1150,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1620,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1920,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2220,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2400,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2520,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3150,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3620,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3800,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3920,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4220,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4400,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4520,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5150,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 5620,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5800,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 5920,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6220,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6400,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6520,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Segundo lote en marcha",
+          "points": 2,
+          "at_ms": 3300,
+          "expect": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Tercer lote en marcha",
+          "points": 2,
+          "at_ms": 5300,
+          "expect": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Turno completo: S1 no arranca la cinta",
+          "points": 6,
+          "from_ms": 7000,
+          "to_ms": 8100,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Turno completo: H1 sigue encendido",
+          "points": 2,
+          "at_ms": 7600,
+          "expect": {
+            "Q0_1": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Un turno",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 1650,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 1900,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2050,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2450,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 2850,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 3300,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3800,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 3950,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4200,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4350,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 4750,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 5150,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 5600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6100,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6250,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 6650,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 6900,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 7050,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 7300,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 7450,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8400,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}
