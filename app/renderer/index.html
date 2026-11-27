@@ -110,6 +110,7 @@
         <div id="plc-diagram" class="plc-diagram" hidden>
           <div class="plc-diagram-head">
             <span id="plc-diagram-hint">Edítelo aquí con ✎ Editar o en el OpenPLC Editor: el archivo es el mismo. En marcha: clic derecho en un contacto o bobina de E/S para forzarlo.</span>
+            <button id="ld-bp-btn" class="small" hidden title="Backplane: nombres (alias) de las borneras del JWPLC, como en el OpenPLC Editor">⊞ Backplane</button>
             <button id="ld-edit-btn" class="small" hidden title="Editar el Ladder en el Sim (mismo formato que el OpenPLC Editor)">✎ Editar</button>
             <button id="plc-diagram-text" class="small" title="Ver el archivo como texto (JSON del editor)">Ver como texto</button>
           </div>
@@ -371,6 +372,7 @@
         <button class="ptab active" role="tab" aria-selected="true" data-view="console" id="tab-console" title="Monitor serie del USB (UART0)">Serie</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="buses" id="tab-buses" title="Tramas de RS-485 y Modbus RTU/TCP">Tráfico</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="watch" id="tab-watch" title="Entradas, salidas y variables del sketch; forzado de E/S">E/S y variables</button>
+        <button class="ptab" role="tab" aria-selected="false" data-view="ldvars" id="tab-ldvars" hidden title="Variables del programa Ladder (VAR … END_VAR del .ld), como la tabla del OpenPLC Editor">Variables</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="debug" id="tab-debug" title="Pila de llamadas y variables al detenerse en un breakpoint">Depuración</button>
         <button class="ptab" role="tab" aria-selected="false" data-view="exercise" id="tab-exercise" hidden>Ejercicio</button>
         <span class="muted" id="view-note">UART0 · 115200</span>
@@ -422,6 +424,7 @@
             <tbody id="bus-rows"></tbody>
           </table>
         </div>
+        <div id="ld-vars" class="ld-vars view" data-view="ldvars" hidden></div>
         <div id="watch" class="watch view" data-view="watch" hidden>
           <div class="watch-col">
             <div class="watch-title">Entradas digitales</div>
@@ -564,6 +567,13 @@
           <button id="tft-zoom-plus" title="Más grande">+</button>
           <button id="tft-zoom-close" title="Cerrar (clic fuera de la pantalla también cierra)">Cerrar</button>
         </div>
+      </div>
+    </div>
+    <div id="ld-bp" class="ld-bp" hidden role="dialog" aria-modal="true" aria-labelledby="ld-bp-title">
+      <div class="ld-bp-card">
+        <div class="ld-bp-head"><b id="ld-bp-title">Backplane</b><span id="ld-bp-board" class="muted"></span><button id="ld-bp-close" class="icon" title="Cerrar (Esc)" aria-label="Cerrar">✕</button></div>
+        <div id="ld-bp-body" class="ld-bp-body"></div>
+        <div class="ld-bp-foot"><span class="muted">Se guarda en devices/configuration.json, igual que el Backplane del OpenPLC Editor. Una variable puede ir AT &lt;alias&gt;.</span><button id="ld-bp-cancel" class="small">Cancelar</button><button id="ld-bp-save" class="small primary">Guardar</button></div>
       </div>
     </div>
     <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>

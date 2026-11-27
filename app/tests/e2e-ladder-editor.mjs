@@ -10,6 +10,11 @@
 //   (con una rama en paralelo bajo el contacto: MARCHA OR H2)
 //   COMENTARIO         el comentario del peldaño se edita en su cabecera
 //   BORRAR_DESHACER    Supr borra el elemento y Ctrl+Z lo devuelve
+//   BACKPLANE          ⊞ Backplane: alias SENSOR en la bornera I0.6, guardado en
+//                      devices/configuration.json (io-mapping) como el editor
+//   CONTACTO_ALIAS     un contacto SENSOR queda AT SENSOR y muestra %IX0.6
+//   TABLA_VARIABLES    pestaña Variables del panel de abajo: agrega CUENTA :
+//                      INT y renombra PARADA → PARO_NC (también en el Ladder)
 //   GUARDA_Y_COMPILA   se guarda el .ld en disco y la cadena de OpenPLC lo
 //                      compila (ST con NOT(PARO) y el TON)
 // Capturas (claro y oscuro) en build/gates/ladder-editor/.
@@ -182,7 +187,55 @@ try {
   await win.keyboard.press("Escape");
   await t(() => window.jwsimTest.setTheme("light"));
 
-  // 5) Guardar y compilar con la cadena del OpenPLC Editor.
+  // 5) Backplane: alias de la bornera I0.6 y un contacto que lo usa.
+  await win.click("#ld-bp-btn");
+  await win.waitForSelector('#ld-bp:not([hidden]) input[data-ch="I0_6"]');
+  await win.fill('#ld-bp input[data-ch="I0_6"]', "SENSOR");
+  await shot("05-backplane.png");
+  await win.click("#ld-bp-save");
+  await until(() => t(() => document.getElementById("ld-bp").hidden), 3000);
+  const dir0 = await t(() => window.jwsimTest.sketchDir());
+  const cfg = JSON.parse(readFileSync(join(dir0, "devices", "configuration.json"), "utf8"));
+  const ent = cfg.vendorScreenData?.["io-mapping"]?.entries ?? [];
+  criteria.BACKPLANE = {
+    pass: ent.length === 16 && ent.some((e) => e.channelName === "I0_6" && e.alias === "SENSOR" && e.iecAddress === "%IX0.6" && e.moduleId === "jwplc-basic-controller") && cfg.deviceBoard === "JWPLC BASIC [2.0.0]",
+    entries: ent.length,
+  };
+  await win.click('#ld-toolbar [data-tool="contact:default"]');
+  await clickPh({ rung: 0, leftOf: ".ld-coil" });
+  await popFill("SENSOR");
+  const t3 = await body();
+  const addr = await t(() => [...document.querySelectorAll('#plc-diagram-body .ld-addr')].map((e) => e.lastChild.textContent));
+  criteria.CONTACTO_ALIAS = { pass: /SENSOR AT SENSOR : BOOL;/.test(t3) && addr.includes("%IX0.6") && addr.includes("%IX0.5"), addr };
+  await shot("06-alias-direcciones.png");
+
+  // 6) Tabla de variables (pestaña del panel de abajo).
+  await win.click("#tab-ldvars");
+  await win.waitForSelector("#ld-vars:not([hidden]) table.ld-vt");
+  const rows0 = await t(() => document.querySelectorAll("#ld-vars tr[data-name]").length);
+  await win.click('#ld-vars [data-act="add-var"]');
+  await win.waitForTimeout(200);
+  await win.keyboard.type("CUENTA");
+  await win.keyboard.press("Enter");
+  await win.waitForTimeout(200);
+  const typeIn = '#ld-vars tr[data-name="CUENTA"] [data-f="type"]';
+  await win.fill(typeIn, "INT");
+  await win.press(typeIn, "Enter");
+  await win.waitForTimeout(200);
+  const ren = '#ld-vars tr[data-name="PARADA"] [data-f="name"]';
+  await win.fill(ren, "PARO_NC");
+  await win.press(ren, "Enter");
+  await win.waitForTimeout(300);
+  const t4 = await body();
+  const rows1 = await t(() => document.querySelectorAll("#ld-vars tr[data-name]").length);
+  criteria.TABLA_VARIABLES = {
+    pass: rows1 === rows0 + 1 && /CUENTA : INT;/.test(t4) && /PARO_NC AT %IX0\.1 : BOOL;/.test(t4) && nodesOf(t4).some((n) => n.data?.variable?.name === "PARO_NC") && !nodesOf(t4).some((n) => n.data?.variable?.name === "PARADA"),
+    rows0,
+    rows1,
+  };
+  await shot("07-tabla-variables.png");
+
+  // 7) Guardar y compilar con la cadena del OpenPLC Editor.
   await win.click("#ld-edit-btn");
   await win.click("#btn-run");
   const ran = await until(() => t(() => ["running", "error", "idle"].includes(window.jwsimTest.status()) && window.jwsimTest.status()), 300000);
@@ -192,7 +245,7 @@ try {
   const g = await generateOpenPlcSketch(dir, mkdtempSync(join(tmpdir(), "jwsim-ld-st-")), { log: () => {} });
   const st = g.programSt;
   criteria.GUARDA_Y_COMPILA = {
-    pass: ran === "running" && disk === (await body()) && /NOT\(PARO\)/.test(st) && /RETARDO\(IN := \(?(MARCHA OR H2|H2 OR MARCHA)\)?, PT := T#2s\)/.test(st) && /H2 := RETARDO\.Q/.test(st),
+    pass: ran === "running" && disk === (await body()) && /NOT\(PARO\)/.test(st) && /PARO_NC/.test(st.split("END_VAR").pop()) && /SENSOR/.test(st.split("END_VAR").pop()) && /RETARDO\(IN := \(?(MARCHA OR H2|H2 OR MARCHA)\)?, PT := T#2s\)/.test(st) && /H2 := RETARDO\.Q/.test(st),
     status: ran,
     st: st.split("\n").filter((l) => /:=|RETARDO/.test(l)).slice(0, 8),
   };

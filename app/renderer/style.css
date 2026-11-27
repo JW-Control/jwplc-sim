@@ -7424,3 +7424,66 @@ html.booting body {
 }
 .ld-blk span { color: var(--muted); font-size: 11px; }
 .ld-blk:hover { background: rgba(4, 100, 251, 0.1); }
+
+/* Dirección bajo el contacto o la bobina (resuelta con los alias). */
+.ld-addr { fill: var(--ld-muted); font-size: 9.5px; font-family: ui-monospace, Consolas, monospace; }
+
+/* Ventana Backplane (ladder-edit.js). */
+.ld-bp {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--backdrop);
+}
+.ld-bp[hidden] { display: none; }
+.ld-bp-card {
+  width: min(820px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px var(--shadow);
+  overflow: hidden;
+}
+.ld-bp-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel-2); font-size: 15px; }
+.ld-bp-head .icon { margin-left: auto; }
+.ld-bp-body { padding: 14px 16px; overflow: auto; font-size: 12px; }
+.ld-bp-mod { font-weight: 600; margin-bottom: 10px; }
+.ld-bp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.ld-bp-t { width: 100%; border-collapse: collapse; }
+.ld-bp-t caption { text-align: left; font-weight: 600; padding-bottom: 6px; color: var(--muted); }
+.ld-bp-t th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 3px 6px; border-bottom: 1px solid var(--border-subtle); }
+.ld-bp-t td { padding: 3px 6px; border-bottom: 1px solid var(--border-subtle); }
+.ld-bp-ch { font-weight: 600; }
+.ld-bp-addr { font-family: ui-monospace, Consolas, monospace; color: var(--muted); }
+.ld-bp-used { font-size: 11px; color: var(--muted); }
+.ld-bp-t input.bad { border-color: var(--danger, #d33); }
+.ld-bp-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 11px; }
+.ld-bp-foot .muted { flex: 1; }
+
+/* Pestaña «Variables» (tabla del .ld, como la del OpenPLC Editor). */
+.ld-vars { padding: 0 10px 10px; overflow: auto; font-size: 12px; }
+.ld-vars[hidden] { display: none; }
+.ld-vt { border-collapse: collapse; width: 100%; min-width: 860px; }
+.ld-vt th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 4px 4px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }
+.ld-vt td { padding: 1px 2px; border-bottom: 1px solid var(--border-subtle); }
+.ld-vt-n { color: var(--muted); width: 26px; text-align: right; padding-right: 6px !important; }
+.ld-vt-in { width: 100%; box-sizing: border-box; font: inherit; padding: 3px 5px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--text); }
+.ld-vt-in:hover { border-color: var(--border-subtle); }
+.ld-vt-in:focus { border-color: #0464fb; background: var(--bg); outline: none; }
+.ld-vt-in.bad { border-color: var(--danger, #d33); }
+.ld-vt td:nth-child(2) { width: 16%; }
+.ld-vt td:nth-child(3) { width: 9%; }
+.ld-vt td:nth-child(4) { width: 10%; }
+.ld-vt td:nth-child(5) { width: 13%; }
+.ld-vt-addr { width: 7%; color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+.ld-vt td:nth-child(7) { width: 10%; }
+.ld-vt-del { border: none; background: transparent; cursor: pointer; opacity: 0.5; padding: 2px 6px; }
+.ld-vt-del:hover { opacity: 1; }
+.ld-vt-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.ld-vt-foot .muted { font-size: 11px; }

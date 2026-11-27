@@ -20,6 +20,24 @@ mismo que abre el OpenPLC Editor: se puede pasar de uno a otro.
   - Un bloque de función pide su instancia (por ejemplo `TON0 : TON;`).
   - Los pines de un bloque (PT, PV…) se editan con un clic. Aceptan una
     variable o un valor fijo (`T#2s`).
+- **Backplane** (botón ⊞ Backplane): es la misma pantalla del OpenPLC Editor.
+  - Muestra las borneras del JWPLC Basic (I0.0–I0.7, Q0.0–Q0.7), cada una con
+    su dirección IEC fija y un **alias**.
+  - Se guarda en `devices/configuration.json`, en
+    `vendorScreenData["io-mapping"]`, con la misma forma que el editor.
+  - Una variable puede ir `AT <alias>` y la cadena lo resuelve a la dirección
+    al compilar.
+  - Al colocar un contacto o una bobina, la lista ofrece también los alias.
+  - Cambiar un alias actualiza las variables que lo usaban.
+- **Tabla de variables**: es la pestaña «Variables» del panel de abajo.
+  - Tiene las columnas de la tabla del OpenPLC Editor: Nombre, Clase, Tipo,
+    Ubicación, Valor inicial y Documentación.
+  - Edita la línea de cada variable en `VAR … END_VAR` y conserva el resto de
+    la cabecera.
+  - Renombrar una variable la renombra también en el Ladder.
+- **Direcciones en el diagrama**: debajo de cada contacto y bobina aparece en
+  chico su dirección real, resuelta por el alias si hace falta. En vivo, los
+  alias también se pintan y se pueden forzar.
 - **Peldaños.** Se pueden agregar, subir, bajar y borrar. Con un clic en la
   cabecera se edita el comentario.
 - **Borrar.** Supr borra lo seleccionado. Ctrl+Z deshace y Ctrl+Y rehace.
@@ -75,6 +93,8 @@ La prueba trabaja sobre la lección IEC 03 en LD:
   PT) y una bobina;
 - edita el comentario;
 - borra un elemento y lo deshace;
+- pone el alias SENSOR en I0.6 y agrega un contacto que lo usa;
+- en la tabla, agrega una variable y renombra otra;
 - guarda y compila.
 
 Además comprueba el texto estructurado que genera la cadena del OpenPLC

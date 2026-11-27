@@ -8,9 +8,9 @@
 //
 // Los bloques salen de las mismas bibliotecas .stlib de STruC++ que carga el
 // editor (stlibsToSystemLibraries), con la misma firma que guarda el editor.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { editorPaths, resolveEditor } from "../../scripts/fetch-editor.mjs";
 
@@ -20,9 +20,18 @@ const require = createRequire(import.meta.url);
 // cientos de bloques que el curso no usa).
 const LIBS = ["iec-standard-fb", "iec-std-functions", "additional-function-blocks"];
 
-export function createLadderEditor() {
+// Backplane del OpenPLC Editor (pantalla «Backplane» del VPP, layout
+// module-slots): cada bornera del módulo fijo del equipo con su dirección IEC
+// y un alias. Se guarda en devices/configuration.json →
+// vendorScreenData["io-mapping"].entries, el mismo lugar y la misma forma que
+// el editor; las variables pueden ir `AT <alias>` y la cadena lo resuelve.
+const IEC_PREFIX = { digitalInput: "%IX", digitalOutput: "%QX", analogInput: "%IW", analogOutput: "%QW" };
+
+/** @param {{onWrite?: (path: string, content: string) => void}} [o] */
+export function createLadderEditor({ onWrite } = {}) {
   let ops = null;
   let blocks = null;
+  let vppDevice = null;
 
   async function load() {
     if (ops) return ops;
@@ -30,6 +39,7 @@ export function createLadderEditor() {
     const P = editorPaths(dir);
     if (!existsSync(P.ladderOps)) throw new Error("Falta la edición Ladder del editor OpenPLC. Ejecute: node scripts/fetch-editor.mjs");
     ops = require(P.ladderOps);
+    vppDevice = JSON.parse(readFileSync(join(P.vpp, "manifest.json"), "utf8")).devices[0];
     const libsDir = join(P.strucpp, "libs");
     const archives = readdirSync(libsDir)
       .filter((f) => LIBS.includes(f.replace(/\.stlib$/, "")))
@@ -72,6 +82,56 @@ export function createLadderEditor() {
     };
   }
 
+  /** Borneras del módulo fijo (slot 0) con su dirección IEC. */
+  function channels() {
+    const mod = vppDevice?.moduleSystem?.modules?.find((m) => m.fixed);
+    if (!mod) return { module: null, channels: [] };
+    const next = {};
+    const list = (mod.addressMapping?.channels ?? []).map((c) => {
+      const pre = IEC_PREFIX[c.type] ?? "%IX";
+      const n = next[pre] ?? 0;
+      next[pre] = n + 1;
+      const iecAddress = pre.endsWith("X") ? `${pre}${Math.floor(n / 8)}.${n % 8}` : `${pre}${n}`;
+      return { slot: 0, moduleId: mod.id, moduleName: mod.name, channelName: c.name, channelType: c.type, dataType: c.dataType ?? "BOOL", iecAddress, alias: "" };
+    });
+    return { module: { id: mod.id, name: mod.name }, channels: list };
+  }
+
+  const configPath = (dir) => join(resolve(dir), "devices", "configuration.json");
+  function readConfig(dir) {
+    const p = configPath(dir);
+    return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {};
+  }
+
+  /** Backplane del proyecto: borneras + alias guardados. */
+  function ioGet(dir) {
+    const cfg = readConfig(dir);
+    const saved = cfg.vendorScreenData?.["io-mapping"]?.entries ?? [];
+    const { module, channels: list } = channels();
+    for (const c of list) {
+      const s = saved.find((e) => e.slot === c.slot && e.channelName === c.channelName);
+      if (s) {
+        c.alias = s.alias ?? "";
+        if (s.iecAddress) c.iecAddress = s.iecAddress;
+      }
+    }
+    return { board: cfg.deviceBoard ?? vppDevice?.name ?? "", module, entries: list };
+  }
+
+  /** Guarda los alias (channelName → alias) conservando el resto de la configuración. */
+  function ioSet(dir, aliases) {
+    const cfg = readConfig(dir);
+    const cur = ioGet(dir).entries;
+    const entries = cur.map((c) => ({ ...c, alias: String(aliases[c.channelName] ?? c.alias ?? "").trim() }));
+    const others = (cfg.vendorScreenData?.["io-mapping"]?.entries ?? []).filter((e) => e.slot !== 0);
+    cfg.vendorScreenData = { ...(cfg.vendorScreenData ?? {}), "io-mapping": { ...(cfg.vendorScreenData?.["io-mapping"] ?? {}), entries: [...entries, ...others] } };
+    const text = JSON.stringify(cfg, null, 2) + "\n";
+    const p = configPath(dir);
+    onWrite?.(p, text);
+    writeFileSync(p, text);
+    return { entries };
+  }
+
   /**
    * @param {{action: string, rung?: object, placeholder?: string (key de «placeholders»), element?: string, block?: string, ids?: string[], pou?: string}} req
    */
@@ -81,6 +141,10 @@ export function createLadderEditor() {
     switch (req.action) {
       case "blocks":
         return { blocks };
+      case "io-get":
+        return ioGet(req.dir);
+      case "io-set":
+        return ioSet(req.dir, req.aliases ?? {});
       case "new-rung":
         return { rung: newRung(req.pou ?? "main") };
       case "placeholders":

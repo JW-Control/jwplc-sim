@@ -230,7 +230,7 @@ ipcMain.handle("update:check", () => updater.check(true));
 ipcMain.handle("update:install", () => updater.install());
 
 // Editor Ladder del Sim: las operaciones de peldaño del OpenPLC Editor.
-const ladderEditor = createLadderEditor();
+const ladderEditor = createLadderEditor({ onWrite: (p, content) => ownWrites.set(p, content) });
 ipcMain.handle("ld:op", (_e, req) => ladderEditor.op(req));
 
 // Suelta gdb (el proceso sigue) y luego cierra el runner.

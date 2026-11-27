@@ -117,6 +117,7 @@ const VIEW_NOTES = {
   watch: "Forzar fija la señal aunque el programa o la escena la cambien",
   debug: "gdb",
   exercise: "Enunciado y calificación",
+  ldvars: "Variables del programa Ladder: se guardan en el .ld, como en el OpenPLC Editor",
 };
 function setView(view) {
   state.view = view;
@@ -131,6 +132,7 @@ function setView(view) {
   $("opt-ts").hidden = view !== "console";
   $("btn-view-clear").hidden = !["console", "buses"].includes(view);
   api.command({ type: "subscribe", buses: view === "buses" ? 1 : 0 });
+  if (view === "ldvars") ldVarsRender();
 }
 
 let editor = null;
@@ -708,7 +710,7 @@ function paintLadder() {
   const live = ["running", "paused", "break"].includes(state.sim);
   box.classList.toggle("ld-live", live);
   const valueOf = (d) => {
-    const sig = window.JwsimPlcDiagram.sigOf(d);
+    const sig = ldSig(d);
     if (!sig || !live) return undefined;
     return !!state.levels.get(sig);
   };

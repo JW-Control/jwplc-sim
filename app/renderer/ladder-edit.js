@@ -91,7 +91,7 @@ function ldSplit(text) {
 function ldVars(text) {
   const head = text.slice(0, text.indexOf("{"));
   const out = [];
-  for (const m of head.matchAll(/^[ \t]*([A-Za-z_]\w*)[ \t]*(?:AT[ \t]+(%[A-Z]+[\d.]+))?[ \t]*:[ \t]*([A-Za-z_]\w*)[ \t]*(?::=[ \t]*([^;]+?))?[ \t]*;[ \t]*(?:\(\*[ \t]*(.*?)[ \t]*\*\))?/gm)) {
+  for (const m of head.matchAll(/^[ \t]*([A-Za-z_]\w*)[ \t]*(?:AT[ \t]+(%[A-Z]+[\d.]+|[A-Za-z_]\w*))?[ \t]*:[ \t]*([A-Za-z_]\w*)[ \t]*(?::=[ \t]*([^;]+?))?[ \t]*;[ \t]*(?:\(\*[ \t]*(.*?)[ \t]*\*\))?/gm)) {
     out.push({ name: m[1], location: m[2] ?? "", type: m[3].toUpperCase(), initial: m[4] ?? null, doc: m[5] ?? "" });
   }
   return out;
@@ -145,12 +145,134 @@ function ldUndo(redo = false) {
 // --------------------------------------------------------------- la vista
 /** HTML del Ladder para renderPlcDiagram: vista normal o modo edición. */
 function ldHtml(text) {
-  if (!ldEdit.on) return window.JwsimPlcDiagram.ladderView(text);
-  return window.JwsimPlcDiagram.ladderView(text, { edit: true, selected: [...ldEdit.sel], placeholders: ldEdit.tool ? ldEdit.ph : {} });
+  const base = { sigOf: ldSig, addrOf: ldAddrOf };
+  if (!ldEdit.on) return window.JwsimPlcDiagram.ladderView(text, base);
+  return window.JwsimPlcDiagram.ladderView(text, { ...base, edit: true, selected: [...ldEdit.sel], placeholders: ldEdit.tool ? ldEdit.ph : {} });
+}
+
+// ------------------------------------------------------------ backplane
+// Alias de las borneras (devices/configuration.json, io-mapping), leídos por
+// IPC al abrir un .ld. Una variable `AT MARCHA` se resuelve a la dirección de
+// la bornera con ese alias, como hace la cadena del editor al compilar.
+const ldIo = { dir: null, entries: [], board: "" };
+async function ldIoLoad(force = false) {
+  const dir = state.sketch?.dir;
+  if (!dir || !state.sketch?.openplc || (!force && ldIo.dir === dir)) return;
+  try {
+    const r = await api.ldOp({ action: "io-get", dir });
+    Object.assign(ldIo, { dir, entries: r.entries, board: r.board });
+    if (state.active && /\.ld$/i.test(state.active)) renderPlcDiagram(state.active);
+    if (state.view === "ldvars") ldVarsRender();
+  } catch (err) {
+    consoleWrite(`[jwsim] backplane: ${err.message}\n`, "sys");
+  }
+}
+const ldAliasOf = (loc) => ldIo.entries.find((e) => e.alias && e.alias.toUpperCase() === String(loc).toUpperCase());
+let ldVarsMemo = { text: null, map: null };
+function ldVarMap() {
+  const text = ldModelText();
+  if (ldVarsMemo.text !== text) ldVarsMemo = { text, map: new Map(ldVars(text).map((v) => [v.name.toUpperCase(), v])) };
+  return ldVarsMemo.map;
+}
+// Texto del .ld que se está mostrando (aunque no se esté editando).
+const ldModelText = () => (state.active && state.models.get(state.active)?.getValue()) || "";
+/** Dirección IEC real de una variable (por su ubicación o el alias). */
+function ldResolve(name) {
+  const v = ldVarMap().get(String(name ?? "").toUpperCase());
+  if (!v?.location) return null;
+  if (v.location.startsWith("%")) return { addr: v.location, alias: ldIo.entries.find((e) => e.iecAddress === v.location)?.alias || "" , loc: v.location };
+  const e = ldAliasOf(v.location);
+  return { addr: e?.iecAddress ?? null, alias: v.location, loc: v.location };
+}
+/** Señal de la placa (I0_n / Q0_n) para pintar en vivo y forzar. */
+function ldSig(d) {
+  const r = ldResolve(d?.variable?.name);
+  const m = /^%([IQ])X0\.([0-7])$/.exec(r?.addr ?? d?.variable?.location ?? "");
+  return m ? `${m[1]}0_${m[2]}` : null;
+}
+/** Dirección bajo el contacto o la bobina, como etiqueta chica. */
+function ldAddrOf(name) {
+  const r = ldResolve(name);
+  if (!r) return null;
+  if (!r.addr) return { text: `${r.loc} ?`, title: `«${r.loc}» no es un alias del backplane` };
+  return { text: r.addr, title: r.alias ? `${r.addr} · bornera «${r.alias}» del backplane` : r.addr };
+}
+
+function ldBackplaneOpen() {
+  const dlg = $("ld-bp");
+  const vars = ldVars(ldModelText());
+  $("ld-bp-board").textContent = ldIo.board;
+  const used = (e) =>
+    vars
+      .filter((v) => v.location && (v.location === e.iecAddress || (e.alias && v.location.toUpperCase() === e.alias.toUpperCase())))
+      .map((v) => v.name)
+      .join(", ");
+  const kind = { digitalInput: "Entrada digital", digitalOutput: "Salida digital", analogInput: "Entrada analógica", analogOutput: "Salida analógica" };
+  const rows = (type) =>
+    ldIo.entries
+      .filter((e) => e.channelType === type)
+      .map(
+        (e) =>
+          `<tr><td class="ld-bp-ch">${ldEsc(e.channelName.replace("_", "."))}</td><td class="ld-bp-addr">${ldEsc(e.iecAddress)}</td>` +
+          `<td><input class="ld-pop-in" data-ch="${ldEsc(e.channelName)}" value="${ldEsc(e.alias)}" placeholder="sin alias" spellcheck="false" autocomplete="off" aria-label="Alias de ${ldEsc(e.channelName)}"></td>` +
+          `<td class="ld-bp-used">${ldEsc(used(e)) || '<span class="muted">—</span>'}</td></tr>`,
+      )
+      .join("");
+  const types = [...new Set(ldIo.entries.map((e) => e.channelType))];
+  $("ld-bp-body").innerHTML = ldIo.entries.length
+    ? `<div class="ld-bp-mod">Slot 0 · ${ldEsc(ldIo.entries[0]?.moduleName ?? "")} <span class="muted">(fijo)</span></div>` +
+      `<div class="ld-bp-cols">${types
+        .map((t) => `<table class="ld-bp-t"><caption>${kind[t] ?? t}</caption><thead><tr><th>Bornera</th><th>Dirección</th><th>Alias</th><th>Variables</th></tr></thead><tbody>${rows(t)}</tbody></table>`)
+        .join("")}</div>`
+    : '<div class="muted">El equipo de este proyecto no declara borneras en su VPP.</div>';
+  $("ld-bp-save").disabled = !ldIo.entries.length;
+  dlg.hidden = false;
+  dlg.querySelector("input")?.focus();
+}
+async function ldBackplaneSave() {
+  const dlg = $("ld-bp");
+  const aliases = {};
+  const seen = new Map();
+  for (const inp of dlg.querySelectorAll("input[data-ch]")) {
+    const a = inp.value.trim();
+    inp.classList.remove("bad");
+    if (a && (!ldIdent(a) || seen.has(a.toUpperCase()))) {
+      inp.classList.add("bad");
+      inp.focus();
+      inp.title = !ldIdent(a) ? "Letras, números y _, sin empezar por número" : `«${a}» ya es el alias de ${seen.get(a.toUpperCase())}`;
+      return;
+    }
+    if (a) seen.set(a.toUpperCase(), inp.dataset.ch);
+    aliases[inp.dataset.ch] = a;
+  }
+  // Como renameAlias del editor: las variables que iban AT <alias viejo>
+  // pasan al nuevo.
+  const renames = new Map();
+  for (const e of ldIo.entries) {
+    const a = aliases[e.channelName] ?? "";
+    if (e.alias && a && e.alias !== a) renames.set(e.alias.toUpperCase(), a);
+  }
+  const r = await api.ldOp({ action: "io-set", dir: state.sketch.dir, aliases });
+  ldIo.entries = r.entries;
+  if (renames.size) {
+    for (const [name, model] of state.models) {
+      if (!/\.(ld|st)$/i.test(name)) continue;
+      const before = model.getValue();
+      const after = before.replace(/(\bAT[ \t]+)([A-Za-z_]\w*)/g, (m, at, al) => (renames.has(al.toUpperCase()) ? at + renames.get(al.toUpperCase()) : m));
+      if (after !== before) model.setValue(after);
+    }
+    renderTabs();
+  }
+  dlg.hidden = true;
+  ldVarsMemo.text = null;
+  if (state.active) renderPlcDiagram(state.active);
+  if (state.view === "ldvars") ldVarsRender();
+  consoleWrite(`[jwsim] backplane guardado (devices/configuration.json)\n`, "sys");
 }
 function ldRefresh() {
   if (state.active) renderPlcDiagram(state.active);
   ldRenderToolbar();
+  if (state.view === "ldvars") ldVarsRender();
 }
 
 /** Lo llama renderPlcDiagram: muestra el botón ✎ Editar solo con un .ld. */
@@ -158,6 +280,9 @@ function ldEditSync(name, isLd) {
   const btn = $("ld-edit-btn");
   if (!btn) return;
   btn.hidden = !isLd;
+  $("ld-bp-btn").hidden = !isLd;
+  ldVarsTab(isLd);
+  if (isLd) ldIoLoad();
   if (!isLd || name !== ldEdit.file) {
     if (ldEdit.on && name !== ldEdit.file) ldStop();
     if (isLd) ldEdit.file = name;
@@ -401,7 +526,15 @@ function ldProps(id) {
       `<div class="iec-edit-h">${kind}</div>` +
       '<label class="ld-pop-l">Variable (BOOL)</label>' +
       `<input id="ld-pop-name" class="ld-pop-in" list="ld-pop-list" value="${ldEsc(cur)}" placeholder="p. ej. S1, KM1" spellcheck="false" autocomplete="off">` +
-      `<datalist id="ld-pop-list">${bools.map((v) => `<option value="${ldEsc(v.name)}">${ldEsc([v.location, v.doc].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>` +
+      `<datalist id="ld-pop-list">${bools
+        .map((v) => {
+          const r = ldResolve(v.name);
+          return `<option value="${ldEsc(v.name)}">${ldEsc([r?.alias && r.alias !== v.name ? `${r.alias} · ${r.addr ?? "?"}` : (r?.addr ?? v.location), v.doc].filter(Boolean).join(" · "))}</option>`;
+        })
+        .join("")}${ldIo.entries
+        .filter((e) => e.alias && e.dataType === "BOOL" && !bools.some((v) => v.name.toUpperCase() === e.alias.toUpperCase()))
+        .map((e) => `<option value="${ldEsc(e.alias)}">bornera ${ldEsc(e.channelName.replace("_", "."))} · ${ldEsc(e.iecAddress)} (backplane)</option>`)
+        .join("")}</datalist>` +
       '<div id="ld-pop-new" class="ld-pop-new" hidden></div>' +
       '<label class="ld-pop-l">Tipo</label>' +
       `<select id="ld-pop-variant" class="ld-pop-in">${LD_VARIANTS[node.type].map(([v, l]) => `<option value="${v}"${v === variant ? " selected" : ""}>${ldEsc(l)}</option>`).join("")}</select>` +
@@ -421,12 +554,22 @@ function ldProps(id) {
       nv.dataset.for = s;
       nv.hidden = false;
       const free = ldFreeIo(vars, io);
+      // Si el nombre es el alias de una bornera, va AT <alias> (como en el editor).
+      const bp = ldAliasOf(s);
+      if (bp) {
+        nv.innerHTML = `<span>Variable nueva <b>${ldEsc(s)}</b> : BOOL AT ${ldEsc(bp.alias)}</span><span class="ld-pop-note">Bornera ${ldEsc(bp.channelName.replace("_", "."))} (${ldEsc(bp.iecAddress)}) del backplane.</span><select id="ld-pop-loc" hidden><option value="${ldEsc(bp.alias)}" selected></option></select>`;
+        return;
+      }
+      const aliasOpts = ldIo.entries
+        .filter((e) => e.alias && e.dataType === "BOOL")
+        .map((e) => `<option value="${ldEsc(e.alias)}">${ldEsc(e.alias)} · bornera ${ldEsc(e.channelName.replace("_", "."))} (${ldEsc(e.iecAddress)})</option>`)
+        .join("");
       nv.innerHTML =
         `<span>Variable nueva <b>${ldEsc(s)}</b> : BOOL</span>` +
         '<label class="ld-pop-l">Dirección</label>' +
         `<select id="ld-pop-loc" class="ld-pop-in"><option value="">Interna (sin dirección)</option>${free.map((l) => `<option value="${l}">${l} · ${io === "I" ? "entrada" : "salida"} de la placa</option>`).join("")}${ldFreeIo(vars, io === "I" ? "Q" : "I")
           .map((l) => `<option value="${l}">${l} · ${io === "I" ? "salida" : "entrada"} de la placa</option>`)
-          .join("")}</select>` +
+          .join("")}${aliasOpts ? `<optgroup label="Alias del backplane">${aliasOpts}</optgroup>` : ""}</select>` +
         '<label class="ld-pop-l">Descripción</label><input id="ld-pop-doc" class="ld-pop-in" placeholder="opcional, p. ej. pulsador de marcha">';
     };
     name.addEventListener("input", showNew);
@@ -587,6 +730,18 @@ function wireLadderEdit() {
   const body = $("plc-diagram-body");
   const pop = $("ld-pop");
   $("ld-edit-btn").addEventListener("click", () => (ldEdit.on ? ldStop() : ldStart()));
+  $("ld-bp-btn").addEventListener("click", async () => {
+    await ldIoLoad(true);
+    ldBackplaneOpen();
+  });
+  $("ld-bp-close").addEventListener("click", () => ($("ld-bp").hidden = true));
+  $("ld-bp-cancel").addEventListener("click", () => ($("ld-bp").hidden = true));
+  $("ld-bp-save").addEventListener("click", () => ldBackplaneSave());
+  $("ld-bp").addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") $("ld-bp").hidden = true;
+    else if (ev.key === "Enter" && ev.target.matches("input")) ldBackplaneSave();
+    ev.stopPropagation();
+  });
   $("ld-toolbar").addEventListener("click", (ev) => {
     const tb = ev.target.closest("[data-tool]");
     if (tb) {
@@ -683,9 +838,197 @@ function wireLadderEdit() {
 }
 wireLadderEdit();
 
+// ------------------------------------------------------------ tabla de variables
+// Pestaña «Variables» del panel de abajo: la cabecera VAR … END_VAR del .ld
+// como la tabla del OpenPLC Editor (Nombre, Clase, Tipo, Ubicación, Valor
+// inicial, Documentación). Se edita la línea de cada variable y se deja el
+// resto del texto como está (el editor también conserva el texto de la
+// cabecera tal cual, variablesText).
+const LD_CLASSES = [
+  ["local", "VAR"],
+  ["input", "VAR_INPUT"],
+  ["output", "VAR_OUTPUT"],
+  ["inOut", "VAR_IN_OUT"],
+  ["external", "VAR_EXTERNAL"],
+  ["temp", "VAR_TEMP"],
+];
+const LD_TYPE_HINTS = ["BOOL", "INT", "DINT", "UINT", "REAL", "TIME", "WORD", "BYTE", "STRING", "TON", "TOF", "TP", "CTU", "CTD", "CTUD", "R_TRIG", "F_TRIG", "SR", "RS"];
+const LD_DECL = /^([ \t]*)([A-Za-z_]\w*)[ \t]*(?:AT[ \t]+(%[A-Z]+[\d.]+|[A-Za-z_]\w*))?[ \t]*:[ \t]*([A-Za-z_]\w*)[ \t]*(?::=[ \t]*([^;]+?))?[ \t]*;[ \t]*(?:\(\*[ \t]*(.*?)[ \t]*\*\))?[ \t]*$/;
+
+/** Declaraciones de la cabecera con su línea y su sección. */
+function ldDecls(head) {
+  const lines = head.split("\n");
+  const out = [];
+  let sec = null;
+  lines.forEach((line, i) => {
+    const t = line.trim();
+    const open = /^(VAR(?:_INPUT|_OUTPUT|_IN_OUT|_EXTERNAL|_TEMP|_GLOBAL)?)\b/.exec(t);
+    if (open && !/^END_VAR/.test(t)) {
+      sec = LD_CLASSES.find(([, k]) => k === open[1])?.[0] ?? "local";
+      return;
+    }
+    if (/^END_VAR/.test(t)) {
+      sec = null;
+      return;
+    }
+    const m = sec && LD_DECL.exec(line);
+    if (m) out.push({ line: i, name: m[2], location: m[3] ?? "", type: m[4].toUpperCase(), initial: m[5] ?? "", doc: m[6] ?? "", cls: sec });
+  });
+  return { lines, decls: out };
+}
+const ldFmtDecl = (v) =>
+  `    ${v.name}${v.location ? ` AT ${v.location}` : ""} : ${v.type}${v.initial ? ` := ${v.initial}` : ""};${v.doc ? ` (* ${String(v.doc).replace(/\*\)/g, "* )").replace(/\s+/g, " ")} *)` : ""}`;
+
+/** Inserta una declaración en la sección de su clase (la crea si falta). */
+function ldInsertDecl(lines, v) {
+  const key = LD_CLASSES.find(([c]) => c === v.cls)?.[1] ?? "VAR";
+  let open = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (open < 0 && new RegExp(`^${key}(\\s|$)`).test(t) && !/CONSTANT|RETAIN/.test(t)) open = i;
+    else if (open >= 0 && /^END_VAR/.test(t)) {
+      lines.splice(i, 0, ldFmtDecl(v));
+      return lines;
+    }
+  }
+  let last = -1;
+  lines.forEach((l, i) => /^\s*END_VAR/.test(l) && (last = i));
+  const at = last >= 0 ? last + 1 : Math.max(1, lines.findIndex((l) => /^\s*(PROGRAM|FUNCTION_BLOCK|FUNCTION)\b/.test(l)) + 1);
+  lines.splice(at, 0, `  ${key}`, ldFmtDecl(v), "  END_VAR");
+  return lines;
+}
+
+function ldVarsTab(isLd) {
+  const tab = $("tab-ldvars");
+  if (!tab) return;
+  const show = isLd || (state.sketch?.openplc && /\.ld$/i.test(state.active ?? ""));
+  tab.hidden = !show;
+  if (!show && state.view === "ldvars") setView("watch");
+  else if (show && state.view === "ldvars") ldVarsRender();
+}
+
+function ldVarsRender() {
+  const box = $("ld-vars");
+  if (!box || !ldEdit.file) return;
+  const text = ldText();
+  if (!text.includes("{")) return;
+  const { decls } = ldDecls(ldSplit(text).head);
+  const focus = document.activeElement?.closest?.("#ld-vars") ? { row: document.activeElement.closest("tr")?.dataset.i, col: document.activeElement.dataset.f } : null;
+  const locs = [
+    ...ldIo.entries.filter((e) => e.alias).map((e) => [e.alias, `bornera ${e.channelName.replace("_", ".")} · ${e.iecAddress}`]),
+    ...ldIo.entries.map((e) => [e.iecAddress, `bornera ${e.channelName.replace("_", ".")}${e.alias ? ` (${e.alias})` : ""}`]),
+  ];
+  const sel = (v, f, opts) => `<select data-f="${f}" class="ld-vt-in">${opts.map(([k, l]) => `<option value="${ldEsc(k)}"${k === v ? " selected" : ""}>${ldEsc(l)}</option>`).join("")}</select>`;
+  const inp = (v, f, extra = "") => `<input data-f="${f}" class="ld-vt-in" value="${ldEsc(v)}" spellcheck="false" autocomplete="off"${extra}>`;
+  const rows = decls
+    .map((v, i) => {
+      const r = ldResolve(v.name);
+      const live = v.location && !r?.addr ? ' title="No es una dirección ni un alias del backplane" class="bad"' : r?.addr && r.addr !== v.location ? ` title="${ldEsc(r.addr)}"` : "";
+      return (
+        `<tr data-i="${i}" data-name="${ldEsc(v.name)}"><td class="ld-vt-n">${i + 1}</td>` +
+        `<td>${inp(v.name, "name", ' aria-label="Nombre"')}</td>` +
+        `<td>${sel(v.cls, "cls", LD_CLASSES.map(([c]) => [c, c]))}</td>` +
+        `<td>${inp(v.type, "type", ' list="ld-vt-types" aria-label="Tipo"')}</td>` +
+        `<td><input data-f="location" class="ld-vt-in${live.includes("bad") ? " bad" : ""}" value="${ldEsc(v.location)}" list="ld-vt-locs" placeholder="—" spellcheck="false" autocomplete="off" aria-label="Ubicación"${live.includes("bad") ? ' title="No es una dirección ni un alias del backplane"' : live}></td>` +
+        `<td class="ld-vt-addr">${r?.addr && r.addr !== v.location ? ldEsc(r.addr) : ""}</td>` +
+        `<td>${inp(v.initial, "initial", ' placeholder="—" aria-label="Valor inicial"')}</td>` +
+        `<td>${inp(v.doc, "doc", ' placeholder="—" aria-label="Documentación"')}</td>` +
+        `<td><button class="ld-vt-del" data-del="${i}" title="Borrar la variable">🗑</button></td></tr>`
+      );
+    })
+    .join("");
+  box.innerHTML =
+    `<datalist id="ld-vt-types">${LD_TYPE_HINTS.map((t) => `<option value="${t}"></option>`).join("")}</datalist>` +
+    `<datalist id="ld-vt-locs">${locs.map(([k, l]) => `<option value="${ldEsc(k)}">${ldEsc(l)}</option>`).join("")}</datalist>` +
+    '<table class="ld-vt"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Tipo</th><th>Ubicación</th><th></th><th>Valor inicial</th><th>Documentación</th><th></th></tr></thead>' +
+    `<tbody>${rows || '<tr><td colspan="9" class="muted">Sin variables.</td></tr>'}</tbody></table>` +
+    '<div class="ld-vt-foot"><button class="small" data-act="add-var">＋ Variable</button><button class="small" data-act="backplane">⊞ Backplane…</button><span class="muted">Ubicación: una dirección (%IX0.0, %QX0.1, %MW0…) o el alias de una bornera del backplane.</span></div>';
+  if (focus?.row != null) box.querySelector(`tr[data-i="${focus.row}"] [data-f="${focus.col}"]`)?.focus();
+}
+
+function ldVarsChange(tr, field, value) {
+  const parts = ldSplit(ldText());
+  const { lines, decls } = ldDecls(parts.head);
+  const v = decls[Number(tr.dataset.i)];
+  if (!v) return;
+  value = value.trim();
+  const nv = { ...v, [field]: field === "type" ? value.toUpperCase() : value };
+  const bad = (msg) => {
+    const el = tr.querySelector(`[data-f="${field}"]`);
+    el?.classList.add("bad");
+    if (el) el.title = msg;
+  };
+  if (field === "name") {
+    if (!ldIdent(value)) return bad("Letras, números y _, sin empezar por número");
+    if (decls.some((d, i) => i !== Number(tr.dataset.i) && d.name.toUpperCase() === value.toUpperCase())) return bad(`Ya existe ${value}`);
+  }
+  if (field === "type" && !ldIdent(value)) return bad("Tipo no válido");
+  if (field === "location" && value && !/^%[IQM][XBWDL]?\d+(\.\d+)?$/i.test(value) && !ldIdent(value)) return bad("Dirección o alias no válido");
+  if (field === "cls" && nv.cls !== v.cls) {
+    lines.splice(v.line, 1);
+    ldInsertDecl(lines, nv);
+  } else lines[v.line] = ldFmtDecl(nv);
+  // Los elementos del Ladder que usan la variable: nombre nuevo y copia al
+  // día (como el editor al renombrar en su tabla).
+  for (const r of parts.body.rungs)
+    for (const n of r.nodes)
+      if (n.data?.variable?.name && n.data.variable.name.toUpperCase() === v.name.toUpperCase() && n.data.variable.class) n.data = { ...n.data, variable: ldVarData(nv) };
+  for (const r of parts.body.rungs)
+    for (const n of r.nodes)
+      if (n.type === "block" && Array.isArray(n.data.connectedVariables))
+        n.data = { ...n.data, connectedVariables: n.data.connectedVariables.map((c) => (c.variable?.name?.toUpperCase() === v.name.toUpperCase() ? { ...c, variable: ldVarData(nv) } : c)) };
+  ldCommit(parts.body, lines.join("\n"));
+}
+
+function ldVarsAdd() {
+  const parts = ldSplit(ldText());
+  const { lines, decls } = ldDecls(parts.head);
+  const name = ldFreeName("VAR", decls.map((d) => ({ name: d.name })));
+  ldInsertDecl(lines, { name, type: "BOOL", location: "", initial: "", doc: "", cls: "local" });
+  ldCommit(parts.body, lines.join("\n"));
+  ldVarsRender();
+  const rows = $("ld-vars").querySelectorAll("tr[data-name]");
+  const row = [...rows].find((r) => r.dataset.name === name);
+  row?.querySelector('[data-f="name"]')?.focus();
+  row?.querySelector('[data-f="name"]')?.select();
+}
+
+function ldVarsDelete(i) {
+  const parts = ldSplit(ldText());
+  const { lines, decls } = ldDecls(parts.head);
+  const v = decls[i];
+  if (!v) return;
+  lines.splice(v.line, 1);
+  ldCommit(parts.body, lines.join("\n"));
+  ldVarsRender();
+}
+
+function wireLdVars() {
+  const box = $("ld-vars");
+  if (!box) return;
+  box.addEventListener("change", (ev) => {
+    const el = ev.target.closest("[data-f]");
+    const tr = el?.closest("tr[data-i]");
+    if (el && tr) ldVarsChange(tr, el.dataset.f, el.value);
+  });
+  box.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && ev.target.matches("input[data-f]")) ev.target.blur();
+    ev.stopPropagation();
+  });
+  box.addEventListener("click", (ev) => {
+    const d = ev.target.closest("[data-del]");
+    if (d) return ldVarsDelete(Number(d.dataset.del));
+    const a = ev.target.closest("[data-act]")?.dataset.act;
+    if (a === "add-var") ldVarsAdd();
+    else if (a === "backplane") $("ld-bp-btn").click();
+  });
+}
+wireLdVars();
+
 // Ganchos para las pruebas (tests/e2e-ladder-editor.mjs).
 if (window.jwsimTest) {
   window.jwsimTest.ldText = () => ldText();
   window.jwsimTest.ldEditing = () => ldEdit.on;
   window.jwsimTest.sketchDir = () => state.sketch?.dir ?? null;
+  window.jwsimTest.ldIo = () => ldIo.entries;
 }

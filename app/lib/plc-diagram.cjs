@@ -208,13 +208,18 @@
     return `M${a.x} ${a.y}L${c.x + ua.x * k} ${c.y + ua.y * k}Q${c.x} ${c.y} ${c.x + ub.x * k} ${c.y + ub.y * k}L${b.x} ${b.y}`;
   }
 
-  function viewNode(n, edit = false) {
+  function viewNode(n, edit = false, opts = {}) {
     const { x, y } = n.position;
     const d = n.data;
     const name = d.variable?.name ?? "";
-    const sig = sigOf(d);
+    // opts.sigOf / opts.addrOf: dirección según la cabecera VAR y los alias
+    // del backplane (la copia de la variable en el nodo puede estar vieja).
+    const sig = opts.sigOf ? opts.sigOf(d) : sigOf(d);
+    const addr = name && opts.addrOf ? opts.addrOf(name) : null;
     const attrs = ` data-node="${esc(n.id)}"${sig ? ` data-sig="${sig}"` : ""}${name ? ` data-var="${esc(name)}"` : ""}`;
-    const label = (w) => (name ? `<text class="ld-name" x="${x + w / 2}" y="${y - 7}" text-anchor="middle"><title>${esc(name)}</title>${esc(short(name))}</text>` : "");
+    const label = (w, h = 24) =>
+      (name ? `<text class="ld-name" x="${x + w / 2}" y="${y - 7}" text-anchor="middle"><title>${esc(name)}</title>${esc(short(name))}</text>` : "") +
+      (addr ? `<text class="ld-addr" x="${x + w / 2}" y="${y + h + 11}" text-anchor="middle"><title>${esc(addr.title ?? addr.text)}</title>${esc(addr.text)}</text>` : "");
     if (n.type === "contact") {
       const w = n.width ?? 24;
       const h = n.height ?? 24;
@@ -223,7 +228,7 @@
       if (d.variant === "negated") s += `<path class="ld-mod-line" d="M${x + 5} ${y + h - 4}L${x + w - 5} ${y + 4}"/>`;
       const m = MARK.contact[d.variant];
       if (m) s += `<text class="ld-mod" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${m}</text>`;
-      return `${s}</g>${label(w)}`;
+      return `${s}</g>${label(w, h)}`;
     }
     if (n.type === "coil") {
       const w = n.width ?? 28;
@@ -235,7 +240,7 @@
       if (d.variant === "negated") s += `<path class="ld-mod-line" d="M${x + 9} ${y + h - 5}L${x + w - 9} ${y + 5}"/>`;
       const m = MARK.coil[d.variant];
       if (m) s += `<text class="ld-mod" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${m}</text>`;
-      return `${s}</g>${label(w)}`;
+      return `${s}</g>${label(w, h)}`;
     }
     if (n.type === "block") {
       const w = n.width ?? 66;
@@ -289,7 +294,7 @@
       const left = nodes.find((n) => n.type === "powerRail" && n.data.variant === "left");
       const right = nodes.find((n) => n.type === "powerRail" && n.data.variant === "right");
       const tops = nodes.filter((n) => n.type !== "powerRail").map((n) => n.position.y - (n.type === "variable" ? 0 : 20));
-      const bots = [...nodes.map((n) => n.position.y + (n.height ?? 24)), ...phs.map((p) => p.y + 16)];
+      const bots = [...nodes.map((n) => n.position.y + (n.height ?? 24) + (opts.addrOf && /^(contact|coil)$/.test(n.type) ? 12 : 0)), ...phs.map((p) => p.y + 16)];
       const y0 = Math.min(left?.position.y ?? 0, ...tops) - 8;
       const y1 = Math.max(...bots) + 12;
       const rx = right ? right.position.x : Math.max(...nodes.map((n) => n.position.x + (n.width ?? 0))) + 20;
@@ -310,7 +315,7 @@
         g += `<path class="ld-edge" data-edge="${esc(e.id)}" d="${dd}"/>`;
       }
       for (const n of nodes) {
-        let v = viewNode(n, edit);
+        let v = viewNode(n, edit, opts);
         if (selected.has(n.id)) v = v.replace(/class="(ld-el|ld-block)/, 'class="$1 ld-sel');
         g += v;
       }
