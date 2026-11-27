@@ -1,0 +1,143 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-42",
+  "goals": [
+    {
+      "id": "sube",
+      "description": "Marcha: la rampa llega a 50 Hz",
+      "when": {
+        "VF1.fRef": 50
+      },
+      "hold_ms": 500
+    },
+    {
+      "id": "baja",
+      "description": "Parada en rampa: «Detenido en rampa»",
+      "console": "Detenido en rampa",
+      "after": "sube",
+      "hint": "S2 pone objetivo = 0; la rampa sigue y al llegar a 0 se manda PARADA.",
+      "why": "Un corte brusco golpea la tubería (golpe de ariete) igual que un arranque brusco."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Marcha y parada en rampa",
+      "until_ms": 20500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13300,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "A los 4 s de la marcha, la rampa va entre 15 y 25 Hz",
+          "points": 3,
+          "at_ms": 5800,
+          "expect": {
+            "VF1.fRef": [
+              15,
+              25
+            ]
+          }
+        },
+        {
+          "description": "Llega a 50 Hz",
+          "points": 2,
+          "at_ms": 12500,
+          "expect": {
+            "VF1.fRef": 50
+          }
+        },
+        {
+          "description": "1,5 s después de S2 sigue bajando: entre 25 y 40 Hz",
+          "points": 5,
+          "at_ms": 14500,
+          "expect": {
+            "VF1.fRef": [
+              25,
+              40
+            ]
+          }
+        },
+        {
+          "description": "El variador sigue en marcha mientras baja",
+          "points": 3,
+          "at_ms": 15000,
+          "expect": {
+            "VF1.running": true
+          }
+        },
+        {
+          "description": "«Detenido en rampa», una vez",
+          "points": 4,
+          "console": "Detenido en rampa",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Al final, el variador parado",
+          "points": 3,
+          "at_ms": 20000,
+          "expect": {
+            "VF1.running": false
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Rampas",
+      "until_ms": 25000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13300,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

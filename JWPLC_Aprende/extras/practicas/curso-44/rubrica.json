@@ -1,0 +1,113 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-44",
+  "goals": [
+    {
+      "id": "pi",
+      "description": "El PI llega a la consigna: 3,9…4,1 bar",
+      "console": "Presión: (3\\.9|4\\.0|4\\.1)",
+      "hint": "Aprieta S1 y espera."
+    },
+    {
+      "id": "reposo",
+      "description": "Sin consumo: «Bomba en reposo»",
+      "console": "Bomba en reposo",
+      "hint": "enMinimoDesde = millis() mientras la frecuencia esté sobre el mínimo; con 5 s en el mínimo, PARADA.",
+      "why": "Una bomba que gira sin dar agua gasta energía y se calienta."
+    },
+    {
+      "id": "despierta",
+      "description": "La presión baja: «Bomba despierta»",
+      "console": "Bomba despierta",
+      "after": "reposo"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Consumo que se corta y vuelve",
+      "until_ms": 62500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 22000,
+          "device": "RED1",
+          "action": "consumo",
+          "value": 0
+        },
+        {
+          "at_ms": 50000,
+          "device": "RED1",
+          "action": "consumo",
+          "value": 40
+        }
+      ],
+      "checks": [
+        {
+          "description": "El PI llega a 3,8…4,2 bar con consumo",
+          "points": 3,
+          "at_ms": 21000,
+          "expect": {
+            "RED1.presion": [
+              3.8,
+              4.2
+            ]
+          }
+        },
+        {
+          "description": "«Bomba en reposo», una vez",
+          "points": 4,
+          "console": "Bomba en reposo",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "En reposo el variador está parado",
+          "points": 5,
+          "at_ms": 48000,
+          "expect": {
+            "VF1.running": false
+          }
+        },
+        {
+          "description": "«Bomba despierta» cuando la presión baja",
+          "points": 4,
+          "console": "Bomba despierta",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Despierta: el variador en marcha otra vez",
+          "points": 4,
+          "from_ms": 50000,
+          "to_ms": 62000,
+          "eventually": {
+            "VF1.running": true
+          },
+          "for_ms": 3000
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "PI",
+      "until_ms": 60000,
+      "actions": []
+    }
+  ]
+}

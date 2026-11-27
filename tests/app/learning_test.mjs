@@ -73,7 +73,7 @@ test("el progreso se guarda y uno dañado empieza de cero", () => {
 });
 
 test("los ejercicios del repositorio traen ficha y quedan en 3 niveles", () => {
-  const root = join(import.meta.dirname, "..", "..", "exercises");
+  const root = join(import.meta.dirname, "..", "..", "JWPLC_Aprende", "extras", "retos");
   const ex = readdirSync(root).map((id) => {
     const f = readdirSync(join(root, id)).find((x) => x.endsWith(".jwsim"));
     const p = JSON.parse(readFileSync(join(root, id, f), "utf8"));

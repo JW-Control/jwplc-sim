@@ -1,0 +1,238 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "09-tolva-nivel",
+  "goals": [
+    {
+      "id": "habilita",
+      "description": "Pon S1 en I: se abre la descarga Y1",
+      "when": {
+        "S1.position": 1,
+        "Y1.open": true
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "piloto",
+      "description": "H1 encendido mientras el agua está bajo B1 (30 %)",
+      "when": {
+        "H1.lit": true,
+        "T1.nivelPct": [
+          0,
+          29
+        ]
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "llena",
+      "description": "Con el agua bajo B1, la bomba arranca",
+      "when": {
+        "KM1.closed": true,
+        "T1.nivelPct": [
+          0,
+          29
+        ]
+      },
+      "hold_ms": 100
+    },
+    {
+      "id": "histeresis",
+      "description": "Sigue bombeando entre B1 y B2 (histéresis)",
+      "when": {
+        "KM1.closed": true,
+        "T1.nivelPct": [
+          40,
+          75
+        ]
+      },
+      "after": "llena",
+      "hold_ms": 2000
+    },
+    {
+      "id": "para",
+      "description": "Para al llegar a B2 (80 %)",
+      "when": {
+        "KM1.closed": false,
+        "T1.nivelPct": [
+          78,
+          100
+        ]
+      },
+      "after": "histeresis",
+      "hold_ms": 2000
+    },
+    {
+      "id": "sin_rebalse",
+      "description": "La tolva queda llena sin rebalsar durante 5 s",
+      "when": {
+        "T1.rebalse": false,
+        "KM1.closed": false,
+        "T1.nivelPct": [
+          70,
+          100
+        ]
+      },
+      "after": "para",
+      "hold_ms": 5000,
+      "extra": "merit"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Habilitado: llena, descarga y vuelve a llenar",
+      "until_ms": 140000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con la tolva baja y S1 en I, la bomba arranca (requisito)",
+          "points": 2,
+          "prerequisite": true,
+          "from_ms": 0,
+          "to_ms": 1000,
+          "eventually": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Con S1 en I se abre la descarga Y1",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 1000,
+          "eventually": {
+            "Y1.open": true
+          }
+        },
+        {
+          "description": "Piloto de nivel bajo encendido con el agua bajo B1",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 1000,
+          "eventually": {
+            "H1.lit": true
+          }
+        },
+        {
+          "description": "Sigue llenando al pasar B1, hasta B2",
+          "points": 3,
+          "from_ms": 3000,
+          "to_ms": 15000,
+          "always": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Para al llegar a B2",
+          "points": 3,
+          "from_ms": 15000,
+          "to_ms": 25000,
+          "eventually": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "No arranca mientras el agua baja entre B2 y B1",
+          "points": 2,
+          "from_ms": 25000,
+          "to_ms": 115000,
+          "always": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "Vuelve a llenar cuando el agua baja de B1",
+          "points": 1,
+          "from_ms": 115000,
+          "to_ms": 135000,
+          "eventually": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "La tolva no rebalsa",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 140000,
+          "never": {
+            "T1.rebalse": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deshabilitado",
+      "until_ms": 5000,
+      "checks": [
+        {
+          "description": "Con S1 en 0, bomba parada y descarga cerrada",
+          "points": 2,
+          "from_ms": 500,
+          "to_ms": 5000,
+          "always": {
+            "KM1.closed": false,
+            "Y1.open": false
+          }
+        },
+        {
+          "description": "El piloto de nivel bajo funciona también con S1 en 0",
+          "points": 1,
+          "from_ms": 0,
+          "to_ms": 1500,
+          "eventually": {
+            "H1.lit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deshabilitar en marcha",
+      "until_ms": 12000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 6000,
+          "device": "S1",
+          "action": "position",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Al volver S1 a 0, la bomba para y la descarga se cierra",
+          "points": 2,
+          "from_ms": 6600,
+          "to_ms": 12000,
+          "always": {
+            "KM1.closed": false,
+            "Y1.open": false
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Habilita, llena y queda llena",
+      "until_ms": 40000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "S1",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

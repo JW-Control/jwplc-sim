@@ -32,6 +32,15 @@ const SPARSE_PATHS = [
   "JWPLC/2.1.0/cores/",
   "JWPLC/2.1.0/variants/",
   "JWPLC/2.1.0/libraries/",
+  // Para «Subir al JWPLC» (cli/lib/esp32.mjs): arduino-cli compila con este
+  // mismo árbol, que necesita el core precompilado y las particiones.
+  "JWPLC/2.1.0/programmers.txt",
+  "JWPLC/2.1.0/precompiled/",
+  "JWPLC/2.1.0/tools/partitions/",
+  "JWPLC/2.1.0/tools/gen_esp32part.py",
+  "JWPLC/2.1.0/tools/gen_esp32part.exe",
+  "JWPLC/2.1.0/tools/espota.py",
+  "JWPLC/2.1.0/tools/espota.exe",
   "tools/build-speed-benchmark/sketches/",
 ];
 
@@ -53,7 +62,13 @@ function git(args, cwd) {
 }
 
 function revParse(dir, rev) {
+  // Solo el repositorio del propio package: si su .git falta o está
+  // incompleto (la copia que lleva la app armada), git sube hasta un
+  // repositorio que lo contenga y daría el commit de otro proyecto.
+  if (!existsSync(join(dir, ".git"))) return null;
   try {
+    const norm = (d) => (process.platform === "win32" ? resolve(d).toLowerCase() : resolve(d));
+    if (norm(git(["rev-parse", "--show-toplevel"], dir)) !== norm(dir)) return null;
     return git(["rev-parse", `${rev}^{commit}`], dir);
   } catch {
     return null;
@@ -127,6 +142,7 @@ function lockedPackage(lock, fetch) {
     }
     if (current() !== want) throw new Error(`${lock.JWPLC_PACKAGE_REF} no apunta a ${want} (package.lock)`);
   }
+  if (fetch) syncSparse(dest);
   markCommit(dest, want);
   return { root: dest, lock, source: "lock" };
 }
@@ -160,6 +176,22 @@ export function packageFromDir(dir) {
   };
 }
 
+// Un clon de antes de agregar rutas a SPARSE_PATHS las recibe aquí (git
+// descarga los archivos que faltan).
+function syncSparse(dest) {
+  if (!existsSync(join(dest, ".git"))) return;
+  const want = SPARSE_PATHS.map((p) => `/${p}`);
+  let have = [];
+  try {
+    have = git(["sparse-checkout", "list"], dest).split(/\r?\n/).filter(Boolean);
+  } catch {
+    return;
+  }
+  if (want.every((p) => have.includes(p))) return;
+  console.error("[fetch-package] agregando rutas al sparse checkout del package");
+  execFileSync("git", ["sparse-checkout", "set", "--no-cone", ...want], { cwd: dest, stdio: "inherit" });
+}
+
 // Package en un tag o commit arbitrario (jwsim-cli parity <ref>): se clona
 // en .jwsim/package/<ref>/ con el mismo sparse checkout. Sin verificación de
 // commit fijado: es justamente lo que se quiere comparar.
@@ -178,6 +210,7 @@ export function fetchPackageRef(ref) {
     execFileSync("git", ["fetch", "--quiet", "--depth", "1", "--filter=blob:none", "origin", ref], { cwd: dest, stdio: "inherit" });
     execFileSync("git", ["-c", "advice.detachedHead=false", "checkout", "--quiet", "FETCH_HEAD"], { cwd: dest, stdio: "inherit" });
   }
+  syncSparse(dest);
   const head = revParse(dest, "HEAD");
   return { root: dest, lock: { ...lock, JWPLC_PACKAGE_REF: ref, JWPLC_PACKAGE_COMMIT: head }, source: "ref" };
 }

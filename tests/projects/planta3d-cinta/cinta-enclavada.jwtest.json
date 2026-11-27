@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Planta 3D (piloto): con enclavamiento la cinta queda detenida aunque la caja pase el haz por la rampa de parada; S1 la rearma y la caja cae al final.",
+  "sketch": "sketch/cinta_enclavada",
+  "scene": "planta3d-cinta.jwsim",
+  "until_ms": 8000,
+  "actions": [
+    { "at_ms": 4000, "device": "S1", "action": "press", "value": true },
+    { "at_ms": 4200, "device": "S1", "action": "press", "value": false }
+  ],
+  "expect": {
+    "console": [
+      { "match": "^cinta_enclavada: lista$", "count": 1 },
+      { "match": "^caja detectada: cinta detenida .enclavada.$", "count": 1 },
+      { "match": "^marcha: rearme$", "count": 1, "after_ms": 4000 }
+    ],
+    "scene": {
+      "state": [
+        { "at_ms": 3900, "KM1.closed": false, "H1.lit": true, "C1.enCinta": 1, "C1.salidas": 0, "C1.sensorA": false },
+        { "at_ms": 7900, "C1.salidas": 1, "C1.enCinta": 0, "KM1.closed": true }
+      ],
+      "faults": []
+    }
+  }
+}

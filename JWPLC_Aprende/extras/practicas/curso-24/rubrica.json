@@ -1,0 +1,244 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-24",
+  "goals": [
+    {
+      "id": "espejo",
+      "description": "Aprieta S1: H1 (Q0.0) se enciende y Serie dice «I0.0 ON»",
+      "console": "I0\\.0 ON",
+      "hint": "Mantén S1 apretado en Mandos."
+    },
+    {
+      "id": "tiempo",
+      "description": "Al soltar: «I0.0 estuvo 1.2 s»",
+      "console": "I0\\.\\d estuvo \\d+\\.\\d s",
+      "hint": "Un arreglo unsigned long inicioActiva[8]: al pasar a ON anota millis() en inicioActiva[i]; al pasar a OFF, resta y divide por 1000.0.",
+      "why": "Con un arreglo, una sola línea de código atiende a las 8 entradas (lección 13)."
+    },
+    {
+      "id": "error",
+      "description": "B1 y B2 a la vez: H5 (Q0.4) y «Error: B1 y B2 a la vez»",
+      "console": "Error: B1 y B2 a la vez",
+      "hint": "La máscara 0x0C (00001100) deja solo I0.2 e I0.3: (entradas & 0x0C) == 0x0C es verdadero si las dos están activas.",
+      "why": "Dos finales de carrera opuestos no pueden estar activos a la vez: si pasa, hay un sensor dañado o un cable cruzado."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Espejo",
+      "until_ms": 5000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "H1 sigue a S1",
+          "points": 1,
+          "from_ms": 1100,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 900
+        },
+        {
+          "description": "Anota el cambio",
+          "points": 1,
+          "console": "I0\\.0 ON"
+        },
+        {
+          "description": "Muestra las entradas en binario",
+          "points": 1,
+          "console": "Entradas: 00000001"
+        },
+        {
+          "description": "H1 se apaga al soltar",
+          "points": 1,
+          "from_ms": 2400,
+          "to_ms": 4900,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tiempo activa",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "B2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "I0.1 estuvo 1.2 s",
+          "points": 4,
+          "console": "I0\\.1 estuvo 1\\.2 s"
+        },
+        {
+          "description": "I0.3 estuvo 0.5 s",
+          "points": 3,
+          "console": "I0\\.3 estuvo 0\\.5 s"
+        }
+      ]
+    },
+    {
+      "name": "Dos finales",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2000,
+          "device": "B2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "B2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Sin error con un solo final",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 1900,
+          "never": {
+            "Q0_4": 1
+          }
+        },
+        {
+          "description": "H5 con los dos finales",
+          "points": 3,
+          "from_ms": 2100,
+          "to_ms": 2400,
+          "eventually": {
+            "Q0_4": 1
+          },
+          "for_ms": 700
+        },
+        {
+          "description": "Avisa una sola vez",
+          "points": 3,
+          "console": "Error: B1 y B2 a la vez",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "H5 se apaga al soltar uno",
+          "points": 2,
+          "from_ms": 3200,
+          "to_ms": 5900,
+          "never": {
+            "Q0_4": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "B2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "B2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

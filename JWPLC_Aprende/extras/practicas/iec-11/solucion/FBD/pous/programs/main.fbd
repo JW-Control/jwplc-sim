@@ -1,0 +1,1555 @@
+PROGRAM main
+  VAR
+    S1 AT %IX0.0  : BOOL; (* marcha bomba 1, NA *)
+    S2 AT %IX0.1  : BOOL; (* parada bomba 1, NC *)
+    S3 AT %IX0.2  : BOOL; (* marcha bomba 2, NA *)
+    S4 AT %IX0.3  : BOOL; (* parada bomba 2, NC *)
+    KM1 AT %QX0.0 : BOOL; (* bomba 1 *)
+    KM2 AT %QX0.1 : BOOL; (* bomba 2 *)
+    H1 AT %QX0.2  : BOOL; (* lámpara «Bombeando» *)
+    BOMBA1        : MOTOR;
+    BOMBA2        : MOTOR;
+  END_VAR
+
+{
+  "name": "main",
+  "rung": {
+    "comment": "",
+    "reactFlowViewport": [
+      1000,
+      528
+    ],
+    "nodes": [
+      {
+        "id": "BLOCK_0001_main",
+        "type": "block",
+        "position": {
+          "x": 20,
+          "y": 34
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "MARCHA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "PARADA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 48
+              },
+              "id": "Q",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 96
+              },
+              "id": "ARRANQUES",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 96,
+                "right": 0
+              }
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "MARCHA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "PARADA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            }
+          ],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 48
+              },
+              "id": "Q",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 96
+              },
+              "id": "ARRANQUES",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 96,
+                "right": 0
+              }
+            }
+          ],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 20,
+              "y": 82
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 48
+            },
+            "id": "MARCHA",
+            "position": "left",
+            "type": "target",
+            "style": {
+              "top": 48,
+              "left": 0
+            }
+          },
+          "outputConnector": {
+            "glbPosition": {
+              "x": 212,
+              "y": 82
+            },
+            "relPosition": {
+              "x": 192,
+              "y": 48
+            },
+            "id": "Q",
+            "position": "right",
+            "type": "source",
+            "style": {
+              "top": 48,
+              "right": 0
+            }
+          },
+          "numericId": "4450545",
+          "variant": {
+            "name": "MOTOR",
+            "type": "function-block",
+            "variables": [
+              {
+                "name": "MARCHA",
+                "class": "input",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "PARADA",
+                "class": "input",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "Q",
+                "class": "output",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "ARRANQUES",
+                "class": "output",
+                "type": {
+                  "definition": "base-type",
+                  "value": "INT"
+                }
+              }
+            ],
+            "documentation": "Marcha y parada con enclavamiento; cuenta los arranques.",
+            "extensible": false
+          },
+          "variable": {
+            "name": "BOMBA1",
+            "class": "local",
+            "type": {
+              "definition": "derived",
+              "value": "MOTOR"
+            },
+            "location": "",
+            "initialValue": null,
+            "documentation": "",
+            "debug": false
+          },
+          "executionOrder": 1,
+          "executionControl": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "width": 192,
+        "height": 120,
+        "measured": {
+          "width": 192,
+          "height": 120
+        },
+        "draggable": true,
+        "selectable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0002_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 66
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 82
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "5246180",
+          "variable": {
+            "name": "S1",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%IX0.0",
+            "initialValue": null,
+            "documentation": "marcha bomba 1, NA",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0003_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 114
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 130
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 130
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "9022489",
+          "variable": {
+            "name": "S2",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%IX0.1",
+            "initialValue": null,
+            "documentation": "parada bomba 1, NC",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "OUTPUT-VARIABLE_0004_main",
+        "type": "output-variable",
+        "position": {
+          "x": 230,
+          "y": 66
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 82
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "outputHandles": [],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 230,
+              "y": 82
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 16
+            },
+            "id": "input-variable",
+            "position": "left",
+            "type": "target"
+          },
+          "numericId": "7686408",
+          "variable": {
+            "name": "KM1",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%QX0.0",
+            "initialValue": null,
+            "documentation": "bomba 1",
+            "debug": false
+          },
+          "executionOrder": 2,
+          "variant": "output-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "BLOCK_0005_main",
+        "type": "block",
+        "position": {
+          "x": 20,
+          "y": 208
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "MARCHA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "PARADA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 48
+              },
+              "id": "Q",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 96
+              },
+              "id": "ARRANQUES",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 96,
+                "right": 0
+              }
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "MARCHA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "PARADA",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            }
+          ],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 48
+              },
+              "id": "Q",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 212,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 192,
+                "y": 96
+              },
+              "id": "ARRANQUES",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 96,
+                "right": 0
+              }
+            }
+          ],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 20,
+              "y": 256
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 48
+            },
+            "id": "MARCHA",
+            "position": "left",
+            "type": "target",
+            "style": {
+              "top": 48,
+              "left": 0
+            }
+          },
+          "outputConnector": {
+            "glbPosition": {
+              "x": 212,
+              "y": 256
+            },
+            "relPosition": {
+              "x": 192,
+              "y": 48
+            },
+            "id": "Q",
+            "position": "right",
+            "type": "source",
+            "style": {
+              "top": 48,
+              "right": 0
+            }
+          },
+          "numericId": "8872313",
+          "variant": {
+            "name": "MOTOR",
+            "type": "function-block",
+            "variables": [
+              {
+                "name": "MARCHA",
+                "class": "input",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "PARADA",
+                "class": "input",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "Q",
+                "class": "output",
+                "type": {
+                  "definition": "base-type",
+                  "value": "BOOL"
+                }
+              },
+              {
+                "name": "ARRANQUES",
+                "class": "output",
+                "type": {
+                  "definition": "base-type",
+                  "value": "INT"
+                }
+              }
+            ],
+            "documentation": "Marcha y parada con enclavamiento; cuenta los arranques.",
+            "extensible": false
+          },
+          "variable": {
+            "name": "BOMBA2",
+            "class": "local",
+            "type": {
+              "definition": "derived",
+              "value": "MOTOR"
+            },
+            "location": "",
+            "initialValue": null,
+            "documentation": "",
+            "debug": false
+          },
+          "executionOrder": 3,
+          "executionControl": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "width": 192,
+        "height": 120,
+        "measured": {
+          "width": 192,
+          "height": 120
+        },
+        "draggable": true,
+        "selectable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0006_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 240
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 256
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "1108933",
+          "variable": {
+            "name": "S3",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%IX0.2",
+            "initialValue": null,
+            "documentation": "marcha bomba 2, NA",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0007_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 288
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 304
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 304
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "5395407",
+          "variable": {
+            "name": "S4",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%IX0.3",
+            "initialValue": null,
+            "documentation": "parada bomba 2, NC",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "OUTPUT-VARIABLE_0008_main",
+        "type": "output-variable",
+        "position": {
+          "x": 230,
+          "y": 240
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 256
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "outputHandles": [],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 230,
+              "y": 256
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 16
+            },
+            "id": "input-variable",
+            "position": "left",
+            "type": "target"
+          },
+          "numericId": "1504140",
+          "variable": {
+            "name": "KM2",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%QX0.1",
+            "initialValue": null,
+            "documentation": "bomba 2",
+            "debug": false
+          },
+          "executionOrder": 4,
+          "variant": "output-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "BLOCK_0009_main",
+        "type": "block",
+        "position": {
+          "x": 20,
+          "y": 368
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "IN1",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 464
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "IN2",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 104,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 84,
+                "y": 48
+              },
+              "id": "OUT",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 48
+              },
+              "id": "IN1",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 48,
+                "left": 0
+              }
+            },
+            {
+              "glbPosition": {
+                "x": 20,
+                "y": 464
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 96
+              },
+              "id": "IN2",
+              "position": "left",
+              "type": "target",
+              "style": {
+                "top": 96,
+                "left": 0
+              }
+            }
+          ],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": 104,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 84,
+                "y": 48
+              },
+              "id": "OUT",
+              "position": "right",
+              "type": "source",
+              "style": {
+                "top": 48,
+                "right": 0
+              }
+            }
+          ],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 20,
+              "y": 416
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 48
+            },
+            "id": "IN1",
+            "position": "left",
+            "type": "target",
+            "style": {
+              "top": 48,
+              "left": 0
+            }
+          },
+          "outputConnector": {
+            "glbPosition": {
+              "x": 104,
+              "y": 416
+            },
+            "relPosition": {
+              "x": 84,
+              "y": 48
+            },
+            "id": "OUT",
+            "position": "right",
+            "type": "source",
+            "style": {
+              "top": 48,
+              "right": 0
+            }
+          },
+          "numericId": "5749744",
+          "variant": {
+            "name": "OR",
+            "type": "function",
+            "variables": [
+              {
+                "name": "OUT",
+                "class": "output",
+                "type": {
+                  "definition": "generic-type",
+                  "value": "ANY_BIT"
+                }
+              },
+              {
+                "name": "IN1",
+                "class": "input",
+                "type": {
+                  "definition": "generic-type",
+                  "value": "ANY_BIT"
+                }
+              },
+              {
+                "name": "IN2",
+                "class": "input",
+                "type": {
+                  "definition": "generic-type",
+                  "value": "ANY_BIT"
+                }
+              }
+            ],
+            "documentation": "",
+            "extensible": true
+          },
+          "variable": {
+            "name": ""
+          },
+          "executionOrder": 5,
+          "executionControl": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "width": 84,
+        "height": 120,
+        "measured": {
+          "width": 84,
+          "height": 120
+        },
+        "draggable": true,
+        "selectable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0010_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 400
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 416
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "1184554",
+          "variable": {
+            "name": "KM1",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%QX0.0",
+            "initialValue": null,
+            "documentation": "bomba 1",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "INPUT-VARIABLE_0011_main",
+        "type": "input-variable",
+        "position": {
+          "x": -168,
+          "y": 448
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 464
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "inputHandles": [],
+          "outputHandles": [
+            {
+              "glbPosition": {
+                "x": -56,
+                "y": 464
+              },
+              "relPosition": {
+                "x": 112,
+                "y": 16
+              },
+              "id": "output-variable",
+              "position": "right",
+              "type": "source"
+            }
+          ],
+          "outputConnector": {
+            "glbPosition": {
+              "x": -56,
+              "y": 464
+            },
+            "relPosition": {
+              "x": 112,
+              "y": 16
+            },
+            "id": "output-variable",
+            "position": "right",
+            "type": "source"
+          },
+          "numericId": "1518023",
+          "variable": {
+            "name": "KM2",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%QX0.1",
+            "initialValue": null,
+            "documentation": "bomba 2",
+            "debug": false
+          },
+          "executionOrder": 0,
+          "variant": "input-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      },
+      {
+        "id": "OUTPUT-VARIABLE_0012_main",
+        "type": "output-variable",
+        "position": {
+          "x": 230,
+          "y": 400
+        },
+        "width": 128,
+        "height": 32,
+        "measured": {
+          "width": 128,
+          "height": 32
+        },
+        "data": {
+          "handles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "inputHandles": [
+            {
+              "glbPosition": {
+                "x": 230,
+                "y": 416
+              },
+              "relPosition": {
+                "x": 0,
+                "y": 16
+              },
+              "id": "input-variable",
+              "position": "left",
+              "type": "target"
+            }
+          ],
+          "outputHandles": [],
+          "inputConnector": {
+            "glbPosition": {
+              "x": 230,
+              "y": 416
+            },
+            "relPosition": {
+              "x": 0,
+              "y": 16
+            },
+            "id": "input-variable",
+            "position": "left",
+            "type": "target"
+          },
+          "numericId": "764280",
+          "variable": {
+            "name": "H1",
+            "class": "local",
+            "type": {
+              "definition": "base-type",
+              "value": "BOOL"
+            },
+            "location": "%QX0.2",
+            "initialValue": null,
+            "documentation": "lámpara «Bombeando»",
+            "debug": false
+          },
+          "executionOrder": 6,
+          "variant": "output-variable",
+          "negated": false,
+          "draggable": true,
+          "selectable": true,
+          "deletable": true
+        },
+        "deletable": true,
+        "selectable": true,
+        "draggable": true,
+        "selected": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0002_mainoutput-variable-BLOCK_0001_mainMARCHA",
+        "source": "INPUT-VARIABLE_0002_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0001_main",
+        "targetHandle": "MARCHA",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0003_mainoutput-variable-BLOCK_0001_mainPARADA",
+        "source": "INPUT-VARIABLE_0003_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0001_main",
+        "targetHandle": "PARADA",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__BLOCK_0001_mainQ-OUTPUT-VARIABLE_0004_maininput-variable",
+        "source": "BLOCK_0001_main",
+        "sourceHandle": "Q",
+        "target": "OUTPUT-VARIABLE_0004_main",
+        "targetHandle": "input-variable",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0006_mainoutput-variable-BLOCK_0005_mainMARCHA",
+        "source": "INPUT-VARIABLE_0006_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0005_main",
+        "targetHandle": "MARCHA",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0007_mainoutput-variable-BLOCK_0005_mainPARADA",
+        "source": "INPUT-VARIABLE_0007_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0005_main",
+        "targetHandle": "PARADA",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__BLOCK_0005_mainQ-OUTPUT-VARIABLE_0008_maininput-variable",
+        "source": "BLOCK_0005_main",
+        "sourceHandle": "Q",
+        "target": "OUTPUT-VARIABLE_0008_main",
+        "targetHandle": "input-variable",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0010_mainoutput-variable-BLOCK_0009_mainIN1",
+        "source": "INPUT-VARIABLE_0010_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0009_main",
+        "targetHandle": "IN1",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__INPUT-VARIABLE_0011_mainoutput-variable-BLOCK_0009_mainIN2",
+        "source": "INPUT-VARIABLE_0011_main",
+        "sourceHandle": "output-variable",
+        "target": "BLOCK_0009_main",
+        "targetHandle": "IN2",
+        "type": "smoothstep"
+      },
+      {
+        "id": "xy-edge__BLOCK_0009_mainOUT-OUTPUT-VARIABLE_0012_maininput-variable",
+        "source": "BLOCK_0009_main",
+        "sourceHandle": "OUT",
+        "target": "OUTPUT-VARIABLE_0012_main",
+        "targetHandle": "input-variable",
+        "type": "smoothstep"
+      }
+    ]
+  }
+}
+END_PROGRAM

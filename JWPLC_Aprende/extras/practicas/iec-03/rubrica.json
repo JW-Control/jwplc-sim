@@ -1,0 +1,231 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-03",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "H2 (Q0.2) encendido con el motor en marcha",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "hint": "Un peldaño más: contacto KM1 y bobina H2."
+    },
+    {
+      "id": "marcha_off",
+      "description": "H2 se apaga al detener el motor",
+      "when": {
+        "Q0_0": 0,
+        "Q0_2": 0
+      },
+      "hold_ms": 300,
+      "after": "marcha"
+    },
+    {
+      "id": "falla",
+      "description": "Dispara el térmico (aprieta F1): H1 (Q0.1) enciende y el motor para",
+      "when": {
+        "I0_2": 0,
+        "Q0_1": 1,
+        "Q0_0": 0
+      },
+      "hold_ms": 300
+    },
+    {
+      "id": "sin_rearranque",
+      "description": "Con el térmico rearmado, el motor sigue parado",
+      "when": {
+        "I0_2": 1,
+        "Q0_0": 0,
+        "Q0_1": 0
+      },
+      "hold_ms": 500,
+      "after": "falla",
+      "why": "Por el enclavamiento: al volver el térmico, nada vuelve a dar MARCHA."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Piloto de marcha",
+      "until_ms": 3500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "H2 se enciende con el motor",
+          "points": 5,
+          "from_ms": 1000,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H2 se apaga con PARADA",
+          "points": 4,
+          "from_ms": 2200,
+          "to_ms": 2700,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Piloto de falla",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2800,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "H1 apagado sin falla",
+          "points": 2,
+          "from_ms": 900,
+          "to_ms": 1800,
+          "always": {
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con el térmico disparado, H1 encendido y el motor parado",
+          "points": 5,
+          "from_ms": 1800,
+          "to_ms": 2200,
+          "eventually": {
+            "Q0_1": 1,
+            "Q0_0": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Al rearmar, H1 se apaga",
+          "points": 2,
+          "from_ms": 2800,
+          "to_ms": 3200,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "El motor no vuelve a arrancar solo",
+          "points": 2,
+          "from_ms": 2800,
+          "to_ms": 4500,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Marcha, parada y falla",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3300,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7200,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

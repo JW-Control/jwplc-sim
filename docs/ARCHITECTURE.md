@@ -585,6 +585,42 @@ RTC sin batería (al iniciar) y el ruido en RS-485 (en vivo). Las fallas de
 la placa quedan en la grabación (`.stim`); las de la escena, como las
 acciones de escena, no se graban todavía.
 
+**Modo Diagnóstico** (`app/renderer/diagnostico.js`, pestaña lateral de la
+Escena): una orden de trabajo inyecta una de estas fallas sin marcarla (ni
+en el dibujo, ni en el inspector, ni en la lista de diagnóstico) y el alumno
+la halla midiendo. Las órdenes vienen del proyecto (`diagnostico.ordenes`
+en el `.jwsim`: título, síntoma del operador, falla y causa) o, si no trae,
+se generan del cableado de las E/S del PLC.
+
+- Multímetro (`scene/meter.mjs`, `Scene.measure`): V⎓ y V~ entre dos bornes
+  por la netlist; una carga sin corriente no hace caída, así que entre las
+  puntas de un contacto abierto, un cable cortado o una bobina quemada que
+  debería estar alimentada se leen los 24 V. Ω por el camino de menor
+  resistencia (cables y contactos cerrados 0 Ω, cada carga según su tensión
+  y una corriente típica, bobinados de motor 12 Ω; quemado o cortado = OL).
+  Pinza (`Scene.clamp`): la corriente que el equipo declara en el borne o la
+  suma de las cargas que se apagarían sin ese cable.
+- Bloqueo y etiquetado (`Scene.lockout`): ninguna fuente da tensión hasta
+  retirarlo. Probar 0 V entre los polos de la fuente cuenta como prueba de
+  ausencia de tensión.
+- Puntaje sobre 100: medir Ω con tensión −10, reparar sin bloqueo −30, sin
+  probar ausencia de tensión −10, cambiar una pieza sana −15. La orden se
+  cierra con la falla reparada y el bloqueo retirado.
+- La tabla de E/S dice qué equipo hay en cada entrada y salida siguiendo el
+  cableado (`JwsimScene.ioMap`).
+- Dónde se apoyan las puntas: en los bornes del esquema a colores, en los
+  del plano normalizado IEC (`iec.js`, cada borne de elemento y el inicio de
+  cada riel) y en los del tablero 3D (`scene3d.js`: equipos del riel,
+  bloques de contacto de la puerta y bornera de salida, que lleva el borne
+  del equipo de campo). Con la pinza, clic en un borne abraza el cable que
+  sale de él (si llegan varios, cada clic pasa al siguiente).
+- En la Planta 3D el mismo panel flota en una tarjeta (botón «Diagnóstico»);
+  el bolsillo de la puerta del tablero abre los planos IEC como un folio, y
+  con la energía bloqueada el interruptor general lleva candado y tarjeta.
+
+Pruebas: `scene/tests/meter.test.mjs`, `app/tests/e2e-diagnostico.mjs` y
+`app/tests/e2e-diagnostico-3d.mjs`.
+
 
 ### 4.3 Ejercicios y calificación **[G9]**
 
@@ -652,6 +688,7 @@ salidas accionan los sensores por `source`, como la posición de un cilindro:
 | Tipo | Lee | Salidas | Acciones |
 |---|---|---|---|
 | `jwsim/conveyor` (cinta) | `motor` (p. ej. `M1.speed`, de -1 a 1) | `sensorA`, `sensorB`, `piezas` (centros en m, lista), `avance` (m/s), `salidas`, `enCinta` | `poner` (pieza; también sola con «cada») |
+| `jwsim/conveyor-physics` (cinta con física, `scene/physics/cargo-line.mjs`) | `motor` (p. ej. `M1.speed`) y, si es `.speed`, el `.running` del mismo motor (para despertar al empezar la rampa) | las de `jwsim/conveyor` más `velPiezas` (m/s de cada caja). Paso fijo (`hz`, 60): cajas con masa y fricción de Coulomb, choques inelásticos, tope, rampas propias; caen con el centro de masa pasado el final | `poner` (caja; también sola con «cada») |
 | `jwsim/tank` (tanque con bomba, 1.1) | `bomba` (p. ej. `M1.running`), `valvula` (p. ej. `Y1.open`), `extraccion` (L/min que sacan otros equipos, p. ej. `RED1.qBombas`) | `nivel` (fracción de la altura, 0-1), `nivelPct` y `alturaM` como segmentos, `volumenL`, `caudalEntrada`, `caudalSalida`, `rebalse`, `vacio`, `bombeando`, `descargando` | `consumo` (L/min) |
 
 **Modelo del tanque (1.1):** balance de volumen dV/dt = bomba × caudal − consumo − válvula × Cd·a·√(2gh) (descarga por gravedad de Torricelli con `salidaMm`). La `forma` (modelo en la paleta: cilindro vertical u horizontal, rectangular, cono, prisma en V, cuarto de círculo, esfera) da el área A(h) ∝ f(h/H); V(h) se tabula y se invierte para la altura. Se integra con RK4 a `pasoMs` (discretización configurable, 1-1000 ms) y el nivel se publica en tramos lineales de un paso, así los sensores ven el cruce exacto. Con área constante y sin descarga es lineal y exacto (un tramo), igual que la 1.0.
@@ -686,6 +723,41 @@ En la Escena 2D los tres equipos tienen un dibujo de proceso en código
 escala y los puntos A y B, el tanque con su nivel y la bomba, y la puerta
 con la hoja que corre y la persona. No representan un modelo comercial, así
 que quedan fuera de la regla de 4 px/mm de los símbolos de tablero.
+
+**Banco de trabajo** (prácticas del curso): un proyecto sin planta y solo
+con equipos de riel y de frente (fuente, PLC, contactores, relés, pilotos,
+pulsadores, selectores, zumbador) se dibuja en 3D como banco de trabajo y no
+como tablero de campo: tablero abierto, sin gabinete ni puerta, parado sobre
+una mesa, con los mandos y pilotos en filas al frente (hasta 8 por fila) y el
+zumbador entre ellos. Con un solo riel el banco es más bajo. La cámara lo
+mira de frente; con piloto rojo, amarillo y verde va un semáforo didáctico
+(60 %) al costado. `scene.plant3d.banco` (true/false) lo fuerza. Los bornes
+de diagnóstico del multímetro siguen igual. Prueba:
+`app/tests/e2e-banco-3d.mjs`.
+
+**Planta armable** (`app/renderer/scene3d-armar.js`, botón «Armar» de la
+vista 3D): sin armar, la planta se acomoda sola como antes. En modo Armar
+cada equipo, el tablero y las piezas de ambiente se arrastran sobre una
+rejilla (0,5 m; 0,25 m opcional), R gira 90°, Supr quita y Ctrl+Z deshace.
+El panel de piezas pone equipos con E/S (se crean también en el esquema,
+sin cablear) y piezas sin E/S (plataforma, escalera, baranda, cerco, poste,
+piso, franja, paso, caja, pallet). Lo armado se guarda en el `.jwsim`:
+
+- `devices[].p3 = {x, z, r}`: posición en metros sobre el piso y giro en
+  grados (0/90/180/270) del equipo; sin `p3` va donde lo acomoda la vista.
+- `scene.plant3d = {grid, panel, pieces}`: `grid` solo si no es 0,5;
+  `panel` es el `{x, z, r}` del tablero; `pieces[] = {id, kind, x, z, r,
+  params}` con ids `A1`, `A2`… y medidas en `params` (largo, ancho, alto…).
+
+Todo apoya en la rejilla del piso: la esquina de menor x y menor z de la
+huella de cada equipo, del tablero y de cada pieza cae en una línea (no el
+origen del modelo, que en unos es una esquina y en otros el centro), también
+en el acomodo automático. Las juntas de la losa van cada 2 m sobre las
+mismas líneas, y al armar se ve la rejilla fina. Los sensores pegados a un
+equipo sobresalen de su huella sin correrlo.
+
+«Acomodo automático» borra los `p3` y la posición del tablero en un solo
+paso de deshacer. Prueba: `app/tests/e2e-3d-armar.mjs`.
 
 Pruebas: `scene/tests/plant.test.mjs` y `app/tests/e2e-g8-3d.mjs` con el
 proyecto `tests/projects/planta-3d` (cinta con marcha y parada, cilindro al
@@ -1185,7 +1257,12 @@ de G2: modo de las entradas y su nivel inicial. **[G7]** `scene.devices` y
 `scene.wiring` son la escena (§4.1; esquema propio en
 [`schema/jwsim-scene-1.json`](../schema/jwsim-scene-1.json)). Cada
 dispositivo tiene `id`, `type` (`autor/nombre`), la `version` mínima (misma
-versión mayor), `params` y su posición `x`/`y` en la vista. Cada cable une
+versión mayor), `params` y su posición `x`/`y` en la vista. Opcional,
+`mount: "<id>"`: el equipo va acoplado a otro sin cables, como el relé
+térmico engrapado bajo el contactor (sus puentes 1-3-5 entran en 2-4-6); la
+posición sale de la del anfitrión y las uniones internas las agrega la
+escena (`scene/mount.mjs`). En el esquema se acopla arrastrándolo cerca de
+su lugar y se separa arrastrándolo lejos. Cada cable une
 dos bornes `<dispositivo>.<borne>`. La versión 0 es el borrador
 previo a v1 (`{"jwsim": 0, "sketch", "openplc", "hmi", "realtime", "seed"}`)
 y sirve para probar la ruta de migración.

@@ -18,12 +18,25 @@
 //     0      I0.7…I0.0 como bits (bit 0 = I0.0)
 //     1      Q0.7…Q0.0 como bits (solo lectura)
 // Otra dirección o función: excepción 02 / 01.
+//
+// Estado (evento "status", método status()): quién está conectado y si
+// sigue pidiendo. Un cliente que solo usa FC16 y FC04 es Open Industry
+// Project en el modo «The simulator polls the PLC» (sondea cada 20 ms); otro
+// patrón (FUXA, un SCADA) es «modbus». Sin pedidos durante QUIET_MS el
+// cliente queda «quieto» (OIP en Stop, o la conexión colgada).
+//
+// Vigilancia (como la E/S remota real y el propio OIP con las salidas del
+// PLC): si ningún cliente pide durante QUIET_MS, o se van todos, las
+// entradas que escribieron los clientes vuelven a 0 (evento "released").
+// Así el sketch no se queda con la fotocelda tapada cuando OIP se cierra.
 import { EventEmitter } from "node:events";
 import net from "node:net";
 
 const N = 8;
 const IN = Array.from({ length: N }, (_, k) => `I0_${k}`);
 const OUT = Array.from({ length: N }, (_, k) => `Q0_${k}`);
+export const QUIET_MS = 1500;
+const OIP_FCS = new Set([0x04, 0x10]);
 
 export class IoBridge extends EventEmitter {
   /**
@@ -40,6 +53,52 @@ export class IoBridge extends EventEmitter {
     this.runner = null;
     this.server = null;
     this.clients = new Set();
+    /** @type {Map<import("node:net").Socket, { remote: string, fcs: Set<number>, last: number, requests: number }>} */
+    this.peers = new Map();
+    this.listening = false;
+    this.lastStatus = "";
+    this.timer = null;
+    /** Entradas que escribió algún cliente desde la última liberación. */
+    this.driven = new Set();
+  }
+
+  /**
+   * Resumen para la interfaz. state: "waiting" (puerto abierto, nadie
+   * pide), "connected" (algún cliente pidió hace menos de QUIET_MS) o
+   * "quiet" (conectado pero callado). kind de cada cliente: "oip",
+   * "modbus" o "unknown" (todavía no pidió nada).
+   */
+  status(now = Date.now()) {
+    const clients = [...this.peers.values()].map((p) => ({
+      remote: p.remote,
+      kind: !p.fcs.size ? "unknown" : [...p.fcs].every((fc) => OIP_FCS.has(fc)) ? "oip" : "modbus",
+      active: p.requests > 0 && now - p.last < QUIET_MS,
+      requests: p.requests,
+    }));
+    const state = clients.some((c) => c.active) ? "connected" : clients.length ? "quiet" : "waiting";
+    return { state, host: this.host, port: this.port, clients };
+  }
+
+  // Avisa solo cuando cambia el estado o los clientes (no el contador).
+  #emitStatus() {
+    if (!this.listening) return;
+    const st = this.status();
+    const key = JSON.stringify([st.state, st.clients.map((c) => [c.remote, c.kind, c.active])]);
+    if (key === this.lastStatus) return;
+    this.lastStatus = key;
+    this.emit("status", st);
+    if (st.state !== "connected") this.#release(st.state);
+  }
+
+  // Vigilancia: nadie pide (o no queda nadie) → las entradas que manejaban
+  // los clientes vuelven a 0. Las que maneja la escena no se tocan.
+  #release(reason) {
+    if (!this.driven.size) return;
+    const signals = [...this.driven].filter((s) => !this.owns(s));
+    const wasOn = signals.filter((s) => this.levels.get(s));
+    for (const s of signals) this.#set(s, false);
+    this.driven.clear();
+    this.emit("released", { reason, signals, wasOn });
   }
 
   /** Engancha el runner y abre el puerto. */
@@ -54,11 +113,19 @@ export class IoBridge extends EventEmitter {
     this.server.on("error", (err) => this.emit("error", new Error(`puente de E/S: ${err.code === "EADDRINUSE" ? `el puerto ${this.port} está en uso` : err.message}`)));
     this.server.listen(this.port, this.host, () => {
       this.port = this.server.address().port;
+      this.listening = true;
       this.emit("listening", this.host, this.port);
+      this.#emitStatus();
+      this.timer = setInterval(() => this.#emitStatus(), 250);
+      this.timer.unref?.();
     });
   }
 
   close() {
+    clearInterval(this.timer);
+    this.timer = null;
+    this.listening = false;
+    this.peers.clear();
     this.runner?.off("message", this.onMessage);
     for (const s of this.clients) s.destroy();
     this.server?.close();
@@ -67,6 +134,7 @@ export class IoBridge extends EventEmitter {
 
   #set(signal, on) {
     if (this.owns(signal)) return;
+    this.driven.add(signal);
     if (this.levels.get(signal) === on) return;
     this.levels.set(signal, on);
     this.runner?.send({ type: "set", signal, value: on ? 1 : 0 });
@@ -151,10 +219,17 @@ export class IoBridge extends EventEmitter {
 
   #serve(sock) {
     this.clients.add(sock);
+    const peer = { remote: `${sock.remoteAddress}:${sock.remotePort}`, fcs: new Set(), last: 0, requests: 0 };
+    this.peers.set(sock, peer);
     this.emit("client", sock.remoteAddress, sock.remotePort);
+    this.#emitStatus();
     let buf = Buffer.alloc(0);
     sock.on("error", () => {});
-    sock.on("close", () => this.clients.delete(sock));
+    sock.on("close", () => {
+      this.clients.delete(sock);
+      this.peers.delete(sock);
+      this.#emitStatus();
+    });
     sock.on("data", (d) => {
       buf = Buffer.concat([buf, d]);
       while (buf.length >= 7 && buf.length >= 6 + buf.readUInt16BE(4)) {
@@ -162,7 +237,11 @@ export class IoBridge extends EventEmitter {
         const frame = buf.subarray(0, 6 + len);
         buf = buf.subarray(6 + len);
         if (frame.readUInt16BE(2) !== 0 || len < 2) continue; // no es Modbus
-        const out = this.handle(Buffer.from(frame.subarray(7)));
+        const pdu = Buffer.from(frame.subarray(7));
+        peer.fcs.add(pdu[0]);
+        peer.last = Date.now();
+        if (++peer.requests === 1) this.#emitStatus();
+        const out = this.handle(pdu);
         const mbap = Buffer.from(frame.subarray(0, 7));
         mbap.writeUInt16BE(out.length + 1, 4);
         sock.write(Buffer.concat([mbap, out]));

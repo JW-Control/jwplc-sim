@@ -1,0 +1,278 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 57 · Proyecto: bomba de pozo",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Proyecto_bomba_de_pozo/Proyecto_bomba_de_pozo.ino"
+  },
+  "exercise": {
+    "lesson": "curso-57",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Proyecto_bomba_de_pozo",
+    "brief": {
+      "goal": "Proteger el motor de los arranques seguidos: como máximo 3 arranques en 60 s; el cuarto se bloquea con «Demasiados arranques: espere».",
+      "steps": [
+        "Ejecuta el ejemplo y prueba la emergencia, el térmico F1 y la bobina cortada de KM1: cada una deja su evento con hora.",
+        "Guarda en un arreglo la hora (millis()) de los últimos 3 arranques.",
+        "Antes de arrancar: si el más viejo de los 3 fue hace menos de 60 s, no arranca y escribe «Demasiados arranques: espere» una vez por intento."
+      ],
+      "uses": [
+        "I0_0 · S1 marcha · I0_1 · S2 parada (NC)",
+        "I0_2 · KM1 13-14, realimentación",
+        "I0_3 · ES emergencia (NC) · I0_4 · F1 térmico (NC) · I0_5 · S3 rearme",
+        "Q0_0 · KM1 · Q0_1 · H1 falla · Q0_2 · H2 en marcha",
+        "FRAM"
+      ],
+      "teaches": "Un tablero de verdad junta la emergencia, las fallas enclavadas, la realimentación y el horómetro. Cada protección es corta; lo difícil es que convivan en orden."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "ES",
+        "type": "jwsim/emergency-stop",
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "R",
+        "type": "jwsim/power-3ph",
+        "x": 1040,
+        "y": 660
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "x": 240,
+        "y": 1540
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 880,
+        "y": 0
+      },
+      {
+        "id": "S3",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "azul",
+          "label": "Rearme"
+        },
+        "x": 1080,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 560,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "En marcha"
+        },
+        "x": 760,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "ES.11",
+        "ref": true
+      },
+      {
+        "from": "ES.12",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "ES.12",
+        "to": "plc.I0_3"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "R.L1",
+        "to": "KM1.1",
+        "ref": true
+      },
+      {
+        "from": "R.L2",
+        "to": "KM1.3",
+        "ref": true
+      },
+      {
+        "from": "R.L3",
+        "to": "KM1.5",
+        "ref": true
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.V1"
+      },
+      {
+        "from": "KM1.6",
+        "to": "M1.W1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "KM1.13",
+        "ref": true
+      },
+      {
+        "from": "KM1.14",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "F1.11",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "plc.I0_4"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S3.13",
+        "ref": true
+      },
+      {
+        "from": "S3.14",
+        "to": "plc.I0_5"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      }
+    ]
+  }
+}

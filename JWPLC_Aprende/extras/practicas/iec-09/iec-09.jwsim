@@ -1,0 +1,220 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 09 · Etapas: un semáforo",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-09",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Verde peatonal (Q0.3) que parpadea en sus últimos 3 s y modo noche (SA1) con el amarillo intermitente.",
+      "steps": [
+        "Ejecuta el ejemplo y aprieta el botón del peatón (S1): el verde dura al menos 10 s, luego amarillo 3 s y rojo 8 s.",
+        "Con otro TON de 5 s en la etapa ROJO, haz parpadear el verde peatonal en los últimos 3 s.",
+        "Con SA1 (I0.1) activo: modo noche, solo el amarillo parpadea cada medio segundo."
+      ],
+      "uses": [
+        "%IX0.0 · S1, botón del peatón",
+        "%IX0.1 · SA1, modo noche",
+        "%QX0.0 · H1, rojo",
+        "%QX0.1 · H2, amarillo",
+        "%QX0.2 · H3, verde",
+        "%QX0.3 · H4, verde peatonal"
+      ],
+      "teaches": "Una secuencia se arma con un bit por etapa y una transición entre etapas; cada etapa enciende sus salidas y lleva su propio temporizador."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Peatón"
+        },
+        "x": 380,
+        "y": 0
+      },
+      {
+        "id": "SA1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Noche"
+        },
+        "x": 580,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Rojo"
+        },
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Amarillo"
+        },
+        "x": 480,
+        "y": 1060
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Verde"
+        },
+        "x": 680,
+        "y": 1060
+      },
+      {
+        "id": "H4",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Peatón"
+        },
+        "x": 880,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "SA1.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H4.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H4.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

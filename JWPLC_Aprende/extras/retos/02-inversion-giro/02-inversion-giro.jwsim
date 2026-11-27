@@ -1,0 +1,230 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Inversión de giro con enclavamiento",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/inversion_giro/inversion_giro.ino"
+  },
+  "exercise": {
+    "level": 1,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/inversion_giro",
+    "brief": {
+      "goal": "Un motor que gira a la izquierda con S1 o a la derecha con S2, sin que KM1 y KM2 cierren juntos.",
+      "steps": [
+        "Enclava KM1 con S1 y KM2 con S2.",
+        "Para cambiar de sentido hay que pasar por parada (S0).",
+        "Enclavamiento: nunca KM1 y KM2 a la vez; con S1 y S2 juntos, ninguno.",
+        "H1 encendido mientras el motor gira."
+      ],
+      "teaches": "Enclavamiento entre contactores y paso obligado por parada.",
+      "uses": [
+        "I0_0 · S1, pulsador NA: Giro a la izquierda",
+        "I0_1 · S2, pulsador NA: Giro a la derecha",
+        "I0_2 · S0, pulsador NC: Parada (1 = sin pulsar)",
+        "Q0_0 · KM1, contactor: Motor a la izquierda",
+        "Q0_1 · KM2, contactor: Motor a la derecha",
+        "Q0_2 · H1, piloto amarillo: Motor en marcha"
+      ]
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Izquierda",
+          "color": "verde"
+        },
+        "x": 820,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "label": "Derecha",
+          "color": "verde"
+        },
+        "x": 980,
+        "y": 0
+      },
+      {
+        "id": "S0",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "label": "Parada",
+          "color": "rojo"
+        },
+        "x": 1160,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 1400,
+        "y": 0
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 1660,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Marcha"
+        },
+        "x": 1900,
+        "y": 0
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "params": {
+          "rating": "24VDC"
+        },
+        "x": 1340,
+        "y": 420
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13"
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.13"
+      },
+      {
+        "from": "S2.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S0.11"
+      },
+      {
+        "from": "S0.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "PS1.-V2",
+        "to": "KM1.3"
+      },
+      {
+        "from": "KM1.4",
+        "to": "M1.U2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "KM2.1"
+      },
+      {
+        "from": "KM2.2",
+        "to": "M1.U2"
+      },
+      {
+        "from": "PS1.-V2",
+        "to": "KM2.3"
+      },
+      {
+        "from": "KM2.4",
+        "to": "M1.U1"
+      }
+    ]
+  }
+}

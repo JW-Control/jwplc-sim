@@ -14,3 +14,4 @@ node_modules
 
 # Salida de jwsim-cli en proyectos OpenPLC (<proyecto>/build/, como el editor)
 /tests/openplc/*/build/
+__pycache__/

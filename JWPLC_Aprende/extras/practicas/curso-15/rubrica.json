@@ -1,0 +1,333 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-15",
+  "goals": [
+    {
+      "id": "man",
+      "description": "En MAN (H1), el impulso S1 mueve el motor",
+      "when": {
+        "Q0_1": 1,
+        "I0_2": 1,
+        "Q0_0": 1
+      },
+      "hold_ms": 300
+    },
+    {
+      "id": "parpadea",
+      "description": "En AUT, con el ciclo en curso, H2 (Q0.2) parpadea cada medio segundo",
+      "period": "Q0_2",
+      "on_ms": [
+        450,
+        550
+      ],
+      "off_ms": [
+        450,
+        550
+      ],
+      "cycles": 3,
+      "hint": "bool parpadeo = (millis() / 500) % 2 == 0; y H2 = modo == AUTOMATICO && (sin ciclo || parpadeo)."
+    },
+    {
+      "id": "descarga",
+      "description": "Al terminar la mezcla, el motor para y Y1 (Q0.3) descarga",
+      "when": {
+        "Q0_0": 0,
+        "Q0_3": 1
+      },
+      "hold_ms": 1000,
+      "hint": "Cambia bool ciclo por un enum Paso { REPOSO, MEZCLANDO, DESCARGANDO }, con un TON para cada paso con tiempo."
+    },
+    {
+      "id": "reposo",
+      "description": "A los 3 s la válvula cierra y H2 queda fija",
+      "when": {
+        "I0_1": 1,
+        "Q0_0": 0,
+        "Q0_3": 0,
+        "Q0_2": 1
+      },
+      "hold_ms": 1500,
+      "after": "descarga"
+    },
+    {
+      "id": "cero",
+      "description": "Arranca otro ciclo y pasa SA1 a 0: todo se detiene",
+      "when": {
+        "I0_0": 0,
+        "I0_1": 0,
+        "Q0_0": 0,
+        "Q0_2": 0,
+        "Q0_3": 0
+      },
+      "hold_ms": 500,
+      "after": "reposo",
+      "why": "Cambiar de modo vuelve el ciclo a REPOSO: la máquina nunca sigue sola en un modo que el operador ya dejó."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Manual y apagado",
+      "until_ms": 4500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": -1
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "SA1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "En MAN, el motor gira con el impulso y H1 encendida",
+          "points": 2,
+          "from_ms": 1500,
+          "to_ms": 2300,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "En 0, el impulso no mueve el motor",
+          "points": 2,
+          "from_ms": 3200,
+          "to_ms": 4500,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "En 0, H1 y H2 apagadas",
+          "points": 1,
+          "from_ms": 3100,
+          "to_ms": 3800,
+          "eventually": {
+            "Q0_1": 0,
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Ciclo con descarga",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "CICLO arranca la mezcla",
+          "points": 1,
+          "from_ms": 2000,
+          "to_ms": 2700,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H2 parpadea durante el ciclo",
+          "points": 5,
+          "from_ms": 3000,
+          "to_ms": 9000,
+          "period": "Q0_2",
+          "on_ms": [
+            400,
+            600
+          ],
+          "off_ms": [
+            400,
+            600
+          ],
+          "cycles": 3
+        },
+        {
+          "description": "A los 8 s el motor para y Y1 descarga",
+          "points": 4,
+          "from_ms": 10000,
+          "to_ms": 10800,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_3": 1
+          },
+          "for_ms": 1000
+        },
+        {
+          "description": "A los 3 s la válvula cierra y H2 queda fija",
+          "points": 1,
+          "from_ms": 13000,
+          "to_ms": 14000,
+          "eventually": {
+            "Q0_3": 0,
+            "Q0_2": 1
+          },
+          "for_ms": 800
+        }
+      ]
+    },
+    {
+      "name": "Cambiar de modo cancela el ciclo",
+      "until_ms": 12500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "SA1",
+          "action": "position",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Y1 estaba descargando",
+          "points": 2,
+          "from_ms": 10000,
+          "to_ms": 10900,
+          "eventually": {
+            "Q0_3": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "En 0, la válvula cierra y el motor queda quieto",
+          "points": 2,
+          "from_ms": 11000,
+          "to_ms": 11700,
+          "eventually": {
+            "Q0_3": 0,
+            "Q0_0": 0
+          },
+          "for_ms": 500
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Manual, automático y apagado",
+      "until_ms": 20500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": -1
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 4000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 17000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 17200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 19000,
+          "device": "SA1",
+          "action": "position",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

@@ -64,7 +64,7 @@ for (const ex of packageExamples(pkg).filter((e) => !filter || e.rel.includes(fi
   }
   const test = {
     $schema: "../../../schema/jwsim-test-1.json",
-    sketch: `package:libraries/${ex.lib}/examples/${ex.name}`,
+    sketch: ex.spec,
     until_ms: until,
     expect: { ...(console_.length ? { console: console_ } : {}) },
   };

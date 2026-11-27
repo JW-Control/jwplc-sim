@@ -113,6 +113,11 @@
             }
           },
           "additionalProperties": false
+        },
+        "rtc": {
+          "type": "string",
+          "pattern": "^fijo:\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d$",
+          "description": "Hora del RTC al iniciar la simulación (p. ej. una práctica con horario). Sin ella, la hora de la PC."
         }
       }
     },
@@ -174,6 +179,34 @@
                   180,
                   270
                 ]
+              },
+              "mount": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+              },
+              "p3": {
+                "type": "object",
+                "description": "Lugar del equipo en la Planta 3D armada a mano (metros y grados). Sin p3 se acomoda solo.",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  },
+                  "r": {
+                    "enum": [
+                      0,
+                      90,
+                      180,
+                      270
+                    ]
+                  }
+                },
+                "required": [
+                  "x",
+                  "z"
+                ]
               }
             }
           }
@@ -233,6 +266,91 @@
               }
             }
           }
+        },
+        "plant3d": {
+          "type": "object",
+          "description": "Planta 3D armada a mano: rejilla, lugar del tablero y piezas de ambiente sin E/S (barandas, plataformas, cercos, pisos).",
+          "properties": {
+            "grid": {
+              "enum": [
+                0.25,
+                0.5
+              ]
+            },
+            "panel": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                },
+                "r": {
+                  "enum": [
+                    0,
+                    90,
+                    180,
+                    270
+                  ]
+                }
+              },
+              "required": [
+                "x",
+                "z"
+              ]
+            },
+            "pieces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "x",
+                  "z"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "plataforma",
+                      "escalera",
+                      "baranda",
+                      "cerco",
+                      "poste",
+                      "franja",
+                      "paso",
+                      "piso",
+                      "caja",
+                      "pallet"
+                    ]
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  },
+                  "r": {
+                    "enum": [
+                      0,
+                      90,
+                      180,
+                      270
+                    ]
+                  },
+                  "params": {
+                    "type": "object",
+                    "description": "Medidas de la pieza (ancho, largo, alto en metros)."
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -247,6 +365,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "Dificultad (1 = inicial)."
+        },
+        "lesson": {
+          "type": "string",
+          "pattern": "^(curso|iec)-\\d+$",
+          "description": "Práctica evaluada de una lección del Curso JWPLC Basic (id curso-NN): la app muestra su teoría en el panel izquierdo y la da por hecha al cumplir los objetivos en vivo."
         },
         "statement": {
           "$ref": "#/$defs/relPath",
@@ -296,6 +419,69 @@
       "items": {
         "$ref": "#/$defs/relPath"
       }
+    },
+    "diagnostico": {
+      "type": "object",
+      "description": "Modo Diagnóstico: órdenes de trabajo con una falla oculta que el alumno halla midiendo y repara (app/renderer/diagnostico.js).",
+      "properties": {
+        "ordenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "titulo",
+              "sintoma",
+              "falla"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "titulo": {
+                "type": "string",
+                "description": "Lo que se ve en la orden (sin delatar la causa)."
+              },
+              "sintoma": {
+                "type": "string",
+                "description": "Lo que reporta el operador."
+              },
+              "falla": {
+                "type": "object",
+                "description": "Falla de la escena (Scene.inject): {kind: open, wire: \"A.x B.y\"} o {kind: stuck|burnt|welded, device, value?}.",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "open",
+                      "stuck",
+                      "burnt",
+                      "welded"
+                    ]
+                  },
+                  "wire": {
+                    "type": "string"
+                  },
+                  "device": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "causa": {
+                "type": "string",
+                "description": "Explicación que se muestra al cerrar la orden."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "allOf": [

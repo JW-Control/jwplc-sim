@@ -1,0 +1,145 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-07",
+  "goals": [
+    {
+      "id": "cuenta",
+      "description": "El Monitor Serie muestra «Pulsaciones: N» (aprieta al menos 2 veces)",
+      "console": "[Pp]ulsaciones\\D*([2-9]|[1-9]\\d+)\\b",
+      "hint": "Una variable que suma 1 en el flanco de subida; imprímela con Serial.print y Serial.println.",
+      "why": "El flanco da una sola cuenta por pulsación, por más que el pulsador siga apretado."
+    },
+    {
+      "id": "suelta",
+      "description": "H2 (Q0.1) se enciende al SOLTAR S1",
+      "when": {
+        "I0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "hint": "El flanco de bajada es !ahora && antes: ya está en el ejemplo, cambia ahí Q0.1."
+    },
+    {
+      "id": "apretado",
+      "description": "Al volver a apretar S1, H2 sigue encendida",
+      "when": {
+        "I0_0": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "suelta"
+    },
+    {
+      "id": "suelta_apaga",
+      "description": "… y se apaga recién al soltar",
+      "when": {
+        "I0_0": 0,
+        "Q0_1": 0
+      },
+      "hold_ms": 300,
+      "after": "apretado",
+      "why": "Subida y bajada son dos eventos distintos de la misma pulsación."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Flanco de bajada y cuenta",
+      "until_ms": 5200,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.1 no cambia al apretar",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1480,
+          "never": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "Q0.1 se cierra al soltar",
+          "points": 3,
+          "from_ms": 1500,
+          "to_ms": 1800,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Q0.1 sigue cerrado mientras se aprieta otra vez",
+          "points": 2,
+          "from_ms": 2550,
+          "to_ms": 2980,
+          "always": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "Q0.1 se abre al soltar otra vez",
+          "points": 2,
+          "from_ms": 3000,
+          "to_ms": 3300,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Q0.0 sigue cambiando al apretar",
+          "points": 1,
+          "from_ms": 1000,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Cuenta las 3 pulsaciones en el Monitor Serie",
+          "points": 4,
+          "from_ms": 4000,
+          "to_ms": 5200,
+          "console": "[Pp]ulsaciones\\D*3\\b"
+        }
+      ]
+    }
+  ]
+}

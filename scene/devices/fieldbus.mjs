@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // @ts-check
 // Catálogo, tanda 3: equipos Modbus RTU para el bus RS-485 de la placa.
-// Módulo de E/S remotas 8DI/8DO, medidor de energía PZEM-016 y controlador
+// Módulo de E/S remotas 8DI/8DO, medidor de energía RS-485 y controlador
 // de temperatura con RS-485. Como los transmisores (process.mjs): se
 // alimentan, se cablean al bus (A con A, B con B) y responden con su
 // dirección y velocidad.
@@ -107,10 +107,10 @@ export const remoteIo = {
 export const energyMeter = {
   type: "jwsim/energy-meter",
   version: "1.0.0",
-  name: "Medidor de energía PZEM-016",
+  name: "Medidor de energía RS-485",
   category: "Instrumentación",
   description:
-    "Medidor de energía monofásico Peacefair PZEM-016 (80-260 VAC, 100 A con TC) con RS-485 Modbus RTU: se alimenta de la tensión que mide (L-N) y la fase de la carga pasa por su TC (en la escena, en serie entre CT1 y CT2). Registros input (función 04), como en su hoja de datos: 0 = tensión × 10 (V), 1-2 = corriente × 1000 (A, 32 bits, parte baja primero), 3-4 = potencia × 10 (W), 5-6 = energía (Wh), 7 = frecuencia × 10 (Hz), 8 = factor de potencia × 100, 9 = alarma (FFFFh si la potencia supera el umbral). Holding 1 = umbral de alarma (W, escribible con 06). Mide la corriente de las cargas que la informan (motores, variador); el factor de potencia es un parámetro.",
+    "Medidor de energía monofásico (80-260 VAC, 100 A con TC) con RS-485 Modbus RTU: se alimenta de la tensión que mide (L-N) y la fase de la carga pasa por su TC (en la escena, en serie entre CT1 y CT2). Registros input (función 04), como en su hoja de datos: 0 = tensión × 10 (V), 1-2 = corriente × 1000 (A, 32 bits, parte baja primero), 3-4 = potencia × 10 (W), 5-6 = energía (Wh), 7 = frecuencia × 10 (Hz), 8 = factor de potencia × 100, 9 = alarma (FFFFh si la potencia supera el umbral). Holding 1 = umbral de alarma (W, escribible con 06). Mide la corriente de las cargas que la informan (motores, variador); el factor de potencia es un parámetro.",
   parameters: [
     ...busParams(1),
     { id: "fp", label: "Factor de potencia de la carga", type: "number", default: 0.85 },
@@ -189,7 +189,7 @@ export const tempController = {
   name: "Controlador de temperatura RS-485",
   category: "Instrumentación",
   description:
-    "Controlador de temperatura de panel 48 × 48 mm con RS-485 Modbus RTU (tipo Autonics TK4S o REX-C100 con opción de comunicación), entrada PT100 de 3 hilos (R1, R2, R3) y control ON-OFF con histéresis: en calentar cierra la salida 11-14 bajo SV − histéresis y la abre al llegar a SV; en enfriar, al revés. Alarma 21-24 cuando PV supera SV + desvío o la sonda está abierta. Registros: input 0 = PV × 10 (°C, con signo; 32767 sonda abierta), input 1 = estado (bit 0 salida, bit 1 alarma, bit 2 sonda abierta); holding 0 = SV × 10, 1 = histéresis × 10, 2 = modo (0 calentar, 1 enfriar), 3 = desvío de alarma × 10, escribibles (06 y 16).",
+    "Controlador de temperatura de panel 48 × 48 mm con RS-485 Modbus RTU, entrada PT100 de 3 hilos (R1, R2, R3) y control ON-OFF con histéresis: en calentar cierra la salida 11-14 bajo SV − histéresis y la abre al llegar a SV; en enfriar, al revés. Alarma 21-24 cuando PV supera SV + desvío o la sonda está abierta. Registros: input 0 = PV × 10 (°C, con signo; 32767 sonda abierta), input 1 = estado (bit 0 salida, bit 1 alarma, bit 2 sonda abierta); holding 0 = SV × 10, 1 = histéresis × 10, 2 = modo (0 calentar, 1 enfriar), 3 = desvío de alarma × 10, escribibles (06 y 16).",
   parameters: [
     ...busParams(4),
     { id: "coil", label: "Alimentación", type: "enum", options: RATINGS, default: "230VAC" },

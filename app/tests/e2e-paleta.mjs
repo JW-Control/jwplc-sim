@@ -335,6 +335,67 @@ criteria.MODEL_WITHOUT_DBLCLICK = {
   remembered,
   tile_updated: tileAfter !== tileBefore,
 };
+
+// ---- MULTI_SELECT: Ctrl+clic suma/quita equipos y arrastrar mueve todo el grupo.
+{
+  const devBox = async (id) => (await win.$(`#scene-devices > g[data-id="${id}"]`)).boundingBox();
+  const selIds = () => win.$$eval("#scene-devices > g.dev.selected", (gs) => gs.map((g) => g.dataset.id).sort());
+  const posOf = async (id) => {
+    const d = (await spec()).devices.find((x) => x.id === id);
+    return { x: d.x, y: d.y };
+  };
+  const m1 = lamps[0].id;
+  const m2 = lamps[1].id;
+  const b1 = await devBox(m1);
+  const b2 = await devBox(m2);
+  const bs1 = await devBox(btn);
+  await win.mouse.click(b1.x + b1.width / 2, b1.y + b1.height / 2);
+  await win.keyboard.down("Control");
+  await win.mouse.click(b2.x + b2.width / 2, b2.y + b2.height / 2);
+  await win.mouse.click(bs1.x + bs1.width / 2, bs1.y + bs1.height / 2);
+  const addedThree = (await selIds()).join(",");
+  await win.mouse.click(bs1.x + bs1.width / 2, bs1.y + bs1.height / 2);
+  await win.keyboard.up("Control");
+  const toggledTwo = (await selIds()).join(",");
+  const inspMulti = await win.$eval("#scene-inspector", (e) => e.textContent);
+  const p1Before = await posOf(m1);
+  const p2Before = await posOf(m2);
+  const dragStart = await devBox(m1);
+  await win.mouse.move(dragStart.x + dragStart.width / 2, dragStart.y + dragStart.height / 2);
+  await win.mouse.down();
+  await win.mouse.move(dragStart.x + dragStart.width / 2 + 80, dragStart.y + dragStart.height / 2 + 40, { steps: 6 });
+  await win.mouse.up();
+  const p1After = await posOf(m1);
+  const p2After = await posOf(m2);
+  const dx1 = p1After.x - p1Before.x;
+  const dy1 = p1After.y - p1Before.y;
+  const dx2 = p2After.x - p2Before.x;
+  const dy2 = p2After.y - p2Before.y;
+  const stillTwoAfterDrag = (await selIds()).join(",");
+  await key("Control+z");
+  const p1Undo = await posOf(m1);
+  const p2Undo = await posOf(m2);
+  const b1Now = await devBox(m1);
+  await win.mouse.click(b1Now.x + b1Now.width / 2, b1Now.y + b1Now.height / 2);
+  const collapsed = (await selIds()).join(",");
+  criteria.MULTI_SELECT = {
+    pass:
+      addedThree === [m1, m2, btn].sort().join(",") &&
+      toggledTwo === [m1, m2].sort().join(",") &&
+      /2 equipos seleccionados/.test(inspMulti) &&
+      dx1 > 0 && dy1 > 0 && dx1 === dx2 && dy1 === dy2 &&
+      stillTwoAfterDrag === toggledTwo &&
+      p1Undo.x === p1Before.x && p1Undo.y === p1Before.y &&
+      p2Undo.x === p2Before.x && p2Undo.y === p2Before.y &&
+      collapsed === m1,
+    addedThree,
+    toggledTwo,
+    delta1: [dx1, dy1],
+    delta2: [dx2, dy2],
+    stillTwoAfterDrag,
+    collapsed,
+  };
+}
 await win.screenshot({ path: join(OUT, "05-final.png") });
 
 await app.close();

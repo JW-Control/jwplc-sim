@@ -1,0 +1,74 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-41",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "La bomba arranca bajo 3,0 bar",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500
+    },
+    {
+      "id": "minimo",
+      "description": "«Bomba parada tras 10 s» o más",
+      "console": "Bomba parada tras (1\\d|[2-9]\\d) s",
+      "hint": "Para por presión solo si millis() - arranque >= 10000.",
+      "why": "Cada arranque calienta el motor; un mínimo de marcha limita los arranques por hora."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Sin consumo",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "RED1",
+          "action": "consumo",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca: KM1 cerrado",
+          "points": 2,
+          "at_ms": 2000,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Trabaja al menos 10 s seguidos",
+          "points": 8,
+          "from_ms": 1500,
+          "to_ms": 10500,
+          "always": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "«Bomba parada tras N s», con N de 10 o más",
+          "points": 6,
+          "console": "Bomba parada tras (1\\d|[2-9]\\d) s"
+        },
+        {
+          "description": "Después para: KM1 abierto",
+          "points": 4,
+          "at_ms": 16000,
+          "expect": {
+            "KM1.closed": false
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Hidroneumático",
+      "until_ms": 30000,
+      "actions": []
+    }
+  ]
+}

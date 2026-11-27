@@ -1,0 +1,264 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 04 · Variables y decisiones",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Variables_y_decisiones/Variables_y_decisiones.ino"
+  },
+  "exercise": {
+    "lesson": "curso-04",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Variables_y_decisiones",
+    "brief": {
+      "goal": "Prensa a tres manos en Q0.0 y Q0.4 encendido con I0.0 activa pero I0.1 inactiva.",
+      "steps": [
+        "Ejecuta el ejemplo y prueba los selectores (en el banco son las «manos»).",
+        "Agrega la tercera mano en I0_2: Q0.0 solo con las tres.",
+        "Q0.4: encendido con I0.0 activa y I0.1 inactiva (&& y !).",
+        "Prueba las combinaciones en la escena."
+      ],
+      "uses": [
+        "I0_0 · SA1, mano izquierda",
+        "I0_1 · SA2, mano derecha",
+        "I0_2 · SA3, tercera mano",
+        "Q0_0…Q0_4 · H1…H5, pilotos"
+      ],
+      "teaches": "&& (Y), || (O), ! (NO) y != combinan entradas en una decisión; un bool se escribe directo en una salida."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "SA1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Mano izq."
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "SA2",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Mano der."
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "SA3",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Tercera mano"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Q0.1"
+        },
+        "x": 480,
+        "y": 1060
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Q0.2"
+        },
+        "x": 680,
+        "y": 1060
+      },
+      {
+        "id": "H4",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "azul",
+          "label": "Q0.3"
+        },
+        "x": 880,
+        "y": 1060
+      },
+      {
+        "id": "H5",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "blanco",
+          "label": "Q0.4"
+        },
+        "x": 1080,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "SA1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA2.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "SA2.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "SA3.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "SA3.14",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H4.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H4.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_4.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H5.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H5.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

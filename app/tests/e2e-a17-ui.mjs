@@ -13,8 +13,9 @@
 //   NO_PACKAGE_TEXT  sin el texto «JWPLC Basic · package …» arriba ni abajo
 //   DOCK             panel inferior a lo ancho con las pestañas Problemas ·
 //                    Compilación · Serie · Tráfico · E/S y variables ·
-//                    Depuración; su alto se arrastra y se recuerda; se oculta
-//                    por completo y vuelve desde la barra de estado;
+//                    Depuración; su alto se arrastra y se recuerda (por
+//                    pestaña principal); se pliega a la barra de pestañas y
+//                    vuelve con su botón;
 //                    COM y velocidad en la barra superior (sin Proyecto ahí)
 // Informe en build/gates/JWSIM_A17_UI.json y capturas en build/gates/a17-ui/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-a17-ui.mjs
@@ -44,12 +45,17 @@ await win.waitForSelector(".monaco-editor .view-lines", { timeout: 30000 });
 await win.waitForTimeout(1000);
 
 // ---- EXAMPLES_JWPLC
-const groups = await win.$$eval("#sel-example optgroup", (gs) => gs.map((g) => g.label));
-const opts = await win.$$eval("#sel-example option", (os) => os.map((o) => o.textContent));
+const list = await win.evaluate(() => window.jwsimTest.examples());
+const groups = [...new Set(list.map((e) => e.group))];
+const menuGroups = await app.evaluate(({ Menu }) => {
+  const file = Menu.getApplicationMenu()?.items.find((i) => i.label === "Archivo");
+  const ex = file?.submenu?.items.find((i) => i.label === "Ejemplos");
+  return ex?.submenu?.items.filter((i) => i.type !== "separator").map((i) => i.label) ?? [];
+});
 criteria.EXAMPLES_JWPLC = {
-  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && !opts.includes("01_empty"),
+  pass: groups.length > 0 && groups.every((g) => /^(JWPLC|JW)_/.test(g)) && groups[0] === "JWPLC_GlobalPeripherals" && menuGroups.length === groups.length && menuGroups[0] === "JWPLC_GlobalPeripherals" && !list.some((e) => e.name === "01_empty"),
   groups,
-  examples: opts.length - 1,
+  menuGroups,
 };
 
 // ---- NO_PACKAGE_TEXT
@@ -146,7 +152,7 @@ await win.mouse.move(ds.x, ds.y - 120, { steps: 8 });
 await win.mouse.up();
 await win.waitForTimeout(300);
 const d1 = await dockBox();
-const dockStored = await win.evaluate(() => localStorage.getItem("jwsim.dockHeight"));
+const dockStored = await win.evaluate(() => JSON.parse(localStorage.getItem("jwsim.dock.program") ?? "{}").h);
 await win.screenshot({ path: join(OUT, "06-panel-inferior.png") });
 const workH = () => win.$eval(".workspace", (e) => Math.round(e.getBoundingClientRect().height));
 const wOpen = await workH();
@@ -156,7 +162,7 @@ const dFold = await dockBox();
 const wFold = await workH();
 const sbFold = await win.$eval(".statusbar", (e) => Math.round(e.getBoundingClientRect().height));
 await win.screenshot({ path: join(OUT, "07-panel-oculto.png") });
-await win.click("#sb-dock");
+await win.click("#btn-dock-toggle");
 await win.waitForTimeout(300);
 await win.click("#tab-buses");
 const dOpen = await dockBox();
@@ -166,7 +172,7 @@ criteria.DOCK = {
   pass:
     tabs.join("|") === "Problemas|Compilación|Serie|Tráfico|E/S y variables|Depuración" &&
     d0.w === viewport && Math.abs(d1.h - d0.h - 120) <= 4 && Number(dockStored) === d1.h &&
-    dFold.h === 0 && wFold - wOpen >= d1.h && sbFold >= 18 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project && modeKept,
+    dFold.h > 0 && dFold.h < 50 && wFold - wOpen >= d1.h - dFold.h && sbFold >= 18 && Math.abs(dOpen.h - d1.h) <= 2 && toolbar.speed && toolbar.com && !toolbar.project && modeKept,
   tabs, input_mode_kept: modeKept, before: d0, after_drag: d1, stored: dockStored, folded: dFold.h, workspace_grew: wFold - wOpen, statusbar_folded: sbFold, reopened: dOpen.h, toolbar,
 };
 

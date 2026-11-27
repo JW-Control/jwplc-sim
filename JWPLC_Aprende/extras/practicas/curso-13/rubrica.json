@@ -1,0 +1,237 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-13",
+  "goals": [
+    {
+      "id": "h1_arr",
+      "description": "H1 (Q0.4) encendida durante el arranque escalonado",
+      "when": {
+        "Q0_3": 1,
+        "Q0_0": 0,
+        "Q0_4": 1
+      },
+      "hold_ms": 1000,
+      "hint": "Al final de loop(): digitalWrite(Q0_4, arrancando || parando);"
+    },
+    {
+      "id": "h1_todas",
+      "description": "Con las cuatro cintas en marcha, H1 se apaga",
+      "when": {
+        "Q0_0": 1,
+        "Q0_1": 1,
+        "Q0_2": 1,
+        "Q0_3": 1,
+        "Q0_4": 0
+      },
+      "hold_ms": 500,
+      "after": "h1_arr"
+    },
+    {
+      "id": "vacia",
+      "description": "PARADA apaga primero la cinta 1 y la 4 sigue",
+      "when": {
+        "Q0_0": 0,
+        "Q0_3": 1
+      },
+      "hold_ms": 500,
+      "after": "h1_todas",
+      "hint": "Al apretar PARADA, en vez del for que apaga todas, empieza una secuencia como la de arranque pero con siguiente = 0 y sumando 1."
+    },
+    {
+      "id": "orden",
+      "description": "Luego la cinta 2, mientras la 3 sigue",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 0,
+        "Q0_2": 1
+      },
+      "hold_ms": 500,
+      "after": "vacia"
+    },
+    {
+      "id": "h1_fin",
+      "description": "Al final, las cuatro detenidas y H1 apagada",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 0,
+        "Q0_2": 0,
+        "Q0_3": 0,
+        "Q0_4": 0
+      },
+      "hold_ms": 500,
+      "after": "orden",
+      "why": "La misma secuencia, recorrida al revés con el índice, vacía las cintas sin dejar material encima."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Arranque con lámpara",
+      "until_ms": 8500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La cinta 3 arranca 2 s después de la 4",
+          "points": 2,
+          "from_ms": 3000,
+          "to_ms": 3600,
+          "eventually": {
+            "Q0_2": 1,
+            "Q0_1": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "H1 encendida durante el arranque",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 1600,
+          "eventually": {
+            "Q0_3": 1,
+            "Q0_4": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Con las cuatro en marcha, H1 apagada",
+          "points": 3,
+          "from_ms": 7000,
+          "to_ms": 8200,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 1,
+            "Q0_2": 1,
+            "Q0_3": 1,
+            "Q0_4": 0
+          },
+          "for_ms": 300
+        }
+      ]
+    },
+    {
+      "name": "Parada escalonada",
+      "until_ms": 13500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "PARADA apaga primero la cinta 1",
+          "points": 4,
+          "from_ms": 9000,
+          "to_ms": 9700,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_3": 1
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "Un segundo después, la cinta 2; la 3 y la 4 siguen",
+          "points": 3,
+          "from_ms": 10000,
+          "to_ms": 10800,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 0,
+            "Q0_2": 1,
+            "Q0_3": 1
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "H1 encendida durante la parada",
+          "points": 2,
+          "from_ms": 9000,
+          "to_ms": 9700,
+          "eventually": {
+            "Q0_4": 1,
+            "Q0_3": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Al final, todas detenidas y H1 apagada",
+          "points": 3,
+          "from_ms": 12000,
+          "to_ms": 13300,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 0,
+            "Q0_2": 0,
+            "Q0_3": 0,
+            "Q0_4": 0
+          },
+          "for_ms": 300
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Arranque y parada",
+      "until_ms": 13500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

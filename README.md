@@ -6,16 +6,45 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.4.0 · package JWPLC 2.1.0-alpha.17 en curso (package.lock)
-Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real y recarga desde el editor PASS; botón «Simular» en el editor pendiente
-Matriz:  138 ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
+Versión: 0.6.0 · package JWPLC 2.1.0-alpha.18 (package.lock) · OpenPLC Editor 4.3.3-jwplc.2 (editor.lock)
+Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real, Ladder en vivo, editor Ladder y depurador del editor PASS
+Matriz:  ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-**[⬇ JWPLC Sim 0.4.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
-package JWPLC, sus dependencias y el compilador GCC, así que no hace falta Node.js ni red. No tienen firma de
-código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
+**[⬇ JWPLC Sim 0.6.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+package JWPLC, sus dependencias, el compilador GCC y la caché de compilación, así que no hace falta Node.js ni
+red. No tienen firma de código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
+
+Desde 0.6.0 el Sim **se actualiza solo** desde las Releases de GitHub ([docs/ACTUALIZAR.md](docs/ACTUALIZAR.md)).
+La 0.6.0 se instala a mano una vez; las siguientes llegan con el botón **⟳ Actualizar**.
+
+Novedades de 0.6.0:
+
+- **Inicio y ruta de aprendizaje** (librería `JWPLC_Aprende`): curso **C++** (unidades 1 a 7 y 9) y **IEC
+  61131-3** en ST, Ladder y FBD (unidades 1 a 4), con la teoría junto al código, ficha de cada lección, retos con
+  objetivos en vivo y prácticas evaluadas. Vitrina de arquitecturas (bombeo, montacargas, tratamiento de agua).
+- **Ladder como en el OpenPLC Editor 4.3**: vista con su aspecto y los colores de su depurador; **editor Ladder**
+  en el Sim con las mismas operaciones de peldaño del editor (el `.ld` se abre igual en el OpenPLC Editor);
+  **backplane** con alias de las borneras, **tabla de variables** y la dirección real bajo cada elemento
+  ([docs/EDITOR_LADDER.md](docs/EDITOR_LADDER.md)).
+- **Ladder en vivo con el depurador del OpenPLC**: tiempo de los TON, cuenta de los CTU y marcas internas
+  mientras corre; columna «En vivo» en la tabla de variables; forzado con clic derecho (Force True / False /
+  Release). También como pestaña de la barra izquierda en **Esquema eléctrico** y **Planta 3D**.
+- **Esquema normalizado (IEC)** generado del circuito: hojas A4 con rejilla, PLC como módulo con bornes, lista de
+  E/S y bornes, colores de conductores IEC 60204-1, referencias cruzadas, edición desde el plano y **PDF**.
+  «Ordenar como tablero» en el esquema a colores.
+- **Modo Diagnóstico**: órdenes de trabajo con falla oculta, multímetro con puntas en los bornes (en el esquema,
+  en el plano IEC y en la Planta 3D), bloqueo del general y puntaje.
+- **Planta 3D**: entorno con luz y sombras, montacargas y tanque detallados, banco de trabajo de las prácticas y
+  modo **Armar**.
+- **«Subir al JWPLC»**: compila para el ESP32 real y carga por USB ([docs/SUBIR_JWPLC.md](docs/SUBIR_JWPLC.md)).
+- **Primera compilación en segundos**: la caché del package viene dentro del instalador.
+- Neumática ISO 1219 y diagrama de estados mejorados, tema claro/oscuro, colores del código como Arduino IDE 2,
+  `jwsim-cli scene` para armar escenas desde JSON.
+
+<details><summary>Novedades de 0.4.0 y 0.3.0</summary>
 
 Novedades de 0.4.0:
 
@@ -25,38 +54,34 @@ Novedades de 0.4.0:
   «+ Cinta», «+ Tanque», «+ Puerta» y «+ Cilindro» y una mini placa con la pantalla y los LED.
 - **Ejercicios a lo ancho**: las escenas de los 8 ejercicios van en una fila y se encuadran centradas.
 - **Autocompletado**: Tab sobre una función escribe sus paréntesis (`Serial.println(|)`, `millis()`).
-- **Package 2.1.0-alpha.17**: ejemplos limpios y numerados, E/S con `digitalRead`/`digitalWrite`/
-  `digitalReadBlock`/`digitalWriteBlock`; los ejemplos ya abiertos se ponen al día con el package.
 - **OpenPLC Editor 4.3.3**: los proyectos OpenPLC (ST y Ladder) se compilan con la cadena del editor
-  4.3.3-jwplc.1 (STruC++ 0.7.0, ya sin xml2st). El contador CTUD sigue ahora la norma IEC: cuenta en el flanco
+  4.3.3 (STruC++ 0.7.0, ya sin xml2st). El contador CTUD sigue ahora la norma IEC: cuenta en el flanco
   de subida de CU y de CD.
 
 Novedades de 0.3.0:
 
 - Interfaz nueva: panel inferior a lo ancho (Problemas · Compilación · Serie · Tráfico · E/S y variables ·
-  Depuración), que se oculta por completo (Ctrl+J); velocidad y puerto COM en la barra superior; la escena con
-  pestañas laterales **Agregar** y **Propiedades**.
+  Depuración), que se oculta por completo (Ctrl+J); velocidad y puerto COM en la barra superior.
 - **Puerto COM virtual** integrado en el instalador (com0com, par COM20 ↔ COM21): JW Serial u otro programa se
   conecta al USB o al RS-485 del PLC simulado.
-- Serie a la velocidad real (115200 baudios): un `Serial.println` sin pausa ya no traba la PC; marca de tiempo
-  por línea.
-- E/S y variables con tabla de forzado (Forzar 0 · 1 · Liberar); ejercicios sin `pinMode` y que se ponen al día
-  solos; la pestaña Tráfico muestra solo RS-485 y Modbus.
-- Instalador: arreglado el aviso de procesos abiertos que impedía instalar o desinstalar.
+- Serie a la velocidad real (115200 baudios); E/S y variables con tabla de forzado.
+
+</details>
 
 Va junto a:
 
 | Programa | Descarga |
 |---|---|
-| Package Arduino JWPLC 2.1.0-alpha.17 | [Release](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.17) |
-| OpenPLC Editor – JWPLC Edition 4.3.3-jwplc.1 y VPP | [Release](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.3.3-jwplc.1) |
-| JWPLC HMI Designer 2.1.0-alpha.17 | adjunto a la [Release del package](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.17) |
+| Package Arduino JWPLC 2.1.0-alpha.18 | [Release](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.18) |
+| OpenPLC Editor – JWPLC Edition 4.3.3-jwplc.2 y VPP | [Release](https://github.com/JW-Control/openplc-editor/releases/tag/jwplc-editor-v4.3.3-jwplc.2) |
+| JWPLC HMI Designer 2.1.0-alpha.18 | adjunto a la [Release del package](https://github.com/JW-Control/platform-jwplc/releases/tag/v2.1.0-alpha.18) |
 
 ## Qué hace
 
 - Compila el sketch con las librerías reales del package y lo corre en la PC con la placa en vivo: entradas,
   salidas, LED, pantalla TFT y botonera (clic o teclado).
 - Abre proyectos de **OpenPLC Editor** con la cadena real del editor; guardar en el editor recarga la simulación.
+  El Ladder se ve y se edita en el Sim y se depura en vivo con el protocolo del editor.
 - **Runtime de panel** (`JWPLC_Runtime`): programa estilo LOGO! desde la pantalla, con la «Demo feria» y
   Diagnóstico › Simular entradas I.
 - **Pantalla en el navegador** (`JWPLC_WebScreen`) y una ventana para ver un JWPLC Basic real por Ethernet.
@@ -221,6 +246,9 @@ pantalla, `xvfb-run -a npm run test:e2e`).
 - Informes: [G0](docs/reports/G0_POC_IO_BASIC.md), [G1](docs/reports/G1.md), [G2](docs/reports/G2.md), [G3](docs/reports/G3.md), [G4](docs/reports/G4.md), [G5](docs/reports/G5.md), [G7](docs/reports/G7.md), [sincronización con alpha.13](docs/reports/SYNC_ALPHA13.md).
 - [Ejercicios](docs/EJERCICIOS.md): los ocho ejercicios, la rúbrica y la
   calificación automática.
+- [Editor Ladder](docs/EDITOR_LADDER.md): edición, backplane, tabla de
+  variables, Ladder en vivo y depurador del OpenPLC.
+- [Subir al JWPLC](docs/SUBIR_JWPLC.md) y [Actualizar el Sim](docs/ACTUALIZAR.md).
 - [SDK de dispositivos](docs/SDK.md): dispositivos de escena en TypeScript,
   nativos en C, plantillas e índice comunitario firmado.
 
@@ -264,3 +292,13 @@ bloquea una tarea; `JWSIM_EXTRA_FLAGS=-fsanitize=address` compila con ASan.
 - Documentación y materiales: [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
 
 Detalle por ruta en `REUSE.toml` y en [docs/LICENSES.md](docs/LICENSES.md).
+
+## Créditos
+
+- La física de planta (`scene/physics/`, cinta con física) está basada en
+  el diseño de [Open Industry Project](https://github.com/Open-Industry-Project/Open-Industry-Project)
+  (MIT, © Automation Standard LLC and Contributors): cinta como superficie
+  con velocidad, fricción de Coulomb con la caja, rampas del accionamiento,
+  fotocelda por haz y las mismas pruebas contra fórmulas cerradas. El
+  código es propio de JW Control. Detalle en
+  [docs/integration/PROPUESTA_PLANTA3D.md](docs/integration/PROPUESTA_PLANTA3D.md).

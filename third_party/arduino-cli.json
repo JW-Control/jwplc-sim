@@ -1,0 +1,10 @@
+{
+  "windows": {
+    "arduinoCli": { "url": "https://github.com/arduino/arduino-cli/releases/download/v1.3.1/arduino-cli_1.3.1_Windows_64bit.zip", "sha256": "cfece6f356fdc9ca003cc3f0a488470030719c8e0e7bfce5e42ac9410d87441f" },
+    "ctags": { "url": "https://github.com/arduino/ctags/releases/download/5.8-arduino11/ctags-5.8-arduino11-i686-mingw32.zip", "sha256": "dfaa5c49c3dcf7900d9b0e35afd8fc6a40213916bdb2421ba72b7f8726acb223" }
+  },
+  "linux": {
+    "arduinoCli": { "url": "https://github.com/arduino/arduino-cli/releases/download/v1.3.1/arduino-cli_1.3.1_Linux_64bit.tar.gz", "sha256": "376428d7d45be640c00812a71612e1742edc2f5f9ee3742a2d6da7870e079588" },
+    "ctags": { "url": "https://github.com/arduino/ctags/releases/download/5.8-arduino11/ctags-5.8-arduino11-x86_64-pc-linux-gnu.tar.bz2", "sha256": "34f3e5fa9c131eabe407d2a86fb5600c3c3fd0aea007c16ae1dbb7e365e52a23" }
+  }
+}

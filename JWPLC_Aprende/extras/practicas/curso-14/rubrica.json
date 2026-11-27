@@ -1,0 +1,198 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-14",
+  "goals": [
+    {
+      "id": "marcha1",
+      "description": "Pon P1 en I: el compresor arranca",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 1000
+    },
+    {
+      "id": "espera",
+      "description": "Pásalo a 0 y otra vez a I: H1 (Q0.2) avisa que espera",
+      "when": {
+        "I0_0": 1,
+        "Q0_0": 0,
+        "Q0_2": 1
+      },
+      "hold_ms": 1500,
+      "after": "marcha1",
+      "hint": "Un TON nuevo con la entrada !compresor (el valor de la vuelta anterior): permitido = tiempoParado.ejecutar(!compresor, 5000); H1 = presionBaja && !compresor && !permitido."
+    },
+    {
+      "id": "bloqueo",
+      "description": "Recién detenido, no arranca aunque pida aire",
+      "when": {
+        "I0_0": 1,
+        "Q0_0": 0
+      },
+      "hold_ms": 3000,
+      "after": "marcha1",
+      "hint": "compresor = pideAire && (compresor || permitido); así espera para arrancar, pero una vez en marcha no se corta."
+    },
+    {
+      "id": "arranca",
+      "description": "Pasados los 5 s, arranca solo y H1 se apaga",
+      "when": {
+        "Q0_0": 1,
+        "Q0_2": 0
+      },
+      "hold_ms": 500,
+      "after": "bloqueo",
+      "why": "Cada uso tiene su propio temporizador: el del presostato y el de la parada mínima no se pisan."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Compresor con presostato y ventilación",
+      "until_ms": 15500,
+      "actions": [
+        {
+          "at_ms": 4000,
+          "device": "P1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 9000,
+          "device": "P1",
+          "action": "position",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "No arranca antes de 2 s de presión baja",
+          "points": 2,
+          "from_ms": 4000,
+          "to_ms": 5800,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Arranca con 2 s de presión baja",
+          "points": 1,
+          "from_ms": 6000,
+          "to_ms": 6700,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "El ventilador sigue después de parar",
+          "points": 1,
+          "from_ms": 9100,
+          "to_ms": 10000,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Y se apaga a los 5 s",
+          "points": 2,
+          "from_ms": 14000,
+          "to_ms": 15300,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Cuenta el arranque",
+          "points": 1,
+          "console": "Arranques: 1"
+        }
+      ]
+    },
+    {
+      "name": "Tiempo mínimo de parada",
+      "until_ms": 15500,
+      "actions": [
+        {
+          "at_ms": 4000,
+          "device": "P1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 9000,
+          "device": "P1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 10000,
+          "device": "P1",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "Recién detenido, no arranca aunque pida aire",
+          "points": 8,
+          "from_ms": 9100,
+          "to_ms": 13800,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "H1 avisa que espera",
+          "points": 4,
+          "from_ms": 10000,
+          "to_ms": 10700,
+          "eventually": {
+            "Q0_2": 1,
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Pasados 5 s detenido, arranca y H1 se apaga",
+          "points": 1,
+          "from_ms": 14000,
+          "to_ms": 14700,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_2": 0
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Parar y volver a pedir aire",
+      "until_ms": 15500,
+      "actions": [
+        {
+          "at_ms": 4000,
+          "device": "P1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 9000,
+          "device": "P1",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 10000,
+          "device": "P1",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

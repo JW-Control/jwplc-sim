@@ -12,6 +12,7 @@
 //   jwsim-cli device build|test|pack <carpeta>     (SDK de dispositivos, G7)
 //   jwsim-cli device install <tipo>[@versión] [--index <url|archivo>]
 //   jwsim-cli device list [--index <url|archivo>]
+//   jwsim-cli scene  describe|new|normalize|validate|preview|build  (Escenas JSON)
 //
 // Opciones de build: --target native|windows, --out <dir> (build y run),
 // --cc gcc|clang, --board <id>, --package <dir> (checkout de platform-jwplc
@@ -24,11 +25,12 @@
 // fallas; 2 uso incorrecto; 3 el sketch no compila; 4 la simulación terminó
 // mal (FATAL, vigilante, caída); 5 entorno (toolchain o package).
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { buildSketch, ROOT } from "./lib/build.mjs";
+import { runSceneCommand } from "./lib/scene-cli.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "./lib/openplc.mjs";
 import { BEHAVIORS, writeDevice } from "./lib/device-gen.mjs";
 import { readComponent, writeComponent } from "./lib/component-files.mjs";
@@ -41,12 +43,14 @@ import { parseResult, parseTimeline, runExe } from "./lib/runner.mjs";
 import { formatGrade, gradeSketch, loadExercise } from "./lib/grade.mjs";
 import { findTests, loadTest, runTest } from "./lib/test.mjs";
 import { toolchain } from "./lib/toolchain.mjs";
+import { compileEsp32, installEsp32Tools, prepareEsp32, uploadEsp32 } from "./lib/esp32.mjs";
 import { fetchPackageRef, packageFromDir, resolvePackageRoot } from "../scripts/fetch-package.mjs";
 
 export const EXIT = { OK: 0, FAIL: 1, USAGE: 2, BUILD: 3, SIM: 4, ENV: 5 };
 
 const USAGE = `uso:
   jwsim-cli build  <sketch_dir> [--target native|windows] [--out dir] [--package dir] [--library dir]... [--json]
+  jwsim-cli subir  <sketch_dir> [--port COM5] [--tools] [--json]   (compila para el JWPLC real y carga por USB)
   jwsim-cli run    <sketch_dir> [opciones de build] [--json] -- [opciones del runner]
   jwsim-cli test   <archivo.jwtest.json|carpeta>... [opciones de build] [--record] [--json] [--report archivo]
   jwsim-cli parity [<ref>] [--package dir] [--update] [--json] [--report archivo]
@@ -54,7 +58,13 @@ const USAGE = `uso:
   jwsim-cli grade  <ejercicio.jwsim|carpeta> [<sketch_dir>] [--solution] [--runs N] [--json] [--report archivo]
   jwsim-cli device build|test|pack <carpeta> [--json]
   jwsim-cli device install <tipo>[@versión] [--index url|archivo] [--json]
-  jwsim-cli device list [--index url|archivo] [--json]`;
+  jwsim-cli device list [--index url|archivo] [--json]
+  jwsim-cli scene describe [<tipo>] [--json]
+  jwsim-cli scene new <salida.jwsim> [--sketch ruta] [--template base] [--json]
+  jwsim-cli scene normalize <entrada.json> [-o salida.jwsim] [--json]
+  jwsim-cli scene validate <archivo.jwsim> [--fast] [--strict] [--json]
+  jwsim-cli scene preview <archivo.jwsim> [--out dir] [--view 2d|3d|both] [--smoke-ms ms] [--json]
+  jwsim-cli scene build <entrada.json> --out <dir> [--create-ino] [--strict] [--json]`;
 
 class CliError extends Error {
   constructor(code, message) {
@@ -83,6 +93,8 @@ function parse(argv) {
     else if (a === "--report") opts.report = value(++i, a);
     else if (a === "--filter") opts.filter = value(++i, a);
     else if (a === "--index") opts.index = value(++i, a);
+    else if (a === "--port") opts.port = value(++i, a);
+    else if (a === "--tools") opts.tools = true;
     else if (a === "--json") opts.json = true;
     else if (a === "--update") opts.update = true;
     else if (a === "--record") opts.record = true;
@@ -91,6 +103,14 @@ function parse(argv) {
     else if (a === "--set") (opts.set ??= []).push(value(++i, a));
     else if (a === "--link") opts.link = true;
     else if (a === "--try") opts.try = value(++i, a);
+    else if (a === "-o" || a === "--output") opts.outFile = value(++i, a);
+    else if (a === "--sketch") opts.sketch = value(++i, a);
+    else if (a === "--template") opts.template = value(++i, a);
+    else if (a === "--view") opts.view = value(++i, a);
+    else if (a === "--strict") opts.strict = true;
+    else if (a === "--fast") opts.fast = true;
+    else if (a === "--create-ino") opts.createIno = true;
+    else if (a === "--smoke-ms") opts.smokeMs = Number(value(++i, a));
     else if (a.startsWith("--")) throw new CliError(EXIT.USAGE, `opción desconocida ${a}`);
     else opts._.push(a);
   }
@@ -149,8 +169,8 @@ async function main() {
   const opts = parse(rest);
   let report;
   let code = EXIT.OK;
-  const emit = (obj) => {
-    report = { command: cmd, ...obj, exit_code: code };
+  const emit = (obj, exitCode = code) => {
+    report = { command: cmd, ...obj, exit_code: exitCode };
     if (opts.report) {
       mkdirSync(dirname(resolve(opts.report)), { recursive: true });
       writeFileSync(resolve(opts.report), JSON.stringify(report, null, 2) + "\n");
@@ -165,6 +185,34 @@ async function main() {
     if (!opts.json) console.error(b.ok ? `[jwsim-cli] OK ${b.executable}` : `[jwsim-cli] ERROR: ${b.error}`);
     emit(b);
     return code;
+  }
+
+  // Subir al JWPLC (cli/lib/esp32.mjs): sin --port solo compila para el ESP32;
+  // --tools descarga las herramientas del ESP32 si faltan.
+  if (cmd === "subir") {
+    const dir = opts._[0];
+    if (!dir) throw new CliError(EXIT.USAGE, "falta la carpeta del sketch");
+    const log = opts.json ? () => {} : (l) => console.error(l);
+    const env = prepareEsp32({ dataDir: process.env.JWSIM_ARDUINO_DATA ?? join(ROOT, "build", "arduino") });
+    if (!env.cli) throw new CliError(EXIT.ENV, "no se encontró arduino-cli (node scripts/fetch-arduino-cli.mjs)");
+    if (env.missing.length && opts.tools) await installEsp32Tools(env, { log });
+    else if (env.missing.length) throw new CliError(EXIT.ENV, `faltan herramientas del ESP32: ${env.missing.map((t) => `${t.name} ${t.version}`).join(", ")} (agregue --tools para descargarlas)`);
+    const ready = env.missing.length ? prepareEsp32({ dataDir: env.dataDir }) : env;
+    const c = await compileEsp32(dir, ready, { log });
+    if (!c.ok) {
+      emit({ ok: false, stage: "compile" }, EXIT.BUILD);
+      return EXIT.BUILD;
+    }
+    for (const l of c.size) log(`[subir] ${l}`);
+    if (!opts.port) {
+      log(`[subir] compilado en ${c.buildDir} (sin --port no se carga)`);
+      emit({ ok: true, buildDir: c.buildDir, size: c.size });
+      return EXIT.OK;
+    }
+    const u = await uploadEsp32(dir, ready, { buildDir: c.buildDir, port: opts.port, log });
+    if (!u.ok && u.hint) log(`[subir] ${u.hint}`);
+    emit({ ok: u.ok, stage: u.ok ? "done" : "upload", buildDir: c.buildDir, size: c.size, hint: u.hint || undefined }, u.ok ? EXIT.OK : EXIT.FAIL);
+    return u.ok ? EXIT.OK : EXIT.FAIL;
   }
 
   if (cmd === "run") {
@@ -450,6 +498,10 @@ async function main() {
       emit({ ok: false, error: err.message, security: err instanceof IndexError });
       return code;
     }
+  }
+
+  if (cmd === "scene") {
+    return runSceneCommand({ opts, CliError, EXIT, emit });
   }
 
   throw new CliError(EXIT.USAGE, `comando desconocido '${cmd}'`);

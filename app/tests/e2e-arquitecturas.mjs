@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Prueba E2E del menú «Arquitecturas» con la 01 (bombeo de edificio):
-//   ARCH_LIST     el menú lista las arquitecturas de arquitecturas/
+//   ARCH_LIST     el menú lista las arquitecturas de JWPLC_Aprende/extras/arquitecturas/
 //   ARCH_OPEN     abre la copia con su escena (13 equipos y la placa) y la ficha en la consola
 //   ARCH_RUN      compila y corre: con S1 en Auto la red sube a ~4 bar con el PI
 //   ARCH_3D       la Planta 3D muestra la cisterna y la sala de bombas con el edificio
@@ -32,8 +32,8 @@ await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setS
 const t = (fn, ...a) => win.evaluate(fn, ...a);
 try {
   await win.waitForSelector(".monaco-editor .view-lines", { timeout: 60000 });
-  await win.waitForFunction(() => document.querySelectorAll("#sel-arch option").length > 1, null, { timeout: 20000 });
-  const ids = await win.$$eval("#sel-arch option", (o) => o.map((x) => x.value).filter(Boolean));
+  await win.waitForFunction(() => window.jwsimTest.archs().length > 0, null, { timeout: 20000 });
+  const ids = await t(() => window.jwsimTest.archs().map((a) => a.id));
   criteria.ARCH_LIST = { ok: ids.includes("01-bombeo-edificio"), ids };
   log(`ARCH_LIST ${JSON.stringify(criteria.ARCH_LIST)}`);
 
@@ -41,7 +41,7 @@ try {
   await win.waitForTimeout(2500);
   await t(() => window.JwsimTabs.select("schematic"));
   await win.waitForTimeout(1000);
-  const opened = await t(() => ({ devices: document.querySelectorAll("#scene-root .dev").length, card: /Arquitectura 01/.test(document.body.innerText) }));
+  const opened = await t(() => ({ devices: document.querySelectorAll("#scene-root .dev").length, card: /Arquitectura 01/.test(document.body.innerText + document.getElementById("console").textContent) }));
   criteria.ARCH_OPEN = { ok: opened.devices >= 13 && opened.card, ...opened };
   log(`ARCH_OPEN ${JSON.stringify(criteria.ARCH_OPEN)}`);
 

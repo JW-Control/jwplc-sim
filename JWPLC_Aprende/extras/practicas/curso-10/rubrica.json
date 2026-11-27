@@ -1,0 +1,378 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-10",
+  "goals": [
+    {
+      "id": "meta",
+      "description": "Cuenta hasta 24 piezas («Piezas: 24»)",
+      "console": "^Piezas: 24$",
+      "hint": "PIEZAS_POR_CAJA = 24"
+    },
+    {
+      "id": "llena",
+      "description": "Con 24 piezas la cinta para y H1 avisa «caja llena»",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "meta"
+    },
+    {
+      "id": "cajas",
+      "description": "El Monitor Serie muestra las cajas llenas («Cajas llenas: 1»)",
+      "console": "[Cc]ajas\\D*[1-9]",
+      "after": "meta",
+      "hint": "Otra variable que suma 1 cuando piezas llega a la meta.",
+      "why": "Un contador de cajas cuenta los eventos del contador de piezas."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Caja de 24",
+      "until_ms": 7200,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1900,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2800,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2900,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3800,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3900,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4500,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4800,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4900,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5500,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5700,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6200,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6400,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con 23 piezas la cinta sigue",
+          "points": 3,
+          "at_ms": 5550,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con 24 piezas: cinta parada y caja llena",
+          "points": 5,
+          "from_ms": 5700,
+          "to_ms": 6100,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Avisa la caja llena en el Monitor Serie",
+          "points": 4,
+          "from_ms": 5500,
+          "to_ms": 6200,
+          "console": "[Cc]ajas\\D*1\\b"
+        },
+        {
+          "description": "RESET arranca otra caja",
+          "points": 2,
+          "from_ms": 6200,
+          "to_ms": 6700,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ]
+}

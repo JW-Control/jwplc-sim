@@ -1,0 +1,231 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 12 · Clases: un motor con sus funciones",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Clases_un_motor/Clases_un_motor.ino"
+  },
+  "exercise": {
+    "lesson": "curso-12",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Clases_un_motor",
+    "brief": {
+      "goal": "Una lámpara «Bombeando» con cualquiera de las dos bombas en marcha, y que cada bomba cuente sus arranques.",
+      "steps": [
+        "Ejecuta el ejemplo: cada bomba arranca y para con sus propios pulsadores.",
+        "Enciende H1 (Q0.2) mientras al menos una bomba esté en marcha.",
+        "Agrega a la clase un contador de arranques y muéstralo: «Bomba 1 en marcha (arranque 2)».",
+        "Comprueba que cada bomba lleva su propia cuenta."
+      ],
+      "uses": [
+        "I0_0 · S1, marcha bomba 1 (NA)",
+        "I0_1 · S2, parada bomba 1 (NC)",
+        "I0_2 · S3, marcha bomba 2 (NA)",
+        "I0_3 · S4, parada bomba 2 (NC)",
+        "Q0_0 · KM1, bomba 1",
+        "Q0_1 · KM2, bomba 2",
+        "Q0_2 · H1, bombeando"
+      ],
+      "teaches": "Una clase junta los datos y las funciones de un equipo; cada objeto lleva sus propios datos y se maneja con objeto.funcion()."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha B1"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada B1"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "S3",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha B2"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "S4",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada B2"
+        },
+        "x": 880,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "KM2",
+        "type": "jwsim/contactor",
+        "x": 560,
+        "y": 1060
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Bombeando"
+        },
+        "x": 840,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S3.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S3.14",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S4.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S4.12",
+        "to": "plc.I0_3",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "KM2.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM2.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

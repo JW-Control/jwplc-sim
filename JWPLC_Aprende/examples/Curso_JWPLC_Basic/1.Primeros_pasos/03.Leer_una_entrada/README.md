@@ -1,0 +1,40 @@
+# Curso JWPLC Basic · Lección 03 · Leer una entrada
+
+## Qué vas a aprender
+
+- A leer una entrada con digitalRead().
+- Que una entrada solo tiene dos estados: HIGH (activa) o LOW (inactiva).
+- A usar lo que se lee para mandar una salida.
+
+## Cómo es una entrada del JWPLC Basic
+
+- Las entradas I0.0 a I0.7 trabajan con 24 V DC y son sinking, para
+  sensores PNP: la entrada se activa cuando le llegan +24 V.
+- El borne 1M es el común de las entradas y se une a 0 V de la fuente.
+- En el programa la entrada I0.0 se escribe I0_0.
+
+## Qué conectar
+
+- Borne 1M a 0 V de la fuente de 24 V.
+- Un pulsador entre +24 V y la entrada I0.0. Sirve también un sensor PNP:
+  marrón a +24 V, azul a 0 V y negro (la señal) a I0.0.
+
+## Cómo probarlo
+
+1. Sube el programa y abre el Monitor Serie a 115200 baudios.
+2. Mientras mantengas el pulsador apretado, el relé Q0.0 estará cerrado y
+   el Monitor Serie dirá "I0.0 activa".
+
+## Para practicar
+
+- Haz lo contrario: que Q0.0 esté cerrado mientras el pulsador NO esté
+  apretado (pista: el operador ! invierte un valor, lo verás en la lección 04).
+- Conecta un segundo pulsador a I0.1 y haz que mande el relé Q0.1.
+
+## En JWPLC Sim
+
+<!-- La clase de la wiki está escrita para el equipo físico; en el Sim, su sección «Súbelo y pruébalo» se reemplaza por esta. -->
+
+1. Pulsa **Ejecutar** y mira la pestaña **Serie**: sin tocar nada sale `I0.0 inactiva` cada 200 ms.
+2. En **Mandos** (panel **Reto**, a la derecha) mantén apretado **S1**: `I0.0` se activa, `Q0.0` se cierra y el mensaje cambia a `I0.0 activa`. Al soltarlo, todo vuelve atrás.
+3. El banco ya está cableado como en la sección Conexiones: míralo en **Esquema eléctrico**.

@@ -1,0 +1,208 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-04",
+  "goals": [
+    {
+      "id": "tres",
+      "description": "Con las tres manos, H1 (Q0.0) enciende",
+      "when": {
+        "I0_0": 1,
+        "I0_1": 1,
+        "I0_2": 1,
+        "Q0_0": 1
+      },
+      "hold_ms": 500,
+      "hint": "if (manoIzquierda && manoDerecha && terceraMano)"
+    },
+    {
+      "id": "dos_no",
+      "description": "Con dos manos, H1 queda apagado",
+      "when": {
+        "I0_0": 1,
+        "I0_1": 1,
+        "I0_2": 0,
+        "Q0_0": 0
+      },
+      "after": "tres",
+      "hold_ms": 500,
+      "why": "Una prensa a varias manos obliga a tener las dos (o tres) manos fuera de la zona de peligro."
+    },
+    {
+      "id": "q4",
+      "description": "H5 (Q0.4) enciende con I0.0 activa e I0.1 inactiva",
+      "when": {
+        "I0_0": 1,
+        "I0_1": 0,
+        "Q0_4": 1
+      },
+      "hold_ms": 500,
+      "hint": "digitalWrite(Q0_4, manoIzquierda && !manoDerecha);"
+    },
+    {
+      "id": "q4_no",
+      "description": "Con I0.1 activa, H5 se apaga",
+      "when": {
+        "I0_0": 1,
+        "I0_1": 1,
+        "Q0_4": 0
+      },
+      "after": "q4",
+      "hold_ms": 500
+    }
+  ],
+  "cases": [
+    {
+      "name": "Prensa a tres manos",
+      "until_ms": 2600,
+      "actions": [
+        {
+          "at_ms": 1200,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1200,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1600,
+          "device": "SA3",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2200,
+          "device": "SA2",
+          "action": "position",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con dos manos no baja la prensa",
+          "points": 3,
+          "from_ms": 1250,
+          "to_ms": 1600,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Con las tres, Q0.0 se cierra",
+          "points": 2,
+          "from_ms": 1600,
+          "to_ms": 1900,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Al quitar una mano, Q0.0 se abre",
+          "points": 1,
+          "from_ms": 2200,
+          "to_ms": 2500,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    },
+    {
+      "name": "Q0.4: I0.0 y no I0.1",
+      "until_ms": 2400,
+      "actions": [
+        {
+          "at_ms": 1200,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1800,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.4 abierto en reposo",
+          "points": 1,
+          "at_ms": 1150,
+          "expect": {
+            "Q0_4": 0
+          }
+        },
+        {
+          "description": "Con I0.0 sola, Q0.4 se cierra",
+          "points": 2,
+          "from_ms": 1200,
+          "to_ms": 1500,
+          "eventually": {
+            "Q0_4": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Con I0.1 también, Q0.4 se abre",
+          "points": 2,
+          "from_ms": 1800,
+          "to_ms": 2100,
+          "eventually": {
+            "Q0_4": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Tres manos y Q0.4",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1000,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 1000,
+          "device": "SA3",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2500,
+          "device": "SA3",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 3500,
+          "device": "SA2",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 4500,
+          "device": "SA2",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

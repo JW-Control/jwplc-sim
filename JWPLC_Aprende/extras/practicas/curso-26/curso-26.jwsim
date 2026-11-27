@@ -1,0 +1,212 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 26 · La pantalla: el estado de la máquina a la vista",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/La_pantalla/La_pantalla.ino"
+  },
+  "exercise": {
+    "lesson": "curso-26",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/La_pantalla",
+    "brief": {
+      "goal": "Que la pantalla cuente los arranques y muestre la falla del térmico, y que el Monitor Serie diga lo mismo.",
+      "steps": [
+        "Ejecuta el ejemplo y abre la pestaña Placa: la pantalla muestra PARADA en rojo; S1 Marcha la pone en MARCHA en verde.",
+        "Cuenta los arranques: muéstralos abajo en la pantalla («Arranques: 2») y escríbelos en Serie.",
+        "Agrega el térmico F1 (I0.2, NC): abierto para el motor, enciende H1 (Q0.1), escribe «Falla: térmico» y la pantalla muestra FALLA en naranja."
+      ],
+      "uses": [
+        "I0_0 · S1, MARCHA (NA)",
+        "I0_1 · S2, PARADA (NC)",
+        "I0_2 · F1, contacto 95-96 del térmico (NC)",
+        "Q0_0 · KM1, contactor de la bomba",
+        "Q0_1 · H1, falla",
+        "Pantalla TFT del frente"
+      ],
+      "teaches": "La pantalla se dibuja en jwplcUIEnter() (lo fijo) y jwplcUIUpdate() (lo que cambia, solo cuando cambia): así no parpadea y el programa no se frena."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 560,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 760,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "F1.11",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

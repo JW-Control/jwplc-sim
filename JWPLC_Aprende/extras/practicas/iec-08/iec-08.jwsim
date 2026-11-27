@@ -1,0 +1,172 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 08 · Intermitencia con dos temporizadores",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-08",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "H3 (Q0.2) parpadea 2 s encendido y 2 s apagado, y H2 (Q0.1) sigue a S1 al instante.",
+      "steps": [
+        "Ejecuta el ejemplo: H1 parpadea cada 500 ms.",
+        "Arma otra intermitencia, lenta, de 2 s y 2 s para H3.",
+        "H2 sigue a S1 sin esperar.",
+        "Mira las tres luces a la vez: ninguna frena a las otras."
+      ],
+      "uses": [
+        "%IX0.0 · S1, pulsador NA",
+        "%QX0.0 · H1, piloto verde",
+        "%QX0.1 · H2, piloto amarillo",
+        "%QX0.2 · H3, piloto rojo"
+      ],
+      "teaches": "Dos TON en anillo arman un generador de pulsos; el PLC nunca se detiene a esperar, por eso todo lo demás sigue respondiendo."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde"
+        },
+        "x": 460,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Q0.1"
+        },
+        "x": 480,
+        "y": 1060
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Q0.2"
+        },
+        "x": 680,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 39 · Proyecto: el extractor por Modbus",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Proyecto_extractor_por_Modbus/Proyecto_extractor_por_Modbus.ino"
+  },
+  "exercise": {
+    "lesson": "curso-39",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Proyecto_extractor_por_Modbus",
+    "brief": {
+      "goal": "Falla segura del extractor: si TC1 deja de responder 3 veces seguidas, el extractor va a 60 Hz y H2 (DO2) avisa; al volver, sigue la temperatura.",
+      "steps": [
+        "Ejecuta el ejemplo con S1 en Automático: sube la temperatura de TC1 y mira cómo el variador pasa de 0 a 30 y a 60 Hz.",
+        "Cuenta las lecturas fallidas de TC1; con 3 seguidas: «Sin temperatura: extractor al máximo» una vez y velocidad 60 Hz.",
+        "Enciende H2 en DO2 mientras falte la temperatura; con la primera lectura buena: «Temperatura recuperada»."
+      ],
+      "uses": [
+        "RS-485 · VF1, variador, dirección 1",
+        "RS-485 · TC1, controlador, dirección 2",
+        "RS-485 · IO1, E/S remotas, dirección 3",
+        "DI1 · S1, Automático",
+        "DO1 · H1, marcha",
+        "DO2 · H2, alarma"
+      ],
+      "teaches": "Un bus con varios equipos se recorre por turnos sin detener el programa. La falla segura depende de la máquina: un horno apaga la resistencia; un extractor ventila al máximo."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 420
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 420
+      },
+      {
+        "id": "TC1",
+        "type": "jwsim/temp-controller",
+        "params": {
+          "address": 2,
+          "baud": "9600",
+          "coil": "24VDC",
+          "sonda": "simulada",
+          "temp": 30,
+          "sv": 200,
+          "hist": 2,
+          "alarma": 10
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "IO1",
+        "type": "jwsim/remote-io",
+        "params": {
+          "address": 3,
+          "baud": "9600"
+        },
+        "x": 2180,
+        "y": 0
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Automático"
+        },
+        "x": 820,
+        "y": 420
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 1020,
+        "y": 420
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Sin temperatura"
+        },
+        "x": 1220,
+        "y": 420
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 820
+      },
+      {
+        "id": "VF1",
+        "type": "jwsim/vfd-el",
+        "x": 1420,
+        "y": 420,
+        "params": {
+          "02-00": "3: RS-485",
+          "02-01": "3: RS-485, STOP/RESET del teclado habilitado",
+          "09-01": "1: 9600 bps",
+          "09-04": "6: RTU 8,N,1",
+          "09-02": "1: advertir y parar en rampa",
+          "09-03": 3,
+          "01-09": 3,
+          "01-10": 3,
+          "09-00": 1
+        }
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor-3ph",
+        "params": {
+          "label": "Extractor"
+        },
+        "x": 1580,
+        "y": 1240
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "plc.RS485_A",
+        "to": "VF1.SG+"
+      },
+      {
+        "from": "plc.RS485_B",
+        "to": "VF1.SG-"
+      },
+      {
+        "from": "VF1.SG+",
+        "to": "IO1.A"
+      },
+      {
+        "from": "VF1.SG-",
+        "to": "IO1.B"
+      },
+      {
+        "from": "IO1.A",
+        "to": "TC1.A"
+      },
+      {
+        "from": "IO1.B",
+        "to": "TC1.B"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "TC1.L",
+        "ref": true
+      },
+      {
+        "from": "TC1.N",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "IO1.+"
+      },
+      {
+        "from": "IO1.-",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "IO1.DC",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "IO1.DI1"
+      },
+      {
+        "from": "PS1.+V2",
+        "to": "IO1.C1"
+      },
+      {
+        "from": "IO1.DO1",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "IO1.DO2",
+        "to": "H2.X1"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V2",
+        "ref": true
+      },
+      {
+        "from": "L1.L",
+        "to": "VF1.R",
+        "ref": true
+      },
+      {
+        "from": "L1.N",
+        "to": "VF1.S",
+        "ref": true
+      },
+      {
+        "from": "VF1.U",
+        "to": "M1.U1"
+      },
+      {
+        "from": "VF1.V",
+        "to": "M1.V1"
+      },
+      {
+        "from": "VF1.W",
+        "to": "M1.W1"
+      }
+    ]
+  }
+}

@@ -104,6 +104,7 @@ export const limitSwitch = {
     "Interruptor de posición con contacto NA (13-14) y NC (21-22). Se acciona a mano o por la posición de otro dispositivo (p. ej. Y1.position entre 1 y 1 = cilindro fuera).",
   parameters: [
     { id: "model", label: "Modelo", type: "enum", options: ["XCKJ", "compacto"], default: "XCKJ", hint: "compacto: de palanca con rodillo, como en los módulos de electroneumática" },
+    { id: "orientacion", label: "Orientación", type: "enum", options: ["arriba", "abajo"], default: "arriba", hint: "arriba: rodillo arriba; abajo: rodillo hacia el émbolo y bornes arriba" },
     { id: "source", label: "Accionado por", type: "string", default: "", hint: "dispositivo.salida, p. ej. Y1.position" },
     { id: "min", label: "Desde", type: "number", default: 1 },
     { id: "max", label: "Hasta", type: "number", default: 1 },
@@ -127,7 +128,7 @@ export const emergencyStop = {
   name: "Parada de emergencia",
   category: "Mando",
   description:
-    "Pulsador de parada de emergencia tipo hongo Ø40 mm, de enclavamiento (Schneider XB2-BS542 / CHINT NP2-BS542): al pulsarlo queda enclavado y se suelta girándolo. 11-12 NC abre y 23-24 NA cierra mientras está enclavado. El 11-12 va en serie con el circuito de mando (IEC 60947-5-5).",
+    "Pulsador de parada de emergencia tipo hongo Ø40 mm, de enclavamiento: al pulsarlo queda enclavado y se suelta girándolo. 11-12 NC abre y 23-24 NA cierra mientras está enclavado. El 11-12 va en serie con el circuito de mando (IEC 60947-5-5).",
   parameters: [{ id: "label", label: "Rótulo", type: "string", default: "Emergencia" }],
   terminals: [{ id: "11" }, { id: "12" }, { id: "23" }, { id: "24" }],
   actions: [{ id: "press", label: "Pulsar / girar para soltar", kind: "toggle" }],
@@ -147,7 +148,7 @@ export const pushbuttonLit = {
   name: "Pulsador luminoso",
   category: "Mando",
   description:
-    "Pulsador luminoso de 22 mm con LED incorporado (Schneider XB2-BW33 / CHINT NP2-BW3361): 13-14 NA mientras se pulsa y el piloto X1-X2 independiente, que se enciende con su tensión nominal (p. ej. «en marcha» desde la salida del PLC).",
+    "Pulsador luminoso de 22 mm con LED incorporado: 13-14 NA mientras se pulsa y el piloto X1-X2 independiente, que se enciende con su tensión nominal (p. ej. «en marcha» desde la salida del PLC).",
   parameters: [
     { id: "label", label: "Rótulo", type: "string", default: "Marcha" },
     { id: "color", label: "Color", type: "enum", options: ["verde", "rojo", "amarillo", "azul", "blanco"], default: "verde" },
@@ -171,7 +172,7 @@ export const selectorKey = {
   name: "Selector con llave",
   category: "Mando",
   description:
-    "Selector de llave de 2 posiciones 0-I (Schneider XB2-BG21 / CHINT NP2-BG21): 13-14 cierra en I y 21-22 en 0. La llave solo se retira en 0, por eso se usa para habilitar modos (mantenimiento, manual) solo a personal autorizado.",
+    "Selector de llave de 2 posiciones 0-I: 13-14 cierra en I y 21-22 en 0. La llave solo se retira en 0, por eso se usa para habilitar modos (mantenimiento, manual) solo a personal autorizado.",
   parameters: [{ id: "label", label: "Rótulo", type: "string", default: "Habilitar" }],
   terminals: [{ id: "13" }, { id: "14" }, { id: "21" }, { id: "22" }],
   actions: [{ id: "position", label: "Posición", kind: "select", options: [0, 1], labels: ["0", "I"] }],

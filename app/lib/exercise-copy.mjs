@@ -30,11 +30,12 @@ function listFiles(dir, base = dir) {
 }
 
 // Plantilla anterior: igual a la actual salvo por la configuración de E/S.
-const OLD_IO = /^[ \t]*for \(uint8_t i = 0; i < (I0|Q0)_COUNT; i\+\+\) pinMode\(\1_X\[i\], (INPUT|OUTPUT)\);\r?\n/gm;
-const NEW_IO = /^[ \t]*\/\/ Las entradas y salidas del JWPLC ya vienen configuradas: no hace falta pinMode\.\r?\n/gm;
+const OLD_IO = /^[ \t]*for \(uint8_t i = 0; i < (I0|Q0)_COUNT; i\+\+\) pinMode\(\1_X\[i\], (INPUT|OUTPUT)\);\n/gm;
+const NEW_IO = /^[ \t]*\/\/ Las entradas y salidas del JWPLC ya vienen configuradas: no hace falta pinMode\.\n/gm;
 function isOldTemplate(old, now) {
-  const a = old.toString("utf8");
-  return a !== now.toString("utf8") && a.replace(OLD_IO, "") === now.toString("utf8").replace(NEW_IO, "");
+  const a = old.toString("utf8").replace(/\r\n/g, "\n");
+  const b = now.toString("utf8").replace(/\r\n/g, "\n");
+  return a !== b && a.replace(OLD_IO, "") === b.replace(NEW_IO, "");
 }
 
 // Copia o pone al día `dst` desde `src`; devuelve los archivos actualizados.

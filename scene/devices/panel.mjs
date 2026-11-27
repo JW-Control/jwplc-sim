@@ -71,7 +71,7 @@ export const timerRelay = {
   name: "Relé temporizador",
   category: "Maniobra",
   description:
-    "Relé temporizador multifunción de riel DIN (Schneider RE22R2 / CHINT NJS2-Z), bobina A1-A2 y dos contactos conmutados 15-16-18 y 25-26-28. Modos: retardo a la conexión (cierra 15-18 el tiempo después de energizar), retardo a la desconexión (se mantiene el tiempo después de quitar la bobina), intermitente (alterna cada tiempo, empieza cerrado), impulso (cierra al energizar durante el tiempo) y estrella-triángulo (15-18 = estrella desde que se energiza hasta el tiempo; 25-28 = triángulo después de la pausa de conmutación). LED U: alimentado; LED R: relé cerrado.",
+    "Relé temporizador multifunción de riel DIN, bobina A1-A2 y dos contactos conmutados 15-16-18 y 25-26-28. Modos: retardo a la conexión (cierra 15-18 el tiempo después de energizar), retardo a la desconexión (se mantiene el tiempo después de quitar la bobina), intermitente (alterna cada tiempo, empieza cerrado), impulso (cierra al energizar durante el tiempo) y estrella-triángulo (15-18 = estrella desde que se energiza hasta el tiempo; 25-28 = triángulo después de la pausa de conmutación). LED U: alimentado; LED R: relé cerrado.",
   parameters: [
     { id: "coil", label: "Alimentación A1-A2", type: "enum", options: RATINGS, default: "24VDC" },
     { id: "mode", label: "Función", type: "enum", options: TIMER_MODES, default: TIMER_MODES[0] },
@@ -242,7 +242,7 @@ export const breaker = {
   name: "Interruptor termomagnético",
   category: "Protección",
   description:
-    "Interruptor termomagnético CHINT NXB-63 (IEC 60898-1) de 1, 2 o 3 polos: entrada 1/3/5 arriba y salida 2/4/6 abajo. Mide la corriente de la salida: dispara por sobrecarga según su imagen térmica (no dispara con 1,13 × In, sí con 1,45 × In) y al instante por cortocircuito o pico (curva B: 4 × In, C: 7,5 × In, D: 15 × In). Al disparar la palanca baja; se rearma subiéndola cuando se enfría. Un cortocircuito directo de la red lo corta la protección de la fuente.",
+    "Interruptor termomagnético (IEC 60898-1) de 1, 2 o 3 polos: entrada 1/3/5 arriba y salida 2/4/6 abajo. Mide la corriente de la salida: dispara por sobrecarga según su imagen térmica (no dispara con 1,13 × In, sí con 1,45 × In) y al instante por cortocircuito o pico (curva B: 4 × In, C: 7,5 × In, D: 15 × In). Al disparar la palanca baja; se rearma subiéndola cuando se enfría. Un cortocircuito directo de la red lo corta la protección de la fuente.",
   parameters: [
     { id: "poles", label: "Polos", type: "enum", options: ["1P", "2P", "3P"], default: "1P" },
     { id: "In", label: "Corriente nominal", type: "enum", options: MCB_CURRENTS, default: "6", unit: "A" },
@@ -304,10 +304,10 @@ export const breaker = {
 export const motorProtector = {
   type: "jwsim/motor-protector",
   version: "1.0.0",
-  name: "Guardamotor CHINT NS2-25",
+  name: "Guardamotor",
   category: "Protección",
   description:
-    "Guardamotor (disyuntor de motor) CHINT NS2-25 con contacto auxiliar NS2-AE11: polos 1-2, 3-4 y 5-6 con protección térmica de clase 10 ajustable (dial) y magnética instantánea a 13 veces el máximo del rango, más disparo por falta de fase. La perilla se gira a I para cerrar y a O para abrir; al disparar queda en TRIP y hay que llevarla a O antes de volver a I (con el bimetal frío). TEST dispara. Auxiliar: 13-14 NA y 21-22 NC siguen a los polos.",
+    "Guardamotor (disyuntor de motor) con contacto auxiliar 13-14 / 21-22: polos 1-2, 3-4 y 5-6 con protección térmica de clase 10 ajustable (dial) y magnética instantánea a 13 veces el máximo del rango, más disparo por falta de fase. La perilla se gira a I para cerrar y a O para abrir; al disparar queda en TRIP y hay que llevarla a O antes de volver a I (con el bimetal frío). TEST dispara. Auxiliar: 13-14 NA y 21-22 NC siguen a los polos.",
   parameters: [
     { id: "range", label: "Rango", type: "enum", options: NR2_25_RANGES, default: "2.5-4 A" },
     { id: "ajuste", label: "Ajuste (dial)", type: "number", default: 3.2, unit: "A", hint: "dentro del rango; corriente nominal del motor" },

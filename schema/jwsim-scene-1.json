@@ -19,7 +19,14 @@
           "params": { "type": "object" },
           "x": { "type": "number" },
           "y": { "type": "number" },
-          "rotation": { "enum": [0, 90, 180, 270] }
+          "rotation": { "enum": [0, 90, 180, 270] },
+          "mount": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$", "description": "Id del equipo al que va acoplado sin cables (relé térmico bajo el contactor). Ver scene/mount.mjs." },
+          "p3": {
+            "type": "object",
+            "description": "Lugar del equipo en la Planta 3D armada a mano (metros y grados). Sin p3 se acomoda solo.",
+            "required": ["x", "z"],
+            "properties": { "x": { "type": "number" }, "z": { "type": "number" }, "r": { "enum": [0, 90, 180, 270] } }
+          }
         }
       }
     },
@@ -48,6 +55,29 @@
           "id": { "type": "string", "description": "W1, W2…" },
           "label": { "type": "string", "description": "Nombre o sección (p. ej. 4×1 mm² mando)." },
           "ref": { "type": "boolean", "description": "Se dibuja como referencia: sin el tronco, un rótulo en cada salida." }
+        }
+      }
+    },
+    "plant3d": {
+      "type": "object",
+      "description": "Planta 3D armada a mano: rejilla, lugar del tablero y piezas de ambiente sin E/S (barandas, plataformas, cercos, pisos).",
+      "properties": {
+        "grid": { "enum": [0.25, 0.5] },
+        "panel": { "type": "object", "required": ["x", "z"], "properties": { "x": { "type": "number" }, "z": { "type": "number" }, "r": { "enum": [0, 90, 180, 270] } } },
+        "pieces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "x", "z"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" },
+              "kind": { "enum": ["plataforma", "escalera", "baranda", "cerco", "poste", "franja", "paso", "piso", "caja", "pallet"] },
+              "x": { "type": "number" },
+              "z": { "type": "number" },
+              "r": { "enum": [0, 90, 180, 270] },
+              "params": { "type": "object", "description": "Medidas de la pieza (ancho, largo, alto en metros)." }
+            }
+          }
         }
       }
     }

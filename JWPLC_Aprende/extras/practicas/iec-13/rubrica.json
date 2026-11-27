@@ -1,0 +1,406 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-13",
+  "goals": [
+    {
+      "id": "aviso",
+      "description": "Con 8 piezas H1 avisa y la cinta sigue",
+      "when": {
+        "Q0_0": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "hint": "H1 := CUENTA >= 8; (en Ladder y FBD, un bloque GE con IN2 = 8)."
+    },
+    {
+      "id": "llena",
+      "description": "Con 12 piezas la cinta para",
+      "when": {
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "aviso",
+      "hint": "KM1 := CUENTA < 12;",
+      "why": "La misma cuenta sirve para varias decisiones: cada una es una comparación."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Caja de 12 con aviso",
+      "until_ms": 5200,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1250,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1350,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1600,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1750,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1850,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2250,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2350,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2600,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2750,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2850,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3100,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3250,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3350,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3600,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3750,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3850,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Con 7 piezas: sin aviso",
+          "points": 3,
+          "at_ms": 2700,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          }
+        },
+        {
+          "description": "Con 8 piezas: aviso y la cinta sigue",
+          "points": 5,
+          "at_ms": 2950,
+          "expect": {
+            "Q0_0": 1,
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "Con 11 piezas la cinta sigue",
+          "points": 4,
+          "at_ms": 3700,
+          "expect": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Con 12 piezas la cinta para",
+          "points": 5,
+          "from_ms": 3800,
+          "to_ms": 4500,
+          "eventually": {
+            "Q0_0": 0,
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "RESET: cinta en marcha y sin aviso",
+          "points": 3,
+          "from_ms": 4600,
+          "to_ms": 5100,
+          "eventually": {
+            "Q0_0": 1,
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Una caja",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1120,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1420,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1600,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1720,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1900,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2020,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2200,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2320,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2620,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2800,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2920,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3100,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3220,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3400,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3520,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3700,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3820,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4120,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4300,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4420,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5200,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

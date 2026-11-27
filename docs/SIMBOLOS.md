@@ -15,8 +15,8 @@ tocar código, siempre que respete este contrato. El simulador lo carga desde:
   del SDK instalado del índice.
 
 Un archivo que no cumple el contrato se ignora y deja un aviso en la consola
-de la app. **Cómo dibujar** (modelo comercial real, vista frontal, escala de
-4 px/mm, estados interpretables, materiales y textos): ver
+de la app. **Cómo dibujar** (proporción real, vista frontal, escala de 4 px/mm,
+contorno grueso, estados interpretables, sin marcas de terceros): ver
 [`simbolos/LINEAMIENTOS.md`](simbolos/LINEAMIENTOS.md), con los generadores
 de cada familia en `simbolos/herramientas/`.
 
@@ -25,10 +25,9 @@ de cada familia en `simbolos/herramientas/`.
 - `viewBox="0 0 ANCHO ALTO"`, con ANCHO y ALTO múltiplos de **20**.
 - La escena tiene una grilla de 20 px: el símbolo se dibuja a escala 1, en
   píxeles de la escena, con su esquina superior izquierda sobre la grilla.
-- Estilo de referencia: equipos de tablero vistos de frente (EduVolt,
-  catálogos Schneider/Siemens). Cuerpo claro o el color real del equipo,
-  contorno oscuro de 1,5 a 2 px, tornillos Phillips en las borneras y
-  rótulos de bornes legibles (8 a 9 px).
+- Estilo: «réplica JW» (19/11/2026), ver los lineamientos. Proporción del
+  equipo real, contorno oscuro de 2 a 3 px, color plano sin degradados,
+  tornillos Phillips grandes y rótulos de borne en negrita (10 a 18 px).
 
 ### 1.1 Variantes por parámetro
 
@@ -118,8 +117,8 @@ Varios atributos pueden ir en el mismo elemento.
 Por seguridad, al cargar se quitan `<script>`, `<foreignObject>`, los
 atributos `on…`, los enlaces `javascript:` y toda `<image>` cuyo `href` no
 sea una imagen incrustada (`data:image/png`, `data:image/jpeg` o
-`data:image/svg+xml`). Así van los logos oficiales de marca (lineamientos
-§2.7). Los estilos de texto de la app no alcanzan a la plantilla: los
+`data:image/svg+xml`). La biblioteca incluida no usa logos de marca
+(lineamientos §2.4). Los estilos de texto de la app no alcanzan a la plantilla: los
 `fill`, `font-*` y `text-anchor` del archivo se respetan. Los `id` deben ser propios del
 símbolo (un prefijo con el tipo evita choques, porque varios símbolos
 conviven en el mismo documento). Fuentes: las del sistema (`sans-serif`);
@@ -150,160 +149,14 @@ actuales en reposo y activos como punto de partida.
 
 ## 6. Estado de la biblioteca
 
-Catálogo, tanda 1 (propuesta del 10/11/2026, **por aprobar**, sin fotos propias
-todavía: medidas y aspecto de los catálogos de cada fabricante; hay que
-validarlas con fotos de JW Control según los lineamientos 2.1):
+Los 62 símbolos incluidos están en estilo «réplica JW» (aprobado por JW Control
+el 19/11/2026) y se generan con `simbolos/herramientas/v3/`:
 
-- `gen_mando_tanda1.py` (familia XB2 de `fam22.py`): parada de emergencia
-  XB2-BS542 (hongo Ø40; suelta, deja ver el anillo verde del vástago;
-  enclavada, hundida y más oscura), pulsador luminoso XB2-BW33 (bloque LED
-  X1-X2) y selector de llave XB2-BG21 (la llave gira con `out.position`).
-- `gen_breaker_nxb63.py`: termomagnético NXB-63 de 1, 2 y 3 polos, el mismo
-  frente que la red de 230 VAC con los bornes de entrada cableables, la
-  palanca accionable, el calibre de `out.rating` y el rótulo DISPARÓ.
-- `gen_tablero_tanda1.py`: guardamotor NS2-25 (polos en x = 40, 80, 120,
-  sobre el contactor; auxiliar lateral; perilla O-TRIP-I y dial), relé
-  temporizador de riel DIN (LED U y R, función, dial y aguja de avance),
-  SSR Fotek SSR-40DA y torre de señalización LTA-205-3 (campo, 2 px/mm).
-- `gen_sensor_capacitivo_cr18.py`: capacitivo Autonics CR18, hecho a
-  partir del inductivo PR18: cuerpo de plástico, perilla SENS, histéresis
-  del 20 % y el material en la pieza. El inductivo y el capacitivo
-  muestran el alcance real (`out.snTxt`) bajo la zona.
+- `fam_mando.py`: 15 de mando y medición (22 mm y AD16);
+- `fam_tablero.py`: 19 de riel DIN, redibujados uno por uno a proporción real;
+- `fam_campo.py`: 21 de campo, a escala reducida fija;
+- `fam_proceso.py`: 6 bloques de proceso.
 
-Tanda 2 (propuesta del 10/11/2026, **por aprobar**, igual sin fotos propias),
-`gen_instrumentos_tanda2.py`: interruptor de nivel tipo pera y
-porta-electrodos (campo, 2 px/mm, dentro de un corte del tanque con el agua;
-el agua de los electrodos se arrastra con `data-drag` y recorta con un
-`clipPath`), relé de nivel de riel DIN (como el temporizador, con el esquema
-del tanque que lee), presostato KP35 y termostato KP77 (escala de corte y
-diferencial, contacto 1-2-4 a la vista, valor medido y deslizador; sin el
-logo de la marca) y voltímetro y amperímetro AD16-22 (familia AD16, display
-LED con `out.lcd`).
-
-Tanda 3 (propuesta del 10/11/2026, **por aprobar**), `gen_fieldbus_tanda3.py`:
-módulo de E/S remotas 8DI/8DO de riel DIN (LED por entrada y salida, PWR y
-dirección), medidor PZEM-016 (bornera L N A B, TC de anillo con CT1 y CT2 y
-la lectura en un rótulo, porque el equipo no tiene pantalla) y controlador
-de temperatura 48 × 48 (PV y SV, LED OUT y AL1, bornera trasera arriba y
-abajo).
-
-Comunicación con la PC (propuesta del 12/11/2026, **por aprobar**, dibujados
-a mano sin foto propia): conversor USB a RS-485 ZK-U485 (`usb-rs485.svg`,
-vertical a 4 px/mm: bornera A+ B− GND arriba, carcasa azul con MAX485,
-CH340G y LED TX/RX, el COM y las fallas activas en rótulos, USB-A abajo; el
-equipo real trae más bornes que estos tres) y cable USB a PC
-(`usb-pc.svg`, portátil esquemática con el COM en pantalla). En la placa,
-el borne `USB` sobre el conector USB-C (`#puerto-usb` de
-`gen_jwplc_basic.py`).
-
-Símbolos v2 (aprobados por JW Control el 24/10/2026, según
-`simbolos/LINEAMIENTOS.md`): pulsadores NA, NC, 2 NA y NA + NC
-(familia XB2), pilotos XB2 y AD16, zumbador AD16-22SM, selectores de 2 y
-3 posiciones, contactor CJX2 (1NA y 1NC) y fuentes Mean Well MDR-60,
-HDR-60 y NDR-120. Las vistas de verificación están en `simbolos/vistas/`.
-
-G8_2D_ELECTRICAL (en curso, uno a la vez con fotos y planos de JW Control;
-aprobados el 25/10/2026): red de 230 VAC como termomagnético CHINT NXB-63 C16, fin de carrera
-Telemecanique XCKJ10511 (cables con marcador y función NA/NC) y sensor
-inductivo Autonics PR18-8D (M18, Sn 8 mm), con la pieza arrastrable y la
-zona de detección (hasta Sn = 8 mm) y la de histéresis (hasta 8,8 mm). Como
-en EduVolt, el área de trabajo no está a escala: un cono exagerado con una
-escala por tramos para que la histéresis se vea y se pueda manipular; la
-cota sobre la pieza da la distancia real.
-
-Bloques de planta (propuesta, sin aprobar): el fermentador de café
-(`fermentador.svg`, generado por `simbolos/herramientas/gen_fermentador.py`)
-es un esquema de proceso, no la vista de un equipo: terma solar, válvula Y1,
-bombas M1 y M2, flujostato FS1, tanque con serpentín y sondas, y abajo la
-regleta con los bornes que se cablean al tablero. Los cables de las sondas
-se dibujan porque son los que se llevan a los transmisores.
-
-Propuesta del 26/10/2026, por aprobar: electroválvula Airtac 4V210-08
-(5/2 monoestable, conector DIN) con cilindro Airtac MBL20x100-CA, según fotos
-y catálogos de Airtac entregados por JW Control
-(`simbolos/herramientas/gen_electrovalvula_4v2.py 4v210`). Primer equipo de campo
-a la escala reducida de 2 px/mm (lineamientos 2.3): cilindro arriba con los
-puertos al frente, válvula abajo, mangueras A al puerto trasero y B al
-delantero (la que tiene presión, azul intenso), silenciadores en R y S y
-alimentación por P. El conector DIN va girado 180° para que el cable baje a
-A1/A2 sin cruzar las mangueras. Estados: LED del conector, vástago con
-`data-translate` (100 mm = 200 px) y bobina cortada con hollín; los textos
-de la bobina siguen a `param.coil`.
-Escala de campo aprobada por JW Control el 26/10/2026. Variante biestable
-(`jwsim/solenoid-valve-2`, mismo generador con `4v220`): Airtac 4V220-08 de
-171 mm con una bobina en cada extremo, A− a la izquierda (P→B, entra) y A+ a
-la derecha (P→A, sale), cada una con su conector, su LED y su cable con
-marcador amarillo; bornes A-1/A-2 abajo a la izquierda y A+1/A+2 a la
-derecha. Las mangueras siguen a `out.spoolA` (la corredera recuerda la
-posición entre pulsos).
-
-Motores trifásicos (propuesta del 26/10/2026, medidas aproximadas hasta
-tener el catálogo de WEG): `gen_motor_frontal.py` dibuja el WEG W22 IEC 80
-visto desde el ventilador, a 2 px/mm, con las aspas girando detrás de la
-rejilla (`data-spin` con `out.speed`), la caja de bornes con la placa de
-datos y los cables con marcador. Variantes: `motor-3ph` (U1 V1 W1 PE),
-`motor-3ph__6cables` (siete bornes) y `motor-2v` (1U…2W y PE). Motor
-aprobado por JW Control el 26/10/2026.
-
-Relé térmico CHINT NR2-25 (`gen_termico_nr2.py`, 26/10/2026): medidas y
-colores de la ficha CHINT serie NR2 (45 mm de ancho, 4 px/mm), pines 1/3/5
-en x = 40, 80, 120 para que calcen bajo los bornes 2/4/6 del contactor
-CJX2; dial azul que gira con el ajuste, lengüeta TEST, STOP rojo, RESET
-azul con la ranura en A o H, banderín naranja de disparo en la ventana y
-aviso de falta de fase.
-
-Variador Delta VFD-EL (`gen_vfd_el.py`, 26/10/2026, según el manual del
-VFD-EL, la foto del producto y el cableado de referencia de JW Control):
-estructura A de 72 x 174 mm a 4 px/mm, a la derecha de un viewBox de 640 x
-700. Arriba R/L1, S/L2, T/L3 (sin tornillo en el modelo monofásico) y
-tierra; el teclado con los colores reales (RUN verde, STOP/RESET rojo, ▲▼ y
-MODE grises, ENTER azul), la pantalla de 7 segmentos de 4 dígitos
-(`data-seg`), los LED RUN FWD REV y STOP y el potenciómetro con su escala en
-arco (se arrastra en vertical); la abertura con los conmutadores NPN/PNP y
-Sw2 AVI/ACI (su palanca sigue a `param.sw2`), la bornera de control verde en dos filas escalonadas, el relé RA RB
-RC y el puerto RS-485, subidos para dejar paso al cableado; abajo U/T1 V/T2
-W/T3, + y - y la barra de tierra. Los puntos de conexión de la bornera de
-control están fuera del cuerpo, abajo a la izquierda, uno a continuación del
-otro (RA RB RC +24V MI2 MI1 MI4 MI3 MI6 MI5 DCM 10V AVI ACM SG+ SG-); el
-cable se lleva (o se suelta) en el tornillo verde de la bornera, marcado con
-`jw-term-alt`, y el resto del recorrido se dibuja solo. El cable interno de
-cada borne (baja, corre a la izquierda por su carril y baja por el costado,
-sin cruzarse con los demás) solo aparece si el borne tiene un cable en la
-escena (`wired.<borne>`); el RS-485 sale del RJ-45 como par trenzado SG+
-amarillo y SG- azul; 10V naranja, AVI blanco y ACM celeste. AFM (salida
-analógica) no se conecta. Una franja amarilla muestra `out.aviso` (Sw2
-equivocado, pérdida de ACI).
-
-Motor monofásico (27/10/2026, propuesta): la misma vista del WEG con el
-capacitor de arranque en un cilindro sobre la carcasa, junto a una caja de
-bornes más angosta; `motor-1ph` (U1 U2 PE) y `motor-1ph__4cables` (U1 U2 Z1
-Z2 PE), con el aviso «ZUMBA: NO ARRANCA» (`out.bloqueado`).
-
-Transmisor PT100 RS-485 (`gen_tt510.py`, 27/10/2026): PIDMaxWell TT-510 de
-cabezal Form B visto desde arriba a 4 px/mm (Ø44 mm), con los bornes del
-diagrama de cableado de su ficha (B, A, −24V y +24V arriba; la RTD abajo,
-R3 blanco solo y R1-R2 rojos juntos) y una etiqueta al costado con la
-lectura o la falla de la sonda.
-
-Señales analógicas (`gen_analog.py`, 27/10/2026, propuesta): potenciómetro
-de panel de 22 mm (160 x 240, 4 px/mm, base y aro de la familia XB2) con
-escala 0-10 y perilla que se arrastra, bornes 1, 2 y 3 arriba; y calibrador
-de lazo portátil en funda amarilla (200 x 320, escala reducida de campo) con
-la pantalla de la señal, la perilla de ajuste y los bornes + y COM abajo.
-
-JWPLC Basic (`gen_jwplc_basic.py`, 27/10/2026, aprobado por JW Control):
-el dibujo de bornes de la web (`fuentes/JWPLC_Basic_Pines_Frente.svg`) sin
-las banderas, las llamadas ni la leyenda, con los tornillos en la grilla
-(57 unidades = 20 px) y rótulos de serigrafía (opción B): el nombre de cada
-borne en gris sobre la caja, del lado de adentro (el cable entra por el
-borde de afuera), y una franja del color de su función en la bornera (rojo
-L+, negro M y 1M, verde entradas, naranja relés, morado RS-485). El detalle
-(«I0.0 · entrada digital 24 VDC») aparece al pasar el mouse. Es el mismo
-dibujo en la vista Placa y en la Escena.
-
-Fuera de la primera versión (decisión de JW Control, 27/10/2026): sensor
-fotoeléctrico, relé enchufable, transmisor de pH y válvula de agua del
-fermentador. Siguen en la biblioteca con el dibujo genérico, igual que el
-motor genérico de los ejercicios. El motorreductor de 24 VDC no se hace: el
-JWPLC Basic no tiene salidas PWM para regularlo.
-`node scripts/export-symbols.mjs` los marca con `plantilla: null` en `dispositivos.json`.
+`vfd-el.svg` y `fermentador.svg` se editan a mano (sin marca ni degradados).
+Los generadores anteriores de `simbolos/herramientas/` quedan como historia y
+ya no reflejan el estilo vigente.

@@ -1,0 +1,147 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-06",
+  "goals": [
+    {
+      "id": "q2",
+      "description": "H3 (Q0.2) parpadea: 2 s encendido y 2 s apagado",
+      "period": "Q0_2",
+      "on_ms": [
+        1900,
+        2100
+      ],
+      "off_ms": [
+        1900,
+        2100
+      ],
+      "cycles": 2,
+      "hint": "Copia el bloque de la intermitencia con otras variables: ultimoCambio2, luz2 y un intervalo de 2000 ms.",
+      "why": "Cada tarea compara millis() con su propio momento: ninguna espera a la otra."
+    },
+    {
+      "id": "q0",
+      "description": "H1 (Q0.0) sigue parpadeando cada medio segundo",
+      "period": "Q0_0",
+      "on_ms": [
+        450,
+        550
+      ],
+      "off_ms": [
+        450,
+        550
+      ],
+      "cycles": 3
+    },
+    {
+      "id": "q1",
+      "description": "H2 (Q0.1) se enciende al apretar S1, aunque todo parpadee",
+      "when": {
+        "I0_0": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "q2"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Dos intermitencias y el pulsador",
+      "until_ms": 12000,
+      "actions": [
+        {
+          "at_ms": 3000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6200,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6600,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Q0.2: 2 s encendido y 2 s apagado",
+          "points": 5,
+          "from_ms": 0,
+          "to_ms": 12000,
+          "period": "Q0_2",
+          "on_ms": [
+            1900,
+            2100
+          ],
+          "off_ms": [
+            1900,
+            2100
+          ],
+          "cycles": 2
+        },
+        {
+          "description": "Q0.0 sigue cada 500 ms",
+          "points": 2,
+          "from_ms": 0,
+          "to_ms": 12000,
+          "period": "Q0_0",
+          "on_ms": [
+            450,
+            550
+          ],
+          "off_ms": [
+            450,
+            550
+          ],
+          "cycles": 4
+        },
+        {
+          "description": "Q0.1 sigue a S1 al instante (sin delay)",
+          "points": 3,
+          "from_ms": 2500,
+          "to_ms": 7000,
+          "responds": {
+            "when": {
+              "I0_0": 1
+            },
+            "expect": {
+              "Q0_1": 1
+            }
+          },
+          "within_ms": 50
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Intermitencias y pulsador",
+      "until_ms": 14000,
+      "actions": [
+        {
+          "at_ms": 10000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 11000,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

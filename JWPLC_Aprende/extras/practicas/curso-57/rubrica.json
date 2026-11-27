@@ -1,0 +1,169 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-57",
+  "goals": [
+    {
+      "id": "bloquea",
+      "description": "Cuarto arranque en un minuto: «Demasiados arranques: espere»",
+      "console": "Demasiados arranques",
+      "hint": "Un arreglo con los millis() de los últimos 3 arranques; el más viejo decide.",
+      "why": "Cada arranque calienta el bobinado: los fabricantes limitan los arranques por hora."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Cuatro arranques seguidos",
+      "until_ms": 9000,
+      "state": "fram",
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 8500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Primer arranque",
+          "points": 2,
+          "at_ms": 2000,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "Tercer arranque",
+          "points": 2,
+          "at_ms": 6000,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "El cuarto no arranca",
+          "points": 8,
+          "from_ms": 7600,
+          "to_ms": 8400,
+          "always": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "«Demasiados arranques: espere», una vez",
+          "points": 6,
+          "console": "Demasiados arranques: espere",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Sin fallas de tablero (H1 apagada)",
+          "points": 2,
+          "at_ms": 8000,
+          "expect": {
+            "H1.lit": false
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Bomba de pozo",
+      "until_ms": 60000,
+      "actions": []
+    }
+  ]
+}

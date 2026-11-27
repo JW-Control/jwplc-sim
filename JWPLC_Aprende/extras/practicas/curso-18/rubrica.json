@@ -1,0 +1,471 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-18",
+  "goals": [
+    {
+      "id": "cuenta",
+      "description": "Da 6 toques a B1: «Paquete listo: 6 botellas»",
+      "console": "Paquete listo: 6 botellas",
+      "hint": "Mira botellas en E/S y variables mientras aprietas B1: ¿cuánto sube con un solo toque? Cuenta solo en el flanco de subida, como en la lección 07."
+    },
+    {
+      "id": "golpe",
+      "description": "Y1 (Q0.0) da un golpe de medio segundo",
+      "when": {
+        "Q0_0": 1
+      },
+      "hold_ms": 400,
+      "after": "cuenta"
+    },
+    {
+      "id": "uno",
+      "description": "Y uno solo: Y1 queda quieto hasta la próxima botella",
+      "when": {
+        "Q0_0": 0
+      },
+      "hold_ms": 2000,
+      "after": "golpe",
+      "hint": "Pon un breakpoint en empujando = true; y mira botellas cuando se detiene la segunda vez: con 6 botellas la condición sigue cierta. Revisa el paquete solo en el momento en que cuentas una botella."
+    },
+    {
+      "id": "paquetes",
+      "description": "Cuenta los paquetes: «Paquetes: 1»",
+      "console": "Paquetes: 1",
+      "why": "Primero observar (variables y breakpoints), después cambiar: cada error se encontró mirando el dato justo donde se tomaba la decisión."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Cada botella cuenta una",
+      "until_ms": 7500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Y1 quieto con menos de 6 botellas",
+          "points": 3,
+          "from_ms": 1000,
+          "to_ms": 5900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "Paquete con 6 botellas",
+          "points": 5,
+          "console": "Paquete listo: 6 botellas"
+        },
+        {
+          "description": "Al sexto toque, Y1 empuja",
+          "points": 2,
+          "from_ms": 6000,
+          "to_ms": 6700,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    },
+    {
+      "name": "Un golpe por paquete",
+      "until_ms": 13500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Después del golpe, Y1 queda quieto hasta el próximo paquete",
+          "points": 5,
+          "from_ms": 7000,
+          "to_ms": 11900,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "El segundo paquete sale con 12 botellas",
+          "points": 2,
+          "from_ms": 12000,
+          "to_ms": 12700,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Cuenta los paquetes",
+          "points": 3,
+          "console": "Paquetes: 2"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Doce botellas",
+      "until_ms": 13500,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 7000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 7300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 8000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 8300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 9000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "B1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12300,
+          "device": "B1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

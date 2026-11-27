@@ -54,6 +54,7 @@
     "power-230vac": [80, 120, [], ["L", "N"]],
     // Planta (G8): sin bornes; dibujo de proceso, no de un modelo comercial.
     conveyor: [280, 120, [], []],
+    "conveyor-physics": [280, 120, [], []],
     tank: [200, 220, [], []],
     door: [260, 160, [], []],
   };
@@ -157,7 +158,7 @@
   }
 
   // Valor de una expresión del contrato: out.<salida>, param.<parámetro>,
-  // contact.<contacto>, damaged, tripped; con "!" niega, "=v" compara y
+  // contact.<contacto>, damaged, tripped, mounted; con "!" niega, "=v" compara y
   // "a|b" toma b si a no tiene valor (p. ej. out.distance|param.distance:
   // la salida con la simulación en marcha, el parámetro en edición).
   function valueOf(expr, ctx) {
@@ -180,6 +181,8 @@
     let v =
       ns === "out" ? ctx.o[key] : ns === "param" ? ctx.p[key] : ns === "contact" ? ctx.st.contacts?.[key] :
       ns === "damaged" ? !!ctx.st.damaged?.length : ns === "tripped" ? !!ctx.st.tripped :
+      // mounted: el equipo está acoplado a otro (térmico bajo el contactor).
+      ns === "mounted" ? !!ctx.st.mounted :
       // wired.<borne>: hay un cable en ese borne (sin cable: sin valor, para "a|b").
       ns === "wired" ? (ctx.wired.has(key) ? true : undefined) : undefined;
     if (cmp !== undefined) v = String(v) === cmp;
@@ -313,9 +316,13 @@
   // si no la del tipo. null: se dibuja en código.
   const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
   function templateKey(type, def, p) {
-    for (const prm of def?.parameters ?? []) {
-      if (prm.type !== "enum") continue;
-      const k = `${type}__${slug(p?.[prm.id] ?? prm.default)}`;
+    const enums = (def?.parameters ?? []).filter((prm) => prm.type === "enum").map((prm) => slug(p?.[prm.id] ?? prm.default));
+    if (enums.length > 1) {
+      const combo = `${type}__${enums.join("__")}`;
+      if (templates.has(combo)) return combo;
+    }
+    for (const s of enums) {
+      const k = `${type}__${s}`;
       if (templates.has(k)) return k;
     }
     return templates.has(type) ? type : null;
@@ -598,7 +605,7 @@
         const led = (x, on, col, t) => `<circle cx="${x}" cy="118" r="5" fill="${on ? col : "#2a2d31"}" stroke="${ink}"/><text class="sym-tag light" x="${x}" y="134">${t}</text>`;
         return (
           `<rect class="dev-box" x="10" y="22" width="${w - 20}" height="${h - 44}" rx="8" fill="#2e3237" stroke="${ink}" stroke-width="1.6"/>` +
-          `<text class="sym-big light" x="${cx}" y="44">DELTA · VFD-EL</text>` +
+          `<text class="sym-big light" x="${cx}" y="44">VFD</text>` +
           terminals(type, lay) +
           `<rect x="${cx - 80}" y="58" width="160" height="40" rx="4" fill="#120606" stroke="${ink}"/>` +
           `<text x="${cx}" y="87" text-anchor="middle" font-family="monospace" font-size="24" font-weight="700" fill="#ff3b26">${esc(o.lcd ?? "")}</text>` +
@@ -630,8 +637,10 @@
           (ok ? "" : `<text class="sym-bad" x="${cx}" y="72">DISPARADA</text>`)
         );
       }
-      case "conveyor": {
-        // Cinta vista de costado: piezas a escala del largo, puntos A y B.
+      case "conveyor":
+      case "conveyor-physics": {
+        // Cinta vista de costado: piezas a escala del largo, puntos A y B
+        // (la cinta con física publica las mismas salidas).
         const L = Math.max(0.2, num(p.largo, 2));
         const x0 = 20, x1 = w - 20, by = 56;
         const sx = (m) => x0 + (m / L) * (x1 - x0);

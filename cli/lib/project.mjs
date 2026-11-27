@@ -118,7 +118,7 @@ export function resolveLinks(project, file) {
 export function loadProject(file) {
   let raw;
   try {
-    raw = JSON.parse(readFileSync(file, "utf8"));
+    raw = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
   } catch (e) {
     throw new Error(`${file}: JSON inválido (${e.message})`);
   }

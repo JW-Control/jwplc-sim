@@ -1,0 +1,81 @@
+{
+  "$schema": "../../../../schema/jwsim-test-1.json",
+  "$comment": "Bombeo de edificio: con S1 en Auto la bomba líder (B1) regula 4,0 bar; con 180 L/min entra la de apoyo; con poco consumo duerme y alterna (líder B2 al despertar); el transmisor abierto da E02 y para todo.",
+  "sketch": "sketch/bombeo_edificio",
+  "scene": "01-bombeo-edificio.jwsim",
+  "until_ms": 120000,
+  "actions": [
+    {
+      "at_ms": 1000,
+      "device": "S1",
+      "action": "position",
+      "value": 1
+    },
+    {
+      "at_ms": 30000,
+      "device": "RED1",
+      "action": "consumo",
+      "value": 180
+    },
+    {
+      "at_ms": 60000,
+      "device": "RED1",
+      "action": "consumo",
+      "value": 5
+    },
+    {
+      "at_ms": 80000,
+      "device": "RED1",
+      "action": "consumo",
+      "value": 40
+    },
+    {
+      "at_ms": 105000,
+      "device": "PT1",
+      "action": "falla",
+      "value": 1
+    }
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^Entra la bomba de apoyo",
+        "after_ms": 30000,
+        "before_ms": 50000
+      },
+      {
+        "match": "^Bomba líder: B2 \\(alternancia\\)",
+        "count": 1
+      },
+      {
+        "match": "^ALARMA E02",
+        "after_ms": 105000
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 25000,
+          "VF1.running": true,
+          "VF2.running": false
+        },
+        {
+          "at_ms": 55000,
+          "VF1.running": true,
+          "VF2.running": true
+        },
+        {
+          "at_ms": 100000,
+          "VF1.running": false,
+          "VF2.running": true
+        },
+        {
+          "at_ms": 115000,
+          "VF1.running": false,
+          "VF2.running": false
+        }
+      ],
+      "faults": []
+    }
+  }
+}

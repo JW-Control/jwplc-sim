@@ -18,6 +18,7 @@ import { motor2v, overloadRelay } from "./drives.mjs";
 import { vfdEl } from "./vfd-el.mjs";
 import { potentiometer, signalSource } from "./analog.mjs";
 import { conveyor, door, tank } from "./plant.mjs";
+import { conveyorPhysics } from "./conveyor-physics.mjs";
 import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
 import { energyMeter, remoteIo, tempController } from "./fieldbus.mjs";
 import { usbPc, usbRs485 } from "./comms.mjs";
@@ -86,6 +87,7 @@ export const builtinDevices = [
   fermenter,
   waterValve,
   conveyor,
+  conveyorPhysics,
   tank,
   door,
 ];

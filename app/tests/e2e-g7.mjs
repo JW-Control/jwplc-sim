@@ -23,7 +23,7 @@
 //                 el contrato (viewBox fuera de la grilla) se rechaza con aviso
 //   SCENE_VARIANTS las plantillas de assets/devices cargan sin avisos; la fuente
 //                 elige su plantilla por modelo (MDR-60 → HDR-60 → NDR-120) con
-//                 el logo incrustado, y los cables siguen en sus bornes
+//                 sin logos de terceros, y los cables siguen en sus bornes
 // Informe en build/gates/JWSIM_G7_E2E.json y capturas en build/gates/g7/.
 // En Linux sin pantalla: xvfb-run -a node app/tests/e2e-g7.mjs
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -302,7 +302,10 @@ try {
     ok:
       loadWarn.length === 0 && nTpl >= 14 && psWired &&
       variants.map((v) => v.tpl).join() === "jwsim/power-24vdc__mdr60,jwsim/power-24vdc__hdr60,jwsim/power-24vdc__ndr120" &&
-      variants.every((v) => v.logo) && new Set(variants.map((v) => `${v.w}x${v.h}`)).size === 3,
+      // Estilo «réplica JW» (19/11/2026): sin logos de terceros en los símbolos.
+      variants.every((v) => !v.logo) &&
+      // Regla de tablero (20/11/2026): todo lo de riel DIN tiene la misma altura.
+      new Set(variants.map((v) => v.h)).size === 1,
     templates: nTpl,
     warnings: loadWarn,
     variants,

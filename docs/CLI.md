@@ -13,6 +13,12 @@ node cli/jwsim-cli.mjs matrix [--filter <texto>] [opciones de build]
 node cli/jwsim-cli.mjs device build|test|pack <carpeta>          (G7)
 node cli/jwsim-cli.mjs device install <tipo>[@versión] [--index <url|archivo>]
 node cli/jwsim-cli.mjs device list [--index <url|archivo>]
+node cli/jwsim-cli.mjs scene describe [<tipo>] [--json]
+node cli/jwsim-cli.mjs scene new <salida.jwsim> [--sketch <ruta>] [--template <base>] [--json]
+node cli/jwsim-cli.mjs scene normalize <entrada.json> [-o <salida.jwsim>] [--json]
+node cli/jwsim-cli.mjs scene validate <archivo.jwsim> [--fast] [--strict] [--json]
+node cli/jwsim-cli.mjs scene preview <archivo.jwsim> [--out <dir>] [--view 2d|3d|both] [--smoke-ms <ms>] [--json]
+node cli/jwsim-cli.mjs scene build <entrada.json> --out <dir> [--create-ino] [--strict] [--json]
 ```
 
 ## Opciones comunes
@@ -169,6 +175,20 @@ SDK de dispositivos e índice comunitario ([docs/SDK.md](SDK.md)):
 
 Códigos de salida: 0 bien; 1 falla (pruebas, compilación, firma o
 integridad); 2 uso incorrecto.
+
+### scene (Proyectos y escenas por JSON)
+
+Subcomandos para que scripts y agentes creen, normalicen, validen y
+previsualicen escenas `.jwsim` (ver [`REFERENCIA_ESCENA.md`](REFERENCIA_ESCENA.md)):
+
+| Subcomando | Qué hace |
+|---|---|
+| `scene describe [<tipo>] [--json]` | Lista todos los dispositivos, dimensiones y prefijos, o la ficha completa de `<tipo>` (`contactor`, `jwsim/motor-3ph`…). |
+| `scene new <salida.jwsim> [--sketch ruta] [--template vacio\|plc\|arranque-directo]` | Crea un `.jwsim` inicial listo para editar. |
+| `scene normalize <entrada.json> [-o salida.jwsim] [--json]` | Expande la forma corta (`type` corto, cables `"A.1 -> B.2 [color]"`, auto-layout `20 px`, acoples `mount`) a `.jwsim` v1 válido. |
+| `scene validate <archivo.jwsim> [--fast] [--strict] [--json]` | Valida esquema v1, variantes SVG activas, grilla `20 px`, colisiones 2D, enlaces 3D/sensores y netlist estática en `t = 0` (`--strict` falla ante avisos). |
+| `scene preview <archivo.jwsim> [--out dir] [--view 2d\|3d\|both] [--smoke-ms ms] [--json]` | Abre la escena en Electron headless, valida `JwsimSymbols.warnings === 0` y exporta capturas PNG 2D y 3D. |
+| `scene build <entrada.json> --out <dir> [--create-ino] [--strict] [--json]` | Normaliza y valida el borrador antes de escribir `<dir>/<nombre>.jwsim`; con `--create-ino` solo crea un `.ino` inicial si todavía no existe en disco. |
 
 ### grade (G9)
 

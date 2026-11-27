@@ -1,0 +1,255 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-04",
+  "goals": [
+    {
+      "id": "disparo",
+      "description": "Dispara el térmico (aprieta F1): el motor para y H1 enciende",
+      "when": {
+        "I0_2": 0,
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300
+    },
+    {
+      "id": "memoria",
+      "description": "Con el térmico rearmado, H1 sigue encendido",
+      "when": {
+        "I0_2": 1,
+        "Q0_1": 1
+      },
+      "hold_ms": 500,
+      "after": "disparo",
+      "hint": "Set de FALLA con el térmico abierto; el reset es otro peldaño."
+    },
+    {
+      "id": "bloqueo",
+      "description": "Sin reconocer, MARCHA no arranca",
+      "when": {
+        "I0_0": 1,
+        "Q0_0": 0,
+        "Q0_1": 1
+      },
+      "hold_ms": 300,
+      "after": "disparo"
+    },
+    {
+      "id": "reconoce",
+      "description": "Tras apretar PARADA, H1 se apaga y MARCHA arranca de nuevo",
+      "when": {
+        "Q0_0": 1,
+        "Q0_1": 0
+      },
+      "hold_ms": 500,
+      "after": "bloqueo",
+      "why": "La falla queda memorizada: alguien tiene que verla y reconocerla antes de volver a arrancar."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Reconocimiento de la falla",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 1800,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2200,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2800,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 3200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3800,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4000,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 4600,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4900,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Arranca con MARCHA",
+          "points": 1,
+          "from_ms": 800,
+          "to_ms": 1300,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "El térmico detiene el motor",
+          "points": 2,
+          "from_ms": 1800,
+          "to_ms": 2100,
+          "eventually": {
+            "Q0_0": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "H1 avisa la falla",
+          "points": 3,
+          "from_ms": 1800,
+          "to_ms": 2200,
+          "eventually": {
+            "Q0_1": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "H1 sigue encendido con el térmico rearmado",
+          "points": 3,
+          "from_ms": 2300,
+          "to_ms": 3750,
+          "always": {
+            "Q0_1": 1
+          }
+        },
+        {
+          "description": "Sin reconocer, MARCHA no arranca",
+          "points": 5,
+          "from_ms": 2800,
+          "to_ms": 3700,
+          "never": {
+            "Q0_0": 1
+          }
+        },
+        {
+          "description": "PARADA apaga H1",
+          "points": 2,
+          "from_ms": 3800,
+          "to_ms": 4300,
+          "eventually": {
+            "Q0_1": 0
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Tras PARADA, MARCHA arranca",
+          "points": 4,
+          "from_ms": 4600,
+          "to_ms": 5100,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Falla y reconocimiento",
+      "until_ms": 9000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1300,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 2000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 2500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 3500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4100,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 5000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 5300,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 6500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 6800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

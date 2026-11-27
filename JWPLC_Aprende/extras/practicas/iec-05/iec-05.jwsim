@@ -1,0 +1,190 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 05 · Temporizadores TON y TOF",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-05",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Arranque a los 2 s, luz de pasillo de 5 s y una bocina si la presencia dura más de 30 s.",
+      "steps": [
+        "Ejecuta el ejemplo: mantén S1 3 s y activa la presencia B1.",
+        "Cambia el arranque a 2 s y la luz del pasillo a 5 s (PT).",
+        "Agrega un tercer temporizador: HA1 (Q0.2) suena si la presencia dura más de 30 s.",
+        "Prueba los tres tiempos."
+      ],
+      "uses": [
+        "%IX0.0 · S1, arranque",
+        "%IX0.1 · B1, presencia (selector)",
+        "%QX0.0 · H1, arranque",
+        "%QX0.1 · H2, luz del pasillo",
+        "%QX0.2 · HA1, bocina"
+      ],
+      "teaches": "TON retrasa el encendido, TOF retrasa el apagado; cada uso es una instancia con su nombre y su tiempo PT."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Arranque"
+        },
+        "x": 380,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/selector-2",
+        "params": {
+          "label": "Presencia"
+        },
+        "x": 580,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "blanco",
+          "label": "Pasillo"
+        },
+        "x": 480,
+        "y": 1060
+      },
+      {
+        "id": "HA1",
+        "type": "jwsim/buzzer",
+        "x": 680,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "HA1.+",
+        "color": "negro"
+      },
+      {
+        "from": "HA1.-",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

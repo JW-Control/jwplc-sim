@@ -5,7 +5,7 @@
 // build/gates/g9-exercises.json.
 //
 // EXERCISES
-//   E1 los ocho ejercicios objetivo de la propuesta están en exercises/
+//   E1 los ocho ejercicios objetivo de la propuesta están en JWPLC_Aprende/extras/retos/
 //   E2 cada uno es un proyecto .jwsim válido con enunciado, rúbrica válida y
 //      una escena sin avisos de cableado
 //   E3 la plantilla compila y saca una nota baja (≤ 2); la solución de
@@ -43,7 +43,7 @@ const say = (k, c) => console.log(`  ${k} ${c.ok ? "OK" : "FALLA"} ${c.detail ??
 
 // ---------------------------------------------------------------- EXERCISES
 console.log("JWSIM_G9_EXERCISES");
-const dirs = readdirSync(join(ROOT, "exercises")).filter((d) => existsSync(join(ROOT, "exercises", d, `${d}.jwsim`))).sort();
+const dirs = readdirSync(join(ROOT, "JWPLC_Aprende", "extras", "retos")).filter((d) => existsSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", d, `${d}.jwsim`))).sort();
 const ex = {};
 {
   const missing = Object.keys(TOPICS).filter((t) => !dirs.some((d) => d.slice(3) === t));
@@ -55,7 +55,7 @@ const ex = {};
   const bad = [];
   for (const d of dirs) {
     try {
-      const e = loadExercise(join(ROOT, "exercises", d));
+      const e = loadExercise(join(ROOT, "JWPLC_Aprende", "extras", "retos", d));
       if (!e.statement || !readFileSync(e.statement, "utf8").trim()) throw new Error("sin enunciado");
       if (!e.solution || !e.sketch) throw new Error("sin plantilla o solución");
       const sc = new Scene(e.scene, { registry });

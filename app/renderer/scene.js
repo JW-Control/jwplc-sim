@@ -165,6 +165,67 @@
 
   // ------------------------------------------------------------ dibujo
   const devById = (id) => S.spec.devices.find((d) => d.id === id);
+  const selectedDeviceIds = () => (S.sel?.kind === "device" ? [S.sel.id] : S.sel?.kind === "devices" ? [...S.sel.ids] : []);
+  const isDeviceSelected = (id) => (S.sel?.kind === "device" ? S.sel.id === id : S.sel?.kind === "devices" ? S.sel.ids.includes(id) : false);
+  function setSelectedDevices(ids) {
+    const uniq = [...new Set(ids)].filter((id) => devById(id));
+    S.sel = !uniq.length ? null : uniq.length === 1 ? { kind: "device", id: uniq[0] } : { kind: "devices", ids: uniq };
+  }
+
+  // Acoples sin cables (térmico bajo el contactor). Copia de las reglas de
+  // scene/mount.mjs (el proceso principal une los bornes; aquí, la posición).
+  // hide: bornes del acoplado que quedan dentro del anfitrión (sin cable posible).
+  const MOUNTS = { "overload-relay": { hosts: ["contactor"], dx: 0, dy: 340, hide: ["1", "3", "5"] } };
+  const MOUNT_SNAP = 40;
+  const baseType = (t) => String(t ?? "").split("/").pop();
+  const mountRule = (d) => MOUNTS[baseType(d?.type)] ?? null;
+  const canMount = (g, h) =>
+    !!mountRule(g) && !!h && g.id !== h.id && mountRule(g).hosts.includes(baseType(h.type)) && !(g.rotation ?? 0) && !(h.rotation ?? 0);
+  const mountPos = (g, h) => ({ x: (h.x ?? 0) + mountRule(g).dx, y: (h.y ?? 0) + mountRule(g).dy });
+  const guestsOf = (id) => S.spec.devices.filter((d) => d.mount === id);
+  /** Rótulo del equipo; el acoplado lleva también el de su anfitrión ("KM + F"). */
+  const mountLabel = (dev) => {
+    const h = dev.mount && devById(dev.mount);
+    return h && canMount(dev, h) ? `${esc(h.id)} + ${esc(dev.id)}` : esc(dev.id);
+  };
+  /** Anfitrión libre más cercano a la posición (x, y) del equipo, dentro del imán. */
+  function mountTarget(dev, x, y) {
+    let best = null;
+    for (const h of S.spec.devices) {
+      if (!canMount(dev, h) || guestsOf(h.id).some((g) => g.id !== dev.id)) continue;
+      const p = mountPos(dev, h);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d <= MOUNT_SNAP && (!best || d < best.d)) best = { h, p, d };
+    }
+    return best;
+  }
+  /** ¿El equipo está acoplado (o a punto de acoplarse mientras se arrastra)? */
+  const isMounted = (dev) => (S.drag?.kind === "device" && S.drag.dev === dev ? !!S.drag.mountTo : !!dev.mount && canMount(dev, devById(dev.mount)));
+  /**
+   * El acoplado se dibuja detrás del anfitrión: la bornera 2-4-6 del
+   * contactor tapa sus puentes y solo asoman los bloques de contacto.
+   */
+  function raiseGuest(g) {
+    const box = $("scene-devices");
+    const el = box.querySelector(`[data-id="${CSS.escape(g.id)}"]`);
+    const host = g.mount ?? S.drag?.mountTo;
+    const hel = host && box.querySelector(`[data-id="${CSS.escape(host)}"]`);
+    if (el && hel && hel.previousSibling !== el) hel.before(el);
+  }
+  /** Acoples coherentes: anfitrión válido y el acoplado en su lugar. */
+  function settleMounts() {
+    for (const g of S.spec.devices) {
+      if (!g.mount) continue;
+      const h = devById(g.mount);
+      if (!canMount(g, h)) {
+        delete g.mount;
+        continue;
+      }
+      const p = mountPos(g, h);
+      g.x = p.x;
+      g.y = p.y;
+    }
+  }
 
   // Borne: entrada del cable (x, y), tornillo (sx, sy) y lado (arriba/abajo).
   function termPos(end) {
@@ -183,6 +244,7 @@
       sx: x0 + sym.screws[id][0],
       sy: y0 + sym.screws[id][1],
       up: sym.sides[id] === "t",
+      board: !!sym.board,
       box: { x1: x0, y1: y0, x2: x0 + sym.w, y2: y0 + sym.h },
     };
   }
@@ -315,7 +377,7 @@
   // Geometría de un cable: extremos de cada hilo (lado A y lado B), sus
   // salidas y el tronco (A* sobre la grilla, como un cable más).
   function cableGeometry(c, ctx) {
-    const idx = cableMembers(c.id);
+    const idx = c.idx ?? cableMembers(c.id);
     if (idx.length < 2) return null;
     const ws = idx.map((i) => S.spec.wiring[i]);
     const devA = devOf(ws[0].from);
@@ -367,6 +429,7 @@
   function focusOn(x, y) {
     const r = svgRect();
     S.pan = { x: r.width / 2 - x * S.zoom, y: r.height / 2 - y * S.zoom };
+    S.manualView = true;
     render();
   }
 
@@ -469,6 +532,7 @@
 
   function route(w, ctx) {
     if (!plainWire(w)) return null; // en un cable multipolar o como referencia
+    if (S.busWires?.has(w)) return null; // va trenzado con su par (busPairs)
     const a = termPos(w.from);
     const b = termPos(w.to);
     if (!a || !b) return null;
@@ -578,6 +642,75 @@
     return (S.snap?.poles?.[w.from] ?? []).some((m) => m.endsWith("+"));
   }
 
+  // ------------------------------------------------------------ pares de bus (RS-485)
+  // Los hilos A y B de un bus entre los mismos dos equipos se dibujan como un
+  // par trenzado (amarillo y azul, como el del variador): así no se confunden
+  // con L y N. Es solo dibujo; un hilo con puntos de doblez propios queda suelto.
+  const BUS_POL = (t) => (/^(RS485_)?A$|^SG\+$|^D\+$|^485\+$|^TX\+$/.test(t) ? "+" : /^(RS485_)?B$|^SG-$|^D-$|^485-$|^TX-$/.test(t) ? "-" : null);
+  const termOf = (end) => end.slice(end.indexOf(".") + 1);
+  const BUS_COLORS = { "+": "#f2cf1d", "-": "#2f8be0" };
+  function busPairs() {
+    const pos = new Map();
+    const neg = new Map();
+    S.spec.wiring.forEach((w, i) => {
+      if (!plainWire(w) || w.points?.length || devOf(w.from) === devOf(w.to)) return;
+      const pa = BUS_POL(termOf(w.from));
+      const pb = BUS_POL(termOf(w.to));
+      if (!pa || pa !== pb) return;
+      const key = pairOf(w);
+      const m = pa === "+" ? pos : neg;
+      if (!m.has(key)) m.set(key, []);
+      m.get(key).push(i);
+    });
+    const out = [];
+    for (const [key, list] of pos) {
+      const other = neg.get(key) ?? [];
+      list.forEach((i, k) => other[k] !== undefined && out.push({ id: `bus:${i}:${other[k]}`, idx: [i, other[k]] }));
+    }
+    return out;
+  }
+  // Color de un hilo del par: el propio, si el usuario lo eligió.
+  const busColor = (w) => (w.color ? WIRE_COLORS[w.color] : null) ?? BUS_COLORS[BUS_POL(termOf(w.from))] ?? WIRE_COLORS.negro;
+
+  // Recorrido con esquinas redondeadas como lista de puntos cada ~2 px, con
+  // su distancia acumulada y la normal (para trenzar los dos hilos).
+  function sampleTrunk(pts, r = 14, step = 2) {
+    const raw = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [p, q, n] = [pts[i - 1], pts[i], pts[i + 1]];
+      const l1 = Math.hypot(q.x - p.x, q.y - p.y);
+      const l2 = Math.hypot(n.x - q.x, n.y - q.y);
+      const k = Math.min(r, l1 / 2, l2 / 2);
+      const a = { x: q.x - ((q.x - p.x) / l1) * k, y: q.y - ((q.y - p.y) / l1) * k };
+      const b = { x: q.x + ((n.x - q.x) / l2) * k, y: q.y + ((n.y - q.y) / l2) * k };
+      raw.push(a);
+      for (let t = 0.2; t < 1; t += 0.2) raw.push({ x: (1 - t) ** 2 * a.x + 2 * t * (1 - t) * q.x + t * t * b.x, y: (1 - t) ** 2 * a.y + 2 * t * (1 - t) * q.y + t * t * b.y });
+      raw.push(b);
+    }
+    raw.push(pts.at(-1));
+    const out = [];
+    let s = 0;
+    for (let i = 1; i < raw.length; i++) {
+      const [p, q] = [raw[i - 1], raw[i]];
+      const l = Math.hypot(q.x - p.x, q.y - p.y);
+      if (!l) continue;
+      const nx = -(q.y - p.y) / l;
+      const ny = (q.x - p.x) / l;
+      for (let d = out.length ? step - ((s % step) || step) : 0; d < l; d += step) out.push({ x: p.x + ((q.x - p.x) * d) / l, y: p.y + ((q.y - p.y) * d) / l, s: s + d, nx, ny });
+      s += l;
+    }
+    const e = raw.at(-1);
+    const last = out.at(-1) ?? { nx: 0, ny: 0 };
+    out.push({ x: e.x, y: e.y, s, nx: last.nx, ny: last.ny });
+    return out;
+  }
+
+  // Tramo de un borne hasta su tornillo cuando el tornillo queda dentro del
+  // equipo (p. ej. U, V, W del variador): el cable entra hasta la bornera,
+  // como en el equipo real, en vez de quedarse en el borde.
+  const LEAD_MIN = 20;
+  const needsLead = (p) => !!p && !p.board && Math.abs(p.sy - p.y) > LEAD_MIN;
+
   function renderWires() {
     const g = $("scene-wires");
     // Los recorridos se recalculan solo si cambió la geometría (no con cada
@@ -589,19 +722,35 @@
       S.spec.devices.map((d) => [d.id, d.type, d.x, d.y]),
       S.spec.wiring.map((w) => [w.from, w.to, w.points, w.cable, w.ref]),
       cablesOf().map((c) => [c.id, c.ref]),
+      // Los bornes de un equipo existen solo cuando ya se dibujó (la placa
+      // espera a su SVG): si cambia lo dibujado, se vuelve a trazar.
+      S.rendered.size,
+      !!S.boardSvg,
     ]);
     if (S.routeKey !== layout) {
+      S.bus = busPairs();
+      S.busWires = new Set(S.bus.flatMap((b) => b.idx.map((i) => S.spec.wiring[i])));
       const ctx = routeContext();
       const moving = S.drag?.moved && S.routes?.length === S.spec.wiring.length;
+      const movingIds =
+        S.drag?.kind === "device"
+          ? new Set([S.drag.dev.id, ...guestsOf(S.drag.dev.id).map((g) => g.id)])
+          : S.drag?.kind === "devices"
+            ? S.drag.movingIds
+            : null;
       const affected = (w, i) =>
-        S.drag.kind === "device" ? w.from.startsWith(`${S.drag.dev.id}.`) || w.to.startsWith(`${S.drag.dev.id}.`) : S.drag.kind === "vertex" && i === S.drag.i;
+        movingIds
+          ? [...movingIds].some((id) => w.from.startsWith(`${id}.`) || w.to.startsWith(`${id}.`))
+          : S.drag.kind === "vertex" && i === S.drag.i;
       if (moving) {
         S.spec.wiring.forEach((w, i) => !affected(w, i) && S.routes[i] && occupy(ctx, w, S.routes[i].mid));
         ctx.limit = 40000;
         S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
+        S.busGeo = S.bus.map((b) => cableGeometry(b, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w, i) => (affected(w, i) ? route(w, ctx) : S.routes[i]));
       } else {
         S.cableGeo = cablesOf().map((c) => cableGeometry(c, ctx)).filter(Boolean);
+        S.busGeo = S.bus.map((b) => cableGeometry(b, ctx)).filter(Boolean);
         S.routes = S.spec.wiring.map((w) => route(w, ctx));
       }
       S.routeKey = layout;
@@ -747,15 +896,112 @@
       }
       html += `<title>Cable ${esc(geo.id)}: ${n} hilos (${esc(geo.devA)} — ${esc(geo.devB)})${cable.ref ? ", como referencia" : ""}</title></g>`;
     }
+    // Pares de bus: cada hilo sale de su borne en abanico hasta el par, y el
+    // par va trenzado (dos hélices que se cruzan; la de arriba cambia en cada
+    // medio paso, como en el par del variador).
+    const TW_AMP = 3.2;
+    const TW_PER = 22;
+    for (const geo of S.busGeo ?? []) {
+      if (!geo.trunk) continue;
+      const samp = sampleTrunk(geo.trunk);
+      const strands = geo.idx.map((i, k) => {
+        const w = S.spec.wiring[i];
+        const c = busColor(w);
+        const cut = wireCut(w);
+        const live = wireLive(w) && !cut;
+        const sel = S.sel?.kind === "wire" && S.sel.id === i;
+        const sign = k ? -1 : 1;
+        const pts = samp.map((q) => {
+          const o = sign * TW_AMP * Math.sin((2 * Math.PI * q.s) / TW_PER);
+          return { x: q.x + q.nx * o, y: q.y + q.ny * o, s: q.s };
+        });
+        return { i, w, c, cut, live, sel, k, pts };
+      });
+      const attrs = (st, extra = "") =>
+        `class="wire twist${extra}${st.sel ? " selected" : ""}${st.live ? " live" : ""}${st.cut ? " cut" : ""}" data-wire="${st.i}" data-color="${esc(st.w.color ?? (st.k ? "azul" : "amarillo"))}"`;
+      // Abanicos (con el color de su hilo) desde cada borne hasta el par.
+      for (const st of strands) {
+        const [ea, eb] = geo.ends[st.k];
+        const lane = (st.k - 0.5) * 2;
+        const d = roundedPath(fanPath(geo.A[st.k], geo.ba, lane, offset(ea, st.i)), 6) + " " + roundedPath(fanPath(geo.B[st.k], geo.bb, lane, offset(eb, st.i)), 6);
+        html += `<g ${attrs(st)}>${wireBody(d, st.c, st.live)}<title>${esc(st.w.from)} — ${esc(st.w.to)} (par RS-485)</title></g>`;
+      }
+      // Tramos de medio paso: primero los de abajo, después los de arriba.
+      const pieces = (st, over) => {
+        let d = "";
+        let cur = [];
+        const flush = () => {
+          if (cur.length > 1) d += "M" + cur.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(" L") + " ";
+          cur = [];
+        };
+        for (const q of st.pts) {
+          const half = Math.floor(q.s / (TW_PER / 2)) % 2 === st.k;
+          if (half === over) cur.push(q);
+          else if (cur.length) {
+            cur.push(q);
+            flush();
+          }
+        }
+        flush();
+        return d;
+      };
+      for (const over of [false, true])
+        for (const st of strands) {
+          const d = pieces(st, over);
+          if (!d) continue;
+          html +=
+            `<g ${attrs(st, over ? " over" : "")}>` +
+            (over ? "" : `<path class="wire-hit" d="${d}"/>`) +
+            (st.live ? `<path class="wire-glow" d="${d}"/>` : "") +
+            `<path class="wire-outline" d="${d}" stroke="${shade(st.c, 0.45)}"/>` +
+            `<path class="wire-core" d="${d}" stroke="${st.c}"/>` +
+            `<title>${esc(st.w.from)} — ${esc(st.w.to)} (par RS-485)</title></g>`;
+        }
+      // Termocontraíble en cada salida del par.
+      for (const b of [geo.ba, geo.bb]) html += `<rect class="twist-sleeve" x="${b.x - 6}" y="${b.y - 4}" width="12" height="8" rx="2"/>`;
+    }
     // Casquillos: la parte plástica del terminal asoma de la entrada de la
-    // bornera (uno por borne; más ancho si es un puente).
+    // bornera (uno por borne; más ancho si es un puente). Si el tornillo
+    // queda dentro del equipo, el cable sigue hasta él (capa sobre los
+    // equipos) y el casquillo va junto al tornillo.
+    let leads = "";
     for (const [t, list] of byTerm) {
       const p = termPos(t);
       if (!p) continue;
+      if (needsLead(p)) {
+        const dir = p.up ? 1 : -1; // hacia el tornillo
+        const tipEnd = p.sy - dir * 7;
+        const tipStart = tipEnd - dir * 5;
+        const sleeveStart = (dir > 0 ? Math.max : Math.min)(p.y, tipStart - dir * 11);
+        // Borne de abajo de un anfitrión tapado por el acoplado (el contactor
+        // con el térmico debajo): el cable entra por detrás, sin tramo visible.
+        const covered = !p.up && guestsOf(devOf(t)).some(isMounted);
+        if (covered) continue;
+        for (const i of list) {
+          const w = S.spec.wiring[i];
+          const x = p.x + offset(t, i);
+          const bus = S.busWires?.has(w);
+          const c = bus ? busColor(w) : WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro;
+          const cut = wireCut(w);
+          const live = wireLive(w) && !cut;
+          const sel = S.sel?.kind === "wire" && S.sel.id === i;
+          const d = `M${x} ${p.y} L${x} ${sleeveStart}`;
+          const y0 = Math.min(sleeveStart, tipStart);
+          const wd = 9;
+          leads +=
+            `<g class="wire lead${sel ? " selected" : ""}${live ? " live" : ""}${cut ? " cut" : ""}" data-wire="${i}" data-color="${esc(wireColorName(w))}">` +
+            (sleeveStart !== p.y ? wireBody(d, c, live) : "") +
+            `<rect class="ferrule" x="${x - wd / 2}" y="${y0}" width="${wd}" height="${Math.abs(tipStart - sleeveStart)}" rx="2" fill="${shade(c, 0.8)}"/>` +
+            `<rect class="ferrule-tip" x="${x - 2}" y="${Math.min(tipStart, tipEnd)}" width="4" height="5" fill="#c9ced5" stroke="#6d737b" stroke-width=".6"/>` +
+            `<title>${esc(w.from)} — ${esc(w.to)}</title></g>`;
+        }
+        continue;
+      }
       const wd = 6 + 5 * list.length;
       const len = 11;
       const y = p.up ? p.y - len : p.y;
-      const c = WIRE_COLORS[wireColorName(S.spec.wiring[list[0]])] ?? WIRE_COLORS.negro;
+      const w0 = S.spec.wiring[list[0]];
+      const c = S.busWires?.has(w0) ? busColor(w0) : WIRE_COLORS[wireColorName(w0)] ?? WIRE_COLORS.negro;
       html += `<rect class="ferrule" x="${p.x - wd / 2}" y="${y}" width="${wd}" height="${len}" rx="2" fill="${shade(c, 0.8)}"/>`;
       html += `<rect class="ferrule-tip" x="${p.x - wd / 2 + 1}" y="${p.up ? p.y - 3 : p.y}" width="${wd - 2}" height="3" fill="#c9ced5"/>`;
     }
@@ -770,12 +1016,17 @@
         if (own) handles += `<g class="wire-del" data-v="${k}" transform="translate(${v.x + 11} ${v.y - 11})"><circle r="5.5"/><path d="M-2.5 -2.5L2.5 2.5M2.5 -2.5L-2.5 2.5"/></g>`;
       });
     }
+    if (S.drag?.snapGhostHtml) handles += S.drag.snapGhostHtml;
     // Solo se reemplaza el DOM si cambió algo: con la simulación corriendo
     // llega una instantánea por cuadro y rehacer todos los cables (y sus
     // rótulos) en cada una obligaba a maquetar y pintar de nuevo el esquema.
     if (S.wiresHtml !== html || !g.firstChild) {
       S.wiresHtml = html;
       g.innerHTML = html;
+    }
+    if (S.leadsHtml !== leads) {
+      S.leadsHtml = leads;
+      $("scene-leads").innerHTML = leads;
     }
     if (S.handlesHtml !== handles) {
       S.handlesHtml = handles;
@@ -845,18 +1096,27 @@
       force = true;
     }
     setAttr(g, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
-    g.classList.toggle("selected", S.sel?.kind === "device" && S.sel.id === dev.id);
+    g.classList.toggle("selected", isDeviceSelected(dev.id));
     // Bornes con cable (la plantilla puede mostrar su cable interno: wired.<borne>).
     const pre = `${dev.id}.`;
     const wired = [...new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]).filter((e) => e.startsWith(pre)).map((e) => e.slice(pre.length)))].sort();
-    const st = { ...out(dev.id), id: dev.id, wired };
+    const mounted = isMounted(dev);
+    const st = { ...out(dev.id), id: dev.id, wired, mounted };
+    const hosting = guestsOf(dev.id).some((x) => canMount(x, dev));
     // Un símbolo con giro (data-spin) se redibuja en cada instante simulado.
     const pp = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
     if (!sym.board && window.JwsimSymbols.animated(dev.type, S.defs.get(dev.type), pp)) st.t_ms = S.snap?.t_ms ?? 0;
-    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired]);
+    const CS = window.JwsimCylinderSensors;
+    let cylTag = "";
+    if (CS?.isValve(dev)) {
+      cylTag = CS.cylinderName(S.spec.devices, dev.id).tag;
+    }
+    const sig = JSON.stringify([st.outputs, st.contacts, st.damaged, st.tripped, st.injected, dev.params, S.running, st.t_ms, wired, mounted, hosting, dev.mount, cylTag]);
     const tg = document.querySelector(`#scene-terms > g[data-id="${CSS.escape(dev.id)}"]`);
     if (tg) setAttr(tg, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
     if (!force && S.rendered.get(dev.id) === sig && tg) return;
+    // La placa SVG carga aparte: hasta que llegue no se marca como dibujada.
+    if (sym.board && !S.boardSvg) return;
     S.rendered.set(dev.id, sig);
     if (sym.board) {
       if (!g.querySelector("svg")) {
@@ -887,14 +1147,23 @@
       leds.innerHTML = html;
     } else {
       const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
+      const invertLimit = baseType(dev.type) === "limit-switch" && p.orientacion === "abajo";
+      const labelX = invertLimit ? 28 : sym.w / 2;
+      const labelY = invertLimit ? sym.h - 14 : sym.h + 16;
+      // Marcas de un cilindro (finales de carrera y sensores magnéticos): rótulo más grande.
+      const isCylMark = !!window.JwsimCylinderSensors?.linkedValveOf(S.spec.devices, dev);
       setSvgHtml(
         g,
         // Zona de clic de todo el equipo, debajo del dibujo: el interior de
         // una plantilla no recibe el puntero (style.css, .dev .tpl *).
         `<rect class="dev-hit" x="0" y="0" width="${sym.w}" height="${sym.h}"/>` +
         window.JwsimSymbols.draw(dev.type, sym.lay, st, p, S.defs.get(dev.type)) +
-        `<rect class="sel-frame" x="-6" y="-6" width="${sym.w + 12}" height="${sym.h + 12}" rx="6"/>` +
-        `<text class="dev-id" x="${sym.w / 2}" y="${sym.h + 16}">${esc(dev.id)}${p.label ? ` · ${esc(p.label)}` : ""}</text>` +
+        `<rect class="sel-frame" x="-2" y="-2" width="${sym.w + 4}" height="${sym.h + 4}" rx="3"/>` +
+        (cylTag ? `<text class="dev-cyl-tag" x="4" y="-8">${esc(cylTag)}</text>` : "") +
+        // Par acoplado (contactor + térmico): un solo rótulo, bajo el acoplado.
+        (hosting
+          ? ""
+          : `<text class="dev-id${isCylMark ? " dev-id-mark" : ""}" x="${labelX}" y="${labelY}">${mountLabel(dev)}${p.label ? ` · ${esc(p.label)}` : ""}</text>`) +
         // Falla inyectada (G9): marca roja arriba a la derecha.
         (st.injected?.length
           ? `<g class="dev-fault" transform="translate(${sym.w - 4} 4)"><circle r="11"/><text y="4.5">!</text><title>Falla inyectada: ${esc(st.injected.map(faultLabel).join(", "))}</title></g>`
@@ -911,9 +1180,13 @@
       $("scene-terms").appendChild(t);
     }
     setAttr(t, "transform", `translate(${dev.x ?? 0} ${dev.y ?? 0})`);
-    if (t.childElementCount && !force) return;
+    const hide = mounted ? new Set(mountRule(dev)?.hide ?? []) : new Set();
+    const tkey = [...hide].join(",");
+    if (t.childElementCount && !force && t.dataset.hide === tkey) return;
+    t.dataset.hide = tkey;
     let th = "";
     for (const [id, [x, y]] of Object.entries(sym.screws)) {
+      if (hide.has(id)) continue;
       // El borne es el tornillo dibujado: el círculo es invisible (resalta
       // al pasar el mouse).
       th += `<g class="term" data-term="${esc(`${dev.id}.${id}`)}"><circle cx="${x}" cy="${y}" r="${sym.board ? 26 * S.board.k : 10}"/>`;
@@ -931,7 +1204,9 @@
     if (S.view !== "scene") return;
     const keep = new Set(S.spec.devices.map((d) => d.id));
     for (const g of [...$("scene-board").children, ...$("scene-devices").children, ...$("scene-terms").children]) if (!keep.has(g.dataset.id)) g.remove();
+    settleMounts();
     for (const dev of S.spec.devices) renderDevice(dev, force);
+    for (const dev of S.spec.devices) if (dev.mount) raiseGuest(dev);
     renderWires();
     commitView();
     renderSide();
@@ -943,10 +1218,63 @@
   }
 
   // ------------------------------------------------------------ panel lateral
+  const fmtN = (n) => String(Math.round(Number(n) * 100) / 100).replace(".", ",");
+  /**
+   * Cómo actúa el equipo con sus ajustes actuales, en una o dos frases. Los
+   * equipos de protección lo calculan; los demás toman la primera frase de su
+   * descripción (la completa queda en «Más información»).
+   * @returns {{ title: string, text: string } | null}
+   */
+  function explainDevice(dev, def) {
+    const p = { ...defaultsOf(dev.type), ...(dev.params ?? {}) };
+    const range = () => {
+      const [lo, hi] = String(p.range ?? "").replace(" A", "").split("-").map(Number);
+      const ir = Math.min(hi, Math.max(lo, Number(p.ajuste) || lo));
+      return { lo, hi, ir };
+    };
+    switch (baseType(dev.type)) {
+      case "overload-relay": {
+        const { ir } = range();
+        const auto = String(p.rearme).startsWith("auto");
+        return {
+          title: "Térmico",
+          text: `Dispara por sobrecarga sobre 1,15 × Ir = ${fmtN(1.15 * ir)} A (clase 10: con 1,5 × Ir en menos de 2 min, con 7,2 × Ir en unos 3 s) y por falta de fase. Al disparar abre 95-96 y cierra 97-98; ${auto ? "se rearma solo al enfriarse" : "se rearma con RESET una vez frío"}.`,
+        };
+      }
+      case "motor-protector": {
+        const { hi, ir } = range();
+        return {
+          title: "Térmico y magnético",
+          text: `Térmico: dispara sobre 1,15 × Ir = ${fmtN(1.15 * ir)} A (clase 10). Magnético: al instante desde 13 × ${fmtN(hi)} A = ${fmtN(13 * hi)} A. Disparado queda en TRIP: llevar la perilla a O y luego a I.`,
+        };
+      }
+      case "breaker": {
+        const In = Number(p.In) || 0;
+        const k = { B: 4, C: 7.5, D: 15 }[p.curve] ?? 7.5;
+        return {
+          title: `Curva ${p.curve}`,
+          text: `Térmico: no dispara con 1,13 × In = ${fmtN(1.13 * In)} A y sí con 1,45 × In = ${fmtN(1.45 * In)} A. Magnético: al instante desde ${fmtN(k)} × In = ${fmtN(k * In)} A.`,
+        };
+      }
+      case "contactor":
+        return {
+          title: "Bobina",
+          text: `Con ${p.coil} en A1-A2 cierra los polos 1-2, 3-4 y 5-6 y ${p.aux === "01" ? "abre el auxiliar 21-22 NC" : "cierra el auxiliar 13-14 NA"}.`,
+        };
+    }
+    const d = String(def.description ?? "").trim();
+    if (!d) return null;
+    // Primera frase (sin cortar decimales ni abreviaturas como «p. ej.»).
+    const m = d.match(/^(.{20,}?[^.\s]{3}\.)(\s|$)/s);
+    let first = m ? m[1] : d;
+    if (first.length > 220) first = first.slice(0, first.lastIndexOf(" ", 210)) + "…";
+    return { title: "Funcionamiento", text: first };
+  }
+
   function renderSide() {
     const side = $("scene-inspector");
     const sel = S.sel;
-    const selKey = sel ? `${sel.kind}:${sel.id}` : "";
+    const selKey = sel ? (sel.kind === "devices" ? `devices:${sel.ids.join(",")}` : `${sel.kind}:${sel.id}`) : "";
     if (selKey && selKey !== S.lastSelKey && !S.keepPane) window.JwsimScenePane?.showProps();
     if (selKey !== S.lastSelKey) S.groupExclude = new Set();
     S.lastSelKey = selKey;
@@ -958,82 +1286,203 @@
       const def = dev && S.defs.get(dev.type);
       if (dev && def) {
         const st = out(dev.id);
-        html += `<div class="insp-title">${esc(dev.id)} <span class="muted">${esc(def.name)} · ${esc(def.type)}@${esc(def.version)}</span></div>`;
-        html += `<p class="insp-desc">${esc(def.description)}</p>`;
-        // Plantillas de taller: dejan el equipo listo para un uso típico.
-        if (def.presets?.length) {
-          html += `<div class="insp-sub">Plantillas de taller</div><div class="preset-pick">`;
-          for (const pr of def.presets) {
-            const on = presetMatches(dev, def, pr);
-            html += `<button class="preset-opt${on ? " on" : ""}" data-preset="${esc(pr.id)}" ${S.running ? "disabled" : ""}><b>${esc(pr.label)}</b><span>${esc(pr.description ?? "")}</span></button>`;
-          }
-          html += `</div>`;
-        }
-        let group = null;
-        for (const p of def.parameters) {
-          const v = dev.params?.[p.id] ?? p.default;
-          const dis = S.running ? "disabled" : "";
-          // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
-          if ((p.group ?? null) !== group) {
-            if (group !== null) html += `</details>`;
-            group = p.group ?? null;
-            if (group !== null) html += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
-          }
-          let input;
-          if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
-            // Placa de bornes con sus chapas: se elige con un clic.
-            const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
-            html += `<div class="insp-sub">${esc(p.label)}</div><div class="bornera-pick">`;
-            for (const o of p.options) {
-              html += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
-                `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
-            }
-            html += `</div>`;
-            continue;
-          }
-          if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
-          else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
-          else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
-          const wide = p.type === "enum" && p.options.some((o) => String(o).length > 16);
-          html += `<label class="insp-row${wide ? " wide" : ""}"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${input}</label>`;
-        }
-        if (group !== null) html += `</details>`;
-        const vals = Object.entries(st.outputs ?? {});
-        if (vals.length) {
-          // El estado cambia con cada instantánea: va en su propio contenedor
-          // para no reemplazar el resto del inspector (botones, campos).
-          stateHtml = `<div class="insp-sub">Estado${S.snap ? ` · t = ${S.snap.t_ms.toFixed(1)} ms` : ""}</div><table class="insp-vals">`;
-          for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
-          stateHtml += "</table>";
-          html += `<div class="insp-state"></div>`;
-        }
+        const dis = S.running ? "disabled" : "";
+        // Cabecera: rótulo y tipo; debajo, categoría y bornes.
+        const lay = symbolFor(dev).lay;
+        const terms = def.terminals.filter((t) => !lay?.terms || t.id in lay.terms);
+        const ends = new Set(S.spec.wiring.flatMap((w) => [w.from, w.to]));
+        const linked = new Set(isMounted(dev) ? (mountRule(dev)?.hide ?? []) : []);
+        for (const g of guestsOf(dev.id)) if (canMount(g, dev)) for (const t of ["2", "4", "6"]) linked.add(t);
+        const nWired = terms.filter((t) => ends.has(`${dev.id}.${t.id}`) || linked.has(t.id)).length;
+        html += `<div class="insp-head" title="${esc(def.type)}@${esc(def.version)}"><b>${esc(dev.id)}</b><span>${esc(def.name)}</span></div>`;
+        html += `<div class="insp-meta">${esc(def.category ?? "Otros")} · ${terms.length} bornes</div>`;
         // Fallas (G9): con la simulación en marcha, se inyectan y se quitan.
-        const opts = dev.type === "jwsim/jwplc-basic" ? [] : faultOptions(dev, def, st);
+        const opts = dev.type === "jwsim/jwplc-basic" || !S.running || window.JwsimDiag?.active?.() ? [] : faultOptions(dev, def, st);
+        let fh = "";
         if (opts.length) {
           const act = (S.snap?.injected ?? []).filter((f) => f.device === dev.id);
-          html += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
+          fh += `<div class="insp-sub">Fallas</div><div class="fault-btns">`;
           for (const f of opts) {
             const on = act.some((a) => a.kind === f.kind && (f.kind !== "stuck" || (a.value !== false) === f.value));
             const data = esc(JSON.stringify({ kind: f.kind, device: dev.id, ...(f.kind === "stuck" ? { value: f.value } : {}) }));
-            html += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
+            fh += `<button class="small fault${on ? " on" : ""}" data-fault="${data}" data-on="${on ? 1 : 0}" ${S.running ? "" : "disabled"}>${esc(f.label)}</button>`;
           }
-          html += `</div>${S.running ? "" : `<p class="insp-desc muted">Las fallas se inyectan con la simulación en marcha.</p>`}`;
+          fh += `</div>`;
         }
-        if (dev.type !== "jwsim/jwplc-basic") html += `<p class="insp-desc muted">Supr o Ctrl+X lo quita; Ctrl+C / Ctrl+V lo copia; Ctrl+Z deshace.</p>`;
+        // En marcha, las fallas van arriba: es lo que se usa durante la simulación.
+        html += fh;
+        const sec = (key, title, body, open, note = "") =>
+          `<details class="insp-group insp-sec" data-group="${key}" ${open ? "open" : ""}><summary><span>${title}</span>${note ? `<em>${note}</em>` : ""}</summary><div class="insp-body">${body}</div></details>`;
+        const isOpen = (key, byDefault) => (byDefault ? !S.openGroups.has(`!${key}`) : S.openGroups.has(key));
+        // Parámetro: fila con «por defecto» o el botón para volver a él.
+        const paramRow = (p) => {
+          const v = dev.params?.[p.id] ?? p.default;
+          const isDef = String(v) === String(p.default);
+          let input;
+          if (p.type === "enum") input = `<select data-param="${esc(p.id)}" ${dis}>${p.options.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+          else if (p.type === "boolean") input = `<input type="checkbox" data-param="${esc(p.id)}" ${v ? "checked" : ""} ${dis}/>`;
+          else input = `<input type="${p.type === "number" ? "number" : "text"}" data-param="${esc(p.id)}" value="${esc(v)}" ${dis} placeholder="${esc(p.hint ?? "")}"/>`;
+          const mark = isDef
+            ? `<i class="insp-def">por defecto</i>`
+            : `<button class="insp-reset" data-reset="${esc(p.id)}" title="Volver al valor por defecto (${esc(p.default)})" ${dis}>↺</button>`;
+          return `<div class="insp-field"><div class="insp-lbl"><span>${esc(p.label ?? p.id)}${p.unit ? ` (${esc(p.unit)})` : ""}</span>${mark}</div>${input}</div>`;
+        };
+        // Ajustes: lo que se elige al montar el tablero. Los tiempos y
+        // constantes del modelo van aparte, en «Parámetros de simulación».
+        const isSim = (p) => p.sim ?? (p.unit === "ms" || /^tau/i.test(p.id));
+        let body = "";
+        if (def.presets?.length) {
+          body += `<div class="preset-pick">`;
+          for (const pr of def.presets) {
+            const on = presetMatches(dev, def, pr);
+            body += `<button class="preset-opt${on ? " on" : ""}" data-preset="${esc(pr.id)}" ${dis}><b>${esc(pr.label)}</b><span>${esc(pr.description ?? "")}</span></button>`;
+          }
+          body += `</div>`;
+        }
+        const CS = window.JwsimCylinderSensors;
+        const isCyl = !!CS?.isValve(dev);
+        // Sin etiqueta propia el cilindro toma la letra de sus marcas (A0/A1 → A).
+        const cylNamePlaceholder = (id) => {
+          const nm = CS.cylinderName(S.spec.devices, id);
+          return nm.source === "sensors" ? `${nm.letter} (por ${nm.letter}0/${nm.letter}1)` : "p. ej. A, Prensa";
+        };
+        let group = null;
+        if (isCyl) {
+          body +=
+            `<div class="cyl-insp-grid">` +
+            `<div class="insp-field"><div class="insp-lbl"><span>ID</span></div><input type="text" data-dev-rename="${esc(dev.id)}" value="${esc(dev.id)}" ${dis} title="Identificador en bornes y programa"/></div>` +
+            `<div class="insp-field"><div class="insp-lbl"><span>Etiqueta</span></div><input type="text" data-param="label" value="${esc(dev.params?.label ?? "")}" placeholder="${esc(cylNamePlaceholder(dev.id))}" title="Nombre del cilindro en el esquema, el plano neumático y el diagrama de estados" ${dis}/></div>` +
+            def.parameters.filter((x) => !isSim(x)).map(paramRow).join("") +
+            `</div>` +
+            `<p id="cyl-id-err" class="cyl-fc-err" hidden></p>`;
+        } else {
+          for (const p of def.parameters.filter((x) => !isSim(x))) {
+            const v = dev.params?.[p.id] ?? p.default;
+            // Grupos plegables (parámetros del variador por grupo 00, 01, 02…).
+            if ((p.group ?? null) !== group) {
+              if (group !== null) body += `</details>`;
+              group = p.group ?? null;
+              if (group !== null) body += `<details class="insp-group" data-group="${esc(group)}" ${S.openGroups.has(group) ? "open" : ""}><summary>${esc(group)}</summary>`;
+            }
+            if (dev.type === "jwsim/motor-3ph" && p.id === "bornera") {
+              // Placa de bornes con sus chapas: se elige con un clic.
+              const names = { triangulo: "Δ triángulo", estrella: "Y estrella", "6 cables": "6 cables" };
+              body += `<div class="insp-lbl"><span>${esc(p.label)}</span></div><div class="bornera-pick">`;
+              for (const o of p.options) {
+                body += `<button class="bornera-opt${o === v ? " on" : ""}" data-setparam="${esc(p.id)}" data-value="${esc(o)}" ${dis} title="${esc(names[o] ?? o)}">` +
+                  `<svg viewBox="0 0 120 90" width="62" height="47">${window.JwsimSymbols.motorBornera(o, { x: 4, y: 4, w: 112, h: 82 })}</svg><span>${esc(names[o] ?? o)}</span></button>`;
+              }
+              body += `</div>`;
+              continue;
+            }
+            body += paramRow(p);
+          }
+          if (group !== null) body += `</details>`;
+        }
+        if (body) html += sec("__ajustes", "Ajustes", body, isOpen("__ajustes", true));
+        // Finales de carrera y sensores magnéticos estilo FluidSIM: se configuran
+        // desde el cilindro y se colocan automáticamente encima del émbolo.
+        if (isCyl) {
+          const linkedSens = CS.sensorsForValve(S.spec.devices, dev.id);
+          const letter = CS.nextCylinderLetter(S.spec.devices, dev.id);
+          const has0 = linkedSens.some((s) => s.pos <= 0.05);
+          const has1 = linkedSens.some((s) => s.pos >= 0.95);
+          const kindsPresent = new Set(linkedSens.map((s) => s.kind));
+          const defKind = kindsPresent.size === 1 ? [...kindsPresent][0] : (S.cylSensorKind ?? "compacto");
+          const canApplyPair = !(has0 && has1) || linkedSens.some((s) => s.kind !== defKind);
+          const kindOpts = [
+            ["compacto", "Rodillo compacto"],
+            ["XCKJ", "Rodillo XCKJ"],
+            ["magnetic", "Magnético SMT-8M"],
+          ];
+          const optHtml = (sel) => kindOpts.map(([val, lbl]) => `<option value="${val}"${val === sel ? " selected" : ""}>${lbl}</option>`).join("");
+          let fcHtml =
+            `<label class="insp-row"><span>Tipo de sensor</span><select id="cyl-fc-default-kind" aria-label="Tipo de sensor para el cilindro" ${dis}>${optHtml(defKind)}</select></label>` +
+            `<div class="cyl-fc-actions">` +
+            `<button type="button" class="small primary" data-cyl-pair="${esc(dev.id)}" ${dis || !canApplyPair ? "disabled" : ""} title="Colocar o convertir ${esc(letter)}0 (0) y ${esc(letter)}1 (1)">+ Par ${esc(letter)}0/${esc(letter)}1</button>` +
+            `<button type="button" class="small" data-cyl-add="${esc(dev.id)}" ${dis} title="Agregar otra marca en cualquier posición 0..1">+ Marca</button>` +
+            `</div>` +
+            `<p id="cyl-fc-err" class="cyl-fc-err" hidden></p>`;
+          if (linkedSens.length) {
+            fcHtml += `<table class="cyl-fc-table"><thead><tr><th>Marca</th><th>Pos</th><th>Tipo</th><th></th></tr></thead><tbody>`;
+            for (const s of linkedSens) {
+              fcHtml +=
+                `<tr>` +
+                `<td><input class="cyl-fc-id" type="text" data-cyl-rename="${esc(s.id)}" value="${esc(s.id)}" ${dis}/></td>` +
+                `<td><input class="cyl-fc-pos" type="number" min="0" max="1" step="0.05" data-cyl-pos="${esc(s.id)}" value="${esc(s.pos)}" ${dis}/></td>` +
+                `<td><select class="cyl-fc-kind" data-cyl-kind="${esc(s.id)}" ${dis}>${optHtml(s.kind)}</select></td>` +
+                `<td><button type="button" class="small ghost" data-cyl-del="${esc(s.id)}" title="Quitar ${esc(s.id)}" ${dis}>×</button></td>` +
+                `</tr>`;
+            }
+            fcHtml += `</tbody></table>`;
+          }
+          html += sec("__fc", "Finales de carrera / Sensores", fcHtml, isOpen("__fc", true), `${linkedSens.length} ${linkedSens.length === 1 ? "marca" : "marcas"}`);
+        }
+        // Cómo funciona con los ajustes actuales, en dos líneas; el resto, a pedido.
+        const ex = explainDevice(dev, def);
+        if (ex) {
+          const more = def.description && def.description !== ex.text
+            ? `<details class="insp-more"><summary>Más información</summary><p>${esc(def.description)}</p></details>`
+            : "";
+          html += sec("__func", esc(ex.title), `<p class="insp-desc">${esc(ex.text)}</p>${more}`, isOpen("__func", !isCyl));
+        }
+        const simP = def.parameters.filter(isSim);
+        if (simP.length) html += sec("__sim", "Parámetros de simulación", simP.map(paramRow).join(""), isOpen("__sim", false));
+        // Acople: el térmico se engrapa bajo un contactor (o el contactor lo recibe).
+        const hostRule = Object.values(MOUNTS).some((r) => r.hosts.includes(baseType(dev.type)));
+        if (mountRule(dev) || hostRule) {
+          let ab = "";
+          if (mountRule(dev)) {
+            if (dev.mount && isMounted(dev)) {
+              ab += `<p class="insp-desc">Acoplado bajo <b>${esc(dev.mount)}</b>: sus puentes entran en 2/T1, 4/T2 y 6/T3 del contactor, sin cables.</p>`;
+              ab += `<button class="small" data-unmount="${esc(dev.id)}" ${dis}>Separar</button>`;
+            } else {
+              const free = S.spec.devices.filter((h) => canMount(dev, h) && !guestsOf(h.id).some((x) => x.id !== dev.id));
+              ab += `<p class="insp-desc">Se acopla bajo un contactor. También se acopla al arrastrarlo debajo de él.</p>`;
+              ab += free.length
+                ? `<div class="mount-pick">${free.map((h) => `<button class="small" data-mount="${esc(h.id)}" ${dis}>Acoplar a ${esc(h.id)}</button>`).join("")}</div>`
+                : `<p class="insp-desc muted">No hay contactores libres en el esquema.</p>`;
+            }
+          } else {
+            const gs = guestsOf(dev.id).filter((x) => canMount(x, dev));
+            ab += gs.length
+              ? `<p class="insp-desc">Tiene acoplado <b>${gs.map((x) => esc(x.id)).join(", ")}</b> debajo.</p>` +
+                gs.map((x) => `<button class="small" data-unmount="${esc(x.id)}" ${dis}>Separar ${esc(x.id)}</button>`).join("")
+              : `<p class="insp-desc">Admite un relé térmico acoplado debajo: arrástrelo bajo el contactor.</p>`;
+          }
+          html += sec("__acople", "Acople", ab, isOpen("__acople", false));
+        }
+        // Bornes: cuáles tienen cable (o quedan unidos por el acople).
+        let tb = `<table class="insp-vals insp-terms">`;
+        for (const t of terms) {
+          const key = `${dev.id}.${t.id}`;
+          const w = S.spec.wiring.filter((x) => x.from === key || x.to === key).map((x) => (x.from === key ? x.to : x.from));
+          const where = w.length ? w.map(esc).join(", ") : linked.has(t.id) ? "acople" : "—";
+          tb += `<tr class="${w.length || linked.has(t.id) ? "on" : ""}"><td>${esc(t.label ?? t.id)}</td><td>${where}</td></tr>`;
+        }
+        tb += `</table>`;
+        html += sec("__bornes", "Bornes", tb, isOpen("__bornes", false), `${nWired} de ${terms.length} conectados`);
+        const vals = S.running ? Object.entries(st.outputs ?? {}) : [];
+        if (vals.length) {
+          // El estado cambia con cada instantánea: va en su propio contenedor
+          // para no reemplazar el resto del inspector (botones, campos).
+          stateHtml = `<table class="insp-vals">`;
+          for (const [k, v] of vals) stateHtml += `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" ? Math.round(v * 1000) / 1000 : v)}</td></tr>`;
+          stateHtml += "</table>";
+          html += `<details class="insp-group insp-sec" data-group="__estado" ${S.openGroups.has("__estado") ? "open" : ""}><summary><span>Estado en simulación</span></summary><div class="insp-body insp-state"></div></details>`;
+        }
       }
     } else if (sel?.kind === "wire") {
       const w = S.spec.wiring[sel.id];
       if (w) {
-        const cur = wireColorName(w);
         html += `<div class="insp-title">Cable</div><p class="insp-desc">${esc(w.from)} — ${esc(w.to)}</p>`;
         html += `<div class="insp-sub">Color</div><div class="wire-swatches">`;
         html += `<button class="swatch auto${w.color ? "" : " on"}" data-color="" title="Automático (según el polo)">A</button>`;
         for (const [name, hex] of Object.entries(WIRE_COLORS)) {
           html += `<button class="swatch${w.color === name ? " on" : ""}" data-color="${esc(name)}" title="${esc(name)}" style="background:${hex}"></button>`;
         }
-        html += `</div><p class="insp-desc">Actual: ${esc(cur)}.${plainWire(w) ? " Clic sobre el cable: agrega un punto de doblez; arrástrelo para dar forma; ✕ lo quita." : ""}</p>`;
+        html += `</div>`;
         if (plainWire(w) && w.points?.length) html += `<button class="small" id="scene-wire-auto">Recorrido automático</button> `;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable; Ctrl+Z deshace.</p>`;
         // Cable multipolar y referencia: solo cambian el dibujo.
         const dis = S.running ? "disabled" : "";
         const swatch = (x) => `<span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>`;
@@ -1070,7 +1519,6 @@
       if (c && idx.length) {
         const dis = S.running ? "disabled" : "";
         html += `<div class="insp-title">Cable ${esc(c.id)} <span class="muted">${idx.length} hilos · ${esc(pairOf(S.spec.wiring[idx[0]]))}</span></div>`;
-        html += `<p class="insp-desc">Cable multipolar: los hilos van juntos en una funda y se abren junto a cada equipo. Solo cambia el dibujo; cada hilo sigue uniendo sus dos bornes.</p>`;
         html += `<label class="insp-row wide"><span>Nombre</span><input type="text" data-cable-field="label" value="${esc(c.label ?? "")}" placeholder="p. ej. 4×1 mm² mando" ${dis}/></label>`;
         html +=
           `<label class="insp-check"><input type="checkbox" id="scene-cable-ref" ${c.ref ? "checked" : ""} ${dis}/>` +
@@ -1081,15 +1529,22 @@
           html += `<tr data-select-wire="${i}" title="Elegir este hilo"><td><span class="sw" style="background:${WIRE_COLORS[wireColorName(x)] ?? WIRE_COLORS.negro}"></span>${esc(x.from)}</td><td>${esc(x.to)}</td></tr>`;
         }
         html += `</table><button class="small" data-cable-act="ungroup" ${dis}>Desagrupar (Ctrl+Mayús+G)</button>`;
-        html += `<p class="insp-desc muted">Supr o Ctrl+X quita el cable con todos sus hilos; Ctrl+Z deshace.</p>`;
       }
+    } else if (sel?.kind === "devices") {
+      const devs = sel.ids.map((id) => devById(id)).filter(Boolean);
+      html += `<div class="insp-head"><b>${devs.length} equipos seleccionados</b></div>`;
+      html += `<p class="insp-desc">${devs.map((d) => esc(d.id)).join(", ")}</p>`;
+      html += `<p class="insp-desc muted">Arrastre cualquiera de ellos para mover el grupo. Ctrl+clic suma o quita equipos; Supr los quita.</p>`;
     } else {
       // Nada seleccionado: información general de la escena.
       const nDev = S.spec.devices.filter((d) => d.type !== "jwsim/jwplc-basic").length;
       const nWire = S.spec.wiring.length;
       html += `<div class="insp-title">Escena</div><table class="insp-vals"><tr><td>Dispositivos</td><td>${nDev}</td></tr><tr><td>Cables</td><td>${nWire}</td></tr>` +
         `<tr><td>Simulación</td><td>${S.running ? "en marcha" : "detenida"}</td></tr></table>`;
-      html += `<p class="insp-desc muted">Clic en un equipo o un cable para ver y cambiar sus propiedades. Arrastre los dispositivos. Para cablear, haga clic en un borne y luego en otro. Supr o Ctrl+X quita lo seleccionado; Ctrl+C y Ctrl+V copian y pegan; Ctrl+Z y Ctrl+Y deshacen y rehacen. Con la simulación en marcha, haga clic en los pulsadores, selectores y sensores.</p>`;
+      html += `<p class="insp-desc muted">Elija un equipo o un cable para ver sus propiedades.</p>`;
+      html += `<details class="insp-group" data-group="__atajos" ${S.openGroups.has("__atajos") ? "open" : ""}><summary>Atajos</summary><table class="insp-vals">` +
+        `<tr><td>Cablear</td><td>clic en un borne y en otro</td></tr><tr><td>Selección múltiple</td><td>Ctrl+clic</td></tr><tr><td>Quitar</td><td>Supr</td></tr><tr><td>Copiar / pegar</td><td>Ctrl+C / Ctrl+V</td></tr>` +
+        `<tr><td>Deshacer / rehacer</td><td>Ctrl+Z / Ctrl+Y</td></tr><tr><td>Acoplar el térmico</td><td>arrástrelo bajo el contactor</td></tr></table></details>`;
     }
     if (side.dataset.key !== html) {
       side.innerHTML = html;
@@ -1117,6 +1572,7 @@
       S.diagHtml = diagHtml;
       diag.innerHTML = diagHtml;
     }
+    if ($("scene-arrange")) $("scene-arrange").disabled = S.running;
     $("scene-rearm").disabled = !S.running || !(S.snap?.faults?.length || S.snap?.devices.some((d) => d.tripped || d.damaged.length));
   }
 
@@ -1132,14 +1588,34 @@
   function svgRect() {
     return $("scene-svg").getBoundingClientRect();
   }
-  // Grilla del lienzo como fondo CSS de .scene-main, alineada con la escena.
+  // Grilla del lienzo, alineada con la escena:
+  // cuadrícula tenue cada 20 px (5 mm) y una línea algo más marcada cada
+  // 100 px. Los equipos miden y se colocan en múltiplos de 20: calzan en ella.
+  // Una sola imagen de 100 × 100 (5 × 5 celdas) que se repite: pintar
+  // gradientes CSS de 20 px en todo el lienzo en cada cuadro del arrastre
+  // costaba más que la escena entera (medido: ~8 veces el rasterizado).
+  const GRID_TILE = (minor) =>
+    `url("data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'>` +
+        (minor ? `<path d='M20 0V100M40 0V100M60 0V100M80 0V100M0 20H100M0 40H100M0 60H100M0 80H100' stroke='rgba(255,255,255,0.035)' stroke-width='1' shape-rendering='crispEdges'/>` : "") +
+        `<path d='M0.5 0V100M0 0.5H100' stroke='rgba(255,255,255,0.07)' stroke-width='1' shape-rendering='crispEdges'/></svg>`,
+    )}")`;
+  const GRID_IMG = { minor: GRID_TILE(true), major: GRID_TILE(false) };
   function gridBg(pan, zoom) {
-    const main = $("scene-pan").parentElement;
-    const step = 20 * zoom;
-    const r = Math.max(0.6, 1.3 * zoom);
-    main.style.backgroundImage = step < 6 ? "none" : `radial-gradient(circle, #2c333c ${r}px, transparent ${r + 0.7}px)`;
-    main.style.backgroundSize = `${step}px ${step}px`;
-    main.style.backgroundPosition = `${pan.x - 10 * zoom}px ${pan.y - 10 * zoom}px`;
+    // Capa propia (#scene-grid) que se mueve con transform: al arrastrar la
+    // vista solo se recompone, no se vuelve a pintar. Es una casilla más
+    // grande que el lienzo y se desplaza módulo 100 px de escena.
+    const el = $("scene-grid");
+    const big = 100 * zoom;
+    const img = 20 * zoom >= 6 ? GRID_IMG.minor : GRID_IMG.major;
+    if (el.dataset.img !== img) {
+      el.dataset.img = img;
+      el.style.backgroundImage = img;
+    }
+    const size = `${big}px ${big}px`;
+    if (el.style.backgroundSize !== size) el.style.backgroundSize = size;
+    const mod = (v) => ((v % big) + big) % big - big;
+    el.style.transform = `translate3d(${mod(pan.x)}px, ${mod(pan.y)}px, 0)`;
   }
   function commitView() {
     if (viewFrame) {
@@ -1160,14 +1636,14 @@
   }
 
   function nextId(type) {
-    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", "sensor-cylinder": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
+    const prefix = { "pushbutton-no": "S", "pushbutton-nc": "S", "selector-2": "SA", "selector-3": "SA", "limit-switch": "B", "sensor-inductive": "B", "sensor-photoelectric": "B", "sensor-cylinder": "B", lamp: "H", buzzer: "HA", relay: "K", contactor: "KM", "solenoid-valve": "Y", "solenoid-valve-2": "Y", compressor: "CP", "service-unit": "FR", motor: "M", "motor-1ph": "M", "motor-3ph": "M", "motor-2v": "M", "overload-relay": "F", "vfd-el": "VF", potentiometer: "RP", "signal-source": "CAL", "power-24vdc": "PS", "power-230vac": "L", "power-3ph": "Q", "emergency-stop": "S", "pushbutton-lit": "S", "selector-key": "SA", "sensor-capacitive": "B", "stack-light": "H", "timer-relay": "KT", ssr: "K", breaker: "Q", "motor-protector": "QM", "float-switch": "BL", "level-electrodes": "BL", "level-relay": "KL", "pressure-switch": "BP", thermostat: "BT", voltmeter: "PV", ammeter: "PA", "remote-io": "KF", "energy-meter": "PM", "temp-controller": "TC", tank: "T", "usb-rs485": "TF", "usb-pc": "XD" }[type.split("/")[1]] ?? "D";
     for (let n = 1; ; n++) if (!devById(`${prefix}${n}`)) return `${prefix}${n}`;
   }
 
   function currentSnapshot() {
     return {
       spec: structuredClone(cleanSpec()),
-      sel: S.sel ? { ...S.sel } : null,
+      sel: S.sel ? structuredClone(S.sel) : null,
     };
   }
 
@@ -1200,7 +1676,7 @@
     S.redoStack.push(curr);
     const prev = S.undoStack.pop();
     S.spec = structuredClone(prev.spec);
-    S.sel = prev.sel ? { ...prev.sel } : null;
+    S.sel = prev.sel ? structuredClone(prev.sel) : null;
     changed();
     updateUndoRedoButtons();
   }
@@ -1216,7 +1692,7 @@
     S.undoStack.push(curr);
     const next = S.redoStack.pop();
     S.spec = structuredClone(next.spec);
-    S.sel = next.sel ? { ...next.sel } : null;
+    S.sel = next.sel ? structuredClone(next.sel) : null;
     changed();
     updateUndoRedoButtons();
   }
@@ -1260,7 +1736,7 @@
   // Cortar: un equipo queda en el portapapeles (Ctrl+V lo vuelve a poner);
   // un cable solo se quita. La placa no se corta.
   function cut() {
-    if (S.running || !S.sel) return;
+    if (S.running || !S.sel || S.sel.kind === "devices") return;
     if (S.sel.kind === "device") {
       if (devById(S.sel.id)?.type === "jwsim/jwplc-basic") return;
       copy();
@@ -1286,6 +1762,113 @@
     return id;
   }
 
+  // «Ordenar como tablero» (app/lib/scene-arrange.cjs): posiciones según
+  // las columnas del esquema IEC; los cables largos de las fuentes pasan a
+  // referencia y se borran los dobleces manuales. Se deshace con Ctrl+Z.
+  async function arrange() {
+    if (S.running) return { error: "Detenga la simulación para ordenar" };
+    const sp = cleanSpec();
+    const model = await api.sceneIec(sp, "");
+    if (model.error) return { error: model.error };
+    const devs = S.spec.devices.map((d) => {
+      const sym = symbolFor(d);
+      const terms = {};
+      for (const [id, p] of Object.entries(sym.terms)) terms[id] = [p[0], p[1], sym.sides[id]];
+      return { id: d.id, type: d.type, w: sym.w, h: sym.h, mount: d.mount && canMount(d, devById(d.mount)) ? d.mount : undefined, terms };
+    });
+    const mountDy = Object.fromEntries(S.spec.devices.filter((d) => mountRule(d)).map((d) => [d.type, mountRule(d).dy]));
+    const r = window.JwsimArrange.arrange(model, devs, S.spec.wiring, { mountDy });
+    pushHistory();
+    for (const d of S.spec.devices) {
+      const p = r.pos[d.id];
+      if (p) Object.assign(d, { x: p.x, y: p.y });
+    }
+    settleMounts();
+    for (const w of S.spec.wiring) delete w.points;
+    for (const i of r.refs) S.spec.wiring[i].ref = true;
+    S.fitted = false;
+    changed();
+    fit();
+    return { moved: Object.keys(r.pos).length, refs: r.refs.length, bands: r.bands };
+  }
+
+  // Edición desde el esquema IEC (iec.js): operaciones sobre el circuito
+  // que se traducen en equipos y cables de la escena. Una sola entrada en
+  // el historial (Ctrl+Z la deshace entera).
+  //   series    contacto nuevo (o libre de un equipo) en serie antes del borne `before`
+  //   parallel  contacto en paralelo entre los bornes `top` y `bot`
+  //   bridge    quitar un contacto: sus dos lados quedan unidos
+  //   cut       quitar una carga: se sueltan sus cables
+  //   rung      columna nueva de `pos` a `neg` con los equipos de `chain` en serie
+  function editCircuit(op) {
+    if (S.running) return { error: "Detenga la simulación para editar el circuito" };
+    const ends = (term) => S.spec.wiring.filter((w) => w.from === term || w.to === term);
+    const color = (a, b) => poleColor(a, S.staticPoles) ?? poleColor(b, S.staticPoles) ?? "negro";
+    const wire = (a, b) => {
+      if (a === b || S.spec.wiring.some((w) => (w.from === a && w.to === b) || (w.from === b && w.to === a))) return;
+      S.spec.wiring.push({ from: a, to: b, color: color(a, b) });
+    };
+    let near = 0;
+    const newDev = (it, anchorId) => {
+      if (it.dev) return it.dev;
+      const a = devById(anchorId) ?? S.spec.devices[0];
+      const sa = a ? symbolFor(a) : { w: 0 };
+      const id = nextId(it.type);
+      const def = S.defs.get(it.type);
+      S.spec.devices.push({ id, type: it.type, version: def?.version, params: structuredClone(it.params ?? {}), x: snap((a?.x ?? 0) + sa.w + 40 + near * 120), y: snap(a?.y ?? 0) });
+      near++;
+      return id;
+    };
+    const dropIfLoose = (id) => {
+      const d = devById(id);
+      if (!d || d.type === "jwsim/jwplc-basic") return;
+      if (S.spec.wiring.some((w) => devOf(w.from) === id || devOf(w.to) === id) || guestsOf(id).length || d.mount) return;
+      S.spec.devices = S.spec.devices.filter((x) => x !== d);
+    };
+    pushHistory();
+    let added = [];
+    if (op.kind === "series") {
+      const id = newDev(op, devOf(op.before));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      for (const w of ends(op.before)) {
+        if (w.from === op.before) w.from = i;
+        else w.to = i;
+        delete w.points;
+      }
+      wire(o, op.before);
+      added = [id];
+    } else if (op.kind === "parallel") {
+      const id = newDev(op, devOf(op.top));
+      const [i, o] = op.io.map((t) => `${id}.${t}`);
+      wire(op.top, i);
+      wire(o, op.bot);
+      added = [id];
+    } else if (op.kind === "bridge") {
+      // Lo que llegaba a sus dos bornes se une directo, sin el contacto.
+      const ws = [...ends(op.top), ...ends(op.bot)];
+      const others = ws.map((w) => ([op.top, op.bot].includes(w.from) ? w.to : w.from)).filter((e) => e !== op.top && e !== op.bot);
+      S.spec.wiring = S.spec.wiring.filter((w) => !ws.includes(w));
+      for (let k = 1; k < others.length; k++) wire(others[0], others[k]);
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "cut") {
+      S.spec.wiring = S.spec.wiring.filter((w) => ![w.from, w.to].some((e) => e === op.top || e === op.bot));
+      dropIfLoose(devOf(op.top));
+    } else if (op.kind === "rung") {
+      let prev = op.pos;
+      for (const it of op.chain) {
+        const id = newDev(it, devOf(op.pos));
+        const [i, o] = it.io.map((t) => `${id}.${t}`);
+        wire(prev, i);
+        prev = o;
+        added.push(id);
+      }
+      wire(prev, op.neg);
+    } else return { error: `operación desconocida: ${op.kind}` };
+    S.sel = added.length ? { kind: "device", id: added[0] } : null;
+    changed();
+    return { added };
+  }
+
   function addWire(from, to) {
     if (from === to || from.split(".")[0] === to.split(".")[0] && from === to) return false;
     if (S.spec.wiring.some((w) => (w.from === from && w.to === to) || (w.from === to && w.to === from))) return false;
@@ -1300,6 +1883,18 @@
 
   function removeSelected() {
     if (S.running || !S.sel) return;
+    if (S.sel.kind === "devices") {
+      const ids = S.sel.ids.filter((id) => devById(id)?.type !== "jwsim/jwplc-basic");
+      if (!ids.length) return;
+      pushHistory();
+      const drop = new Set(ids);
+      S.spec.devices = S.spec.devices.filter((d) => !drop.has(d.id));
+      S.spec.wiring = S.spec.wiring.filter((w) => !drop.has(w.from.split(".")[0]) && !drop.has(w.to.split(".")[0]));
+      for (const id of ids) for (const g of guestsOf(id)) if (!drop.has(g.id)) delete g.mount;
+      S.sel = null;
+      changed();
+      return;
+    }
     pushHistory();
     if (S.sel.kind === "wire") S.spec.wiring.splice(S.sel.id, 1);
     else if (S.sel.kind === "cable") {
@@ -1311,6 +1906,7 @@
       if (devById(id)?.type === "jwsim/jwplc-basic") return;
       S.spec.devices = S.spec.devices.filter((d) => d.id !== id);
       S.spec.wiring = S.spec.wiring.filter((w) => !w.from.startsWith(`${id}.`) && !w.to.startsWith(`${id}.`));
+      for (const g of guestsOf(id)) delete g.mount;
     }
     S.sel = null;
     changed();
@@ -1351,6 +1947,44 @@
    * Cambia un parámetro. Si el cambio oculta bornes (la bornera del motor
    * pasa de «6 cables» a chapas), se quitan los cables que llegaban a ellos.
    */
+  function renameDevice(dev, rawNext) {
+    const old = dev.id;
+    const next = String(rawNext ?? "").trim();
+    if (next === old) return { ok: true };
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(next)) return { ok: false, error: "ID inválido (use letras, números, _ o -)" };
+    if (S.spec.devices.some((d) => d !== dev && d.id === next)) return { ok: false, error: `Ya existe un equipo llamado ${next}` };
+    pushHistory();
+    const oldPre = `${old}.`;
+    const newPre = `${next}.`;
+    for (const w of S.spec.wiring) {
+      if (w.from.startsWith(oldPre)) w.from = newPre + w.from.slice(oldPre.length);
+      if (w.to.startsWith(oldPre)) w.to = newPre + w.to.slice(oldPre.length);
+    }
+    for (const d of S.spec.devices) {
+      if (d.mount === old) d.mount = next;
+      const dp = d.params;
+      if (!dp) continue;
+      if (dp.cylinder === old) dp.cylinder = next;
+      if (dp.source === `${old}.position`) dp.source = `${next}.position`;
+      if (dp.air === old) dp.air = next;
+      if (typeof dp.consumers === "string" && dp.consumers) {
+        dp.consumers = dp.consumers
+          .split(/([\s,;]+)/)
+          .map((tok) => (tok === old ? next : tok))
+          .join("");
+      }
+    }
+    document.querySelector(`#scene-root .dev[data-id="${CSS.escape(old)}"]`)?.remove();
+    document.querySelector(`#scene-terms > g[data-id="${CSS.escape(old)}"]`)?.remove();
+    S.rendered.delete(old);
+    dev.id = next;
+    if (S.sel?.kind === "device" && S.sel.id === old) S.sel = { kind: "device", id: next };
+    S.routeKey = null;
+    S.keepPane = true;
+    changed();
+    return { ok: true };
+  }
+
   function setParam(dev, id, value, record = true) {
     if (record) pushHistory();
     dev.params = { ...(dev.params ?? {}), [id]: value };
@@ -1377,11 +2011,77 @@
     changed();
   }
 
+  /**
+   * Para cada entrada I0_k, los equipos cuyos contactos la alimentan (del
+   * borne hacia la fuente) y, para cada salida Q0_k, la carga que mueve y lo
+   * que hay en el camino. Se sigue el cableado y, dentro de cada equipo, el
+   * borne par (13-14, 21-22, 95-96, A1-A2, X1-X2).
+   */
+  function ioMap() {
+    const plc = S.spec.devices.find((d) => d.type === "jwsim/jwplc-basic");
+    if (!plc) return {};
+    const pair = (t) => {
+      const [id, term] = [t.slice(0, t.indexOf(".")), t.slice(t.indexOf(".") + 1)];
+      let m = /^(\d+)$/.exec(term);
+      if (m) return `${id}.${Number(m[1]) % 2 ? Number(m[1]) + 1 : Number(m[1]) - 1}`;
+      m = /^([A-Za-z]+)([12])$/.exec(term);
+      if (m) return `${id}.${m[1]}${m[2] === "1" ? 2 : 1}`;
+      return null;
+    };
+    const next = (t) => S.spec.wiring.flatMap((w) => (w.from === t ? [w.to] : w.to === t ? [w.from] : []));
+    const isSource = (id) => /power|supply|fuente/.test(devById(id)?.type ?? "");
+    const walk = (start, stopAtLoad) => {
+      const chain = [];
+      const seen = new Set([start]);
+      let frontier = next(start);
+      for (let hop = 0; hop < 12 && frontier.length; hop++) {
+        const t = frontier.find((x) => !seen.has(x));
+        if (!t) break;
+        seen.add(t);
+        const id = t.slice(0, t.indexOf("."));
+        if (id === plc.id || isSource(id)) break;
+        const term = t.slice(t.indexOf(".") + 1);
+        chain.push(id);
+        if (stopAtLoad && /^(A1|X1|\+)$/.test(term)) return { chain, load: id };
+        const p = pair(t);
+        if (!p) break;
+        seen.add(p);
+        frontier = next(p);
+      }
+      return { chain, load: null };
+    };
+    const label = (id) => {
+      const d = devById(id);
+      const l = d?.params?.label;
+      return l ? `${id} (${l})` : id;
+    };
+    /** @type {Record<string, { text: string, devices: string[] }>} */
+    const out = {};
+    for (let k = 0; k < 8; k++) {
+      const i = walk(`${plc.id}.I0_${k}`, false);
+      if (i.chain.length) {
+        const names = [...new Set(i.chain)];
+        const first = names[0];
+        out[`I0_${k}`] = { devices: names, text: names.length > 1 ? `${names.slice().reverse().map(label).join(" · ")} en serie` : `${label(first)} · ${S.defs.get(devById(first)?.type)?.name ?? ""}` };
+      }
+      const q = walk(`${plc.id}.Q0_${k}.2`, true);
+      if (q.chain.length) {
+        const ld = q.load ?? q.chain[q.chain.length - 1];
+        const via = q.chain.filter((x) => x !== ld);
+        out[`Q0_${k}`] = { devices: q.chain, text: `${label(ld)} · ${S.defs.get(devById(ld)?.type)?.name ?? ""}${via.length ? ` (por ${via.join(", ")})` : ""}` };
+      }
+    }
+    return out;
+  }
+
   function changed() {
     normalizeCables();
     S.dirty = true;
     clearTimeout(S.analyzeTimer);
     S.analyzeTimer = setTimeout(analyze, 120);
+    window.JwsimStateDiag?.onSpec?.();
+    window.Jwsim3D?.onSpec?.();
+    window.updateIoDescriptions?.();
     render();
   }
 
@@ -1392,13 +2092,15 @@
     S.snap = r.snapshot ?? null;
     window.Jwsim3D?.onSnapshot(S.snap);
     window.JwsimPneu?.onSnapshot(S.snap);
+    window.JwsimIec?.onSnapshot(S.snap);
+    window.JwsimStateDiag?.onSnapshot?.(S.snap, false);
     S.staticPoles = S.snap?.poles ?? {};
     render(true);
   }
 
   function cleanSpec() {
     return {
-      devices: S.spec.devices.map(({ id, type, version, params, x, y }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0 })),
+      devices: S.spec.devices.map(({ id, type, version, params, x, y, mount, p3 }) => ({ id, type, ...(version ? { version } : {}), ...(params && Object.keys(params).length ? { params } : {}), x: x ?? 0, y: y ?? 0, ...(mount ? { mount } : {}), ...(p3 ? { p3 } : {}) })),
       wiring: S.spec.wiring.map(({ from, to, color, points, cable, ref }) => ({
         from,
         to,
@@ -1409,7 +2111,16 @@
       })),
       // Cables multipolares (solo dibujo: el simulador usa from/to de cada hilo).
       ...(cablesOf().length ? { cables: cablesOf().map(({ id, label, ref }) => ({ id, ...(label ? { label } : {}), ...(ref ? { ref: true } : {}) })) } : {}),
+      // Planta 3D armada a mano: piezas de ambiente y lugar del tablero (la
+      // posición 3D de cada equipo va en su p3).
+      ...(plant3dOf() ? { plant3d: plant3dOf() } : {}),
     };
+  }
+  function plant3dOf() {
+    const p = S.spec.plant3d;
+    if (!p) return null;
+    const out = { ...(p.grid && p.grid !== 0.5 ? { grid: p.grid } : {}), ...(p.panel ? { panel: p.panel } : {}), ...(p.pieces?.length ? { pieces: p.pieces } : {}) };
+    return Object.keys(out).length ? out : null;
   }
 
   async function act(id, action, value) {
@@ -1507,6 +2218,15 @@
         }
         return;
       }
+      // Modo Diagnóstico: el borne recibe la punta del multímetro.
+      if (term && window.JwsimDiag?.onTerm?.(term.dataset.term)) {
+        e.preventDefault();
+        return;
+      }
+      if (wireEl && window.JwsimDiag?.onWire?.(Number(wireEl.dataset.wire))) {
+        e.preventDefault();
+        return;
+      }
       if (term) {
         e.preventDefault();
         if (S.running) return;
@@ -1560,8 +2280,74 @@
       }
       if (devEl) {
         const dev = devById(devEl.dataset.id);
-        S.sel = { kind: "device", id: dev.id };
-        S.drag = { kind: "device", dev, dx: w.x - (dev.x ?? 0), dy: w.y - (dev.y ?? 0), moved: false, snapshot: currentSnapshot() };
+        const mod = e.ctrlKey || e.metaKey;
+        if (mod) {
+          const cur = selectedDeviceIds();
+          if (cur.includes(dev.id)) {
+            setSelectedDevices(cur.filter((id) => id !== dev.id));
+            render();
+            return;
+          }
+          setSelectedDevices([...cur, dev.id]);
+        } else if (!isDeviceSelected(dev.id)) {
+          S.sel = { kind: "device", id: dev.id };
+        }
+        const selIds = selectedDeviceIds();
+        const CS = window.JwsimCylinderSensors;
+        if (selIds.length > 1) {
+          const selSet = new Set(selIds);
+          const items = selIds.map((id) => devById(id)).filter(Boolean).map((d) => ({ dev: d, x0: d.x ?? 0, y0: d.y ?? 0 }));
+          const guestItems = [];
+          const cylGuestItems = [];
+          for (const { dev: d } of items) {
+            for (const g of guestsOf(d.id)) {
+              if (!selSet.has(g.id)) guestItems.push({ dev: g, host: d });
+            }
+            if (CS?.isValve(d)) {
+              for (const s of CS.groupedSensorsForValve(S.spec.devices, d.id)) {
+                if (!selSet.has(s.id)) cylGuestItems.push({ dev: s, x0: s.x ?? 0, y0: s.y ?? 0 });
+              }
+            }
+          }
+          const movingIds = new Set([...items.map((it) => it.dev.id), ...guestItems.map((it) => it.dev.id)]);
+          S.drag = {
+            kind: "devices",
+            anchor: dev,
+            ax0: dev.x ?? 0,
+            ay0: dev.y ?? 0,
+            dx: w.x - (dev.x ?? 0),
+            dy: w.y - (dev.y ?? 0),
+            items,
+            guestItems,
+            cylGuestItems,
+            movingIds,
+            collapseTo: mod ? null : dev.id,
+            moved: false,
+            snapshot: currentSnapshot(),
+          };
+        } else {
+          const cylGuests = CS?.isValve(dev)
+            ? CS.groupedSensorsForValve(S.spec.devices, dev.id).map((s) => ({ dev: s, x0: s.x ?? 0, y0: s.y ?? 0 }))
+            : [];
+          const linkedValve = CS ? CS.linkedValveOf(S.spec.devices, dev) : null;
+          const cylHome = linkedValve ? CS.sensorHome(S.spec.devices, dev, linkedValve) : null;
+          const wasAtHome = !!cylHome && Math.hypot((dev.x ?? 0) - cylHome.x, (dev.y ?? 0) - cylHome.y) <= 40;
+          S.drag = {
+            kind: "device",
+            dev,
+            x0: dev.x ?? 0,
+            y0: dev.y ?? 0,
+            dx: w.x - (dev.x ?? 0),
+            dy: w.y - (dev.y ?? 0),
+            cylGuests,
+            cylHome,
+            wasAtHome,
+            snapActive: false,
+            snapGhostHtml: "",
+            moved: false,
+            snapshot: currentSnapshot(),
+          };
+        }
         svg.setPointerCapture(e.pointerId);
         render();
         return;
@@ -1620,6 +2406,7 @@
       if (S.drag.kind === "pan") {
         if (!S.drag.panned && Math.hypot(e.clientX - S.drag.sx, e.clientY - S.drag.sy) > 4) S.drag.panned = true;
         S.pan = { x: e.clientX - S.drag.x, y: e.clientY - S.drag.y };
+        S.manualView = true;
         viewFast();
         // La punta del cable en curso sigue al puntero con la vista nueva.
         updateRubber(e);
@@ -1632,14 +2419,76 @@
           S.drag.moved = true;
           renderWires();
         }
+      } else if (S.drag.kind === "devices") {
+        const ddx = snap(w.x - S.drag.dx) - S.drag.ax0;
+        const ddy = snap(w.y - S.drag.dy) - S.drag.ay0;
+        let any = false;
+        for (const it of S.drag.items) {
+          const nx = snap(it.x0 + ddx);
+          const ny = snap(it.y0 + ddy);
+          if (nx !== it.dev.x || ny !== it.dev.y) {
+            it.dev.x = nx;
+            it.dev.y = ny;
+            renderDevice(it.dev);
+            any = true;
+          }
+        }
+        if (any) {
+          S.drag.moved = true;
+          for (const g of S.drag.guestItems) {
+            Object.assign(g.dev, mountPos(g.dev, g.host));
+            renderDevice(g.dev);
+            raiseGuest(g.dev);
+          }
+          for (const cg of S.drag.cylGuestItems ?? []) {
+            cg.dev.x = snap(cg.x0 + ddx);
+            cg.dev.y = snap(cg.y0 + ddy);
+            renderDevice(cg.dev);
+          }
+          for (const it of S.drag.items) if (it.dev.mount && S.drag.movingIds.has(it.dev.mount)) raiseGuest(it.dev);
+          window.JwsimStateDiag?.onSceneDragMove?.(e.clientX, e.clientY, S.drag.anchor?.id);
+          if (!S.wireFrame) {
+            S.wireFrame = requestAnimationFrame(() => {
+              S.wireFrame = 0;
+              renderWires();
+            });
+          }
+        }
       } else {
-        const nx = snap(w.x - S.drag.dx);
-        const ny = snap(w.y - S.drag.dy);
+        let nx = snap(w.x - S.drag.dx);
+        let ny = snap(w.y - S.drag.dy);
+        window.JwsimStateDiag?.onSceneDragMove?.(e.clientX, e.clientY, S.drag.dev?.id);
+        // Imán: cerca de su lugar bajo un anfitrión, el equipo se acopla.
+        const tgt = mountRule(S.drag.dev) ? mountTarget(S.drag.dev, nx, ny) : null;
+        if (tgt) ({ x: nx, y: ny } = tgt.p);
+        S.drag.mountTo = tgt?.h.id ?? null;
         if (nx !== S.drag.dev.x || ny !== S.drag.dev.y) {
           S.drag.dev.x = nx;
           S.drag.dev.y = ny;
           S.drag.moved = true;
           renderDevice(S.drag.dev);
+          if (S.drag.mountTo) raiseGuest(S.drag.dev);
+          for (const g of guestsOf(S.drag.dev.id)) {
+            Object.assign(g, mountPos(g, S.drag.dev));
+            renderDevice(g);
+            raiseGuest(g);
+          }
+          for (const cg of S.drag.cylGuests ?? []) {
+            cg.dev.x = snap(cg.x0 + (nx - S.drag.x0));
+            cg.dev.y = snap(cg.y0 + (ny - S.drag.y0));
+            renderDevice(cg.dev);
+          }
+          if (S.drag.cylHome) {
+            const CS = window.JwsimCylinderSensors;
+            const snapNow = Math.hypot(nx - S.drag.cylHome.x, ny - S.drag.cylHome.y) <= (CS?.GROUP_SNAP_RADIUS ?? 100);
+            S.drag.snapActive = snapNow;
+            if (snapNow && (nx !== S.drag.cylHome.x || ny !== S.drag.cylHome.y)) {
+              const sym = symbolFor(S.drag.dev);
+              S.drag.snapGhostHtml = `<rect x="${S.drag.cylHome.x}" y="${S.drag.cylHome.y}" width="${sym.w}" height="${sym.h}" rx="4" fill="rgba(59,130,246,0.10)" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+            } else {
+              S.drag.snapGhostHtml = "";
+            }
+          }
           // Un trazado por cuadro como máximo.
           if (!S.wireFrame) {
             S.wireFrame = requestAnimationFrame(() => {
@@ -1679,9 +2528,72 @@
       }
       const moved = S.drag?.moved;
       const snapshot = S.drag?.snapshot;
-      if (moved) S.dirty = true;
+      let didMove = moved;
+      const dragDevId = (S.drag?.dev ?? S.drag?.anchor)?.id;
+      const droppedOnDiag = moved && dragDevId && window.JwsimStateDiag?.onSceneDragDrop?.(e.clientX, e.clientY, dragDevId);
+      if (droppedOnDiag) {
+        if (S.drag.kind === "device") {
+          S.drag.dev.x = S.drag.x0;
+          S.drag.dev.y = S.drag.y0;
+          renderDevice(S.drag.dev);
+          for (const g of guestsOf(S.drag.dev.id)) {
+            Object.assign(g, mountPos(g, S.drag.dev));
+            renderDevice(g);
+          }
+          for (const cg of S.drag.cylGuests ?? []) {
+            cg.dev.x = cg.x0;
+            cg.dev.y = cg.y0;
+            renderDevice(cg.dev);
+          }
+        } else if (S.drag.kind === "devices") {
+          for (const it of S.drag.items) {
+            it.dev.x = it.x0;
+            it.dev.y = it.y0;
+            renderDevice(it.dev);
+          }
+          for (const g of S.drag.guestItems) {
+            Object.assign(g.dev, mountPos(g.dev, g.host));
+            renderDevice(g.dev);
+          }
+          for (const cg of S.drag.cylGuestItems ?? []) {
+            cg.dev.x = cg.x0;
+            cg.dev.y = cg.y0;
+            renderDevice(cg.dev);
+          }
+        }
+        didMove = false;
+      } else if (moved && S.drag.kind === "device" && S.drag.cylHome && S.drag.snapActive) {
+        const dev = S.drag.dev;
+        dev.x = S.drag.cylHome.x;
+        dev.y = S.drag.cylHome.y;
+        renderDevice(dev);
+        if (S.drag.wasAtHome && dev.x === S.drag.x0 && dev.y === S.drag.y0) didMove = false;
+      }
+      if (didMove && S.drag.kind === "device" && mountRule(S.drag.dev)) {
+        const dev = S.drag.dev;
+        const was = dev.mount;
+        if (S.drag.mountTo) dev.mount = S.drag.mountTo;
+        else delete dev.mount;
+        if (was !== dev.mount) changed();
+      }
+      if (didMove && S.drag.kind === "devices") {
+        let detached = false;
+        for (const it of S.drag.items) {
+          if (it.dev.mount && !S.drag.movingIds.has(it.dev.mount)) {
+            delete it.dev.mount;
+            detached = true;
+          }
+        }
+        if (detached) changed();
+      }
+      const collapseTo = !moved && S.drag?.kind === "devices" ? S.drag.collapseTo : null;
+      if (didMove) S.dirty = true;
       S.drag = null;
-      if (moved && snapshot) {
+      if (collapseTo) {
+        S.sel = { kind: "device", id: collapseTo };
+        render();
+      }
+      if (didMove && snapshot) {
         S.undoStack.push(snapshot);
         if (S.undoStack.length > 50) S.undoStack.shift();
         S.redoStack.length = 0;
@@ -1703,6 +2615,7 @@
         const z = Math.min(3, Math.max(0.2, S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
         S.pan = { x: mx - ((mx - S.pan.x) * z) / S.zoom, y: my - ((my - S.pan.y) * z) / S.zoom };
         S.zoom = z;
+        S.manualView = true;
         viewFast();
         updateRubber(e);
       },
@@ -1750,7 +2663,7 @@
     // Edición ▸ Cortar (y Ctrl+X si lo atiende el menú).
     window.addEventListener("cut", (e) => {
       if (S.view !== "scene" || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? "")) return;
-      if (S.sel) {
+      if (S.sel && S.sel.kind !== "devices") {
         cut();
         e.preventDefault();
       }
@@ -1810,10 +2723,36 @@
     });
     $("scene-inspector").addEventListener("change", (e) => {
       const el = e.target;
+      if (el.dataset.devRename !== undefined && S.sel?.kind === "device") {
+        const dev = devById(S.sel.id);
+        if (!dev || S.running) return;
+        const res = renameDevice(dev, el.value);
+        if (!res.ok) {
+          const err = $("cyl-id-err");
+          if (err) {
+            err.textContent = res.error;
+            err.hidden = false;
+          }
+          el.value = dev.id;
+        }
+        return;
+      }
       const id = el.dataset.param;
       if (!id || S.sel?.kind !== "device") return;
       const dev = devById(S.sel.id);
+      if (id === "label") {
+        const v = String(el.value ?? "").trim();
+        pushHistory();
+        const nextP = { ...(dev.params ?? {}) };
+        if (v) nextP.label = v;
+        else delete nextP.label;
+        dev.params = nextP;
+        S.keepPane = true;
+        changed();
+        return;
+      }
       const p = S.defs.get(dev.type).parameters.find((x) => x.id === id);
+      if (!p) return;
       setParam(dev, id, p.type === "boolean" ? el.checked : p.type === "number" ? Number(el.value) : el.value);
     });
     $("scene-inspector").addEventListener("click", (e) => {
@@ -1829,16 +2768,128 @@
       (e) => {
         const d = e.target;
         if (!d.classList?.contains("insp-group")) return;
-        if (d.open) S.openGroups.add(d.dataset.group);
-        else S.openGroups.delete(d.dataset.group);
+        // Ajustes y Funcionamiento empiezan abiertos: se recuerda que se cerraron.
+        const k = d.dataset.group;
+        if (k === "__ajustes" || k === "__func") {
+          if (d.open) S.openGroups.delete(`!${k}`);
+          else S.openGroups.add(`!${k}`);
+        } else if (d.open) S.openGroups.add(k);
+        else S.openGroups.delete(k);
       },
       true,
     );
+    // Volver un parámetro a su valor por defecto; acoplar y separar.
+    $("scene-inspector").addEventListener("click", (e) => {
+      const r = e.target.closest("[data-reset],[data-mount],[data-unmount]");
+      if (!r || r.disabled || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (r.dataset.reset) {
+        const p = S.defs.get(dev.type)?.parameters.find((x) => x.id === r.dataset.reset);
+        if (p) setParam(dev, p.id, p.default);
+        return;
+      }
+      pushHistory();
+      if (r.dataset.mount) {
+        dev.mount = r.dataset.mount;
+      } else {
+        const g = devById(r.dataset.unmount);
+        const h = g && devById(g.mount);
+        delete g.mount;
+        // Suelto, a la derecha de su contactor.
+        if (h) Object.assign(g, { x: (h.x ?? 0) + symbolFor(h).w + 80, y: h.y ?? 0 });
+      }
+      S.routeKey = null;
+      changed();
+    });
     // Selectores gráficos de parámetros (bornera del motor trifásico).
     $("scene-inspector").addEventListener("click", (e) => {
       const b = e.target.closest("[data-setparam]");
       if (!b || b.disabled || S.sel?.kind !== "device") return;
       setParam(devById(S.sel.id), b.dataset.setparam, b.dataset.value);
+    });
+    // Configurador de finales de carrera/sensores desde la ficha del cilindro.
+    const syncSensorVersions = () => {
+      for (const d of S.spec.devices) {
+        const v = S.defs.get(d.type)?.version;
+        if (v && !d.version) d.version = v;
+      }
+    };
+    const showCylErr = (msg) => {
+      const el = $("cyl-fc-err");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.hidden = !msg;
+    };
+    const runCylMutation = (fn) => {
+      pushHistory();
+      const res = fn();
+      if (res && res.ok === false) {
+        S.undoStack.pop();
+        updateUndoRedoButtons();
+        showCylErr(res.error);
+        return false;
+      }
+      syncSensorVersions();
+      S.keepPane = true;
+      S.routeKey = null;
+      changed();
+      return true;
+    };
+    $("scene-inspector").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-cyl-pair],[data-cyl-add],[data-cyl-del]");
+      const CS = window.JwsimCylinderSensors;
+      if (!btn || btn.disabled || S.running || !CS || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (!dev) return;
+      const kind = $("cyl-fc-default-kind")?.value || S.cylSensorKind || "compacto";
+      S.cylSensorKind = kind;
+      runCylMutation(() => {
+        if (btn.dataset.cylPair) {
+          CS.addStandardPair(S.spec, btn.dataset.cylPair, kind);
+          return CS.applyKindToValve(S.spec, btn.dataset.cylPair, kind);
+        }
+        if (btn.dataset.cylAdd) CS.addMark(S.spec, btn.dataset.cylAdd, { kind });
+        else if (btn.dataset.cylDel) CS.removeSensor(S.spec, btn.dataset.cylDel);
+        return { ok: true };
+      });
+    });
+    $("scene-inspector").addEventListener("change", (e) => {
+      const CS = window.JwsimCylinderSensors;
+      if (e.target.id === "cyl-fc-default-kind") {
+        const kind = e.target.value;
+        S.cylSensorKind = kind;
+        const dev = S.sel?.kind === "device" ? devById(S.sel.id) : null;
+        if (CS && !S.running && dev && CS.isValve(dev)) {
+          const linked = CS.sensorsForValve(S.spec.devices, dev.id);
+          if (linked.some((s) => s.kind !== kind)) runCylMutation(() => CS.applyKindToValve(S.spec, dev.id, kind));
+        }
+        return;
+      }
+      if (!CS || S.running || S.sel?.kind !== "device") return;
+      const dev = devById(S.sel.id);
+      if (!dev || !CS.isValve(dev)) return;
+      const t = e.target;
+      let sensorId = null;
+      let patch = null;
+      if (t.dataset.cylRename) {
+        sensorId = t.dataset.cylRename;
+        patch = { id: t.value };
+      } else if (t.dataset.cylPos) {
+        sensorId = t.dataset.cylPos;
+        const pos = Number(t.value);
+        if (!Number.isFinite(pos)) {
+          renderSide();
+          return;
+        }
+        patch = { pos };
+      } else if (t.dataset.cylKind) {
+        sensorId = t.dataset.cylKind;
+        patch = { kind: t.value };
+      }
+      if (!sensorId || !patch) return;
+      if (!runCylMutation(() => CS.updateSensorConfig(S.spec, dev.id, sensorId, patch)) && t.dataset.cylRename) {
+        t.value = sensorId;
+      }
     });
     // Fallas (G9): en marcha el inspector se redibuja con cada instantánea;
     // con pointerdown el botón responde aunque se reemplace antes de soltar.
@@ -1902,8 +2953,9 @@
       /* sin caja (vista oculta): basta con los equipos */
     }
     S.zoom = Math.min(2, Math.max(0.2, Math.min((box.width - 40) / (x1 - x0), (box.height - 40) / (y1 - y0))));
-    // Centrado a lo ancho (la escena a todo el ancho deja aire a los lados).
-    S.pan = { x: Math.max(20, (box.width - (x1 - x0) * S.zoom) / 2) - x0 * S.zoom, y: 20 - y0 * S.zoom };
+    // Centrado a lo ancho y a lo alto: al entrar, el esquema entero a la vista.
+    S.pan = { x: Math.max(20, (box.width - (x1 - x0) * S.zoom) / 2) - x0 * S.zoom, y: Math.max(20, (box.height - (y1 - y0) * S.zoom) / 2) - y0 * S.zoom };
+    S.manualView = false;
     render();
   }
 
@@ -2241,6 +3293,7 @@
     document.querySelector(".board-card").classList.toggle("scene-mode", view !== "board");
     window.JwsimTabs?.onView(view);
     window.Jwsim3D?.show(view === "3d");
+    window.JwsimDiag?.onView?.(view);
     // scene3d.js es un módulo: si no carga (falta three.js en la instalación),
     // el aviso de «escena sin planta» engañaba; se dice qué pasa.
     if (view === "3d" && !window.Jwsim3D) {
@@ -2256,6 +3309,10 @@
       if (!S.fitted) {
         S.fitted = true;
         fit();
+        // Los paneles de teoría y reto y el trazado de los cables terminan de
+        // acomodarse después: se vuelve a encuadrar mientras no se haya
+        // movido la vista a mano.
+        for (const ms of [60, 250, 700]) setTimeout(() => S.view === "scene" && !S.manualView && fit(), ms);
       }
       copyTft();
       if (!S.snap && !S.running) analyze();
@@ -2264,9 +3321,10 @@
 
   const Scene = {
     // Escena del proyecto (campo "scene" del .jwsim).
-    load(sc) {
-      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []) };
+    load(sc, { preserveView = false } = {}) {
+      S.spec = { devices: structuredClone(sc?.devices ?? []), wiring: structuredClone(sc?.wiring ?? []), cables: structuredClone(sc?.cables ?? []), ...(sc?.plant3d ? { plant3d: structuredClone(sc.plant3d) } : {}) };
       normalizeCables();
+      S.dirty = false;
       S.undoStack = [];
       S.redoStack = [];
       updateUndoRedoButtons();
@@ -2284,8 +3342,15 @@
       S.fitted = false;
       S.rendered.clear();
       window.JwsimPneu?.onSpec();
-      if (S.spec.devices.length) setView("scene");
-      else if (S.view === "scene") setView("scene");
+      window.JwsimIec?.onSpec();
+      window.JwsimStateDiag?.onSpec?.({ resetProject: true });
+      if (!preserveView) {
+        if (S.spec.devices.length) setView("scene");
+        else if (S.view === "scene") setView("scene");
+      } else {
+        if (S.view === "scene") render(true);
+        else if (S.view === "3d") window.Jwsim3D?.show(true);
+      }
       if (!S.running) analyze();
     },
     // Para correr: solo si hay algo más que la placa sola.
@@ -2297,9 +3362,53 @@
       const sc = cleanSpec();
       return sc.devices.length > 1 || sc.wiring.length ? sc : { devices: [], wiring: [] };
     },
+    isDirty: () => !!S.dirty,
+    markSaved: () => {
+      S.dirty = false;
+    },
     // Entradas de la placa que maneja la escena (la interfaz no las toca).
     // Para la vista 3D: la escena tal como está y si corre la simulación.
     specForView: () => S.spec,
+    /** Nombre del tipo de un equipo («Contactor», «Final de carrera»…). */
+    deviceName: (id) => S.defs.get(devById(id)?.type)?.name ?? "",
+    /** Qué hay en cada E/S del PLC, siguiendo el cableado (tabla de E/S y modo Diagnóstico). */
+    ioMap: () => ioMap(),
+    editCircuit: (op) => editCircuit(op),
+    // Un dato del equipo que no cambia su dibujo (p. ej. los bornes del PLC
+    // que se escriben en el plano IEC). value undefined lo quita. Ctrl+Z deshace.
+    setDeviceParam(id, key, value) {
+      if (S.running) return false;
+      const dev = S.spec.devices.find((d) => d.id === id);
+      if (!dev) return false;
+      pushHistory();
+      const params = { ...(dev.params ?? {}) };
+      if (value === undefined) delete params[key];
+      else params[key] = value;
+      dev.params = params;
+      changed();
+      return true;
+    },
+    // Para el cableado 3D: dónde está cada borne en su símbolo (fracción del
+    // ancho y del alto, y de qué lado sale) y el color de cada cable.
+    terminalOf(end) {
+      const i = end.indexOf(".");
+      const dev = devById(end.slice(0, i));
+      if (!dev) return null;
+      const sym = symbolFor(dev);
+      const p = sym.terms[end.slice(i + 1)];
+      if (!p) return null;
+      return { fx: p[0] / sym.w, fy: p[1] / sym.h, side: sym.sides[end.slice(i + 1)] ?? (p[1] < sym.h / 2 ? "t" : "b") };
+    },
+    // Para la vista 3D: acciones del equipo (pulsar, girar, accionar…), su
+    // estado actual y accionarlas (solo con la simulación en marcha).
+    actionsOf(id) {
+      const dev = devById(id);
+      return dev ? (S.defs.get(dev.type)?.actions ?? []) : [];
+    },
+    actionState: (id, action) => out(id).actions?.[action],
+    act: (id, action, value) => act(id, action, value),
+    running: () => !!S.running,
+    wireHex: (w) => (S.busWires?.has(w) || (!w.color && BUS_POL(termOf(w.from)) && BUS_POL(termOf(w.from)) === BUS_POL(termOf(w.to))) ? busColor(w) : WIRE_COLORS[wireColorName(w)] ?? WIRE_COLORS.negro),
     // Pestañas de la ventana (tabs.js): cambian la vista del panel derecho.
     setView: (v) => setView(v),
     view: () => S.view,
@@ -2312,12 +3421,57 @@
     removeSelected,
     // Vista 3D vacía: agrega un equipo de planta a la escena, a la derecha
     // de lo que ya hay (sin cablear; se cablea en Esquema eléctrico).
-    async addPlant(type) {
+    // Equipo nuevo de planta (o de campo). Desde el armado 3D llega con su
+    // lugar en la planta (p3); en el esquema queda a la derecha, sin cablear.
+    async addPlant(type, p3) {
       if (S.running) return null;
       await loadBoard();
       ensurePlc();
       const right = Math.max(0, ...S.spec.devices.map((d) => (d.x ?? 0) + 400));
-      return addDevice(type, right + 80, 0);
+      const id = addDevice(type, right + 80, 0);
+      if (id && p3) {
+        devById(id).p3 = { ...p3 };
+        changed();
+      }
+      return id;
+    },
+    // Armado 3D: lugar de un equipo en la planta { x, z, r } (m y grados);
+    // null lo devuelve al acomodo automático. Ctrl+Z deshace.
+    place3d(id, p3) {
+      if (S.running) return false;
+      const dev = devById(id);
+      if (!dev) return false;
+      pushHistory();
+      if (p3) dev.p3 = { x: p3.x, z: p3.z, ...(p3.r ? { r: p3.r } : {}) };
+      else delete dev.p3;
+      changed();
+      return true;
+    },
+    // Armado 3D: piezas de ambiente, lugar del tablero y rejilla. fn recibe
+    // una copia de scene.plant3d y la devuelve cambiada. Ctrl+Z deshace.
+    editPlant3d(fn) {
+      if (S.running) return false;
+      pushHistory();
+      S.spec.plant3d = fn(structuredClone(S.spec.plant3d ?? {})) ?? {};
+      changed();
+      return true;
+    },
+    // «Acomodo automático»: equipos y tablero vuelven a su lugar calculado
+    // (las piezas de ambiente se quedan). Un solo paso de Ctrl+Z.
+    resetPlant3d() {
+      if (S.running) return false;
+      pushHistory();
+      for (const d of S.spec.devices) delete d.p3;
+      if (S.spec.plant3d) delete S.spec.plant3d.panel;
+      changed();
+      return true;
+    },
+    // Quita un equipo (y sus cables), como Supr en el esquema.
+    removeDevice(id) {
+      if (S.running || !devById(id) || devById(id).type === "jwsim/jwplc-basic") return false;
+      S.sel = { kind: "device", id };
+      removeSelected();
+      return true;
     },
     isRunning: () => S.running,
     // Gestor de dispositivos: vuelve a leer definiciones y símbolos (sin reiniciar).
@@ -2339,7 +3493,9 @@
       const run = kind === "running" || kind === "paused" || kind === "break";
       if (run === S.running) return;
       S.running = run;
+      if (!run) window.JwsimDiag?.onStop?.();
       updateUndoRedoButtons();
+      window.Jwsim3D?.onRun?.();
       if (!run) analyze();
       render(true);
     },
@@ -2366,15 +3522,24 @@
         return { x: r.left + S.pan.x + x * S.zoom, y: r.top + S.pan.y + y * S.zoom };
       },
       wire: (a, b) => addWire(a, b),
+      arrange: () => arrange(),
       act: (id, action, value) => act(id, action, value),
       view3d: () => window.Jwsim3D?.objects() ?? [],
+      // Encuadre: zoom y punto de la escena que queda arriba a la izquierda.
+      camera: (zoom, x, y) => {
+        S.manualView = true;
+        S.zoom = zoom;
+        S.pan = { x: -x * zoom, y: -y * zoom };
+        commitView();
+      },
       fps3d: () => window.Jwsim3D?.fps() ?? 0,
       spec: () => cleanSpec(),
       snapshot: () => S.snap,
       cables: () => structuredClone(cablesOf()),
       group: (indices) => groupWires(indices),
       select: (id) => {
-        S.sel = typeof id === "number" ? { kind: "wire", id } : String(id).startsWith("cable:") ? { kind: "cable", id: id.slice(6) } : { kind: "device", id };
+        if (Array.isArray(id)) setSelectedDevices(id);
+        else S.sel = id == null ? null : typeof id === "number" ? { kind: "wire", id } : String(id).startsWith("cable:") ? { kind: "cable", id: id.slice(6) } : { kind: "device", id };
         render();
       },
       analyze: () => analyze(),
@@ -2438,6 +3603,10 @@
     $("scene-undo")?.addEventListener("click", () => undo());
     $("scene-redo")?.addEventListener("click", () => redo());
     $("scene-fit").addEventListener("click", fit);
+    $("scene-arrange")?.addEventListener("click", async () => {
+      const r = await arrange();
+      if (r?.error) console.warn(r.error);
+    });
     $("scene-rearm").addEventListener("click", () => api.sceneRearm());
     api.onSceneSnapshot((snap) => {
       // Relés y contactores externos: clic al atraer y al soltar.
@@ -2455,9 +3624,14 @@
           S.dirty = true;
         }
       }
+      // Modo Diagnóstico: la falla de la orden de trabajo no se delata.
+      snap = window.JwsimDiag?.filter?.(snap) ?? snap;
       S.snap = snap;
+      window.JwsimDiag?.onSnapshot?.(snap);
       window.Jwsim3D?.onSnapshot(snap);
       window.JwsimPneu?.onSnapshot(snap);
+      window.JwsimIec?.onSnapshot(snap);
+      window.JwsimStateDiag?.onSnapshot?.(snap, S.running);
       render();
     });
     const sound = $("scene-sound");
@@ -2472,7 +3646,9 @@
     window.JwsimSound?.onChange(paintSound);
     paintSound();
     api.onDisplay(() => requestAnimationFrame(copyTft));
-    new ResizeObserver(() => S.view === "scene" && !S.fitted && fit()).observe($("scene-svg"));
+    // Mientras no se movió la vista a mano, el esquema sigue encuadrado si
+    // cambia el espacio (paneles que se abren o pliegan, ventana).
+    new ResizeObserver(() => S.view === "scene" && (!S.fitted || !S.manualView) && fit()).observe($("scene-svg"));
   }
 
   init();

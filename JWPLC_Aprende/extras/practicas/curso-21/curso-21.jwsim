@@ -1,0 +1,120 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 21 · El reloj: encender por horario",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/El_reloj/El_reloj.ino"
+  },
+  "exercise": {
+    "lesson": "curso-21",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/El_reloj",
+    "brief": {
+      "goal": "Un aviso previo de 5 segundos antes de encender, y la vitrina apagada el fin de semana.",
+      "steps": [
+        "Ejecuta el ejemplo: en esta práctica el reloj arranca a las 17:59:50 de un martes.",
+        "Los 5 s antes de las 18:00:00, H1 (Q0.1) parpadea; a las 18:00:00 se apaga y enciende KM1.",
+        "Sábado y domingo no enciende: escribe «Fin de semana: alumbrado apagado». dayOfWeek() da 1 el domingo y 7 el sábado."
+      ],
+      "uses": [
+        "Q0_0 · KM1, alumbrado",
+        "Q0_1 · H1, aviso"
+      ],
+      "teaches": "JWPLC_Time da la hora del RTC; pasar la hora a segundos del día vuelve una comparación de horarios en una de números."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1,
+    "rtc": "fijo:2026-11-24T17:59:50"
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 700
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "amarillo",
+          "label": "Aviso"
+        },
+        "x": 560,
+        "y": 700
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1",
+        "color": "negro"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

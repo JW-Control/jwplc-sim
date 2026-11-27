@@ -1,0 +1,167 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Llenado de tanque por niveles",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.13"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/bomba_niveles/bomba_niveles.ino"
+  },
+  "exercise": {
+    "level": 2,
+    "statement": "./ENUNCIADO.md",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/bomba_niveles",
+    "brief": {
+      "goal": "Mantener un tanque entre dos niveles: la bomba arranca bajo B1 y para en B2.",
+      "steps": [
+        "Arranca la bomba cuando el agua baje de B1.",
+        "Mantenla hasta llegar a B2 (histéresis).",
+        "Con el tanque lleno vaciándose, no arranques hasta bajar de B1.",
+        "H1 encendido con el agua bajo B1."
+      ],
+      "teaches": "Histéresis entre dos sensores.",
+      "uses": [
+        "I0_0 · B1, interruptor de nivel bajo: Cerrado: hay agua a la altura de B1",
+        "I0_1 · B2, interruptor de nivel alto: Cerrado: tanque lleno",
+        "Q0_0 · KM1, contactor: Bomba M1 (230 VAC)",
+        "Q0_1 · H1, piloto rojo: Tanque bajo"
+      ]
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 240,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/limit-switch",
+        "x": 820,
+        "y": 0
+      },
+      {
+        "id": "B2",
+        "type": "jwsim/limit-switch",
+        "x": 1020,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 1300,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Tanque bajo"
+        },
+        "x": 1560,
+        "y": 0
+      },
+      {
+        "id": "L1",
+        "type": "jwsim/power-230vac",
+        "x": 0,
+        "y": 440
+      },
+      {
+        "id": "M1",
+        "type": "jwsim/motor",
+        "x": 1240,
+        "y": 420
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13"
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B2.13"
+      },
+      {
+        "from": "B2.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V2"
+      },
+      {
+        "from": "L1.L",
+        "to": "KM1.1"
+      },
+      {
+        "from": "KM1.2",
+        "to": "M1.U1"
+      },
+      {
+        "from": "M1.U2",
+        "to": "L1.N"
+      }
+    ]
+  }
+}

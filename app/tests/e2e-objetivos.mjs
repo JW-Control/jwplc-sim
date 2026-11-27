@@ -51,7 +51,7 @@ const run = async () => {
 };
 
 try {
-  await until(() => win.$$eval("#sel-exercise option", (o) => o.filter((x) => x.value).length), 10000);
+  await until(() => win.evaluate(() => window.jwsimTest.exercises().length), 10000);
   await t(() => window.jwsimTest.pickExercise("01-marcha-parada"));
   await until(() => win.$eval("#ex-goals", (e) => !e.hidden), 10000);
   const ids = await win.$$eval("#ex-goals .goal", (l) => l.map((x) => x.dataset.goal));
@@ -59,7 +59,7 @@ try {
   criteria.GOALS_SHOWN = { ok: ids.join() === "arranca,piloto,para,rearranca" && merit === "Mérito", ids, merit };
   log(`GOALS_SHOWN ${JSON.stringify(criteria.GOALS_SHOWN)}`);
 
-  const sol = readFileSync(join(ROOT, "exercises", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
+  const sol = readFileSync(join(ROOT, "JWPLC_Aprende", "extras", "retos", "01-marcha-parada", "solucion", "marcha_parada", "marcha_parada.ino"), "utf8");
   await t((x) => window.jwsimTest.setSource(x), sol);
   const running = await run();
   await win.waitForTimeout(800);
@@ -86,7 +86,7 @@ try {
   const count = await win.$eval("#ex-goals .goals-count", (e) => e.textContent);
   await win.waitForTimeout(1000);
   await win.$eval("#ex-goals", (e) => e.scrollIntoView());
-  await (await win.$("#scene-side")).screenshot({ path: join(OUT, "02-completado.png") });
+  await (await win.$("#prog-side")).screenshot({ path: join(OUT, "02-completado.png") });
   criteria.GOALS_COMPLETE = { ok: /Reto completado/.test(banner ?? "") && count === "3/3" && (await state("rearranca")) !== "done", count };
   log(`GOALS_COMPLETE ${JSON.stringify(criteria.GOALS_COMPLETE)}`);
 

@@ -109,7 +109,7 @@
   function render() {
     const s = st.spec;
     el().innerHTML =
-      `<header class="ce-head"><span class="start-logo">JW</span><b>Editor de componentes</b>` +
+      `<header class="ce-head"><img class="app-logo" src="../icon/icon.svg" alt="" width="24" height="24"/><b>Editor de componentes</b>` +
       `<label class="ce-f">Nombre <input data-path="name" value="${esc(s.name)}" size="20"></label>` +
       `<label class="ce-f">Autor <input data-meta="author" value="${esc(s.type.split("/")[0])}" size="12" placeholder="utec"></label>` +
       `<label class="ce-f">Id <input data-meta="id" value="${esc(s.type.split("/")[1] ?? "")}" size="14"></label>` +
@@ -934,7 +934,8 @@
     const W = cv.width;
     const H = cv.height;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#10151b";
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--surface-deep").trim() || "#10151b";
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     const h = st.bench.hist;
     const keys = st.bench.watch;

@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-05",
+  "goals": [
+    {
+      "id": "cruce_a",
+      "description": "I0.0 manda Q0.7 (y no Q0.0)",
+      "when": {
+        "I0_0": 1,
+        "I0_7": 0,
+        "Q0_7": 1,
+        "Q0_0": 0
+      },
+      "hold_ms": 600,
+      "hint": "for (uint8_t i = 0; i < 8; i++) digitalWrite(Q0_X[7 - i], bitRead(entradas, i));"
+    },
+    {
+      "id": "cruce_b",
+      "description": "I0.7 manda Q0.0 (y no Q0.7)",
+      "when": {
+        "I0_7": 1,
+        "I0_0": 0,
+        "Q0_0": 1,
+        "Q0_7": 0
+      },
+      "hold_ms": 600
+    },
+    {
+      "id": "cuenta",
+      "description": "El Monitor Serie muestra «Activas: N»",
+      "console": "^Activas:\\s*\\d+\\s*$",
+      "hint": "Suma bitRead(entradas, i) en una variable dentro del for.",
+      "why": "Contar bits es la base para saber cuántos sensores están activos."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Cruce y cuenta",
+      "until_ms": 4000,
+      "actions": [
+        {
+          "at_ms": 1200,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2300,
+          "device": "SA3",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 2300,
+          "device": "SA6",
+          "action": "position",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "I0.0 cierra Q0.7",
+          "points": 2,
+          "from_ms": 1200,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_7": 1,
+            "Q0_0": 0
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "I0.2 e I0.5 cierran Q0.5 y Q0.2",
+          "points": 2,
+          "from_ms": 2300,
+          "to_ms": 3100,
+          "eventually": {
+            "Q0_5": 1,
+            "Q0_2": 1,
+            "Q0_7": 1
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Muestra «Activas: 1» con una entrada",
+          "points": 1,
+          "from_ms": 1200,
+          "to_ms": 2300,
+          "console": "^Activas:\\s*1\\s*$"
+        },
+        {
+          "description": "Muestra «Activas: 3» con tres entradas",
+          "points": 2,
+          "from_ms": 2300,
+          "to_ms": 4000,
+          "console": "^Activas:\\s*3\\s*$"
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Los dos cruces",
+      "until_ms": 6000,
+      "actions": [
+        {
+          "at_ms": 1000,
+          "device": "SA8",
+          "action": "position",
+          "value": 1
+        },
+        {
+          "at_ms": 3000,
+          "device": "SA8",
+          "action": "position",
+          "value": 0
+        },
+        {
+          "at_ms": 3500,
+          "device": "SA1",
+          "action": "position",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

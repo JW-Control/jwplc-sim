@@ -1,0 +1,188 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-29",
+  "goals": [
+    {
+      "id": "edita",
+      "description": "Ajusta el tiempo: OK, UP y OK: «Tiempo: 25 s»",
+      "console": "Tiempo: 25 s",
+      "hint": "En la pestaña Placa: OK (Enter), UP (flecha arriba) y OK."
+    },
+    {
+      "id": "mezcla",
+      "description": "MARCHA mezcla el tiempo ajustado",
+      "console": "Mezclando \\d+ s",
+      "after": "edita"
+    },
+    {
+      "id": "recupera",
+      "description": "Al volver a ejecutar: «Recuperado: 25 s»",
+      "console": "Recuperado: \\d+ s",
+      "hint": "Al confirmar con OK, guarda con JWPLC_FRAM.writeBlock(); en setup(), léelo con readBlock() y verifica que esté entre 5 y 60 antes de usarlo.",
+      "why": "El operador ajusta una vez; un corte de energía no le borra el trabajo."
+    },
+    {
+      "id": "bloquea",
+      "description": "Con la mezcladora en marcha, OK: «Detén la mezcladora para ajustar»",
+      "console": "Detén la mezcladora para ajustar",
+      "hint": "Al apretar OK sin estar editando, si motor es true, escribe el aviso y no entres a editar."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Ajuste y corte de energía",
+      "state": "fram",
+      "until_ms": 4500,
+      "stim": [
+        "1500 BTN_OK=1",
+        "1650 BTN_OK=0",
+        "2000 BTN_UP=1",
+        "2150 BTN_UP=0",
+        "2400 BTN_UP=1",
+        "2550 BTN_UP=0",
+        "2800 BTN_OK=1",
+        "2950 BTN_OK=0"
+      ],
+      "actions": [],
+      "checks": [
+        {
+          "description": "OK, UP, UP y OK: «Tiempo: 30 s»",
+          "points": 2,
+          "console": "Tiempo: 30 s"
+        }
+      ]
+    },
+    {
+      "name": "Al volver la energía",
+      "state": "fram",
+      "until_ms": 34000,
+      "stim": [],
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Recupera el tiempo de la FRAM: «Recuperado: 30 s»",
+          "points": 5,
+          "console": "Recuperado: 30 s"
+        },
+        {
+          "description": "Mezcla con el tiempo recuperado",
+          "points": 2,
+          "console": "Mezclando 30 s"
+        },
+        {
+          "description": "La mezcladora marcha 30 s",
+          "points": 3,
+          "from_ms": 1500,
+          "to_ms": 2000,
+          "eventually": {
+            "Q0_0": 1
+          },
+          "for_ms": 29000
+        },
+        {
+          "description": "Y para sola",
+          "points": 1,
+          "from_ms": 32000,
+          "to_ms": 34000,
+          "never": {
+            "Q0_0": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sin editar en marcha",
+      "until_ms": 5000,
+      "stim": [
+        "2500 BTN_OK=1",
+        "2650 BTN_OK=0",
+        "3000 BTN_UP=1",
+        "3150 BTN_UP=0",
+        "3500 BTN_OK=1",
+        "3650 BTN_OK=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "Avisa «Detén la mezcladora para ajustar»",
+          "points": 3,
+          "console": "Detén la mezcladora para ajustar"
+        },
+        {
+          "description": "En marcha no entra a editar",
+          "points": 2,
+          "console": "Editando",
+          "count": [
+            0,
+            0
+          ]
+        },
+        {
+          "description": "Y el tiempo no cambia",
+          "points": 2,
+          "console": "Tiempo: 25 s",
+          "count": [
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Demostración",
+      "until_ms": 12000,
+      "stim": [
+        "1500 BTN_OK=1",
+        "1650 BTN_OK=0",
+        "2000 BTN_UP=1",
+        "2150 BTN_UP=0",
+        "2400 BTN_UP=1",
+        "2550 BTN_UP=0",
+        "2800 BTN_OK=1",
+        "2950 BTN_OK=0"
+      ],
+      "actions": [
+        {
+          "at_ms": 4000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 4200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

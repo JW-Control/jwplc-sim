@@ -44,10 +44,19 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
-# Ejercicios (G9): MIT, para que alumnos y docentes copien plantillas,
-# soluciones y rúbricas sin atar su trabajo a la GPL.
+# Texturas de Open Industry Project (planta 3D, cinta con física): MIT, de
+# sus autores. Ver app/renderer/assets/oip/LEEME.md.
 [[annotations]]
-path = ["exercises/**"]
+path = ["app/renderer/assets/oip/*.jpg", "app/renderer/assets/oip/*.webp"]
+precedence = "override"
+SPDX-FileCopyrightText = "2024-present Automation Standard LLC and Contributors"
+SPDX-License-Identifier = "MIT"
+
+# Material de aprendizaje (JWPLC_Aprende: curso, retos, arquitecturas e
+# imágenes): MIT, para que alumnos y docentes copien plantillas, soluciones y
+# rúbricas sin atar su trabajo a la GPL.
+[[annotations]]
+path = ["JWPLC_Aprende/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 JW Control"
 SPDX-License-Identifier = "MIT"

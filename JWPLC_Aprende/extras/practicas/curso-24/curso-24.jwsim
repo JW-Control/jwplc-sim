@@ -1,0 +1,286 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 24 · El escaneo de E/S: las 8 entradas de una vez",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.17"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/El_escaneo_de_E_S/El_escaneo_de_E_S.ino"
+  },
+  "exercise": {
+    "lesson": "curso-24",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/El_escaneo_de_E_S",
+    "brief": {
+      "goal": "Medir cuánto estuvo activa cada entrada y detectar los dos finales de carrera a la vez.",
+      "steps": [
+        "Ejecuta el ejemplo y aprieta las entradas: cada cambio sale en Serie y en las lámparas.",
+        "Al soltar una entrada, escribe cuánto estuvo activa con un decimal: «I0.1 estuvo 1.2 s».",
+        "Si B1 (I0.2) y B2 (I0.3) están activos a la vez, H5 (Q0.4) se enciende y escribe «Error: B1 y B2 a la vez»."
+      ],
+      "uses": [
+        "I0_0 a I0_3 · S1, S2, B1, B2",
+        "Q0_0 a Q0_3 · H1 a H4",
+        "Q0_4 · H5, error"
+      ],
+      "teaches": "JWPLC_IO.inputs() da las 8 entradas en un byte; con & (máscara) y ^ (cambios) se revisan todas de una sola vez."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Entrada 0"
+        },
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Entrada 1"
+        },
+        "x": 480,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "negro",
+          "label": "Final izq."
+        },
+        "x": 680,
+        "y": 0
+      },
+      {
+        "id": "B2",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "negro",
+          "label": "Final der."
+        },
+        "x": 880,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.0"
+        },
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H2",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.1"
+        },
+        "x": 480,
+        "y": 1060
+      },
+      {
+        "id": "H3",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.2"
+        },
+        "x": 680,
+        "y": 1060
+      },
+      {
+        "id": "H4",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Q0.3"
+        },
+        "x": 880,
+        "y": 1060
+      },
+      {
+        "id": "H5",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Error"
+        },
+        "x": 1080,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC",
+        "color": "rojo"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1",
+        "color": "azul"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_0",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "S2.14",
+        "to": "plc.I0_1",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "B1.14",
+        "to": "plc.I0_2",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B2.13",
+        "color": "rojo",
+        "ref": true
+      },
+      {
+        "from": "B2.14",
+        "to": "plc.I0_3",
+        "color": "negro"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H2.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H2.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_2.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_2.2",
+        "to": "H3.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H3.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_3.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_3.2",
+        "to": "H4.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H4.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_4.1",
+        "color": "rojo"
+      },
+      {
+        "from": "plc.Q0_4.2",
+        "to": "H5.X1",
+        "color": "negro"
+      },
+      {
+        "from": "H5.X2",
+        "to": "PS1.-V1",
+        "color": "azul",
+        "ref": true
+      }
+    ]
+  }
+}

@@ -31,6 +31,48 @@
       "items": {
         "$ref": "#/$defs/case"
       }
+    },
+    "goal_runs": {
+      "description": "Corridas de demostración para comprobar que la solución cumple los objetivos en vivo (scripts/gate-objetivos.mjs): como un caso, pero sin verificaciones. Cada una empieza con los objetivos en cero.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "until_ms"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "until_ms": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "actions": {
+            "type": "array"
+          },
+          "faults": {},
+          "stim": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "$defs": {
@@ -69,6 +111,18 @@
           "items": {
             "$ref": "#/$defs/check"
           }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Opciones extra del runner para este caso, p. ej. [\"--rtc\", \"fijo:2026-11-28T17:59:50\"]."
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Memoria no volátil compartida (FRAM, SD, RTC) entre los casos con el mismo nombre, en orden: cada caso es un nuevo encendido."
         }
       }
     },
@@ -78,7 +132,7 @@
         "description"
       ],
       "additionalProperties": false,
-      "description": "Una sola de expect (con at_ms), always/never/eventually (con from_ms y to_ms), console o no_faults.",
+      "description": "Una sola de expect (con at_ms), always/never/eventually (con from_ms y to_ms), console, no_faults, period o responds.",
       "properties": {
         "description": {
           "type": "string"
@@ -116,8 +170,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "always": {
@@ -127,8 +188,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "never": {
@@ -138,8 +206,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "eventually": {
@@ -149,8 +224,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "console": {
@@ -160,6 +242,95 @@
         "no_faults": {
           "const": true,
           "description": "Sin fallas eléctricas de la escena (cortocircuito, sobretensión)."
+        },
+        "period": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Señal (Q0_k, I0_k, <equipo>.<salida>)"
+            },
+            {
+              "type": "object",
+              "required": [
+                "console"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "console": {
+                  "type": "string",
+                  "description": "Expresión regular sobre las líneas de la consola"
+                }
+              }
+            }
+          ],
+          "description": "La señal (o la línea de la consola) se repite con un ritmo: cycle_ms, on_ms y/o off_ms."
+        },
+        "cycle_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "on_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "off_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "cycles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Con period: cuántos ciclos seguidos (los últimos del intervalo)."
+        },
+        "responds": {
+          "type": "object",
+          "required": [
+            "when",
+            "expect"
+          ],
+          "additionalProperties": false,
+          "description": "Cada vez que 'when' pasa a cumplirse, 'expect' se cumple dentro de within_ms.",
+          "properties": {
+            "when": {
+              "type": "object",
+              "minProperties": 1
+            },
+            "expect": {
+              "type": "object",
+              "minProperties": 1
+            }
+          }
+        },
+        "within_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "count": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Con 'console': cuántas líneas deben coincidir, [min, max]; [0, 0] = ninguna."
         }
       },
       "oneOf": [
@@ -193,6 +364,17 @@
           "required": [
             "no_faults"
           ]
+        },
+        {
+          "required": [
+            "period"
+          ]
+        },
+        {
+          "required": [
+            "responds",
+            "within_ms"
+          ]
         }
       ]
     },
@@ -200,8 +382,7 @@
       "type": "object",
       "required": [
         "id",
-        "description",
-        "when"
+        "description"
       ],
       "additionalProperties": false,
       "properties": {
@@ -250,8 +431,163 @@
             "merit",
             "distinction"
           ]
+        },
+        "console": {
+          "type": "string",
+          "description": "Expresión regular: una línea del Monitor Serie que coincide."
+        },
+        "period": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Señal (Q0_k, I0_k, <equipo>.<salida>)"
+            },
+            {
+              "type": "object",
+              "required": [
+                "console"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "console": {
+                  "type": "string",
+                  "description": "Expresión regular sobre las líneas de la consola"
+                }
+              }
+            }
+          ],
+          "description": "Ritmo de una señal o de una línea de la consola; con cycle_ms, on_ms u off_ms."
+        },
+        "cycle_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "on_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "off_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms"
+        },
+        "cycles": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Ciclos (period, 3 por defecto) o veces seguidas (delay, 1 por defecto)"
+        },
+        "hint": {
+          "type": "string",
+          "description": "Pista que el alumno puede abrir mientras no lo logra."
+        },
+        "why": {
+          "type": "string",
+          "description": "Qué enseña; se muestra al lograrlo."
+        },
+        "delay": {
+          "type": "object",
+          "required": [
+            "from",
+            "to"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "description": "Señal → valor (igualdad) o [min, max] (rango cerrado). Claves: I0_k, Q0_k, <equipo>.<salida>.",
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": [
+                      "boolean",
+                      "number"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                ]
+              }
+            },
+            "to": {
+              "description": "Señal → valor (igualdad) o [min, max] (rango cerrado). Claves: I0_k, Q0_k, <equipo>.<salida>.",
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": [
+                      "boolean",
+                      "number"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Retardo: desde que 'from' empieza a cumplirse hasta que se cumple 'to' (temporizadores); con delay_ms."
+        },
+        "delay_ms": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] en ms del retardo"
         }
-      }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "when"
+          ]
+        },
+        {
+          "required": [
+            "console"
+          ]
+        },
+        {
+          "required": [
+            "period"
+          ]
+        },
+        {
+          "required": [
+            "delay"
+          ]
+        }
+      ]
     }
   }
 }

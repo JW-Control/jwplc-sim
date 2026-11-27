@@ -7,6 +7,7 @@
 //   vpp/                        VPP del JWPLC Basic en PLATFORM_VPP_SHA del editor
 //   deps/node_modules/          STruC++ y las dependencias exactas del editor
 //   deps/pipeline.cjs           el pipeline del editor empaquetado con esbuild
+//   deps/ladder-ops.cjs         sus operaciones de peldaño Ladder (editor del Sim)
 //   ready.json                  versiones de todo lo anterior
 //
 // Uso:
@@ -89,7 +90,16 @@ export async function resolveEditor({ fetch = true } = {}) {
   const readyFile = join(dir, "ready.json");
   if (existsSync(readyFile)) {
     const ready = JSON.parse(readFileSync(readyFile, "utf8"));
-    if (ready.editorCommit === lock.OPENPLC_EDITOR_COMMIT && ready.platform === process.platform && ready.entry === ENTRY) return { dir, lock, ready };
+    if (ready.editorCommit === lock.OPENPLC_EDITOR_COMMIT && ready.platform === process.platform && ready.entry === ENTRY) {
+      // Las operaciones Ladder se agregaron después: se empaquetan sin volver
+      // a descargar nada si faltan o cambió lo que exportan.
+      if (existsSync(join(dir, "editor", "src")) && existsSync(LADDER_OPS) && ready.ladderOps !== ladderOpsHash()) {
+        await buildLadderOps(dir);
+        ready.ladderOps = ladderOpsHash();
+        writeFileSync(readyFile, JSON.stringify(ready, null, 2) + "\n");
+      }
+      return { dir, lock, ready };
+    }
   }
   if (!fetch) throw new Error("Cadena del editor OpenPLC no descargada. Ejecute: node scripts/fetch-editor.mjs");
 
@@ -141,6 +151,8 @@ export async function resolveEditor({ fetch = true } = {}) {
     logLevel: "error",
   });
 
+  await buildLadderOps(dir);
+
   const ready = {
     editorRef: lock.OPENPLC_EDITOR_REF,
     editorCommit: lock.OPENPLC_EDITOR_COMMIT,
@@ -150,14 +162,56 @@ export async function resolveEditor({ fetch = true } = {}) {
     platform: process.platform,
   };
   ready.entry = ENTRY; // Si cambia lo exportado, hay que volver a empaquetar.
+  ready.ladderOps = ladderOpsHash();
   writeFileSync(readyFile, JSON.stringify(ready, null, 2) + "\n");
   return { dir, lock, ready };
+}
+
+// Operaciones de peldaño del editor (ladder-utils: agregar, borrar,
+// placeholders, reacomodar) empaquetadas sin React, para que el editor Ladder
+// del Sim produzca exactamente lo mismo que el OpenPLC Editor.
+const LADDER_OPS = join(ROOT, "scripts", "ladder-ops");
+const SHIMS = { "@xyflow/react": "xyflow.js", react: "react.js", "react/jsx-runtime": "react.js", uuid: "uuid.js", clsx: "clsx.js", "tailwind-merge": "twmerge.js", lodash: "lodash.js" };
+function ladderOpsHash() {
+  const h = createHash("sha256").update(readFileSync(join(LADDER_OPS, "entry.ts")));
+  for (const f of Object.values(SHIMS).sort()) h.update(readFileSync(join(LADDER_OPS, "shims", f)));
+  h.update(readFileSync(join(LADDER_OPS, "shims", "toast.js"))).update(readFileSync(join(LADDER_OPS, "shims", "tr.js")));
+  return h.digest("hex").slice(0, 16);
+}
+async function buildLadderOps(dir) {
+  const deps = join(dir, "deps");
+  const esbuild = createRequire(join(deps, "package.json"))("esbuild");
+  const shim = (f) => join(LADDER_OPS, "shims", f);
+  await esbuild.build({
+    entryPoints: [join(LADDER_OPS, "entry.ts")],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    outfile: join(deps, "ladder-ops.cjs"),
+    tsconfig: join(dir, "tsconfig.json"),
+    alias: Object.fromEntries(Object.entries(SHIMS).map(([k, f]) => [k, shim(f)])),
+    jsx: "automatic",
+    plugins: [
+      {
+        name: "jwsim-shims",
+        setup(b) {
+          b.onResolve({ filter: /utils\/toast$/ }, () => ({ path: shim("toast.js") }));
+          b.onResolve({ filter: /locales\/tr$/ }, () => ({ path: shim("tr.js") }));
+          b.onResolve({ filter: /\.(svg|png|css)$/ }, (a) => ({ path: a.path, namespace: "stub" }));
+          b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({ contents: "export default ''", loader: "js" }));
+        },
+      },
+    ],
+    nodePaths: [join(deps, "node_modules")],
+    logLevel: "error",
+  });
 }
 
 // Rutas de lo que usa cli/lib/openplc.mjs.
 export function editorPaths(dir) {
   return {
     pipeline: join(dir, "deps", "pipeline.cjs"),
+    ladderOps: join(dir, "deps", "ladder-ops.cjs"),
     sources: join(dir, "editor", "resources", "sources"),
     vpp: join(dir, "platform", VPP_PATH),
     strucpp: join(dir, "deps", "node_modules", "strucpp"),

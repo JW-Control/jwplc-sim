@@ -5,14 +5,20 @@
 // frío en Windows pueden durar decenas de segundos y congelarían la ventana.
 import { parentPort } from "node:worker_threads";
 
-import { buildSketch } from "../../cli/lib/build.mjs";
+import { buildSketch, killBuildProcesses } from "../../cli/lib/build.mjs";
 import { buildOpenPlcProject, isOpenPlcProject } from "../../cli/lib/openplc.mjs";
 
-parentPort.on("message", async ({ id, dir, outDir }) => {
+parentPort.on("message", async ({ id, dir, outDir, options = {}, abort }) => {
+  // Al cerrar la app: cortar los compiladores en curso antes de terminar.
+  if (abort) {
+    killBuildProcesses();
+    parentPort.postMessage({ aborted: true });
+    return;
+  }
   try {
     const log = (line) => parentPort.postMessage({ id, log: line });
     // Proyecto del OpenPLC Editor: cadena del editor y luego el sketch (G6).
-    const { exe, libraries, openplc } = isOpenPlcProject(dir) ? await buildOpenPlcProject(dir, { outDir, log }) : await buildSketch(dir, { outDir, log });
+    const { exe, libraries, openplc } = isOpenPlcProject(dir) ? await buildOpenPlcProject(dir, { outDir, log }) : await buildSketch(dir, { ...options, outDir, log });
     parentPort.postMessage({ id, done: { ok: true, exe, libraries, openplc } });
   } catch (err) {
     parentPort.postMessage({ id, done: { ok: false, message: err.message, diagnostics: err.diagnostics ?? [], output: err.output ?? "" } });
