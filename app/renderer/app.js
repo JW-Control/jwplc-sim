@@ -814,6 +814,7 @@ function renderPlcDiagram(name) {
   const box = $("plc-diagram");
   const diagram = isDiagramFile(name);
   const show = diagram && !state.plcText;
+  ldEditSync(name, show && /\.ld$/i.test(name));
   box.hidden = !diagram;
   box.classList.toggle("as-text", diagram && !!state.plcText);
   $("plc-diagram-body").hidden = !show;
@@ -828,7 +829,8 @@ function renderPlcDiagram(name) {
     const text = state.models.get(name)?.getValue() ?? "";
     const ld = /\.ld$/i.test(name);
     state.ldView = ld ? text : null;
-    $("plc-diagram-body").innerHTML = ld ? window.JwsimPlcDiagram.ladderView(text) : window.JwsimPlcDiagram.fbdSvg(text);
+    // Ladder: vista o modo edición (ladder-edit.js).
+    $("plc-diagram-body").innerHTML = ld ? ldHtml(text) : window.JwsimPlcDiagram.fbdSvg(text);
     $("plc-diagram-body").classList.toggle("is-ladder", ld);
     fitPlcDiagram();
     paintPlcDiagram();
@@ -972,7 +974,8 @@ async function deleteSketchFile(name, { ask = true } = {}) {
 
 async function saveSketch() {
   if (!state.sketch) return;
-  const files = [...state.models].filter(([name]) => !isReadOnlyFile(name)).map(([name, m]) => ({ name, content: m.getValue() }));
+  // Los .ld se guardan también: se editan en el editor Ladder del Sim.
+  const files = [...state.models].filter(([name, m]) => !isReadOnlyFile(name) || (/\.ld$/i.test(name) && m.getValue() !== state.saved.get(name))).map(([name, m]) => ({ name, content: m.getValue() }));
   if (!files.length) return;
   await api.save({ dir: state.sketch.dir, files });
   for (const f of files) state.saved.set(f.name, f.content);

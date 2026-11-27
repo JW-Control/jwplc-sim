@@ -7306,3 +7306,121 @@ html.booting body {
 .ld-el.forced-0 .ld-stroke { stroke: #4080ff; }
 .ld-el.forced-0 .ld-fill { fill: #4080ff; }
 .ld-el.forced .ld-hit { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 2; }
+
+/* ---- Editor Ladder del Sim (ladder-edit.js): caja de elementos,
+   placeholders en rombo y selección, como el OpenPLC Editor. */
+.ld-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--panel);
+  font-size: 12px;
+}
+.ld-toolbar[hidden] { display: none; }
+.ld-tb-group { display: inline-flex; gap: 2px; }
+.ld-tb-sep { width: 1px; height: 26px; background: var(--border-subtle); margin: 0 4px; }
+.ld-tool, .ld-tbtn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 44px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 10px;
+  cursor: pointer;
+}
+.ld-tbtn { min-width: 30px; font-size: 15px; padding: 4px 6px; }
+.ld-tool:hover, .ld-tbtn:hover:not(:disabled) { background: var(--hover, rgba(127, 127, 127, 0.12)); }
+.ld-tool.on { border-color: #0464fb; background: rgba(4, 100, 251, 0.12); color: light-dark(#0464fb, #7aa9ff); }
+.ld-tbtn:disabled { opacity: 0.35; cursor: default; }
+.ld-tool .ld-ti-mark { color: light-dark(#0464fb, #7aa9ff); stroke: light-dark(#0464fb, #7aa9ff); fill: light-dark(#0464fb, #7aa9ff); }
+.ld-tb-hint { flex: 1; min-width: 180px; color: var(--muted); padding-left: 6px; }
+#ld-edit-btn.primary { background: #0464fb; color: #fff; border-color: #0464fb; }
+
+.ld-editing .ld-el, .ld-editing .ld-block { cursor: pointer; }
+.ld-editing .ld-el:hover .ld-hit { stroke: var(--ld-blue); stroke-width: 1; stroke-dasharray: 2 2; }
+.ld-editing .ld-sel .ld-hit, .ld-editing .ld-block.ld-sel .ld-block-box { stroke: var(--ld-blue) !important; stroke-width: 2 !important; stroke-dasharray: none !important; }
+.ld-editing .ld-sel .ld-hit { fill: rgba(4, 100, 251, 0.1); }
+.ld-varbox-empty { fill: var(--ld-muted) !important; font-style: italic; }
+.ld-ph { cursor: copy; }
+.ld-ph-hit { fill: transparent; }
+.ld-ph-d { fill: light-dark(#b4bac6, #5e6275); transition: fill 0.1s; }
+.ld-ph-par .ld-ph-d { fill: light-dark(#c9ced8, #4a4e5c); }
+.ld-ph:hover .ld-ph-d { fill: #0464fb; }
+.ld-ph:hover .ld-ph-hit { fill: rgba(4, 100, 251, 0.14); }
+.ld-rung-tools { margin-left: auto; display: inline-flex; gap: 2px; }
+.ld-rung-btn {
+  border: none;
+  background: transparent;
+  color: var(--ld-muted);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ld-rung-btn:hover:not(:disabled) { background: rgba(127, 127, 127, 0.15); color: var(--ld-ink); }
+.ld-rung-btn:disabled { opacity: 0.3; cursor: default; }
+.ld-editing [data-act="comment"] { cursor: text; border-bottom: 1px dashed transparent; }
+.ld-editing [data-act="comment"]:hover { border-bottom-color: var(--ld-muted); }
+.ld-cmt-input {
+  flex: 1;
+  font: inherit;
+  padding: 2px 6px;
+  border: 1px solid #0464fb;
+  border-radius: 4px;
+  background: var(--ld-card);
+  color: var(--ld-ink);
+}
+.ld-add-rung {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border: 1px dashed var(--ld-edge);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ld-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ld-add-rung:hover { border-color: #0464fb; color: #0464fb; }
+
+.ld-pop { position: fixed; z-index: 41; width: 270px; max-height: 70vh; gap: 4px; }
+.ld-pop-l { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.ld-pop-in {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+}
+.ld-pop-new { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; padding: 6px; border-radius: 6px; background: rgba(4, 100, 251, 0.08); }
+.ld-pop-new[hidden] { display: none; }
+.ld-pop-warn { color: var(--warn); }
+.ld-pop-doc, .ld-pop-note { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.ld-pop-sig { font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.5; }
+.ld-pop-foot { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.ld-blk-list { display: flex; flex-direction: column; max-height: 300px; overflow: auto; margin-top: 4px; }
+.ld-blk {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 6px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ld-blk span { color: var(--muted); font-size: 11px; }
+.ld-blk:hover { background: rgba(4, 100, 251, 0.1); }

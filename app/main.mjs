@@ -42,6 +42,7 @@ import { MODELS as LTI_MODELS } from "../scene/lti.mjs";
 import { folderOf, readComponent, writeComponent } from "../cli/lib/component-files.mjs";
 import { ComponentBench } from "./lib/component-bench.mjs";
 import { createUpdater } from "./lib/updater.mjs";
+import { createLadderEditor } from "./lib/ladder-edit.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
@@ -227,6 +228,10 @@ const updater = createUpdater({
 ipcMain.handle("update:status", () => updater.status);
 ipcMain.handle("update:check", () => updater.check(true));
 ipcMain.handle("update:install", () => updater.install());
+
+// Editor Ladder del Sim: las operaciones de peldaño del OpenPLC Editor.
+const ladderEditor = createLadderEditor();
+ipcMain.handle("ld:op", (_e, req) => ladderEditor.op(req));
 
 // Suelta gdb (el proceso sigue) y luego cierra el runner.
 async function stopRunner() {
@@ -631,11 +636,12 @@ ipcMain.handle("sketch:openPlc", (_e, target) => readSketch(openPlcDir(target)))
 
 ipcMain.handle("sketch:save", (_e, { dir, files }) => {
   if (isOpenPlcProject(dir)) {
-    // Proyecto OpenPLC: el texto estructurado (pous/**/*.st) se edita aquí
-    // también; Ladder y FBD, en el OpenPLC Editor.
+    // Proyecto OpenPLC: el texto estructurado (pous/**/*.st) y el Ladder
+    // (pous/**/*.ld, editor Ladder del Sim) se editan aquí también; FBD, en el
+    // OpenPLC Editor.
     for (const f of files) {
       const p = resolve(dir, f.name);
-      if (!/\.st$/i.test(f.name) || relative(join(resolve(dir), "pous"), p).startsWith("..") || !existsSync(p)) continue;
+      if (!/\.(st|ld)$/i.test(f.name) || relative(join(resolve(dir), "pous"), p).startsWith("..") || !existsSync(p)) continue;
       ownWrites.set(p, f.content);
       writeFileSync(p, f.content);
     }

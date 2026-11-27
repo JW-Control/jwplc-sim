@@ -109,11 +109,14 @@
         </div>
         <div id="plc-diagram" class="plc-diagram" hidden>
           <div class="plc-diagram-head">
-            <span id="plc-diagram-hint">Se edita en el OpenPLC Editor; al guardar allí, el Sim recompila. En marcha: clic derecho en un contacto o bobina de E/S para forzarlo.</span>
+            <span id="plc-diagram-hint">Edítelo aquí con ✎ Editar o en el OpenPLC Editor: el archivo es el mismo. En marcha: clic derecho en un contacto o bobina de E/S para forzarlo.</span>
+            <button id="ld-edit-btn" class="small" hidden title="Editar el Ladder en el Sim (mismo formato que el OpenPLC Editor)">✎ Editar</button>
             <button id="plc-diagram-text" class="small" title="Ver el archivo como texto (JSON del editor)">Ver como texto</button>
           </div>
+          <div id="ld-toolbar" class="ld-toolbar" hidden role="toolbar" aria-label="Elementos Ladder"></div>
           <div id="plc-diagram-body" class="plc-diagram-body" title="Clic derecho en un contacto o bobina de E/S: forzar (Force True/False/Release)"></div>
           <div id="plc-force-menu" class="iec-edit plc-force-menu" role="menu" hidden></div>
+          <div id="ld-pop" class="iec-edit ld-pop" role="dialog" hidden></div>
         </div>
         <div id="editor"></div>
         </div>
@@ -569,6 +572,7 @@
     <script src="editor-syntax.js"></script>
     <script src="completion.js"></script>
     <script src="app.js"></script>
+    <script src="ladder-edit.js"></script>
     <script src="start.js"></script>
     <script src="devices.js"></script>
     <script src="component-editor.js"></script>

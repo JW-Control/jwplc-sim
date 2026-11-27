@@ -112,6 +112,8 @@ contextBridge.exposeInMainWorld("jwsim", {
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
   updateInstall: () => ipcRenderer.invoke("update:install"),
+  // Editor Ladder (app/lib/ladder-edit.mjs).
+  ldOp: (req) => ipcRenderer.invoke("ld:op", req),
   onMessage: on("sim:message"),
   onDisplay: on("sim:display"),
   onStderr: on("sim:stderr"),

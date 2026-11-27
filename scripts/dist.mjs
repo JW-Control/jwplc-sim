@@ -146,7 +146,7 @@ const config = {
     res(pkgDir),
     res(".jwsim/third_party"),
     // Del editor solo hace falta lo que usa la cadena (fetch-editor.mjs
-    // editorPaths): pipeline.cjs, resources/sources, el VPP y STruC++. Las
+    // editorPaths): pipeline.cjs, ladder-ops.cjs, resources/sources, el VPP y STruC++. Las
     // fuentes (editor/src, ya empaquetadas en pipeline.cjs) traen las rutas
     // más largas del instalador (ver longPaths).
     ...(editorDir ? [{ ...res(editorDir), filter: [...res(editorDir).filter, "!editor/src/**", "!editor/.github/**"] }] : []),

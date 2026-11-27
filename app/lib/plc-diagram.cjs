@@ -208,7 +208,7 @@
     return `M${a.x} ${a.y}L${c.x + ua.x * k} ${c.y + ua.y * k}Q${c.x} ${c.y} ${c.x + ub.x * k} ${c.y + ub.y * k}L${b.x} ${b.y}`;
   }
 
-  function viewNode(n) {
+  function viewNode(n, edit = false) {
     const { x, y } = n.position;
     const d = n.data;
     const name = d.variable?.name ?? "";
@@ -241,7 +241,7 @@
       const w = n.width ?? 66;
       const h = n.height ?? 100;
       const v = d.variant ?? {};
-      let s = `<g class="ld-block" data-node="${esc(n.id)}"><rect class="ld-block-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>`;
+      let s = `<g class="ld-block${edit ? " ld-el" : ""}" data-node="${esc(n.id)}"><rect class="ld-block-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>`;
       s += `<text class="ld-block-name" x="${x + w / 2}" y="${y + 19}" text-anchor="middle">${esc(v.name ?? "")}</text>`;
       for (const hd of d.inputHandles ?? []) s += `<text class="ld-pin" x="${x + 6}" y="${y + hd.relPosition.y + 4}">${esc(hd.id)}</text>`;
       for (const hd of d.outputHandles ?? []) s += `<text class="ld-pin" x="${x + w - 6}" y="${y + hd.relPosition.y + 4}" text-anchor="end">${esc(hd.id)}</text>`;
@@ -250,25 +250,46 @@
       return s;
     }
     if (n.type === "variable") {
-      if (!name) return "";
       const right = d.variant === "output";
       const w = n.width ?? 80;
-      return `<text class="ld-varbox" x="${right ? x + 6 : x + w - 6}" y="${y + (n.height ?? 32) / 2 + 4}" text-anchor="${right ? "start" : "end"}"><title>${esc(name)}</title>${esc(short(name))}</text>`;
+      const h = n.height ?? 32;
+      if (!name && !edit) return "";
+      const tx = `<text class="ld-varbox${name ? "" : " ld-varbox-empty"}" x="${right ? x + 6 : x + w - 6}" y="${y + h / 2 + 4}" text-anchor="${right ? "start" : "end"}"><title>${esc(name || "Clic para asignar una variable o un valor")}</title>${esc(name ? short(name) : "???")}</text>`;
+      return edit ? `<g class="ld-el ld-pinvar" data-node="${esc(n.id)}"><rect class="ld-hit" x="${x}" y="${y + 4}" width="${w}" height="${h - 8}" rx="3"/>${tx}</g>` : tx;
     }
     return "";
   }
 
-  /** HTML de la vista Ladder de la app (una tarjeta por peldaño). */
-  function ladderView(ldText) {
-    const body = graphicBody(ldText);
-    let html = '<div class="ld-view">';
+  // Placeholder del OpenPLC Editor: un rombo de 10 × 10 donde se puede soltar
+  // un elemento (al costado) o abrir una rama en paralelo (debajo).
+  function phSvg(rungId, p) {
+    const cx = p.x + 5;
+    const cy = p.y + 5;
+    const par = p.type === "parallelPlaceholder";
+    return (
+      `<g class="ld-ph${par ? " ld-ph-par" : ""}" data-ph="${esc(p.key)}" data-rung="${esc(rungId)}"><title>${par ? "Rama en paralelo" : "Insertar aquí"}</title>` +
+      `<rect class="ld-ph-hit" x="${cx - 9}" y="${cy - 9}" width="18" height="18" rx="4"/><path class="ld-ph-d" d="M${cx} ${cy - 5}L${cx + 5} ${cy}L${cx} ${cy + 5}L${cx - 5} ${cy}Z"/></g>`
+    );
+  }
+
+  /**
+   * HTML de la vista Ladder de la app (una tarjeta por peldaño). Con
+   * opts.edit, el modo edición: elementos seleccionables (opts.selected),
+   * placeholders (opts.placeholders[rungId]), comentario y botones del peldaño.
+   */
+  function ladderView(ldText, opts = {}) {
+    const body = typeof ldText === "string" ? graphicBody(ldText) : ldText;
+    const edit = !!opts.edit;
+    const selected = new Set(opts.selected ?? []);
+    let html = `<div class="ld-view${edit ? " ld-editing" : ""}">`;
     body.rungs.forEach((r, i) => {
+      const phs = (edit && opts.placeholders?.[r.id]) || [];
       const nodes = r.nodes.filter((n) => !/placeholder/i.test(n.type));
       const byId = new Map(nodes.map((n) => [n.id, n]));
       const left = nodes.find((n) => n.type === "powerRail" && n.data.variant === "left");
       const right = nodes.find((n) => n.type === "powerRail" && n.data.variant === "right");
       const tops = nodes.filter((n) => n.type !== "powerRail").map((n) => n.position.y - (n.type === "variable" ? 0 : 20));
-      const bots = nodes.map((n) => n.position.y + (n.height ?? 24));
+      const bots = [...nodes.map((n) => n.position.y + (n.height ?? 24)), ...phs.map((p) => p.y + 16)];
       const y0 = Math.min(left?.position.y ?? 0, ...tops) - 8;
       const y1 = Math.max(...bots) + 12;
       const rx = right ? right.position.x : Math.max(...nodes.map((n) => n.position.x + (n.width ?? 0))) + 20;
@@ -288,12 +309,23 @@
         const dd = e.sourceHandle === "output-down" ? corner(pa, { x: pa.x, y: pb.y }, pb) : e.targetHandle === "input-down" ? corner(pa, { x: pb.x, y: pa.y }, pb) : smooth(pa, pb);
         g += `<path class="ld-edge" data-edge="${esc(e.id)}" d="${dd}"/>`;
       }
-      for (const n of nodes) g += viewNode(n);
-      const cmt = r.comment ? `<span class="ld-rung-c">${esc(r.comment)}</span>` : '<span class="ld-rung-c ld-rung-c-empty">Sin comentario</span>';
+      for (const n of nodes) {
+        let v = viewNode(n, edit);
+        if (selected.has(n.id)) v = v.replace(/class="(ld-el|ld-block)/, 'class="$1 ld-sel');
+        g += v;
+      }
+      for (const p of phs) g += phSvg(r.id, p);
+      const cmt = r.comment
+        ? `<span class="ld-rung-c"${edit ? ' data-act="comment" title="Clic para editar el comentario"' : ""}>${esc(r.comment)}</span>`
+        : `<span class="ld-rung-c ld-rung-c-empty"${edit ? ' data-act="comment" title="Clic para escribir un comentario"' : ""}>${edit ? "Escribir un comentario…" : "Sin comentario"}</span>`;
+      const tools = edit
+        ? `<span class="ld-rung-tools"><button class="ld-rung-btn" data-act="up" title="Subir el peldaño"${i ? "" : " disabled"}>▲</button><button class="ld-rung-btn" data-act="down" title="Bajar el peldaño"${i < body.rungs.length - 1 ? "" : " disabled"}>▼</button><button class="ld-rung-btn ld-rung-del" data-act="delete" title="Borrar el peldaño">🗑</button></span>`
+        : "";
       html +=
-        `<section class="ld-rung" data-rung="${esc(r.id)}"><header class="ld-rung-h"><span class="ld-rung-n">${i + 1}</span>${cmt}</header>` +
+        `<section class="ld-rung" data-rung="${esc(r.id)}"><header class="ld-rung-h"><span class="ld-rung-n">${i + 1}</span>${cmt}${tools}</header>` +
         `<div class="ld-rung-b"><svg class="ld-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-6 ${y0} ${w + 6} ${y1 - y0}" width="${w + 6}" height="${y1 - y0}" role="img" aria-label="Peldaño ${i + 1}">${g}</svg></div></section>`;
     });
+    if (edit) html += '<button class="ld-add-rung" data-act="add-rung" title="Agregar un peldaño vacío al final">＋ Agregar peldaño</button>';
     return `${html}</div>`;
   }
 
