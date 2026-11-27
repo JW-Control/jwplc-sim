@@ -182,5 +182,7 @@ export function createLadderEditor({ onWrite } = {}) {
     }
   }
 
-  return { op };
+  // Las funciones del editor empaquetadas (también las del depurador:
+  // app/lib/plc-debug.mjs).
+  return { op, ops: load };
 }

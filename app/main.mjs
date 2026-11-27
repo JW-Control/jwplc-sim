@@ -43,6 +43,7 @@ import { folderOf, readComponent, writeComponent } from "../cli/lib/component-fi
 import { ComponentBench } from "./lib/component-bench.mjs";
 import { createUpdater } from "./lib/updater.mjs";
 import { createLadderEditor } from "./lib/ladder-edit.mjs";
+import { PlcDebugLink, debugMapFor } from "./lib/plc-debug.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
@@ -1076,6 +1077,16 @@ let bridge = null;
 let ioBridge = null;
 // Puerto COM virtual (JW Serial u otro programa): queda abierto entre corridas.
 let comBridge = null;
+// Cliente del depurador OpenPLC sobre la UART0 del runner (app/lib/plc-debug.mjs).
+let plcDebug = null;
+ipcMain.handle("plcdbg:read", async (_e, names) => {
+  if (!plcDebug || !runner) return { error: "sin depurador" };
+  try {
+    return await plcDebug.read(names);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
 // Enlaces de la escena con la PC (conversor USB a RS-485, cable USB): se
 // abren al iniciar la simulación y se cierran al detenerla.
 let hostLinks = [];
@@ -1142,6 +1153,9 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   // Los horizontes de la escena (cientos por segundo) y los bytes del enlace
   // Modbus son de SceneSession: no van a la interfaz.
   r.on("message", (m) => {
+    // Las respuestas del depurador OpenPLC salen por la misma UART0 que el
+    // Monitor serie: mientras se consulta, no se muestran.
+    if (m.type === "serial" && !m.port && plcDebug?.busy()) return;
     // Monitor Serie (puerto 0) para los objetivos de consola y de ritmo.
     if (m.type === "serial" && !m.port && goalTracker) goalTracker.serial(m.text, m.t_ns !== undefined ? Number(m.t_ns) / 1e6 : undefined);
     if (m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out") forward("sim:message", m);
@@ -1163,6 +1177,8 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     if (runner === r) {
       runner = null;
       detachDebugger();
+      plcDebug?.detach();
+      plcDebug = null;
     }
     forward("sim:exit", info);
   });
@@ -1228,6 +1244,18 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
   }
   // Al reproducir una grabación, lo que llegó del COM ya está en el .stim.
   if (comBridge && !stim) comBridge.attach(r);
+  // Depurador del OpenPLC (proyectos OpenPLC): variables internas y bloques.
+  plcDebug?.detach();
+  plcDebug = null;
+  const mapFile = stim ? null : debugMapFor(exe);
+  if (mapFile) {
+    try {
+      plcDebug = new PlcDebugLink({ ops: await ladderEditor.ops(), mapFile });
+      plcDebug.attach(r);
+    } catch (err) {
+      forward("sim:stderr", `[jwsim] depurador OpenPLC: ${err.message}\n`);
+    }
+  }
   if (sceneObj) await openHostLinks(sceneObj, r);
   // Con breakpoints ya puestos, gdb se adjunta antes de que corra el firmware.
   if (hasBreakpoints()) {

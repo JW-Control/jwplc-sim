@@ -60,6 +60,39 @@ flotante, pintada en vivo igual que la vista del programa:
 Prueba: `node tests/e2e-ladder-flotante.mjs` (capturas en
 `build/gates/ladder-flotante/`).
 
+## Depurador: bloques y variables internas en vivo
+
+Mientras corre un proyecto OpenPLC, el Sim lee las variables del programa
+con el **depurador del OpenPLC Editor**, igual que el editor al depurar:
+
+- el firmware de OpenPLC trae el depurador siempre activo en la UART0
+  (115200, esclavo 1), con tramas Modbus RTU y las funciones propias del
+  editor (0x41–0x4B);
+- `app/lib/plc-debug.mjs` (proceso principal, IPC `plcdbg:read`) arma y lee
+  las tramas con el código del editor (`modbus-pdu.ts`,
+  `cli/debug/variables.ts`, `debug-medium-profile.ts`), empaquetado en
+  `deps/ladder-ops.cjs`, y toma las direcciones del `debug-map.json` de la
+  compilación;
+- primero compara el MD5 del programa de la placa con el compilado y luego
+  pide las variables en tandas de 19, como el editor por RTU;
+- las peticiones entran por `uart_rx`, así que no quedan en la grabación, y
+  sus respuestas no se muestran en el Monitor serie.
+
+Con eso, en la vista del programa y en la ventana flotante:
+
+- junto a cada bloque con instancia aparecen sus pines en vivo (IN, PT, Q,
+  ET de un TON; CU, PV, Q, CV de un CTU);
+- los contactos y bobinas de marcas internas (sin E/S) también se pintan;
+- la salida de un bloque toma el valor de su pin (`RETARDO.Q`);
+- la tabla de variables tiene la columna **En vivo** (un bloque muestra sus
+  salidas: `Q=TRUE ET=300ms`).
+
+El mismo cliente sirve para depurar un JWPLC real por su puerto COM: solo
+cambia el transporte.
+
+Prueba: `node tests/e2e-ladder-depurador.mjs` (capturas en
+`build/gates/ladder-depurador/`).
+
 ## Por qué es compatible
 
 Las operaciones de peldaño no son una copia propia. Son las del OpenPLC Editor,

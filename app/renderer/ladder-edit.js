@@ -1110,6 +1110,7 @@ function ldVarsRender() {
         `${r?.addr && r.addr !== v.location ? `<span class="ld-vt-addr" title="Alias del backplane: bornera con dirección ${ldEsc(r.addr)}">→ ${ldEsc(r.addr)}</span>` : ""}</span></td>` +
         `<td>${inp(v.initial, "initial", ' placeholder="—" aria-label="Valor inicial"')}</td>` +
         `<td>${inp(v.doc, "doc", ' placeholder="—" aria-label="Documentación"')}</td>` +
+        `<td class="ld-vt-live" data-live="${ldEsc(v.name.toUpperCase())}"></td>` +
         `<td><button class="ld-vt-del" data-del="${i}" title="Borrar la variable">🗑</button></td></tr>`
       );
     })
@@ -1117,10 +1118,73 @@ function ldVarsRender() {
   box.innerHTML =
     `<datalist id="ld-vt-types">${LD_TYPE_HINTS.map((t) => `<option value="${t}"></option>`).join("")}</datalist>` +
     `<datalist id="ld-vt-locs">${locs.map(([k, l]) => `<option value="${ldEsc(k)}">${ldEsc(l)}</option>`).join("")}</datalist>` +
-    '<table class="ld-vt"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Tipo</th><th>Ubicación</th><th>Valor inicial</th><th>Documentación</th><th></th></tr></thead>' +
-    `<tbody>${rows || '<tr><td colspan="8" class="muted">Sin variables.</td></tr>'}</tbody></table>` +
+    '<table class="ld-vt"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Tipo</th><th>Ubicación</th><th>Valor inicial</th><th>Documentación</th><th title="Valor en la placa mientras corre la simulación (depurador del OpenPLC)">En vivo</th><th></th></tr></thead>' +
+    `<tbody>${rows || '<tr><td colspan="9" class="muted">Sin variables.</td></tr>'}</tbody></table>` +
     '<div class="ld-vt-foot"><button class="small" data-act="add-var">＋ Variable</button><button class="small" data-act="backplane">⊞ Backplane…</button><span class="muted">Ubicación: una dirección (%IX0.0, %QX0.1, %MW0…) o el alias de una bornera del backplane.</span></div>';
   if (focus?.row != null) box.querySelector(`tr[data-i="${focus.row}"] [data-f="${focus.col}"]`)?.focus();
+  ldVarsLive();
+}
+
+// ------------------------------------------------------------ Valores en vivo
+// Mientras corre un proyecto OpenPLC, el Sim lee las variables del programa
+// con el depurador del OpenPLC Editor (app/lib/plc-debug.mjs, por la UART0 de
+// la placa simulada): variables internas, bloques (Q, ET, CV…) y E/S.
+const plcLive = { values: new Map(), busy: false, error: null };
+const plcLiveOn = () => ["running", "paused", "break"].includes(state.sim);
+/** Valor de una variable del programa (nombre o «INSTANCIA.PIN»), o undefined. */
+function plcVal(name) {
+  return plcLiveOn() ? plcLive.values.get(String(name ?? "").toUpperCase()) : undefined;
+}
+/** Texto corto de un valor, como lo muestra el depurador del editor. */
+function plcFmt(v) {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
+  if (typeof v === "number" && !Number.isInteger(v)) return String(Math.round(v * 1000) / 1000);
+  return String(v);
+}
+function plcLiveWanted() {
+  if (!state.sketch?.openplc || state.sim !== "running" || document.hidden) return false;
+  const float = ldFloat.el && !ldFloat.el.hidden && !ldFloat.min;
+  const diagram = state.ldView && !$("plc-diagram")?.hidden && document.body.dataset.tab === "program";
+  return !!(float || diagram || state.view === "ldvars");
+}
+async function plcLiveTick() {
+  if (!plcLiveOn()) {
+    if (plcLive.values.size) {
+      plcLive.values.clear();
+      ldVarsLive();
+    }
+    return;
+  }
+  if (plcLive.busy || !plcLiveWanted()) return;
+  plcLive.busy = true;
+  try {
+    const r = await window.jwsim.plcDebugRead();
+    plcLive.error = r?.error ?? null;
+    if (r?.values) {
+      plcLive.values = new Map(Object.entries(r.values));
+      paintPlcDiagram();
+      ldVarsLive();
+    }
+  } finally {
+    plcLive.busy = false;
+  }
+}
+setInterval(plcLiveTick, 200);
+/** Columna «En vivo» de la tabla de variables. Un bloque muestra sus salidas. */
+function ldVarsLive() {
+  const box = $("ld-vars");
+  if (!box || box.hidden) return;
+  for (const td of box.querySelectorAll("td[data-live]")) {
+    const k = td.dataset.live;
+    let t = plcFmt(plcVal(k));
+    if (!t && plcLive.values.size && plcLiveOn()) {
+      const parts = [...plcLive.values].filter(([n]) => n.startsWith(`${k}.`) && !/\.(IN|PT|PV|CU|CD|R|LD|S1|R1|CLK)$/.test(n));
+      t = parts.map(([n, v]) => `${n.slice(k.length + 1)}=${plcFmt(v)}`).join(" ");
+    }
+    td.textContent = t;
+    td.classList.toggle("on", t === "TRUE");
+  }
 }
 
 function ldVarsChange(tr, field, value) {

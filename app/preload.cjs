@@ -114,6 +114,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   updateInstall: () => ipcRenderer.invoke("update:install"),
   // Editor Ladder (app/lib/ladder-edit.mjs).
   ldOp: (req) => ipcRenderer.invoke("ld:op", req),
+  plcDebugRead: (names) => ipcRenderer.invoke("plcdbg:read", names),
   onMessage: on("sim:message"),
   onDisplay: on("sim:display"),
   onStderr: on("sim:stderr"),

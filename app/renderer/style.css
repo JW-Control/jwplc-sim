@@ -7609,3 +7609,20 @@ html.booting body {
   position: fixed;
   z-index: 50;
 }
+/* Valores en vivo del depurador OpenPLC: pines de los bloques (ET, CV, Q…)
+   y la columna «En vivo» de la tabla de variables. */
+.ld-live-val {
+  fill: var(--ld-blue);
+  font: 600 10.5px ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.ld-live-val.on {
+  fill: light-dark(#0a8a2a, #2fd05a);
+}
+.ld-vt-live {
+  font: 600 12px ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.ld-vt-live.on {
+  color: light-dark(#0a8a2a, #2fd05a);
+}

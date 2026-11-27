@@ -709,12 +709,25 @@ function paintPlcDiagram(names) {
 function paintLadder(box = $("plc-diagram-body"), text = state.ldView) {
   const live = ["running", "paused", "break"].includes(state.sim);
   box.classList.toggle("ld-live", live);
+  // E/S de la placa por su nivel; el resto (marcas, bloques) por el
+  // depurador del OpenPLC (plcVal, ladder-edit.js).
   const valueOf = (d) => {
+    if (!live) return undefined;
     const sig = ldSig(d);
-    if (!sig || !live) return undefined;
-    return !!state.levels.get(sig);
+    if (sig) return !!state.levels.get(sig);
+    const v = plcVal(d.variable?.name);
+    return typeof v === "boolean" ? v : undefined;
   };
-  const flow = live ? window.JwsimPlcDiagram.ladderFlow(text, valueOf) : { edges: new Map(), nodes: new Map() };
+  const pinValue = (inst, pin) => {
+    const v = plcVal(`${inst}.${pin}`);
+    return typeof v === "boolean" ? v : undefined;
+  };
+  const flow = live ? window.JwsimPlcDiagram.ladderFlow(text, valueOf, pinValue) : { edges: new Map(), nodes: new Map() };
+  for (const el of box.querySelectorAll("[data-live]")) {
+    const v = live ? plcVal(el.dataset.live) : undefined;
+    el.textContent = plcFmt(v);
+    el.classList.toggle("on", v === true);
+  }
   for (const el of box.querySelectorAll(".ld-edge")) el.classList.toggle("on", flow.edges.get(el.dataset.edge) === true);
   for (const el of box.querySelectorAll(".ld-el")) {
     const v = flow.nodes.get(el.dataset.node);

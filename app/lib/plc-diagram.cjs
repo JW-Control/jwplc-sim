@@ -250,6 +250,11 @@
       s += `<text class="ld-block-name" x="${x + w / 2}" y="${y + 19}" text-anchor="middle">${esc(v.name ?? "")}</text>`;
       for (const hd of d.inputHandles ?? []) s += `<text class="ld-pin" x="${x + 6}" y="${y + hd.relPosition.y + 4}">${esc(hd.id)}</text>`;
       for (const hd of d.outputHandles ?? []) s += `<text class="ld-pin" x="${x + w - 6}" y="${y + hd.relPosition.y + 4}" text-anchor="end">${esc(hd.id)}</text>`;
+      // Valores en vivo de los pines (depurador): sobre la línea, junto al bloque.
+      if (name) {
+        for (const hd of d.inputHandles ?? []) s += `<text class="ld-live-val" data-live="${esc(`${name}.${hd.id}`.toUpperCase())}" x="${x - 4}" y="${y + hd.relPosition.y - 4}" text-anchor="end"></text>`;
+        for (const hd of d.outputHandles ?? []) s += `<text class="ld-live-val" data-live="${esc(`${name}.${hd.id}`.toUpperCase())}" x="${x + w + 4}" y="${y + hd.relPosition.y - 4}"></text>`;
+      }
       s += "</g>";
       if (name) s += `<text class="ld-name" x="${x + w / 2}" y="${y - 7}" text-anchor="middle">${esc(name)}</text>`;
       return s;
@@ -340,10 +345,11 @@
    * pasa un contacto si su variable (o su negada) está en 1 y atraviesa las
    * bobinas. valueOf(nodeData) da true/false o undefined si no se conoce
    * (en el Sim se conocen las E/S de la placa). La salida de un bloque se
-   * toma de la bobina que alimenta, cuando esa bobina es de una E/S.
+   * toma de pinValue(instancia, pin) si se conoce (depurador) o de la bobina
+   * que alimenta, cuando esa bobina es de una E/S.
    * Devuelve { edges: Map(id → bool), nodes: Map(id → bool|undefined) }.
    */
-  function ladderFlow(ldText, valueOf) {
+  function ladderFlow(ldText, valueOf, pinValue) {
     const body = graphicBody(ldText);
     const edges = new Map();
     const nodesOut = new Map();
@@ -372,8 +378,11 @@
           const v = MARK.contact[n.data.variant] ? undefined : valueOf(n.data);
           out = v === undefined ? undefined : inGreen && (n.data.variant === "negated" ? !v : v);
         } else if (n.type === "block") {
+          // Salida del bloque: con el depurador, el valor de su pin
+          // (RETARDO.Q); si no, la de la bobina de E/S que alimenta.
+          const pin = n.data.variable?.name && pinValue ? pinValue(n.data.variable.name, e.sourceHandle) : undefined;
           const t = byId.get(e.target);
-          out = t?.type === "coil" && (t.data.variant ?? "default") === "default" ? valueOf(t.data) : undefined;
+          out = pin !== undefined ? pin : t?.type === "coil" && (t.data.variant ?? "default") === "default" ? valueOf(t.data) : undefined;
         }
         const green = out === true;
         memo.set(e.id, green);
