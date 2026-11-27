@@ -7467,10 +7467,13 @@ html.booting body {
 .ld-bp-foot .muted { flex: 1; }
 
 /* Pestaña «Variables» (tabla del .ld, como la del OpenPLC Editor). */
-.ld-vars { padding: 0 10px 10px; overflow: auto; font-size: 12px; }
+.ld-vars { flex: 1; min-height: 0; padding: 0 10px 10px; overflow: auto; font-size: 12px; }
 .ld-vars[hidden] { display: none; }
 .ld-vt { border-collapse: collapse; width: 100%; min-width: 860px; }
-.ld-vt th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 4px 4px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }
+/* Títulos fijos arriba, sin rendija: la tabla se desplaza dentro de .ld-vars
+   y la cabecera tapa todo lo que pasa por debajo. */
+.ld-vt { border-collapse: separate; border-spacing: 0; }
+.ld-vt th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 6px 4px 4px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; background: var(--panel); box-shadow: 0 -12px 0 var(--panel); }
 .ld-vt td { padding: 1px 2px; border-bottom: 1px solid var(--border-subtle); }
 .ld-vt-n { color: var(--muted); width: 26px; text-align: right; padding-right: 6px !important; }
 .ld-vt-in { width: 100%; box-sizing: border-box; font: inherit; padding: 3px 5px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--text); }
@@ -7480,9 +7483,12 @@ html.booting body {
 .ld-vt td:nth-child(2) { width: 16%; }
 .ld-vt td:nth-child(3) { width: 9%; }
 .ld-vt td:nth-child(4) { width: 10%; }
-.ld-vt td:nth-child(5) { width: 13%; }
-.ld-vt-addr { width: 7%; color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
-.ld-vt td:nth-child(7) { width: 10%; }
+.ld-vt td:nth-child(5) { width: 18%; }
+.ld-vt-loc { display: flex; align-items: center; gap: 4px; }
+.ld-vt-loc .ld-vt-in { flex: 0 1 auto; width: auto; min-width: 0; }
+.ld-vt-loc:has(.ld-vt-addr) .ld-vt-in { padding-right: 2px; }
+.ld-vt-addr { flex: none; color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; white-space: nowrap; }
+.ld-vt td:nth-child(6) { width: 10%; }
 .ld-vt-del { border: none; background: transparent; cursor: pointer; opacity: 0.5; padding: 2px 6px; }
 .ld-vt-del:hover { opacity: 1; }
 .ld-vt-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }

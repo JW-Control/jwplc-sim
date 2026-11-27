@@ -929,8 +929,9 @@ function ldVarsRender() {
         `<td>${inp(v.name, "name", ' aria-label="Nombre"')}</td>` +
         `<td>${sel(v.cls, "cls", LD_CLASSES.map(([c]) => [c, c]))}</td>` +
         `<td>${inp(v.type, "type", ' list="ld-vt-types" aria-label="Tipo"')}</td>` +
-        `<td><input data-f="location" class="ld-vt-in${live.includes("bad") ? " bad" : ""}" value="${ldEsc(v.location)}" list="ld-vt-locs" placeholder="—" spellcheck="false" autocomplete="off" aria-label="Ubicación"${live.includes("bad") ? ' title="No es una dirección ni un alias del backplane"' : live}></td>` +
-        `<td class="ld-vt-addr">${r?.addr && r.addr !== v.location ? ldEsc(r.addr) : ""}</td>` +
+        // Con alias, la dirección real de la bornera va pegada al alias.
+        `<td><span class="ld-vt-loc"><input data-f="location" size="${Math.max(4, v.location.length)}" class="ld-vt-in${live.includes("bad") ? " bad" : ""}" value="${ldEsc(v.location)}" list="ld-vt-locs" placeholder="—" spellcheck="false" autocomplete="off" aria-label="Ubicación"${live.includes("bad") ? ' title="No es una dirección ni un alias del backplane"' : live}>` +
+        `${r?.addr && r.addr !== v.location ? `<span class="ld-vt-addr" title="Alias del backplane: bornera con dirección ${ldEsc(r.addr)}">→ ${ldEsc(r.addr)}</span>` : ""}</span></td>` +
         `<td>${inp(v.initial, "initial", ' placeholder="—" aria-label="Valor inicial"')}</td>` +
         `<td>${inp(v.doc, "doc", ' placeholder="—" aria-label="Documentación"')}</td>` +
         `<td><button class="ld-vt-del" data-del="${i}" title="Borrar la variable">🗑</button></td></tr>`
@@ -940,8 +941,8 @@ function ldVarsRender() {
   box.innerHTML =
     `<datalist id="ld-vt-types">${LD_TYPE_HINTS.map((t) => `<option value="${t}"></option>`).join("")}</datalist>` +
     `<datalist id="ld-vt-locs">${locs.map(([k, l]) => `<option value="${ldEsc(k)}">${ldEsc(l)}</option>`).join("")}</datalist>` +
-    '<table class="ld-vt"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Tipo</th><th>Ubicación</th><th></th><th>Valor inicial</th><th>Documentación</th><th></th></tr></thead>' +
-    `<tbody>${rows || '<tr><td colspan="9" class="muted">Sin variables.</td></tr>'}</tbody></table>` +
+    '<table class="ld-vt"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Tipo</th><th>Ubicación</th><th>Valor inicial</th><th>Documentación</th><th></th></tr></thead>' +
+    `<tbody>${rows || '<tr><td colspan="8" class="muted">Sin variables.</td></tr>'}</tbody></table>` +
     '<div class="ld-vt-foot"><button class="small" data-act="add-var">＋ Variable</button><button class="small" data-act="backplane">⊞ Backplane…</button><span class="muted">Ubicación: una dirección (%IX0.0, %QX0.1, %MW0…) o el alias de una bornera del backplane.</span></div>';
   if (focus?.row != null) box.querySelector(`tr[data-i="${focus.row}"] [data-f="${focus.col}"]`)?.focus();
 }
