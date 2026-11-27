@@ -149,7 +149,8 @@ function valueAt(tl, key, t) {
 }
 
 const num = (v) => (typeof v === "boolean" ? (v ? 1 : 0) : Number(v ?? 0));
-const same = (got, want) => Math.abs(num(got) - num(want)) < 1e-6;
+// Un valor esperado puede ser un rango [min, max] (medidas analógicas: presión, frecuencia).
+const same = (got, want) => (isRange(want) ? num(got) >= Number(want[0]) && num(got) <= Number(want[1]) : Math.abs(num(got) - num(want)) < 1e-6);
 
 // Instantes donde puede cambiar el estado de las claves dentro de [a, b].
 function instants(tl, keys, a, b) {

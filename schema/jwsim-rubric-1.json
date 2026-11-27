@@ -170,8 +170,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "always": {
@@ -181,8 +188,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "never": {
@@ -192,8 +206,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "eventually": {
@@ -203,8 +224,15 @@
           "additionalProperties": {
             "type": [
               "number",
-              "boolean"
-            ]
+              "boolean",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Valor exacto, o un rango [min, max] para una medida."
           }
         },
         "console": {

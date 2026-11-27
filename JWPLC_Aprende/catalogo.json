@@ -2663,6 +2663,349 @@
           }
         }
       ]
+    },
+    {
+      "unidad": 7,
+      "nombre": "Analógicas y control",
+      "lecciones": [
+        {
+          "id": "curso-40",
+          "numero": 40,
+          "titulo": "Un transmisor: de un número a una presión",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/40.Leer_un_transmisor",
+          "aprende": [
+            "Qué es una medida analógica y por qué llega como un número.",
+            "A escalar: pasar el número del registro a la unidad de la máquina (bar).",
+            "A validar: reconocer el valor con que el transmisor avisa de su propia falla.",
+            "Por qué una alarma analógica necesita histéresis."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "PT1: transmisor de presión 0-10 bar con RS-485, en la dirección 1, alimentado con 24 V DC.",
+                "Q0.0: lámpara H1 de falla del sensor. Q0.1: lámpara H2 de presión baja."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: la consola muestra la presión de **PT1**.",
+                "Mueve la presión en el símbolo de **PT1**: la consola la sigue.",
+                "Elige **Falla del sensor → Sensor abierto**: aparece el aviso y **H1** se enciende.",
+                "Lección 40: transmisor de presión 0-10 bar en la dirección 1\nPresión: 3.00 bar\nPresión: 3.00 bar\nSensor de presión abierto"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: cada segundo aparece la presión en bar.",
+            "Cambia la presión: el número sigue a la tubería.",
+            "Desconecta la sonda del transmisor: «Sensor de presión abierto» y H1 se enciende."
+          ],
+          "practica": [
+            "Bajo 2,0 bar: «Presión baja» una vez y H2 (Q0.1) encendida.",
+            "Sobre 2,5 bar: «Presión normal» y H2 apagada. Entre los dos límites no cambia nada."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-40",
+            "objetivos_en_vivo": [
+              {
+                "id": "baja",
+                "text": "Bajo 2,0 bar: «Presión baja» y H2 encendida",
+                "extra": false
+              },
+              {
+                "id": "normal",
+                "text": "Sobre 2,5 bar: «Presión normal»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-41",
+          "numero": 41,
+          "titulo": "Control on-off: el hidroneumático",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/41.Control_on_off",
+          "aprende": [
+            "Qué es un control on-off y cómo reemplaza a un presostato.",
+            "Por qué los dos límites (histéresis) protegen al motor.",
+            "Qué hacer con la bomba si se pierde la medida."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "PT1: transmisor de presión en la dirección 1.",
+                "Q0.0: bobina del contactor KM1 de la bomba (24 V DC). El motor, por el contactor y su protección."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: **KM1** se cierra y la presión de **RED1** sube.",
+                "Baja el consumo de **RED1** a 0: la bomba llega a 5,0 bar en pocos segundos y para.",
+                "Sube el consumo: la bomba vuelve a arrancar bajo 3,0 bar.",
+                "Lección 41: control on-off, bomba KM1 en Q0.0, arranca < 3,0 bar, para en 5,0 bar\nBomba en marcha a 2.50 bar\nBomba parada a 5.01 bar"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa con el tanque descargado: la bomba arranca bajo 3,0 bar.",
+            "Espera: al llegar a 5,0 bar la bomba para.",
+            "Abre un grifo: la presión baja y la bomba vuelve a arrancar en 3,0 bar."
+          ],
+          "practica": [
+            "Tiempo mínimo de marcha: una vez que arranca, la bomba trabaja al menos 10 s aunque la presión llegue a 5,0 bar.",
+            "Al parar, escribe «Bomba parada tras N s»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-41",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "La bomba arranca bajo 3,0 bar",
+                "extra": false
+              },
+              {
+                "id": "minimo",
+                "text": "«Bomba parada tras 10 s» o más",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-42",
+          "numero": 42,
+          "titulo": "Rampas: llegar a la velocidad de a poco",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/42.Rampas",
+          "aprende": [
+            "Qué es una rampa y por qué se usa al arrancar y al parar.",
+            "A escribir una rampa como un paso pequeño en cada ciclo, sin pasarse del objetivo.",
+            "Que una rampa sirve para cualquier consigna: frecuencia, temperatura o presión."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "VF1: variador en la dirección 1 con su motor (lección 36).",
+                "I0.0: pulsador de marcha (NA). I0.1: pulsador de parada (NC)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: la frecuencia de **VF1** sube de a poco.",
+                "Mira el display del variador: sigue a la rampa.",
+                "Aprieta **S2**: el variador para.",
+                "Lección 42: rampa de 5 Hz/s, marcha I0.0, parada NC I0.1\nMarcha: rampa hacia 50 Hz\nRampa: 10 Hz\nRampa: 20 Hz\nRampa: 30 Hz\nRampa: 40 Hz\nRampa: 50 Hz\nParada"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y aprieta marcha: la frecuencia sube 5 Hz por segundo hasta 50 Hz.",
+            "Mira la consola: un aviso cada 10 Hz.",
+            "Aprieta parada: el variador corta enseguida."
+          ],
+          "practica": [
+            "Rampa de bajada: con la parada, el objetivo pasa a 0 y la frecuencia baja a 10 Hz/s.",
+            "Al llegar a 0: la orden de parada al variador y «Detenido en rampa»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-42",
+            "objetivos_en_vivo": [
+              {
+                "id": "sube",
+                "text": "Marcha: la rampa llega a 50 Hz",
+                "extra": false
+              },
+              {
+                "id": "baja",
+                "text": "Parada en rampa: «Detenido en rampa»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-43",
+          "numero": 43,
+          "titulo": "Control proporcional: presión constante",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/43.Control_proporcional",
+          "aprende": [
+            "Qué es un lazo de control: medir, comparar con la consigna y actuar.",
+            "El control proporcional: más error, más empuje.",
+            "Qué es el error de régimen y por qué el control P se queda corto."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "VF1: variador en la dirección 1 con la bomba. PT1: transmisor de presión en la dirección 2.",
+                "I0.0: marcha (NA). I0.1: parada (NC)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: la presión de **RED1** sube y se queda cerca de 3,5 bar.",
+                "Cambia el consumo de **RED1**: la frecuencia de **VF1** se ajusta sola.",
+                "Fíjate que nunca llega a 4,0 bar: ese resto es el error de régimen.",
+                "Lección 43: control P de presión, consigna 4,0 bar, marcha I0.0, parada NC I0.1\nControl en marcha\nPresión: 2.61 bar · 60.0 Hz\nPresión: 3.19 bar · 56.2 Hz\nPresión: 3.52 bar · 49.6 Hz\nPresión: 3.55 bar · 49.0 Hz"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y aprieta marcha: la bomba acelera y la presión sube.",
+            "Espera unos segundos: la presión se queda quieta un poco bajo 4,0 bar.",
+            "Abre más grifos: la presión baja un poco más y la bomba acelera."
+          ],
+          "practica": [
+            "UP y DOWN cambian la consigna de a 0,5 bar, entre 3,0 y 6,0 bar: «Consigna: 4.5 bar».",
+            "Comprueba que la presión sube con la consigna."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-43",
+            "objetivos_en_vivo": [
+              {
+                "id": "control",
+                "text": "Marcha: la presión sube cerca de 4,0 bar",
+                "extra": false
+              },
+              {
+                "id": "consigna",
+                "text": "UP sube la consigna: «Consigna: 4.5 bar»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-44",
+          "numero": 44,
+          "titulo": "Control PI: sin error de régimen",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/44.Control_PI",
+          "aprende": [
+            "Qué agrega la parte integral y por qué llega a la consigna.",
+            "El anti-windup: limitar la integral para que no se pase al arrancar.",
+            "Para qué sirve la D de un PID y por qué en agua casi no se usa."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "El montaje de la lección 43: VF1 en la dirección 1 y PT1 en la 2.",
+                "I0.0: marcha (NA). I0.1: parada (NC)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: la presión de **RED1** llega a 4,0 bar.",
+                "Cambia el consumo de **RED1**: la presión vuelve a la consigna.",
+                "Baja el consumo a 0: la frecuencia baja hasta 20 Hz y se queda ahí, girando sin dar agua.",
+                "Lección 44: control PI de presión, consigna 4,0 bar, marcha I0.0, parada NC I0.1\nControl en marcha\nPresión: 2.73 bar · 60.0 Hz\nPresión: 4.01 bar · 59.9 Hz\nPresión: 4.29 bar · 55.4 Hz\nPresión: 4.11 bar · 51.6 Hz"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y aprieta marcha: la presión sube, se pasa un poco y vuelve a 4,0 bar.",
+            "Abre más grifos: la presión baja un momento y vuelve a 4,0 bar.",
+            "Compáralo con la lección 43: ya no queda error."
+          ],
+          "practica": [
+            "Modo reposo: si la frecuencia está en el mínimo 5 s seguidos y la presión llegó a la consigna, la bomba para con «Bomba en reposo».",
+            "En reposo, si la presión baja de 3,5 bar: «Bomba despierta» y el PI sigue."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-44",
+            "objetivos_en_vivo": [
+              {
+                "id": "pi",
+                "text": "El PI llega a la consigna: 3,9…4,1 bar",
+                "extra": false
+              },
+              {
+                "id": "reposo",
+                "text": "Sin consumo: «Bomba en reposo»",
+                "extra": false
+              },
+              {
+                "id": "despierta",
+                "text": "La presión baja: «Bomba despierta»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-45",
+          "numero": 45,
+          "titulo": "Proyecto: presión constante en un edificio",
+          "ruta": "examples/Curso_JWPLC_Basic/7.Analogicas_y_control/45.Proyecto_presion_constante",
+          "aprende": [
+            "A juntar medida, rampa, PI, reposo y alarmas en un solo programa.",
+            "A ordenar el programa como un PLC: medir, decidir, actuar y avisar.",
+            "A usar estados (detenido, regulando, reposo) para que cada parte sepa qué hacer.",
+            "A elegir la falla segura de la máquina."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "VF1: variador en la dirección 1 con la bomba. PT1: transmisor de presión en la dirección 2.",
+                "I0.0: marcha (NA). I0.1: parada (NC).",
+                "Q0.0: lámpara H1 de bomba en marcha. Q0.1: lámpara H2 de alarma."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y aprieta **S1**: **H1** se enciende y la presión de **RED1** llega a 4,0 bar.",
+                "Baja el consumo de **RED1** a 0: a los segundos, «Bomba en reposo».",
+                "Sube el consumo: «Bomba despierta».",
+                "Lección 45: presión constante 4,0 bar, marcha I0.0, parada NC I0.1\nEquipo en marcha\nPresión: 4.01 bar · 59.9 Hz\nPresión: 4.11 bar · 51.6 Hz\nBomba en reposo\nBomba despierta"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y aprieta marcha: la presión llega a 4,0 bar y H1 se enciende.",
+            "Cierra todos los grifos: la bomba se va a reposo y H1 se apaga.",
+            "Abre grifos: la bomba despierta sola."
+          ],
+          "practica": [
+            "Sin sensor: «Sensor de presión en falla: bomba a 45 Hz» una vez, la bomba a 45 Hz fijos y H2 encendida.",
+            "Con el sensor de vuelta: «Sensor de presión normal», H2 apagada y el PI retoma."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-45",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "Equipo en marcha: la presión cerca de 4,0 bar",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Sensor abierto: «Sensor de presión en falla: bomba a 45 Hz»",
+                "extra": false
+              },
+              {
+                "id": "vuelve",
+                "text": "«Sensor de presión normal»",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
     }
   ],
   "curso_iec": [

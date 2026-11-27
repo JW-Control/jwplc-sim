@@ -1,0 +1,155 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-40",
+  "goals": [
+    {
+      "id": "baja",
+      "description": "Bajo 2,0 bar: «Presión baja» y H2 encendida",
+      "console": "Presión baja",
+      "hint": "Una variable presionBaja: pasa a true bajo 2,0 y escribe una vez."
+    },
+    {
+      "id": "normal",
+      "description": "Sobre 2,5 bar: «Presión normal»",
+      "console": "Presión normal",
+      "after": "baja",
+      "why": "Con un solo límite, una presión que ronda los 2,0 bar encendería y apagaría la alarma sin parar."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Presión que baja y se recupera",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "PT1",
+          "action": "presion",
+          "value": 3.0
+        },
+        {
+          "at_ms": 4000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 1.8
+        },
+        {
+          "at_ms": 7000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 2.2
+        },
+        {
+          "at_ms": 10000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 2.8
+        },
+        {
+          "at_ms": 13000,
+          "device": "PT1",
+          "action": "falla",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "A 3,0 bar, H2 apagada",
+          "points": 1,
+          "at_ms": 3000,
+          "expect": {
+            "H2.lit": false
+          }
+        },
+        {
+          "description": "«Presión baja», una vez",
+          "points": 4,
+          "console": "Presión baja",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "A 1,8 bar, H2 encendida",
+          "points": 3,
+          "at_ms": 6000,
+          "expect": {
+            "H2.lit": true
+          }
+        },
+        {
+          "description": "A 2,2 bar sigue encendida (histéresis)",
+          "points": 4,
+          "at_ms": 9000,
+          "expect": {
+            "H2.lit": true
+          }
+        },
+        {
+          "description": "«Presión normal», una vez",
+          "points": 3,
+          "console": "Presión normal",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "A 2,8 bar, H2 apagada",
+          "points": 3,
+          "at_ms": 12000,
+          "expect": {
+            "H2.lit": false
+          }
+        },
+        {
+          "description": "Sensor abierto: H1 encendida",
+          "points": 2,
+          "at_ms": 14500,
+          "expect": {
+            "H1.lit": true
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Presión",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 0,
+          "device": "PT1",
+          "action": "presion",
+          "value": 3.0
+        },
+        {
+          "at_ms": 4000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 1.8
+        },
+        {
+          "at_ms": 7000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 2.2
+        },
+        {
+          "at_ms": 10000,
+          "device": "PT1",
+          "action": "presion",
+          "value": 2.8
+        },
+        {
+          "at_ms": 13000,
+          "device": "PT1",
+          "action": "falla",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

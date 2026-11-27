@@ -1,0 +1,136 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-45",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "Equipo en marcha: la presión cerca de 4,0 bar",
+      "console": "Presión: (3\\.[89]|4\\.[0-2])",
+      "hint": "Aprieta S1."
+    },
+    {
+      "id": "falla",
+      "description": "Sensor abierto: «Sensor de presión en falla: bomba a 45 Hz»",
+      "console": "Sensor de presión en falla",
+      "hint": "Si !sensorBien: sinSensor = true, frecuencia fija de 45 Hz y H2.",
+      "why": "Con la última presión conocida el PI empujaría a ciegas; una frecuencia fija y prudente da agua sin reventar la tubería."
+    },
+    {
+      "id": "vuelve",
+      "description": "«Sensor de presión normal»",
+      "console": "Sensor de presión normal",
+      "after": "falla"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Sensor que falla",
+      "until_ms": 44500,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 22000,
+          "device": "PT1",
+          "action": "falla",
+          "value": 1
+        },
+        {
+          "at_ms": 34000,
+          "device": "PT1",
+          "action": "falla",
+          "value": 0
+        }
+      ],
+      "checks": [
+        {
+          "description": "Regula: 3,8…4,2 bar",
+          "points": 2,
+          "at_ms": 21000,
+          "expect": {
+            "RED1.presion": [
+              3.8,
+              4.2
+            ]
+          }
+        },
+        {
+          "description": "«Sensor de presión en falla: bomba a 45 Hz», una vez",
+          "points": 4,
+          "console": "Sensor de presión en falla: bomba a 45 Hz",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Sin sensor: la bomba a 45 Hz",
+          "points": 5,
+          "at_ms": 28000,
+          "expect": {
+            "VF1.fRef": 45
+          }
+        },
+        {
+          "description": "Sin sensor: H2 encendida",
+          "points": 3,
+          "at_ms": 28000,
+          "expect": {
+            "H2.lit": true
+          }
+        },
+        {
+          "description": "«Sensor de presión normal», una vez",
+          "points": 3,
+          "console": "Sensor de presión normal",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Con el sensor de vuelta: H2 apagada y la presión regulada otra vez",
+          "points": 3,
+          "at_ms": 44000,
+          "expect": {
+            "H2.lit": false,
+            "RED1.presion": [
+              3.7,
+              4.3
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Presión constante",
+      "until_ms": 60000,
+      "actions": [
+        {
+          "at_ms": 1500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 1800,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}
