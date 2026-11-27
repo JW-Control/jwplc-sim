@@ -646,14 +646,14 @@ body.resizing #editor {
   padding: 18px 20px;
 }
 /* E/S de la placa en el diagrama: fondo verde mientras la señal está en 1. */
-.plc-diagram-body [data-sig] {
+.plc-diagram-body rect[data-sig] {
   fill: transparent;
 }
-.plc-diagram-body [data-sig].on {
+.plc-diagram-body rect[data-sig].on {
   fill: rgba(47, 208, 90, 0.28);
 }
 /* Forzada desde el diagrama (clic derecho): borde ámbar punteado. */
-.plc-diagram-body [data-sig].forced {
+.plc-diagram-body rect[data-sig].forced {
   stroke: var(--warn) !important;
   stroke-width: 2;
   stroke-dasharray: 4 3;
@@ -7207,3 +7207,102 @@ html.booting body {
   font-weight: 600;
 }
 .statusbar .sb-update:disabled { cursor: default; opacity: 0.85; }
+
+/* ---- Ladder con el aspecto del OpenPLC Editor 4.3 (plc-diagram.cjs ladderView).
+   Paleta del editor: tinta #030303 / #edeff2, barras #9ca4b8, uniones
+   #b1b1b7, variantes en azul #0464FB; en vivo #00FF00 (1), #0464FB (0),
+   forzado #80C000 / #4080FF. */
+.plc-diagram-body.is-ladder {
+  --ld-canvas: light-dark(#f5f7f8, #121316);
+  --ld-card: light-dark(#ffffff, #1b1d22);
+  --ld-head: light-dark(#f5f7f8, #2e3038);
+  --ld-line: light-dark(#dde2e8, #2e3038);
+  --ld-ink: light-dark(#030303, #edeff2);
+  --ld-muted: light-dark(#7d8297, #868ca5);
+  --ld-rail: #9ca4b8;
+  --ld-edge: light-dark(#b1b1b7, #5e6275);
+  --ld-blue: light-dark(#0464fb, #4d8dff);
+  --ld-on: #00ff00;
+  --ld-off: #0464fb;
+  background: var(--ld-canvas);
+  padding: 14px 16px 24px;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+.ld-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: max-content;
+  min-width: 100%;
+}
+.ld-rung {
+  background: var(--ld-card);
+  border: 1px solid var(--ld-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ld-rung-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--ld-head);
+  border-bottom: 1px solid var(--ld-line);
+  font-size: 12px;
+  color: var(--ld-ink);
+}
+.ld-rung-n {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--ld-blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ld-rung-c-empty {
+  color: var(--ld-muted);
+  font-style: italic;
+}
+.ld-rung-b {
+  padding: 8px 14px 10px;
+}
+.ld-svg {
+  display: block;
+  overflow: visible;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+.ld-rail { fill: var(--ld-rail); }
+.ld-edge {
+  fill: none;
+  stroke: var(--ld-edge);
+  stroke-width: 1;
+}
+.ld-stroke { fill: none; stroke: var(--ld-ink); stroke-width: 1.4; }
+.ld-fill { fill: var(--ld-ink); }
+.ld-mod { fill: var(--ld-blue); font-size: 12px; font-weight: 500; }
+.ld-mod-line { stroke: var(--ld-blue); stroke-width: 1.6; }
+.ld-hit { fill: transparent; stroke: none; }
+.ld-name { fill: var(--ld-ink); font-size: 12px; }
+.ld-varbox { fill: var(--ld-ink); font-size: 12px; }
+.ld-block-box { fill: var(--ld-card); stroke: light-dark(#50545f, #868ca5); stroke-width: 1; }
+.ld-block-name { fill: var(--ld-ink); font-size: 12px; font-weight: 500; }
+.ld-pin { fill: var(--ld-ink); font-size: 12px; }
+.ld-el[data-sig] { cursor: context-menu; }
+.ld-el[data-sig]:hover .ld-hit { stroke: var(--ld-blue); stroke-width: 1.5; }
+
+/* En vivo (como el depurador del editor). */
+.ld-edge.on { stroke: var(--ld-on); stroke-width: 2; }
+.ld-el.on .ld-stroke { stroke: var(--ld-on); }
+.ld-el.on .ld-fill { fill: var(--ld-on); }
+.ld-el.off .ld-stroke { stroke: var(--ld-off); }
+.ld-el.off .ld-fill { fill: var(--ld-off); }
+.ld-el.forced-1 .ld-stroke { stroke: #80c000; }
+.ld-el.forced-1 .ld-fill { fill: #80c000; }
+.ld-el.forced-0 .ld-stroke { stroke: #4080ff; }
+.ld-el.forced-0 .ld-fill { fill: #4080ff; }
+.ld-el.forced .ld-hit { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 3 2; }

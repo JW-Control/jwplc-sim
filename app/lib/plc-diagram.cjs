@@ -166,5 +166,187 @@
     return wrap(`${x0} ${y0} ${x1 - x0} ${y1 - y0}`, x1 - x0, y1 - y0, "Programa FBD", lines, texts);
   }
 
-  return { graphicBody, ladderSvg, fbdSvg };
+  // ---------------------------------------------------------------------
+  // Vista de la app con el aspecto del OpenPLC Editor (4.3): cada peldaño en
+  // su tarjeta con el comentario arriba, barras de alimentación grises,
+  // contactos de dos barras, bobinas entre paréntesis, letras de variante en
+  // azul, nombres encima, bloques con esquinas redondeadas y uniones
+  // «smoothstep». En vivo, como el depurador del editor: verde (#00FF00) lo
+  // que está en 1 y la corriente que pasa, azul (#0464FB) lo que está en 0;
+  // forzado en verde oliva / azul claro. Colores y trazos por clase (CSS de
+  // la app), para el tema claro y el oscuro. El dibujo es propio; solo imita
+  // el aspecto del editor.
+  const VAR_MAX = 11;
+  const short = (s) => (String(s).length > VAR_MAX ? `${String(s).slice(0, VAR_MAX - 1)}…` : String(s));
+  const sigOf = (d) => {
+    const m = /^%([IQ])X0\.([0-7])$/.exec(d?.variable?.location ?? "");
+    return m ? `${m[1]}0_${m[2]}` : null;
+  };
+  const MARK = { contact: { risingEdge: "P", fallingEdge: "N" }, coil: { set: "S", reset: "R", risingEdge: "P", fallingEdge: "N" } };
+
+  // Unión con codos redondeados (como el «smoothstep» de React Flow).
+  function smooth(a, b, r = 5) {
+    if (Math.abs(a.y - b.y) < 0.5) return `M${a.x} ${a.y}H${b.x}`;
+    const mx = Math.round((a.x + b.x) / 2);
+    const k = Math.min(r, Math.abs(b.y - a.y) / 2, Math.abs(mx - a.x), Math.abs(b.x - mx));
+    const sy = b.y > a.y ? 1 : -1;
+    const sx1 = mx >= a.x ? 1 : -1;
+    const sx2 = b.x >= mx ? 1 : -1;
+    return `M${a.x} ${a.y}H${mx - sx1 * k}Q${mx} ${a.y} ${mx} ${a.y + sy * k}V${b.y - sy * k}Q${mx} ${b.y} ${mx + sx2 * k} ${b.y}H${b.x}`;
+  }
+
+  // Un solo codo (ramas en paralelo), también redondeado.
+  function corner(a, c, b, r = 5) {
+    const k = Math.min(r, Math.hypot(c.x - a.x, c.y - a.y) / 2, Math.hypot(b.x - c.x, b.y - c.y) / 2);
+    if (k < 0.5) return `M${a.x} ${a.y}L${c.x} ${c.y}L${b.x} ${b.y}`;
+    const u = (p, q) => {
+      const d = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+      return { x: (q.x - p.x) / d, y: (q.y - p.y) / d };
+    };
+    const ua = u(c, a);
+    const ub = u(c, b);
+    return `M${a.x} ${a.y}L${c.x + ua.x * k} ${c.y + ua.y * k}Q${c.x} ${c.y} ${c.x + ub.x * k} ${c.y + ub.y * k}L${b.x} ${b.y}`;
+  }
+
+  function viewNode(n) {
+    const { x, y } = n.position;
+    const d = n.data;
+    const name = d.variable?.name ?? "";
+    const sig = sigOf(d);
+    const attrs = ` data-node="${esc(n.id)}"${sig ? ` data-sig="${sig}"` : ""}${name ? ` data-var="${esc(name)}"` : ""}`;
+    const label = (w) => (name ? `<text class="ld-name" x="${x + w / 2}" y="${y - 7}" text-anchor="middle"><title>${esc(name)}</title>${esc(short(name))}</text>` : "");
+    if (n.type === "contact") {
+      const w = n.width ?? 24;
+      const h = n.height ?? 24;
+      let s = `<g class="ld-el ld-contact" data-variant="${esc(d.variant ?? "default")}"${attrs}><rect class="ld-hit" x="${x - 4}" y="${y - 2}" width="${w + 8}" height="${h + 4}" rx="3"/>`;
+      s += `<path class="ld-stroke" d="M${x + 0.7} ${y}V${y + h}M${x + w - 0.7} ${y}V${y + h}"/>`;
+      if (d.variant === "negated") s += `<path class="ld-mod-line" d="M${x + 5} ${y + h - 4}L${x + w - 5} ${y + 4}"/>`;
+      const m = MARK.contact[d.variant];
+      if (m) s += `<text class="ld-mod" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${m}</text>`;
+      return `${s}</g>${label(w)}`;
+    }
+    if (n.type === "coil") {
+      const w = n.width ?? 28;
+      const h = n.height ?? 24;
+      // Paréntesis rellenos, más gruesos al centro (como el ícono del editor).
+      const L = `M${x + 5} ${y}C${x + 1.4} ${y + 6} ${x + 1.4} ${y + h - 6} ${x + 5} ${y + h}H${x + 3.2}C${x - 0.6} ${y + h - 6} ${x - 0.6} ${y + 6} ${x + 3.2} ${y}Z`;
+      const R = `M${x + w - 5} ${y}C${x + w - 1.4} ${y + 6} ${x + w - 1.4} ${y + h - 6} ${x + w - 5} ${y + h}H${x + w - 3.2}C${x + w + 0.6} ${y + h - 6} ${x + w + 0.6} ${y + 6} ${x + w - 3.2} ${y}Z`;
+      let s = `<g class="ld-el ld-coil" data-variant="${esc(d.variant ?? "default")}"${attrs}><rect class="ld-hit" x="${x - 4}" y="${y - 2}" width="${w + 8}" height="${h + 4}" rx="3"/><path class="ld-fill" d="${L}${R}"/>`;
+      if (d.variant === "negated") s += `<path class="ld-mod-line" d="M${x + 9} ${y + h - 5}L${x + w - 9} ${y + 5}"/>`;
+      const m = MARK.coil[d.variant];
+      if (m) s += `<text class="ld-mod" x="${x + w / 2}" y="${y + h / 2 + 4.5}" text-anchor="middle">${m}</text>`;
+      return `${s}</g>${label(w)}`;
+    }
+    if (n.type === "block") {
+      const w = n.width ?? 66;
+      const h = n.height ?? 100;
+      const v = d.variant ?? {};
+      let s = `<g class="ld-block" data-node="${esc(n.id)}"><rect class="ld-block-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>`;
+      s += `<text class="ld-block-name" x="${x + w / 2}" y="${y + 19}" text-anchor="middle">${esc(v.name ?? "")}</text>`;
+      for (const hd of d.inputHandles ?? []) s += `<text class="ld-pin" x="${x + 6}" y="${y + hd.relPosition.y + 4}">${esc(hd.id)}</text>`;
+      for (const hd of d.outputHandles ?? []) s += `<text class="ld-pin" x="${x + w - 6}" y="${y + hd.relPosition.y + 4}" text-anchor="end">${esc(hd.id)}</text>`;
+      s += "</g>";
+      if (name) s += `<text class="ld-name" x="${x + w / 2}" y="${y - 7}" text-anchor="middle">${esc(name)}</text>`;
+      return s;
+    }
+    if (n.type === "variable") {
+      if (!name) return "";
+      const right = d.variant === "output";
+      const w = n.width ?? 80;
+      return `<text class="ld-varbox" x="${right ? x + 6 : x + w - 6}" y="${y + (n.height ?? 32) / 2 + 4}" text-anchor="${right ? "start" : "end"}"><title>${esc(name)}</title>${esc(short(name))}</text>`;
+    }
+    return "";
+  }
+
+  /** HTML de la vista Ladder de la app (una tarjeta por peldaño). */
+  function ladderView(ldText) {
+    const body = graphicBody(ldText);
+    let html = '<div class="ld-view">';
+    body.rungs.forEach((r, i) => {
+      const nodes = r.nodes.filter((n) => !/placeholder/i.test(n.type));
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      const left = nodes.find((n) => n.type === "powerRail" && n.data.variant === "left");
+      const right = nodes.find((n) => n.type === "powerRail" && n.data.variant === "right");
+      const tops = nodes.filter((n) => n.type !== "powerRail").map((n) => n.position.y - (n.type === "variable" ? 0 : 20));
+      const bots = nodes.map((n) => n.position.y + (n.height ?? 24));
+      const y0 = Math.min(left?.position.y ?? 0, ...tops) - 8;
+      const y1 = Math.max(...bots) + 12;
+      const rx = right ? right.position.x : Math.max(...nodes.map((n) => n.position.x + (n.width ?? 0))) + 20;
+      const w = rx + 3 + 16;
+      let g = "";
+      // Barras: cubren todo el peldaño (con ramas en paralelo, todas sus salidas).
+      const railH = (n) => Math.max(40, ...(n.data.handles ?? []).map((hd) => (hd.relPosition?.y ?? 0) + 20));
+      if (left) g += `<rect class="ld-rail" x="${left.position.x}" y="${left.position.y}" width="3" height="${railH(left)}"/>`;
+      if (right) g += `<rect class="ld-rail" x="${rx}" y="${right.position.y}" width="3" height="${railH(right)}"/>`;
+      for (const e of r.edges) {
+        const a = byId.get(e.source);
+        const b = byId.get(e.target);
+        if (!a || !b) continue;
+        if ((a.type === "variable" && !a.data.variable?.name) || (b.type === "variable" && !b.data.variable?.name)) continue;
+        const pa = a.type === "powerRail" ? { x: a.position.x + 3, y: hpos(a, e.sourceHandle).y } : hpos(a, e.sourceHandle);
+        const pb = b.type === "powerRail" ? { x: rx, y: hpos(b, e.targetHandle).y } : hpos(b, e.targetHandle);
+        const dd = e.sourceHandle === "output-down" ? corner(pa, { x: pa.x, y: pb.y }, pb) : e.targetHandle === "input-down" ? corner(pa, { x: pb.x, y: pa.y }, pb) : smooth(pa, pb);
+        g += `<path class="ld-edge" data-edge="${esc(e.id)}" d="${dd}"/>`;
+      }
+      for (const n of nodes) g += viewNode(n);
+      const cmt = r.comment ? `<span class="ld-rung-c">${esc(r.comment)}</span>` : '<span class="ld-rung-c ld-rung-c-empty">Sin comentario</span>';
+      html +=
+        `<section class="ld-rung" data-rung="${esc(r.id)}"><header class="ld-rung-h"><span class="ld-rung-n">${i + 1}</span>${cmt}</header>` +
+        `<div class="ld-rung-b"><svg class="ld-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-6 ${y0} ${w + 6} ${y1 - y0}" width="${w + 6}" height="${y1 - y0}" role="img" aria-label="Peldaño ${i + 1}">${g}</svg></div></section>`;
+    });
+    return `${html}</div>`;
+  }
+
+  /**
+   * Estado en vivo del Ladder, con las reglas del depurador del OpenPLC
+   * Editor (rung-debug-states.ts): la corriente sale de la barra izquierda,
+   * pasa un contacto si su variable (o su negada) está en 1 y atraviesa las
+   * bobinas. valueOf(nodeData) da true/false o undefined si no se conoce
+   * (en el Sim se conocen las E/S de la placa). La salida de un bloque se
+   * toma de la bobina que alimenta, cuando esa bobina es de una E/S.
+   * Devuelve { edges: Map(id → bool), nodes: Map(id → bool|undefined) }.
+   */
+  function ladderFlow(ldText, valueOf) {
+    const body = graphicBody(ldText);
+    const edges = new Map();
+    const nodesOut = new Map();
+    for (const r of body.rungs) {
+      const byId = new Map(r.nodes.map((n) => [n.id, n]));
+      const into = new Map();
+      const outOf = new Map();
+      for (const e of r.edges) {
+        (into.get(e.target) ?? into.set(e.target, []).get(e.target)).push(e);
+        (outOf.get(e.source) ?? outOf.set(e.source, []).get(e.source)).push(e);
+      }
+      const memo = new Map();
+      const state = (e, seen = new Set()) => {
+        if (memo.has(e.id)) return memo.get(e.id);
+        if (seen.has(e.id)) return false;
+        seen.add(e.id);
+        const n = byId.get(e.source);
+        const ins = into.get(e.source) ?? [];
+        const inGreen = ins.length ? ins.some((x) => state(x, seen)) : n?.type === "powerRail" && n.data.variant === "left";
+        let out;
+        if (!n) out = false;
+        else if (n.type === "powerRail") out = n.data.variant === "left";
+        else if (n.type === "parallel") out = inGreen;
+        else if (n.type === "coil") out = inGreen;
+        else if (n.type === "contact") {
+          const v = MARK.contact[n.data.variant] ? undefined : valueOf(n.data);
+          out = v === undefined ? undefined : inGreen && (n.data.variant === "negated" ? !v : v);
+        } else if (n.type === "block") {
+          const t = byId.get(e.target);
+          out = t?.type === "coil" && (t.data.variant ?? "default") === "default" ? valueOf(t.data) : undefined;
+        }
+        const green = out === true;
+        memo.set(e.id, green);
+        return green;
+      };
+      for (const e of r.edges) edges.set(e.id, state(e));
+      for (const n of r.nodes) if (n.type === "contact" || n.type === "coil") nodesOut.set(n.id, valueOf(n.data));
+    }
+    return { edges, nodes: nodesOut };
+  }
+
+  return { graphicBody, ladderSvg, fbdSvg, ladderView, ladderFlow, sigOf };
 });

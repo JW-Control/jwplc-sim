@@ -70,7 +70,7 @@ try {
   const ld = await until(() => t(() => (window.jwsimTest.fileNames().includes("pous/programs/main.ld") ? window.jwsimTest.sketchDir() : null)), 20000);
   const roLd = await t(() => window.jwsimTest.readOnly());
   // El .ld se ve como diagrama (contactos y bobinas), no como el JSON del editor.
-  const diag = await t(() => !document.getElementById("plc-diagram").hidden && document.querySelectorAll("#plc-diagram-body svg text").length > 5);
+  const diag = await t(() => !document.getElementById("plc-diagram").hidden && document.querySelectorAll("#plc-diagram-body .ld-rung svg text").length >= 4);
   await t(() => document.querySelector("#lesson-card button")?.click());
   await win.click("#btn-run");
   const runLd = await until(() => t(() => window.jwsimTest.status() === "running"), 300000);

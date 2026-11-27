@@ -169,6 +169,7 @@ function setStatus(kind, text) {
   btnRun.className = `primary state-${kind}`;
   btnPause.className = kind === "paused" ? "is-paused" : kind === "break" ? "is-break" : "";
   btnStop.className = live ? "is-live" : "";
+  if (state.ldView) paintPlcDiagram();
   if (kind === "building") {
     btnRun.textContent = "⟳ Compilando";
     btnRun.title = "Compilando el programa…";
@@ -690,9 +691,38 @@ const isReadOnlyFile = (name) => !!state.sketch?.openplc && !/\.st$/i.test(name)
 function paintPlcDiagram(names) {
   const box = $("plc-diagram-body");
   if (!box || $("plc-diagram").hidden) return;
+  if (state.ldView) return paintLadder();
   for (const el of box.querySelectorAll(names ? names.map((n) => `[data-sig="${n}"]`).join(",") : "[data-sig]")) {
     el.classList.toggle("on", !!state.levels.get(el.dataset.sig));
     const f = state.forced.get(el.dataset.sig);
+    el.classList.toggle("forced", f !== undefined);
+  }
+}
+
+// Ladder con el aspecto del OpenPLC Editor (plc-diagram.cjs ladderView): en
+// vivo, como su depurador, verde lo que está en 1 y la corriente que pasa,
+// azul lo que está en 0; forzado en verde oliva / azul claro. Solo mientras
+// corre la simulación; se conocen las E/S de la placa (AT %IX0.n / %QX0.n).
+function paintLadder() {
+  const box = $("plc-diagram-body");
+  const live = ["running", "paused", "break"].includes(state.sim);
+  box.classList.toggle("ld-live", live);
+  const valueOf = (d) => {
+    const sig = window.JwsimPlcDiagram.sigOf(d);
+    if (!sig || !live) return undefined;
+    return !!state.levels.get(sig);
+  };
+  const flow = live ? window.JwsimPlcDiagram.ladderFlow(state.ldView, valueOf) : { edges: new Map(), nodes: new Map() };
+  for (const el of box.querySelectorAll(".ld-edge")) el.classList.toggle("on", flow.edges.get(el.dataset.edge) === true);
+  for (const el of box.querySelectorAll(".ld-el")) {
+    const v = flow.nodes.get(el.dataset.node);
+    const neg = el.dataset.variant === "negated";
+    const shown = v === undefined ? undefined : neg ? !v : v;
+    const f = el.dataset.sig ? state.forced.get(el.dataset.sig) : undefined;
+    el.classList.toggle("on", f === undefined && shown === true);
+    el.classList.toggle("off", f === undefined && shown === false);
+    el.classList.toggle("forced-1", live && f !== undefined && !!f);
+    el.classList.toggle("forced-0", live && f !== undefined && !f);
     el.classList.toggle("forced", f !== undefined);
   }
 }
@@ -728,6 +758,8 @@ function openPlcForce(sig, ev) {
 }
 function wirePlcForce() {
   const body = $("plc-diagram-body");
+  plcFitObs ??= new ResizeObserver(() => fitPlcDiagram());
+  plcFitObs.observe(body);
   const menu = $("plc-force-menu");
   body.addEventListener("contextmenu", (ev) => {
     const sig = plcSigAt(ev);
@@ -751,6 +783,31 @@ function wirePlcForce() {
   });
 }
 
+// Tamaño del diagrama: un poco más grande que en la wiki (se lee a la
+// distancia del editor). En Ladder todos los peldaños con la misma escala,
+// achicada lo justo para que el más ancho entre en el panel sin barra.
+function fitPlcDiagram() {
+  const body = $("plc-diagram-body");
+  const svgs = [...body.querySelectorAll("svg")];
+  if (!svgs.length) return;
+  const ld = body.classList.contains("is-ladder");
+  if (!ld) {
+    const vb = svgs[0].viewBox.baseVal;
+    if (vb?.width) svgs[0].style.width = `${Math.round(vb.width * 1.35)}px`;
+    return;
+  }
+  const widest = Math.max(...svgs.map((s) => s.viewBox.baseVal.width || 0));
+  // Ancho útil: panel menos sus márgenes y los de la tarjeta (~64 px).
+  const room = Math.max(240, body.clientWidth - 64);
+  const k = Math.max(0.8, Math.min(1.25, room / widest));
+  for (const svg of svgs) {
+    const vb = svg.viewBox.baseVal;
+    svg.style.width = `${Math.round(vb.width * k)}px`;
+    svg.style.height = `${Math.round(vb.height * k)}px`;
+  }
+}
+let plcFitObs = null;
+
 // Ladder (.ld) y FBD (.fbd): se muestra el diagrama; «Ver como texto» deja el JSON.
 const isDiagramFile = (name) => !!state.sketch?.openplc && /\.(ld|fbd)$/i.test(name) && !!window.JwsimPlcDiagram;
 function renderPlcDiagram(name) {
@@ -769,13 +826,14 @@ function renderPlcDiagram(name) {
   }
   try {
     const text = state.models.get(name)?.getValue() ?? "";
-    $("plc-diagram-body").innerHTML = /\.ld$/i.test(name) ? window.JwsimPlcDiagram.ladderSvg(text) : window.JwsimPlcDiagram.fbdSvg(text);
-    // Un poco más grande que en la wiki: se lee a la distancia del editor.
-    const svg = $("plc-diagram-body").querySelector("svg");
-    const vb = svg?.viewBox.baseVal;
-    if (vb?.width) svg.style.width = `${Math.round(vb.width * 1.35)}px`;
+    const ld = /\.ld$/i.test(name);
+    state.ldView = ld ? text : null;
+    $("plc-diagram-body").innerHTML = ld ? window.JwsimPlcDiagram.ladderView(text) : window.JwsimPlcDiagram.fbdSvg(text);
+    $("plc-diagram-body").classList.toggle("is-ladder", ld);
+    fitPlcDiagram();
     paintPlcDiagram();
   } catch (err) {
+    state.ldView = null;
     $("plc-diagram-body").textContent = `No se pudo dibujar el diagrama: ${err.message}`;
   }
 }
