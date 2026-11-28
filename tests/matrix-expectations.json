@@ -8,7 +8,8 @@
   },
   "unsupportedPattern": "no está soportada por JWPLC Sim",
   "unsupportedHardware": {
-    "JWPLC/2.1.0/libraries/JWPLC_Red/examples/01.Red_Cable_o_WiFi": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la línea 2.1.0-alpha.20). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable.",
-    "JWPLC/2.1.0/libraries/JWPLC_WiFi/examples/01.WiFi_Conectar": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la línea 2.1.0-alpha.20). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable."
+    "JWPLC/2.1.0/libraries/JWPLC_Red/examples/01.Red_Cable_o_WiFi": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la alpha.19). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable.",
+    "JWPLC/2.1.0/libraries/JWPLC_WiFi/examples/01.WiFi_Conectar": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la alpha.19). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable.",
+    "JWPLC/2.1.0/libraries/JWPLC_WiFi/examples/02.WiFi_Punto_Acceso_QR": "Usa el punto de acceso de JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la alpha.19)."
   }
 }

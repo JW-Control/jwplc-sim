@@ -157,7 +157,7 @@
     "SPIFFS": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "FFat": "los sistemas de archivos en la flash del ESP32 no se simulan. No está en el plan de gates G0–G10. Para archivos use la microSD (JW_SD, JWSIM_G4_SD_DATALOG).",
     "Console": "usa la consola de ESP-IDF (esp_console, linenoise, argtable3), que no se simula. No está en el plan de gates G0–G10. Use Serial: la consola del simulador es el monitor serie.",
-    "JWPLC_WiFi": "usa la radio WiFi del ESP32, que todavía no se simula (fase «WiFi virtual» de la línea 2.1.0-alpha.20). Para red use JWPLC_Red en modo cable (useEthernet) o JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL)."
+    "JWPLC_WiFi": "usa la radio WiFi del ESP32, que todavía no se simula (fase «WiFi virtual» de la alpha.19). Para red use JWPLC_Red en modo cable (useEthernet) o JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL)."
   },
   "unsupportedApis": {
     "$comment": "APIs del core ESP32 que el JWPLC Basic simulado no ofrece: si el compilador no las encuentra ('X' was not declared / does not name a type), el error lleva esta explicación. Una clave terminada en * cubre el prefijo.",
