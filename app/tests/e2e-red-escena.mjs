@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Red Ethernet de la escena en la app (alpha.19): un HMI Modbus TCP pregunta
+// Red Ethernet de la escena en la app (alpha.19): una PC con JW Modbus Tool pregunta
 // al JWPLC simulado (servidor Modbus TCP) sin salir a la PC.
-//   CONECTA   el HMI queda «en línea» tras el arranque del Ethernet
-//   VALORES   V1 muestra el holding 0 del PLC (segundos desde el arranque)
-//   ESCRIBE   la consigna del HMI llega al PLC (vuelve en V2) y B1 enciende L1
-// Sketch de prueba: app/tests/fixtures/red-hmi (servidor del package con eco).
+//   CONECTA   la PC queda «en línea» tras el arranque del Ethernet
+//   VALORES   el holding 1 (40001) muestra el registro 0 del PLC (segundos desde el arranque)
+//   ESCRIBE   escribir el holding 5 vuelve en el 2 e invertir la bobina 5 enciende la 1
+// Sketch de prueba: app/tests/fixtures/red-modbus-tcp (servidor del package con eco).
 // Capturas en build/gates/red-escena/.
 //   xvfb-run -a node app/tests/e2e-red-escena.mjs
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -49,31 +49,29 @@ const until = async (fn, timeout = 5000) => {
   }
   return null;
 };
-const hmi = () => t(() => window.jwsimTest.scene.snapshot()?.devices?.find((d) => d.id === "HMI1")?.outputs ?? null);
+const pc = () => t(() => window.jwsimTest.scene.snapshot()?.devices?.find((d) => d.id === "PC1")?.outputs ?? null);
 try {
-  await t((d) => window.jwsimTest.openSketchDir(d), join(APP, "tests", "fixtures", "red-hmi"));
+  await t((d) => window.jwsimTest.openSketchDir(d), join(APP, "tests", "fixtures", "red-modbus-tcp"));
   await win.click('.mtab[data-tab="schematic"]');
   await t(() => {
     const s = window.jwsimTest.scene;
     s.add("jwsim/power-24vdc", 0, 0, "PS1");
-    s.add("jwsim/hmi-modbus-tcp", 640, 0, "HMI1");
+    s.add("jwsim/pc-modbus-tcp", 640, 0, "PC1");
     s.wire("PS1.+V1", "plc.24VDC");
     s.wire("PS1.-V1", "plc.M0");
-    s.wire("PS1.+V2", "HMI1.+");
-    s.wire("PS1.-V2", "HMI1.-");
   });
   await win.click("#btn-run");
   await until(() => t(() => window.jwsimTest.status() === "running"), 300000);
-  const on = await until(() => hmi().then((o) => (o?.connected ? o : null)), 30000);
-  check("CONECTA", !!on, { estado: (await hmi())?.estado });
-  const v = await until(() => hmi().then((o) => (o?.v1 >= 2 ? o : null)), 10000);
-  check("VALORES", !!v, { v1: (await hmi())?.v1 });
-  await t(() => window.jwsimTest.scene.act("HMI1", "consigna", 321));
-  await t(() => window.jwsimTest.scene.act("HMI1", "b1", true));
-  const w = await until(() => hmi().then((o) => (o?.v2 === 321 && o?.l1 ? o : null)), 8000);
+  const on = await until(() => pc().then((o) => (o?.connected ? o : null)), 30000);
+  check("CONECTA", !!on, { estado: (await pc())?.estado });
+  const v = await until(() => pc().then((o) => (o?.h0 >= 2 ? o : null)), 10000);
+  check("VALORES", !!v, { h0: (await pc())?.h0 });
+  await t(() => window.jwsimTest.scene.act("PC1", "h4", 321));
+  await t(() => window.jwsimTest.scene.act("PC1", "c4", true));
+  const w = await until(() => pc().then((o) => (o?.h1 === 321 && o?.c0 ? o : null)), 8000);
   await win.waitForTimeout(400);
-  await win.screenshot({ path: join(OUT, "1-hmi-en-linea.png") });
-  check("ESCRIBE", !!w, { v2: (await hmi())?.v2, l1: (await hmi())?.l1 });
+  await win.screenshot({ path: join(OUT, "1-pc-modbus-tool.png") });
+  check("ESCRIBE", !!w, { h1: (await pc())?.h1, c0: (await pc())?.c0 });
 } finally {
   await app.close().catch(() => {});
   rmSync(userData, { recursive: true, force: true });
