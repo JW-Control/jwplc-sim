@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Dos arranques. (1) Cable conectado sin servidor DHCP: a los 10 s y a los 20 s el estado dice modo Ethernet, sale por Sin red y WiFi no incluida (el sketch no incluye JWPLC_WiFi.h), y no intenta conectar. (2) El servidor DHCP guionado (el mismo de 01.Ethernet_DHCP_Basic) entrega 192.168.250.10: a los 10 s sale por Ethernet con esa IP e intenta la petición HTTP.",
+  "sketch": "package:libraries/JWPLC_Red/examples/02.Red_Solo_Cable",
+  "runs": [
+    {
+      "until_ms": 21000,
+      "expect": {
+        "console": [
+          {
+            "match": "^Red: modo Ethernet \\| sale por: Sin red \\| cable: no \\| WiFi: no incluida$",
+            "min": 2
+          }
+        ],
+        "console_absent": [
+          "Respuesta por",
+          "No se pudo conectar"
+        ]
+      }
+    },
+    {
+      "until_ms": 12000,
+      "stim": [
+        "6300 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501023604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff",
+        "7400 net 0 udp 192.168.250.1:67 02010600000003940000800000000000c0a8fa0ac0a8fa0100000000024a57c40a2400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053604c0a8fa013304000151800104ffffff000304c0a8fa010604c0a8fa01ff"
+      ],
+      "expect": {
+        "console": [
+          {
+            "match": "^Red: modo Ethernet \\| sale por: Ethernet \\| IP: 192\\.168\\.250\\.10 \\| cable: listo \\| WiFi: no incluida$",
+            "min": 1,
+            "after_ms": 9000
+          }
+        ],
+        "console_absent": [
+          "sale por: Sin red"
+        ]
+      }
+    }
+  ]
+}

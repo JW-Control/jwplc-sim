@@ -1,10 +1,14 @@
 {
-  "$comment": "Sketches del package que NO deben compilar en el simulador, con el motivo. Cualquier otra falla de la matriz es un defecto del HAL (gate JWSIM_G1_HAL_CORE).",
+  "$comment": "Sketches del package que NO deben compilar en el simulador, con el motivo. Cualquier otra falla de la matriz es un defecto del HAL (gate JWSIM_G1_HAL_CORE). 'unsupportedHardware': ejemplos que usan hardware que el simulador todavía no modela (p. ej. la radio WiFi).",
   "obsolete": {
     "tools/build-speed-benchmark/sketches/08_ethernet_bridge_link": "Usa JWPLC_Bundled_Ethernet_W5x00.h, retirado del package antes de alpha.12 (tampoco compila con el Arduino IDE).",
     "tools/build-speed-benchmark/sketches/09_gfx_bridge_link": "Usa JWPLC_Bundled_Adafruit_GFX.h, retirado en alpha.12 (la TFT pasó a JWPLC_TFT/TFT_eSPI).",
     "tools/build-speed-benchmark/sketches/10_gfx_physical": "Usa constantes ST77XX_* de Adafruit ST7789, retirado en alpha.12.",
     "tools/build-speed-benchmark/sketches/16_alpha6_ethernet_nonblocking_acceptance": "Usa constantes ST77XX_* de Adafruit ST7789, retirado en alpha.12."
   },
-  "unsupportedPattern": "no está soportada por JWPLC Sim"
+  "unsupportedPattern": "no está soportada por JWPLC Sim",
+  "unsupportedHardware": {
+    "JWPLC/2.1.0/libraries/JWPLC_Red/examples/01.Red_Cable_o_WiFi": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la línea 2.1.0-alpha.20). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable.",
+    "JWPLC/2.1.0/libraries/JWPLC_WiFi/examples/01.WiFi_Conectar": "Usa JWPLC_WiFi: la radio WiFi del ESP32 todavía no se simula (fase «WiFi virtual» de la línea 2.1.0-alpha.20). La parte de cable de JWPLC_Red se prueba con 02.Red_Solo_Cable."
+  }
 }
