@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld("jwsim", {
   importFiles: (dir) => ipcRenderer.invoke("sketch:importFiles", dir),
   deleteFile: (dir, name) => ipcRenderer.invoke("sketch:deleteFile", { dir, name }),
   build: (dir) => ipcRenderer.invoke("sketch:build", dir),
+  buildCancel: () => ipcRenderer.invoke("sketch:buildCancel"),
   jwplcUploadInfo: () => ipcRenderer.invoke("jwplc:uploadInfo"),
   jwplcInstallTools: () => ipcRenderer.invoke("jwplc:installTools"),
   jwplcUpload: (args) => ipcRenderer.invoke("jwplc:upload", args),

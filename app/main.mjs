@@ -1084,10 +1084,26 @@ async function offerAvExclusion(auto) {
   });
 }
 
+// Cancelar la compilación del Sim (botón Detener mientras compila, o Esc):
+// corta los compiladores y cierra el worker; el próximo Ejecutar abre otro.
+let buildCancelled = false;
+ipcMain.handle("sketch:buildCancel", async () => {
+  if (!builds.size) return { ok: false };
+  buildCancelled = true;
+  const pending = [...builds.values()];
+  builds.clear();
+  await stopBuilder();
+  for (const resolveBuild of pending) resolveBuild({ ok: false, cancelled: true, message: "Compilación cancelada.", diagnostics: [], output: "" });
+  forward("build:log", "[build] compilación cancelada");
+  return { ok: true };
+});
+
 ipcMain.handle("sketch:build", async (_e, dir) => {
+  buildCancelled = false;
   await stopRunner();
   if (warmup && !warmupDone) forward("build:log", "[build] esperando a que termine la preparación del compilador (solo la primera vez)…");
   await warmup;
+  if (buildCancelled) return { ok: false, cancelled: true, message: "Compilación cancelada.", diagnostics: [], output: "", ms: 0 };
   const outDir = join(app.getPath("userData"), "build", basename(dir));
   const t0 = Date.now();
   const r = await buildInWorker(dir, outDir);

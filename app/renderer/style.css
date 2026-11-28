@@ -329,6 +329,15 @@ select:focus-visible {
   border-color: var(--err-border);
   color: var(--err-text);
 }
+/* Compilando: Detener pasa a «✕ Cancelar» (corta la compilación). */
+#btn-stop.is-cancel {
+  border-color: var(--err-border);
+  color: var(--err-text);
+  font-weight: 600;
+}
+#btn-stop.is-cancel:hover:not(:disabled) {
+  background: var(--err-bg);
+}
 .tb-right {
   justify-self: end;
   gap: 7px;

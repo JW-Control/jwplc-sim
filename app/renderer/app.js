@@ -163,14 +163,16 @@ function setStatus(kind, text) {
   const btnPause = $("btn-pause");
   const btnStop = $("btn-stop");
   btnPause.disabled = !live || kind === "break";
-  btnStop.disabled = !live;
+  btnStop.disabled = !live && kind !== "building";
+  btnStop.title = kind === "building" ? "Cancelar la compilación (Mayús+F5)" : "Detener (Mayús+F5)";
+  btnStop.innerHTML = kind === "building" ? '✕<span class="tb-lbl"> Cancelar</span>' : '■<span class="tb-lbl"> Detener</span>';
   btnRun.disabled = kind === "building";
   btnRun.dataset.state = kind;
   btnPause.dataset.state = kind;
   btnStop.dataset.state = kind;
   btnRun.className = `primary state-${kind}`;
   btnPause.className = kind === "paused" ? "is-paused" : kind === "break" ? "is-break" : "";
-  btnStop.className = live ? "is-live" : "";
+  btnStop.className = live ? "is-live" : kind === "building" ? "is-cancel" : "";
   paintPlcDiagram();
   if (kind === "building") {
     btnRun.textContent = "⟳ Compilando";
@@ -1069,7 +1071,12 @@ async function buildAndRun({ keepScene = false, replay = null } = {}) {
   $("build-log").textContent = "";
   clearProblems();
   const r = await api.build(state.sketch.dir);
-  $("sb-build").textContent = r.ok ? `Compilado en ${(r.ms / 1000).toFixed(1)} s` : "Compilación con errores";
+  $("sb-build").textContent = r.ok ? `Compilado en ${(r.ms / 1000).toFixed(1)} s` : r.cancelled ? "Compilación cancelada" : "Compilación con errores";
+  if (r.cancelled) {
+    setStatus("idle", "Compilación cancelada");
+    setView(before);
+    return false;
+  }
   if (!r.ok) {
     setStatus("error", "Error de compilación");
     $("build-log").textContent += `\n${r.message}\n${r.output}`;
@@ -1135,6 +1142,11 @@ function togglePause() {
 }
 
 function stopSim() {
+  // Mientras compila, Detener cancela la compilación (como en Arduino IDE).
+  if (state.sim === "building") {
+    api.buildCancel?.();
+    return;
+  }
   api.stop();
   clearDebugView();
   if (state.sim === "running" || state.sim === "paused" || state.sim === "break") setStatus("idle", "Detenido");
