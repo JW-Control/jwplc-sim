@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (red, Modbus TCP y salidas).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/47.Servidor_Modbus_TCP",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      {
+        "match": "^Lección 47: servidor Modbus TCP, cajas en 40001, marcha en la bobina 00001$",
+        "min": 1
+      }
+    ]
+  }
+}

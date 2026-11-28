@@ -52,6 +52,7 @@
     "JWPLC_Red",
     "JWPLC_Runtime",
     "JWPLC_TFT",
+    "JWPLC_Cloud",
     "JWPLC_TLS",
     "JWPLC_UI_Widgets",
     "JWPLC_Web",

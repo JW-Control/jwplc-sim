@@ -16,6 +16,18 @@
 // alterna la bomba líder al despertar. Fallas: cisterna vacía (E01),
 // transmisor abierto o sin respuesta (E02), bomba que no confirma marcha o
 // variador en falla (E1x/E2x: entra la otra bomba).
+//
+// JW Cloud (opcional): con el token del equipo en CLOUD_TOKEN, cada 10 s manda
+// presión, frecuencias y bombas en marcha, y cada alarma llega como aviso al
+// celular. Sin token no usa la red. Para probar con JW Cloud en la PC desde el
+// JWPLC Sim: CLOUD_SERVIDOR "192.168.250.1", CLOUD_PUERTO 8788, CLOUD_TLS false.
+
+#include <JWPLC_Cloud.h>
+
+const char CLOUD_TOKEN[] = "";
+const char CLOUD_SERVIDOR[] = "ota.jw-control.com";
+const uint16_t CLOUD_PUERTO = 443;
+const bool CLOUD_TLS = true;
 
 static const float CONSIGNA = 4.0;      // bar
 static const float DESPERTAR = 0.5;     // bar bajo la consigna
@@ -234,6 +246,42 @@ static void controlar(uint32_t ahora, bool automatico, bool agua)
     digitalWrite(Q0_1, codigo[0] != 0 && (ahora / 500) % 2);
 }
 
+static void iniciarCloud()
+{
+    if (CLOUD_TOKEN[0] == 0) return;
+    JWPLC_Cloud.setServer(CLOUD_SERVIDOR, CLOUD_PUERTO, CLOUD_TLS);
+    JWPLC_Cloud.setProgram("Bombeo de edificio");
+    JWPLC_Cloud.addNumber("p", "Presión", "bar", 2, 0, 6);
+    JWPLC_Cloud.addNumber("sp", "Consigna", "bar", 1);
+    JWPLC_Cloud.addNumber("f1", "Frecuencia B1", "Hz", 1, 0, 60);
+    JWPLC_Cloud.addNumber("f2", "Frecuencia B2", "Hz", 1, 0, 60);
+    JWPLC_Cloud.addBool("b1", "Bomba 1");
+    JWPLC_Cloud.addBool("b2", "Bomba 2");
+    JWPLC_Cloud.addBool("auto", "Automático");
+    JWPLC_Cloud.addAlarm("E01", "Cisterna vacía");
+    JWPLC_Cloud.addAlarm("E02", "Transmisor de presión sin señal");
+    JWPLC_Cloud.addAlarm("E1", "Falla de la bomba 1");
+    JWPLC_Cloud.addAlarm("E2", "Falla de la bomba 2");
+    JWPLC_Cloud.begin(CLOUD_TOKEN);
+}
+
+// Solo guarda los valores: el envío lo hace JWPLC_Cloud en otra tarea.
+static void publicarCloud(bool automatico, bool agua)
+{
+    if (CLOUD_TOKEN[0] == 0) return;
+    if (presionOk) JWPLC_Cloud.set("p", presion);
+    JWPLC_Cloud.set("sp", CONSIGNA);
+    JWPLC_Cloud.set("f1", bombas[0].hzSalida);
+    JWPLC_Cloud.set("f2", bombas[1].hzSalida);
+    JWPLC_Cloud.set("b1", enMarcha(bombas[0]));
+    JWPLC_Cloud.set("b2", enMarcha(bombas[1]));
+    JWPLC_Cloud.set("auto", automatico);
+    JWPLC_Cloud.alarm("E01", !agua);
+    JWPLC_Cloud.alarm("E02", automatico && !presionOk);
+    JWPLC_Cloud.alarm("E1", bombas[0].bloqueada);
+    JWPLC_Cloud.alarm("E2", bombas[1].bloqueada);
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -241,6 +289,7 @@ void setup()
     JWPLC_Display.setErrCode("");
     if (!JWPLC_ModbusRTU.begin(247, 9600, SERIAL_8N1)) Serial.println("Modbus: begin falló");
     Serial.println("Bombeo de edificio a presión constante: consigna 4,0 bar");
+    iniciarCloud();
 }
 
 void loop()
@@ -254,6 +303,7 @@ void loop()
     {
         ultimoCiclo = ahora;
         controlar(ahora, digitalRead(I0_1), digitalRead(I0_0));
+        publicarCloud(digitalRead(I0_1), digitalRead(I0_0));
     }
     if (ahora - ultimoLog >= 2000)
     {
