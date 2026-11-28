@@ -1,17 +1,46 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "JWPLC_Web (alpha.19): bombeo de presión constante simulado. Mientras el equipo no tiene usuarios la TFT muestra el código de primer ingreso (sin red en la prueba: «Esperando la red»). El control de bombas corre igual sin red: Q0.0 arranca con la presión baja. El panel completo (reclamar, operador, consigna, alarma baja reconocida, tendencia) está en scripts/gate-web.mjs.",
+  "$comment": "JWPLC_Web (alpha.19): bombeo de presión constante simulado. Mientras el equipo no tiene usuarios la TFT muestra el código de primer ingreso (sin red en la prueba: «Esperando la red»). El control de bombas corre igual sin red: Q0.0 arranca con la presión baja. A los 20 s sigue el mismo código (la pantalla del programa no se va sola a la IDLE); ESC muestra la IDLE de E/S limpia (GLCD, sin la fuente de 26 del programa) y OK vuelve al código. El panel completo (reclamar, operador, consigna, alarma baja reconocida, tendencia) está en scripts/gate-web.mjs.",
   "sketch": "package:libraries/JWPLC_Web/examples/02.Bombeo_Presion_Constante",
-  "until_ms": 4000,
-  "args": ["--rtc", "fijo:2026-11-28T09:00:00"],
-  "stim": [],
+  "until_ms": 28000,
+  "args": [
+    "--rtc",
+    "fijo:2026-11-28T09:00:00"
+  ],
+  "stim": [
+    "21000 BTN_ESC=1",
+    "21400 BTN_ESC=0",
+    "25000 BTN_OK=1",
+    "25400 BTN_OK=0"
+  ],
   "expect": {
     "console": [
-      { "match": "^JWPLC Basic - 02.Bombeo_Presion_Constante$", "count": 1 },
-      { "match": "^\\[JWPLC_Web\\] Primer ingreso: abrir el panel y escribir el codigo \\d{6}$", "count": 1 }
+      {
+        "match": "^JWPLC Basic - 02.Bombeo_Presion_Constante$",
+        "count": 1
+      },
+      {
+        "match": "^\\[JWPLC_Web\\] Primer ingreso: abrir el panel y escribir el codigo \\d{6}$",
+        "count": 1
+      }
     ],
     "screen": [
-      { "at_ms": 3500, "ref": "screens/02.Bombeo_Presion_Constante_primer_ingreso.png" }
+      {
+        "at_ms": 3500,
+        "ref": "screens/02.Bombeo_Presion_Constante_primer_ingreso.png"
+      },
+      {
+        "at_ms": 20000,
+        "ref": "screens/02.Bombeo_Presion_Constante_primer_ingreso.png"
+      },
+      {
+        "at_ms": 23500,
+        "ref": "screens/02.Bombeo_Presion_Constante_idle.png"
+      },
+      {
+        "at_ms": 27500,
+        "ref": "screens/02.Bombeo_Presion_Constante_primer_ingreso.png"
+      }
     ]
   }
 }
