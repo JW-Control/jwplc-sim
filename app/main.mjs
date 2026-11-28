@@ -1135,8 +1135,9 @@ function copyDir(from, to) {
 let bridge = null;
 // «Panel web desde el celular» (Herramientas): publica los puertos del PLC en
 // la red de la PC (0.0.0.0) para entrar desde el celular por el mismo Wi-Fi.
-// Apagado por defecto: abre esos puertos a la red local.
-const panelCelular = () => readPref("panelCelular") === true;
+// Prendido por defecto (decisión de Jeykco, 28/11): el panel se abre igual desde
+// la PC y desde el celular; el botón lo apaga si no se quiere abrir a la red.
+const panelCelular = () => readPref("panelCelular") !== false;
 // IPv4 de la PC en la red local: privada, no interna y sin adaptadores
 // virtuales (Hyper-V/WSL, VirtualBox, VMware, Docker).
 function lanIPv4() {

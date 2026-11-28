@@ -3634,7 +3634,7 @@ function celularShow(st) {
     ? st.lan
       ? `Activo: el panel web se abre desde el celular en http://${st.lan}:1080/ (mismo Wi-Fi). Escanea el QR de la pantalla del equipo. Se aplica al iniciar la simulación; si Windows pregunta, permitir en redes privadas. Clic para apagar.`
       : "Activo, pero la PC no tiene una red local (Wi-Fi o cable). Clic para apagar."
-    : "Abre el panel web del JWPLC simulado desde el celular, por el mismo Wi-Fi de la PC. Apagado: solo se ve desde esta PC.";
+    : "Apagado: el panel web solo se abre desde esta PC. Clic para abrirlo también desde el celular (mismo Wi-Fi).";
 }
 if ($("btn-celular") && window.jwsim.celular) {
   window.jwsim.celular().then(celularShow).catch(() => {});

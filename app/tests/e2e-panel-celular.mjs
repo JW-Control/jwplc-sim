@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 JW Control
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Botón «Celular» de la barra (alpha.19): se ve sin abrir menús, se prende y
-// se apaga con un clic, queda guardado y coincide con Herramientas.
-//   VISIBLE    el botón está en la barra superior
-//   PRENDE     un clic lo pone en verde; el globo da la URL con la IP de la PC
-//   MENU       la casilla de Herramientas queda igual
-//   GUARDA     la preferencia se guarda (panelCelular = true)
-//   APAGA      otro clic lo apaga
+// se apaga con un clic, queda guardado y coincide con Herramientas. Viene
+// prendido: el panel se abre desde la PC y desde el celular sin tocar nada.
+//   VISIBLE    el botón está en la barra superior y arranca prendido
+//   APAGA      un clic lo apaga; la casilla de Herramientas queda igual
+//   GUARDA     la preferencia se guarda (panelCelular = false)
+//   PRENDE     otro clic lo vuelve a prender; el globo da la URL con la IP de la PC
 // Capturas en build/gates/panel-celular/.
 //   xvfb-run -a node app/tests/e2e-panel-celular.mjs
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
@@ -42,19 +42,18 @@ try {
   await win.waitForSelector("#btn-celular", { timeout: 60000 });
   const btn = () => win.$eval("#btn-celular", (b) => ({ on: b.classList.contains("on"), text: b.textContent.trim(), title: b.title, visible: b.offsetWidth > 0 && b.offsetHeight > 0 }));
   let b = await btn();
-  check("VISIBLE", b.visible && !b.on && b.text === "Celular", b.text);
-  await win.screenshot({ path: join(OUT, "1-apagado.png"), clip: { x: 700, y: 0, width: 800, height: 60 } });
+  check("VISIBLE", b.visible && b.on && b.text === "Celular" && (await menuChecked()) === true, b.text);
+  await win.screenshot({ path: join(OUT, "1-prendido.png"), clip: { x: 700, y: 0, width: 800, height: 60 } });
   await win.click("#btn-celular");
   await win.waitForTimeout(400);
   b = await btn();
-  check("PRENDE", b.on && b.text === "Celular" && /http:\/\/\d+\.\d+\.\d+\.\d+:1080\/|sin Wi-Fi|no tiene una red/.test(b.title), b.title);
-  await win.screenshot({ path: join(OUT, "2-prendido.png"), clip: { x: 700, y: 0, width: 800, height: 60 } });
-  check("MENU", (await menuChecked()) === true);
-  check("GUARDA", prefs().panelCelular === true, JSON.stringify(prefs()));
+  check("APAGA", !b.on && (await menuChecked()) === false, b.text);
+  check("GUARDA", prefs().panelCelular === false, JSON.stringify(prefs()));
+  await win.screenshot({ path: join(OUT, "2-apagado.png"), clip: { x: 700, y: 0, width: 800, height: 60 } });
   await win.click("#btn-celular");
   await win.waitForTimeout(400);
   b = await btn();
-  check("APAGA", !b.on && (await menuChecked()) === false && prefs().panelCelular === false, b.text);
+  check("PRENDE", b.on && (await menuChecked()) === true && prefs().panelCelular === true && /http:\/\/\d+\.\d+\.\d+\.\d+:1080\/|no tiene una red/.test(b.title), b.title);
 } catch (err) {
   console.log("FALLA", err.message);
   failed++;
