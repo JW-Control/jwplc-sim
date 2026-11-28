@@ -54,7 +54,7 @@ export async function runMatrix(pkg, { target = "native", filter, log = () => {}
   const examples = packageExamples(pkg).filter((e) => !filter || e.rel.includes(filter));
   const rows = [];
   for (const ex of examples) {
-    const classified = expect.obsolete[ex.rel] ?? expect.packageIssue?.[ex.rel] ?? expect.externalLibrary?.[ex.rel];
+    const classified = expect.obsolete[ex.rel] ?? expect.packageIssue?.[ex.rel] ?? expect.externalLibrary?.[ex.rel] ?? expect.unsupportedHardware?.[ex.rel];
     const file = testFileFor(ex);
     const row = { library: ex.lib, example: ex.name, sketch: ex.rel, test: existsSync(file) ? relative(ROOT, file).split(sep).join("/") : null };
     if (classified) {
