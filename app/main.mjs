@@ -1969,7 +1969,7 @@ ipcMain.handle("stim:open", async () => {
   return file ? { file, text: readFileSync(file, "utf8") } : null;
 });
 
-// Pantalla de un JWPLC Basic real (JWPLC_WebScreen): ventana aparte que pide la IP
+// Panel de un JWPLC Basic real (JWPLC_Web): ventana aparte que pide la IP
 // y carga la página que sirve el equipo. Sin preload: es contenido de la red.
 let realWin = null;
 function openRealDevice() {
@@ -1991,7 +1991,7 @@ function openRealDevice() {
 
 const EXAMPLE_SECTIONS = [
   ["JWPLC_Aprende", "JWPLC_GlobalPeripherals"],
-  ["JWPLC_Display", "JWPLC_UI_Widgets", "JWPLC_Runtime", "JWPLC_WebScreen"],
+  ["JWPLC_Display", "JWPLC_UI_Widgets", "JWPLC_Runtime", "JWPLC_Web"],
   ["JWPLC_Ethernet", "JWPLC_RS485", "JWPLC_ModbusRTU", "JWPLC_ModbusTCP", "JWPLC_Expansion"],
   ["JW_DWIN", "JW_FRAM", "JW_MatrixButtons", "JW_ModbusRTU", "JW_RS485", "JW_RTC", "JW_SD"],
 ];

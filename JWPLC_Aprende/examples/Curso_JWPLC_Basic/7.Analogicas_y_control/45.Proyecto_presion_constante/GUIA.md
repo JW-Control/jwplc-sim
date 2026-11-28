@@ -99,4 +99,4 @@ Bomba despierta
 - Un solo lugar escribe las salidas.
 - La falla segura depende de la máquina.
 
-Con esta lección terminas la **Unidad 7**. Vuelve al [temario](https://jw-control.com/wiki/curso-jwplc-basic/) para ver las unidades siguientes.
+Con esta lección terminas la **Unidad 7**. En la Unidad 8, [La red del tablero](https://jw-control.com/wiki/curso-jwplc-basic/unidad-8/46-la-red-del-tablero/), el JWPLC se une a la red Ethernet de la planta.

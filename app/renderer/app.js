@@ -2625,7 +2625,7 @@ function mandosDevices() {
   if (!Sc || !state.exercise) return [];
   const out = [];
   for (const d of Sc.specForView()?.devices ?? []) {
-    const acts = (Sc.actionsOf(d.id) ?? []).filter((a) => a.kind !== "value");
+    const acts = (Sc.actionsOf(d.id) ?? []).filter((a) => a.kind !== "value" && a.mando !== false);
     if (acts.length) out.push({ id: d.id, label: d.params?.label ?? "", name: Sc.deviceName(d.id), acts });
   }
   return out;

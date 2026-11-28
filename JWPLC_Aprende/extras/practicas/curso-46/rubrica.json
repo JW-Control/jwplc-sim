@@ -1,0 +1,73 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-46",
+  "goals": [
+    {
+      "id": "lista",
+      "description": "«Red lista. IP: 192.168.250.10»",
+      "console": "Red lista\\. IP: 192\\.168\\.250\\.10"
+    },
+    {
+      "id": "parpadeo",
+      "description": "H1 parpadea mientras espera la red",
+      "period": "H1.lit",
+      "cycle_ms": [
+        900,
+        1100
+      ],
+      "cycles": 3,
+      "hint": "bool parpadeo = (millis() / 500) % 2 == 1; y digitalWrite(Q0_0, redLista || parpadeo);",
+      "why": "Un piloto que parpadea dice «estoy en eso»; uno apagado no distingue entre esperar y estar sin tensión."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Arranque de la red",
+      "until_ms": 14000,
+      "actions": [],
+      "checks": [
+        {
+          "description": "«Red lista. IP: 192.168.250.10»",
+          "points": 4,
+          "console": "Red lista\\. IP: 192\\.168\\.250\\.10"
+        },
+        {
+          "description": "H1 se enciende mientras espera la red",
+          "points": 5,
+          "from_ms": 1000,
+          "to_ms": 3500,
+          "eventually": {
+            "H1.lit": true
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "y se apaga otra vez: parpadea",
+          "points": 5,
+          "from_ms": 1600,
+          "to_ms": 4000,
+          "eventually": {
+            "H1.lit": false
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "Con la red lista, H1 fijo",
+          "points": 6,
+          "from_ms": 11000,
+          "to_ms": 14000,
+          "always": {
+            "H1.lit": true
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Red",
+      "until_ms": 12000,
+      "actions": []
+    }
+  ]
+}

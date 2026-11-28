@@ -1,0 +1,182 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-48",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "S1 en el módulo: la bomba arranca por la red",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "Mandos: S1. El JWPLC lee DI1 y escribe DO1."
+    },
+    {
+      "id": "falla",
+      "description": "Abre F1: «Falla: térmico», bomba parada y H2",
+      "console": "Falla: térmico",
+      "hint": "termicoNormal = (entradas[0] & 0b00000100) != 0; y la bomba con && !falla.",
+      "why": "Con un módulo remoto la lógica de seguridad sigue en el JWPLC: el térmico se lee como cualquier entrada."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Marcha, falla y parada por la red",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 10000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 11700,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 12700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 13500,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14800,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "S1 en DI1 arranca la bomba",
+          "points": 2,
+          "from_ms": 10000,
+          "to_ms": 10800,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "S2 en DI2 la detiene",
+          "points": 2,
+          "from_ms": 11500,
+          "to_ms": 12200,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "El térmico abierto detiene la bomba",
+          "points": 4,
+          "from_ms": 13500,
+          "to_ms": 13900,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Con el térmico abierto, S1 no arranca",
+          "points": 4,
+          "from_ms": 13900,
+          "to_ms": 14700,
+          "never": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "«Falla: térmico», una vez",
+          "points": 4,
+          "console": "Falla: térmico",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "H2 en DO3 durante la falla",
+          "points": 4,
+          "from_ms": 13500,
+          "to_ms": 14700,
+          "eventually": {
+            "H2.lit": true
+          },
+          "for_ms": 500
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Remoto",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 10000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 10200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 12000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 13500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

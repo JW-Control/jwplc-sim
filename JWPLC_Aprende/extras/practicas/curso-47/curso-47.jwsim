@@ -1,0 +1,118 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 47 · El JWPLC servidor Modbus TCP",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.18"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Servidor_Modbus_TCP/Servidor_Modbus_TCP.ino"
+  },
+  "exercise": {
+    "lesson": "curso-47",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Servidor_Modbus_TCP",
+    "brief": {
+      "goal": "Meta desde la PC: la PC escribe la meta de cajas en 40003; al llegarla, la banda para sola y se escribe «Meta cumplida: N cajas».",
+      "steps": [
+        "Ejecuta el ejemplo y espera «en línea» en la PC PC1: el 40001 muestra las cajas contadas.",
+        "Clic en la bobina 00001 de la PC: la banda KM1 arranca. Pasa cajas por el sensor B1 y míralas sumar en 40001.",
+        "Lee la meta de holding[2] (40003). Si es mayor que 0 y cajas ≥ meta, apaga el bit 0 de bobinas y escribe «Meta cumplida: N cajas»."
+      ],
+      "uses": [
+        "Ethernet · servidor Modbus TCP, puerto 502",
+        "I0_0 · B1, sensor de cajas",
+        "Q0_0 · KM1, banda",
+        "PC1 · JW Modbus Tool: 40001 cajas, 40002 banda, 40003 meta, 00001 marcha"
+      ],
+      "teaches": "Con el JWPLC de servidor, la PC lee y escribe las tablas del programa por la red. El programa también puede cambiar lo que escribió la PC, como apagar la bobina al cumplir la meta."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 220
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 220
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 500,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 920
+      },
+      {
+        "id": "PC1",
+        "type": "jwsim/pc-modbus-tcp",
+        "x": 860,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}

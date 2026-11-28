@@ -1,0 +1,97 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 46 · La red del tablero",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.18"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/La_red_del_tablero/La_red_del_tablero.ino"
+  },
+  "exercise": {
+    "lesson": "curso-46",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/La_red_del_tablero",
+    "brief": {
+      "goal": "Mientras el JWPLC espera la red, el piloto H1 parpadea cada 500 ms; con la red lista queda fijo.",
+      "steps": [
+        "Ejecuta el ejemplo: el estado de la red sale cada 2 s y, a los pocos segundos, «Red lista. IP: 192.168.250.10» y H1 se enciende.",
+        "Mientras redLista sea falso, haz parpadear H1 con millis(): encendido medio segundo, apagado medio segundo.",
+        "Con la red lista, H1 fijo. La PC PC1 ya ve al JWPLC en línea en la misma red."
+      ],
+      "uses": [
+        "Ethernet · IP fija 192.168.250.10",
+        "Q0_0 · H1, piloto «red lista»",
+        "PC1 · PC de la oficina en la misma red"
+      ],
+      "teaches": "Cada equipo de una red tiene su dirección IP. En un tablero se fija, para que los demás sepan dónde encontrarlo, y un piloto dice si la red está lista."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 0
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "verde",
+          "label": "Red lista"
+        },
+        "x": 300,
+        "y": 700
+      },
+      {
+        "id": "PC1",
+        "type": "jwsim/pc-modbus-tcp",
+        "x": 860,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}
