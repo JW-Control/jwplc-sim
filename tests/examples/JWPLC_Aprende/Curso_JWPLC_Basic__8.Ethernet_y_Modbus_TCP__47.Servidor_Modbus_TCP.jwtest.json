@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Lección 47: la PC con JW Modbus Tool arranca la banda con la bobina 00001 y ve las cajas en el 40001.",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/47.Servidor_Modbus_TCP",
+  "scene": "../../../JWPLC_Aprende/extras/practicas/curso-47/curso-47.jwsim",
+  "until_ms": 13000,
+  "actions": [
+    {
+      "at_ms": 9000,
+      "device": "PC1",
+      "action": "c0",
+      "value": true
+    },
+    {
+      "at_ms": 10000,
+      "device": "B1",
+      "action": "target",
+      "value": true
+    },
+    {
+      "at_ms": 10300,
+      "device": "B1",
+      "action": "target",
+      "value": false
+    },
+    {
+      "at_ms": 11000,
+      "device": "B1",
+      "action": "target",
+      "value": true
+    },
+    {
+      "at_ms": 11300,
+      "device": "B1",
+      "action": "target",
+      "value": false
+    }
+  ],
+  "expect": {
+    "console": [
+      "Banda en marcha \\(desde la PC\\)",
+      {
+        "match": "^Caja 2$",
+        "min": 1,
+        "max": 1
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 8800,
+          "PC1.connected": true,
+          "KM1.closed": false
+        },
+        {
+          "at_ms": 9800,
+          "KM1.closed": true
+        },
+        {
+          "at_ms": 12500,
+          "PC1.h0": 2,
+          "PC1.h1": 1
+        }
+      ]
+    }
+  }
+}

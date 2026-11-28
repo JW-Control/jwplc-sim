@@ -1,0 +1,17 @@
+{
+  "name": "modbus_tcp",
+  "protocol": "modbus-tcp",
+  "modbusSlaveConfig": {
+    "enabled": true,
+    "transports": [
+      "tcp"
+    ],
+    "networkInterface": "0.0.0.0",
+    "port": 502,
+    "bufferMapping": {
+      "holdingRegisters": {
+        "mwCount": 8
+      }
+    }
+  }
+}

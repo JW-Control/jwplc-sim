@@ -1,0 +1,165 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-17",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "La PC arranca la banda con el 40002",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "En la PC PC1, arrastra el valor del 40002 a la derecha."
+    },
+    {
+      "id": "meta",
+      "description": "Al llegar a la meta, la marcha vuelve a 0 sola",
+      "when": {
+        "KM1.closed": false,
+        "PC1.h1": 0
+      },
+      "hold_ms": 500,
+      "after": "marcha",
+      "hint": "IF META > 0 AND CAJAS >= META THEN MARCHA := 0; END_IF;",
+      "why": "Lo que escribe la PC es una variable más: el programa decide cuándo vale y cuándo se borra."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lote de 3 cajas",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h2",
+          "value": 3
+        },
+        {
+          "at_ms": 9500,
+          "device": "PC1",
+          "action": "h1",
+          "value": 1
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 12800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "El 40002 de la PC arranca la banda",
+          "points": 4,
+          "from_ms": 9500,
+          "to_ms": 10400,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "La PC ve las 3 cajas en el 40001",
+          "points": 4,
+          "at_ms": 13500,
+          "expect": {
+            "PC1.h0": 3
+          }
+        },
+        {
+          "description": "Al llegar a la meta la banda para sola",
+          "points": 6,
+          "from_ms": 12500,
+          "to_ms": 13500,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "La PC ve la marcha en 0 (40002)",
+          "points": 6,
+          "at_ms": 14500,
+          "expect": {
+            "PC1.h1": 0
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Banda",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h2",
+          "value": 2
+        },
+        {
+          "at_ms": 9500,
+          "device": "PC1",
+          "action": "h1",
+          "value": 1
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

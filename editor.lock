@@ -7,9 +7,9 @@
 #     workflow de pre-release (PLATFORM_VPP_SHA).
 # Para cambiar de versión: REF y COMMIT, y `node scripts/fetch-editor.mjs`.
 OPENPLC_EDITOR_REPO=https://github.com/JW-Control/openplc-editor.git
-# 4.3.3-jwplc.2 (upstream OpenPLC Editor 4.3.3), editor final de 2.1.0-alpha.17
-# (misma cadena que jwplc.1: STruC++ v0.7.0 y VPP 0647a84; cambia solo el HMI Designer).
-OPENPLC_EDITOR_REF=jwplc-editor-v4.3.3-jwplc.2
-OPENPLC_EDITOR_COMMIT=f81969c3563468432a51aaea7810db7eac501d64
+# 4.3.3-jwplc.3 (upstream OpenPLC Editor 4.3.3), editor de 2.1.0-alpha.18: el servidor Modbus TCP
+# del Baremetal reintenta la red y abre el 502 cuando el enlace sube (STruC++ v0.7.0, VPP 0647a84).
+OPENPLC_EDITOR_REF=jwplc-editor-v4.3.3-jwplc.3
+OPENPLC_EDITOR_COMMIT=7272626dbc0c8bc1f9337ca74787e2a895d9c219
 # SHA-256 de lo que se descarga del editor (STruC++ v0.7.0 de binary-versions.json).
 STRUCPP_SHA256=8d78ae92d931b87c06145520222d1491206f424c147ec66ea84653cb8b0e1be5

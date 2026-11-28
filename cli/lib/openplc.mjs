@@ -164,7 +164,21 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
       projectData: ipcData,
       boardTarget: dev.name,
       boardRuntime: "arduino",
-      boardEntry: { compiler: "arduino-cli", platform: dev.target.platform, core: dev.target.core, define: dev.hal.define, vpp: manifest, capabilities: dev.capabilities },
+      // Como el editor: las pantallas del VPP (la de Network es la que dice que
+      // la placa tiene red y deja compilar el servidor Modbus TCP), las
+      // interfaces de red y los puertos serie del dispositivo.
+      boardEntry: {
+        compiler: "arduino-cli",
+        platform: dev.target.platform,
+        core: dev.target.core,
+        define: dev.hal.define,
+        vpp: manifest,
+        capabilities: dev.capabilities,
+        vppScreenNames: Object.keys(dev.screens ?? {}),
+        ...(dev.networkInterfaces ? { networkInterfaces: dev.networkInterfaces } : {}),
+        ...(dev.serialPorts ? { serialPorts: dev.serialPorts } : {}),
+        ...(dev.defaultSerial ? { defaultSerial: dev.defaultSerial } : {}),
+      },
       devicePinMapping: pins,
       isSimulator: false,
       isRuntimeV4: false,
@@ -177,6 +191,13 @@ export async function generateOpenPlcSketch(projectDir, outDir, { log = (m) => c
       avrLibStdCppInclude: "",
       arduinoCliParallel: false,
       vendorScreenData: parsed.deviceConfiguration?.vendorScreenData,
+      // Como compiler-module.ts: las pantallas Serial y Network del VPP. Sin
+      // esto el bloque de comunicaciones de defines.h no sale y el servidor
+      // Modbus (devices/servers/) no se compila.
+      vppModbusState: {
+        serial: parsed.deviceConfiguration?.vendorScreenData?.serial,
+        network: parsed.deviceConfiguration?.vendorScreenData?.network,
+      },
     },
     port,
     (ev) => {

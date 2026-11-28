@@ -417,4 +417,35 @@ Con ese orden, todo lo que se decide en una vuelta se ve en las salidas de la mi
     como: `\`IF F_PIEZA.Q AND KM1\` cuenta solo con la cinta en marcha: una pieza que se mueve con la cinta parada no es parte del lote. \`IF S1 AND COMPLETO THEN PIEZAS := 0\` es el lote nuevo; en Ladder es un **MOVE** de 0 a PIEZAS, y en FBD un **SEL** que elige 0. Como COMPLETO se calcula después, en la misma vuelta ya vale FALSE y la cinta arranca.`,
     sim: ["Pulsa **Ejecutar** y aprieta **S1**: la cinta marcha.", "Toca **B1** tres veces: el lote se completa, la cinta para y H1 se enciende.", "**S1** empieza un lote nuevo.", ABRIR],
   },
+  "iec-17": {
+    descripcion: "Comunicaciones en IEC 61131-3: el servidor Modbus TCP del proyecto en el OpenPLC Editor; una PC con JW Modbus Tool lee el contador de cajas y arranca la banda, en ST, Ladder y FBD.",
+    intro: `Una banda cuenta cajas y el jefe de producción quiere verlas desde la oficina, y arrancar la banda sin bajar al tablero. El JWPLC y la PC están en la misma red Ethernet; el idioma común es **Modbus TCP**. En la ruta C++ es la lección 47; aquí el servidor se configura en el **OpenPLC Editor** y el programa solo usa variables.`,
+    aprende: ["A agregar el servidor Modbus TCP a un proyecto del OpenPLC Editor y darle al JWPLC una IP fija.", "Qué tabla de Modbus es cada dirección IEC: %QX son bobinas y %MW son holding.", "A leer lo que escribe la PC y a escribir lo que la PC lee, con variables comunes."],
+    idea: `### El servidor, en el proyecto
+
+En el OpenPLC Editor, el servidor Modbus no se programa: se configura. En **Servers** se agrega un servidor **Modbus** con transporte **TCP** (puerto 502) y, en su *Buffer Mapping*, cuántos **%MW** expone como holding. En **Device → Network** se activa la red con IP fija **192.168.250.10**, máscara 255.255.255.0 y puerta de enlace 192.168.250.1. Al subir el programa, el JWPLC atiende el puerto 502 por su cuenta.
+
+### Cada dirección IEC es una tabla de Modbus
+
+| En el programa | En Modbus | Dirección para la PC |
+|---|---|---|
+| \`%IX0.0\` a \`%IX0.7\` (entradas) | Entradas discretas | 10001 a 10008 |
+| \`%QX0.0\` a \`%QX0.7\` (salidas) | Bobinas | 00001 a 00008 |
+| \`%MW0\`, \`%MW1\`… (memoria) | Holding | 40001, 40002… |
+
+Las variables **%MW** no son bornes: son palabras de memoria que existen para que la red las lea y las escriba. Si el programa no usa salidas analógicas (%QW), el **%MW0** es el holding 40001.
+
+### El mapa de la banda
+
+\`\`\`iecst
+VAR
+  CAJAS  AT %MW0 : INT;  (* 40001: cajas contadas *)
+  MARCHA AT %MW1 : INT;  (* 40002: marcha, la escribe la PC *)
+END_VAR
+\`\`\`
+
+La PC lee el 40001 cuando quiere y escribe el 40002 para arrancar la banda. KM1 (%QX0.0) es además la bobina 00001: la PC ve la banda en marcha sin que el programa haga nada más.`,
+    como: `El flanco de B1 suma una caja en \`CAJAS\` (como en la lección 14). La banda sigue a la orden de la PC: \`KM1 := MARCHA <> 0;\`. En Ladder, la suma es un bloque **ADD** detrás de un contacto de flanco y la comparación un bloque **NE** por EN/ENO; en FBD, **R_TRIG**, **SEL** con **ADD**, y **NE**. Nada en el programa habla de la red: el servidor del proyecto presta \`CAJAS\` y \`MARCHA\` tal cual.`,
+    sim: ["Pulsa **Ejecutar** y espera unos segundos: la PC **PC1** del **Esquema** dice «en línea».", "Arrastra a la derecha el valor del **40002** en la PC: **KM1** cierra y la bobina **00001** se enciende.", "Acciona el sensor **B1** desde su símbolo: el **40001** cuenta las cajas.", ABRIR],
+  },
 };

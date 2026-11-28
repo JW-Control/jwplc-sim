@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Lección 48: el JWPLC cliente Modbus TCP lee S1/S2 del módulo IO1 por la red y escribe KM1/H1 en DO1/DO2.",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/48.E_S_remotas_por_Ethernet",
+  "scene": "../../../JWPLC_Aprende/extras/practicas/curso-48/curso-48.jwsim",
+  "until_ms": 13000,
+  "actions": [
+    {
+      "at_ms": 9000,
+      "device": "S1",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 9200,
+      "device": "S1",
+      "action": "press",
+      "value": false
+    },
+    {
+      "at_ms": 11000,
+      "device": "S2",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 11200,
+      "device": "S2",
+      "action": "press",
+      "value": false
+    }
+  ],
+  "expect": {
+    "console": [
+      {
+        "match": "^Módulo en línea$",
+        "min": 1
+      },
+      "Bomba en marcha",
+      "Bomba detenida"
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 10500,
+          "KM1.closed": true,
+          "H1.lit": true
+        },
+        {
+          "at_ms": 12500,
+          "KM1.closed": false
+        }
+      ]
+    }
+  }
+}

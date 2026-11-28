@@ -1,0 +1,121 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 17 · Servidor Modbus TCP: la PC mira y manda",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.18"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-17",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Meta desde la PC: la PC escribe la meta de cajas en el 40003; al llegarla, el programa pone la marcha (40002) en 0 y la banda para sola.",
+      "steps": [
+        "Ejecuta el ejemplo y espera «en línea» en la PC PC1: el 40001 cuenta las cajas y la bobina 00001 muestra la banda.",
+        "Arrastra el 40002 de la PC a un valor distinto de 0: la banda KM1 arranca. Acciona B1 y mira sumar el 40001.",
+        "Declara META AT %MW2 (40003). Si META > 0 y CAJAS >= META, escribe 0 en MARCHA: la banda para y la PC lo ve."
+      ],
+      "uses": [
+        "Ethernet · servidor Modbus TCP del proyecto, puerto 502",
+        "%IX0.0 · B1, sensor de cajas",
+        "%QX0.0 · KM1, banda (bobina 00001)",
+        "%MW0 · 40001 cajas",
+        "%MW1 · 40002 marcha",
+        "%MW2 · 40003 meta",
+        "PC1 · JW Modbus Tool"
+      ],
+      "teaches": "Con el servidor Modbus TCP del proyecto, las variables %MW son los holding que la PC lee y escribe; el programa también puede escribir en ellos, como borrar la marcha al cumplir la meta."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 220
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 220
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 500,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 920
+      },
+      {
+        "id": "PC1",
+        "type": "jwsim/pc-modbus-tcp",
+        "x": 860,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}
