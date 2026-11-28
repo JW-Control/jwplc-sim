@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Con el térmico (I0_1) abierto el sketch intenta avisar; sin red reintenta cada 10 s (el POST real con respuesta 200 lo prueba el gate JWSIM_PROTOCOLOS).",
+  "sketch": "package:libraries/JWPLC_HTTP/examples/01.HTTP_Aviso_Webhook",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 01\\.HTTP_Aviso_Webhook$",
+            "min": 1
+          },
+          {
+            "match": "^No se pudo avisar \\(SIN RED\\), reintento en 10 s$",
+            "min": 3
+          }
+        ],
+        "console_absent": [
+          "Aviso enviado"
+        ]
+      }
+    }
+  ]
+}

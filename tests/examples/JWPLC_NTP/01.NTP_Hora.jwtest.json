@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin red el reloj queda «ESPERANDO HORA» y la iluminación no se enciende por horario (la sincronización real con un servidor SNTP local la prueba el gate JWSIM_PROTOCOLOS).",
+  "sketch": "package:libraries/JWPLC_NTP/examples/01.NTP_Hora",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 01\\.NTP_Hora$",
+            "min": 1
+          },
+          {
+            "match": "^--/--/---- --:--:-- ESPERANDO HORA \\| iluminación: NO$",
+            "min": 4
+          }
+        ],
+        "console_absent": [
+          "EN HORA"
+        ]
+      }
+    }
+  ]
+}

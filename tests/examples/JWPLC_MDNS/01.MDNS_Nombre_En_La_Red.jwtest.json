@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Arranque sin red: el panel web muestra el código de primer ingreso y aún no anuncia planta1.local (anuncio y respuesta a consultas mDNS: gate JWSIM_PROTOCOLOS).",
+  "sketch": "package:libraries/JWPLC_MDNS/examples/01.MDNS_Nombre_En_La_Red",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 01\\.MDNS_Nombre_En_La_Red$",
+            "min": 1
+          },
+          {
+            "match": "^\\[JWPLC_Web\\] Primer ingreso: abrir el panel y escribir el codigo \\d{6}$",
+            "min": 1
+          }
+        ],
+        "console_absent": [
+          "Panel web: http://planta1.local"
+        ]
+      }
+    }
+  ]
+}

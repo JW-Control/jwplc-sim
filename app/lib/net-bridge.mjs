@@ -275,6 +275,10 @@ export class NetBridge extends EventEmitter {
     if (port === 67 && (ip === "255.255.255.255" || ip === this.gateway)) return this.#dhcp(s, data);
     if (port === 53 && ip === this.gateway) return this.#dns(s, data);
     if (ip === "255.255.255.255" || ip.endsWith(".255")) return;   // difusión: no sale del simulador
+    // Multicast (mDNS 224.0.0.251, SSDP...): tampoco sale, porque anunciaría en la red de la PC la
+    // IP virtual del PLC (192.168.250.x), que desde ahí no se alcanza.
+    const first = Number(ip.split(".")[0]);
+    if (first >= 224 && first <= 239) return;
     this.#hostUdp(s)?.send(data, this.connectPort(ip, port), this.#target(ip));
   }
 

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin red el cliente MQTT informa «SIN RED» y no recibe órdenes (conexión, último deseo, orden ON y reconexión con un broker local: gate JWSIM_PROTOCOLOS).",
+  "sketch": "package:libraries/JWPLC_MQTT/examples/01.MQTT_Publicar_Recibir",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 01\\.MQTT_Publicar_Recibir$",
+            "min": 1
+          },
+          {
+            "match": "^MQTT: SIN RED$",
+            "min": 1
+          }
+        ],
+        "console_absent": [
+          "Orden recibida",
+          "CONECTADO"
+        ]
+      }
+    }
+  ]
+}

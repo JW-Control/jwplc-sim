@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin red no hay pronóstico: el riego no se bloquea y no se imprime ninguna lectura (la consulta real la prueba el gate JWSIM_PROTOCOLOS).",
+  "sketch": "package:libraries/JWPLC_HTTP/examples/02.HTTPS_Consultar_API",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 02\\.HTTPS_Consultar_API$",
+            "min": 1
+          }
+        ],
+        "console_absent": [
+          "Lima:"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin red el cliente MQTTS informa «SIN RED»; la faja (Q0_0) arranca porque aún no se llegó a la meta.",
+  "sketch": "package:libraries/JWPLC_MQTT/examples/02.MQTTS_Usuario_Clave",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 02\\.MQTTS_Usuario_Clave$",
+            "min": 1
+          },
+          {
+            "match": "^MQTT: SIN RED$",
+            "min": 1
+          }
+        ],
+        "console_absent": [
+          "CONECTADO"
+        ]
+      }
+    }
+  ]
+}

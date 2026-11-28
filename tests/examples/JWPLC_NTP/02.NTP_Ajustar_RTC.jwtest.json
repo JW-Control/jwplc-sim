@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Sin red no hay hora de Internet: el RTC no se ajusta y sigue contando desde su valor (el ajuste real lo prueba el gate JWSIM_PROTOCOLOS con 01.NTP_Hora).",
+  "sketch": "package:libraries/JWPLC_NTP/examples/02.NTP_Ajustar_RTC",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 02\\.NTP_Ajustar_RTC$",
+            "min": 1
+          },
+          {
+            "match": "^RTC: 01/01/2000 00:00:[12]0$",
+            "min": 2
+          }
+        ]
+      }
+    }
+  ]
+}
