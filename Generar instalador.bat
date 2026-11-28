@@ -18,4 +18,17 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+rem Regla: no se entrega un instalador sin abrir la app empaquetada y recorrer
+rem todas sus pestanas, Planta 3D incluida (app\tests\e2e-empaquetado.mjs).
+pushd app
+node tests\e2e-empaquetado.mjs
+set PRUEBA=%errorlevel%
+popd
+if not "%PRUEBA%"=="0" (
+  echo.
+  echo LA APP EMPAQUETADA FALLO LA PRUEBA: NO entregar este instalador. Capturas en build\gates\empaquetado
+  explorer "%~dp0build\gates\empaquetado"
+  pause
+  exit /b 1
+)
 explorer "%~dp0build\dist"

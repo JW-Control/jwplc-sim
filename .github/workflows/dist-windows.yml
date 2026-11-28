@@ -39,6 +39,22 @@ jobs:
       - name: Instalador y portable
         run: node scripts/dist.mjs
 
+      # Regla de JW Control: ninguna versión sale sin abrir la app EMPAQUETADA
+      # y recorrer todas sus pestañas (Inicio, Programa, Esquema, Planta 3D,
+      # Placa, IEC). En 0.3.0 y 0.6.0 la Planta 3D salió en blanco solo en el
+      # instalador. Si esta prueba falla, no se sube nada ni se publica.
+      - name: Prueba de la app empaquetada (todas las pestañas)
+        working-directory: app
+        run: node tests/e2e-empaquetado.mjs
+
+      - name: Capturas de la app empaquetada
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: JWPLC-Sim-prueba-empaquetado
+          path: build/gates/empaquetado/
+          if-no-files-found: warn
+
       - name: Instalador
         uses: actions/upload-artifact@v4
         with:
