@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Web (alpha.19): el panel arranca, publica las variables y deja en la consola el código de primer ingreso (el Sim da siempre el mismo). Sin servidor DHCP en la prueba no hay URL. La página, los usuarios y la API se prueban con la red en scripts/gate-web.mjs (JWSIM_WEB).",
+  "sketch": "package:libraries/JWPLC_Web/examples/01.Panel_Basico",
+  "until_ms": 4000,
+  "args": ["--rtc", "fijo:2026-11-28T09:00:00"],
+  "stim": [],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - 01.Panel_Basico$", "count": 1 },
+      { "match": "^\\[JWPLC_Web\\] Primer ingreso: abrir el panel y escribir el codigo \\d{6}$", "count": 1 }
+    ]
+  }
+}

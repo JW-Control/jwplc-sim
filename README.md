@@ -91,7 +91,8 @@ Va junto a:
   El Ladder se ve y se edita en el Sim y se depura en vivo con el protocolo del editor.
 - **Runtime de panel** (`JWPLC_Runtime`): programa estilo LOGO! desde la pantalla, con la «Demo feria» y
   Diagnóstico › Simular entradas I.
-- **Pantalla en el navegador** (`JWPLC_WebScreen`) y una ventana para ver un JWPLC Basic real por Ethernet.
+- **Panel web con usuarios** (`JWPLC_Web`): variables, consignas, alarmas, tendencia y la pantalla en el navegador,
+  y una ventana para ver un JWPLC Basic real por Ethernet.
 - Buses I2C/SPI/UART/Modbus, depuración con breakpoints, FRAM, NVS, RTC y microSD persistentes, varios PLC en
   RS-485, red virtual, fallas inyectadas y ejercicios con calificación automática.
 
@@ -131,10 +132,11 @@ activo («JWPLC publicado» o «JWPLC local») y con un clic abre el mismo selec
 (la barra de menús se muestra con Alt). El Sim nunca modifica ese checkout.
 
 **Ver > JWPLC real (pantalla en vivo)…** (`Ctrl+Shift+R`) abre en una ventana
-aparte la pantalla de un JWPLC Basic real por Ethernet, con su botonera: el
-sketch del equipo usa `JWPLC_WebScreen` (ejemplos de esa librería) y se escribe
-su IP. Con un sketch que usa `JWPLC_WebScreen` corriendo en el simulador, la
-misma ventana lo muestra en `127.0.0.1:1080`.
+aparte el panel web de un JWPLC Basic real por Ethernet (pestaña Pantalla, con
+su botonera): el sketch del equipo usa `JWPLC_Web` (ejemplos de esa librería) y
+se escribe su IP. El primer ingreso pide el código de 6 dígitos del equipo. Con
+un sketch que usa `JWPLC_Web` corriendo en el simulador, la misma ventana lo
+muestra en `127.0.0.1:1080`.
 
 ### Instalador y portable (Windows)
 

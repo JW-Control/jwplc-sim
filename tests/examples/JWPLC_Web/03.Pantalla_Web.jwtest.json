@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "JWPLC_Web (alpha.19, antes JWPLC_WebScreen 01): la copia de la pantalla y el servidor web no cambian lo que muestra la TFT. La pantalla en vivo con sesión y la botonera se prueban en scripts/gate-web.mjs (JWSIM_WEB).",
+  "sketch": "package:libraries/JWPLC_Web/examples/03.Pantalla_Web",
+  "until_ms": 4000,
+  "args": ["--rtc", "fijo:2026-11-28T09:00:00"],
+  "stim": [],
+  "expect": {
+    "console": [
+      { "match": "^JWPLC Basic - 03.Pantalla_Web$", "count": 1 }
+    ],
+    "screen": [
+      { "at_ms": 3500, "ref": "screens/03.Pantalla_Web_reposo.png" }
+    ]
+  }
+}

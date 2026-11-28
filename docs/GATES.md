@@ -65,8 +65,9 @@ JWSIM_SERIAL_FLOOD=PASS            (03/11, alpha.17: Serial.println(millis()) si
                                     líneas/s) y la consola pinta por bloques cada 50 ms con tope de 100 000 caracteres. En
                                     la app, 12 s: ×1 atraso 64 ms y cuadros p95 50 ms (antes 250 ms); ×10 atraso 1 s; Máx
                                     p95 100 ms; app/tests/e2e-serial-flood.mjs. En Windows: [no verificado] en una PC)
-JWSIM_WEBSCREEN=PASS               (01/11, alpha.16: JWPLC_WebScreen; página, teclas desde la web y cuadro idéntico píxel a
-                                    píxel a la TFT; <1 KB por pedido con la pantalla quieta; scripts/gate-webscreen.mjs)
+JWSIM_WEB=PASS                     (28/11, alpha.19: JWPLC_Web reemplaza a JWPLC_WebScreen; primer ingreso con código, usuarios
+                                    y roles, consigna, alarma reconocida, tendencia, auditoría, teclas desde la web y cuadro
+                                    idéntico píxel a píxel a la TFT; scripts/gate-web.mjs)
                                    (G4: Windows CI corrida 3 de g4-windows.yml con alpha.13, Linux y wine)
 JWSIM_G5_HEADLESS_CLI=PASS          (build|run|test|parity|matrix, JSON y códigos de salida; Linux y Windows CI)
 JWSIM_G5_RELEASE_TREE_PARITY=PASS   (core, headers -M -MG y autoload contra el registro; alpha.10 y un árbol sintético detectados)
@@ -167,7 +168,7 @@ JWSIM_G10_*=PENDING
 | `JWSIM_G4_W5500_MODEL` | **Tras publicarse alpha.13** (2026-10-22). Modelo W5500 por registros (común, 8 sockets, buffers, INTn), TCP/UDP mapeados a sockets del host; ejemplos de `JWPLC_Ethernet` pasan con el comportamiento de alpha.13/14. | Ejemplos + tests del modelo. |
 | `JWSIM_G4_MODBUS_TCP_HOST` | `JWPLC_ModbusTCP` accesible desde el host (localhost/LAN) por un cliente externo; varios PLC simulados en puertos distintos. | Cliente Modbus TCP externo. |
 | `JWSIM_EXPANSION_RTU` | Protocolo de expansión v2 del package (alpha.16): el ejemplo `Expansion_Esclavo_Basic` responde de fábrica en el ID 247, se configura con el comando 5 (ID, estado seguro, vigilancia, vínculo), rechaza la clave errónea, aplica el estado seguro al callar el maestro y conserva la configuración tras reiniciar. | `scripts/gate-expansion-rtu.mjs` (dos runners en el bus RS-485). |
-| `JWSIM_WEBSCREEN` | Pantalla del JWPLC en el navegador (alpha.16): el ejemplo `02.Runtime_En_Vivo` de `JWPLC_WebScreen` sirve la página en el puerto 80 (127.0.0.1:1080 en el host); OK, ▼ y ► pulsados desde la página llevan el MENU del Runtime a RED, y la pantalla que arma un cliente igual al de la página con `/f` es idéntica píxel a píxel a la TFT simulada. | `scripts/gate-webscreen.mjs` (W5500 simulado con app/lib/net-bridge.mjs). |
+| `JWSIM_WEB` | Panel web `JWPLC_Web` (alpha.19, reemplaza a `JWSIM_WEBSCREEN`). Ejemplo `02.Bombeo_Presion_Constante`: página gzip con CSP, API cerrada sin sesión (401) y POST sin `X-JW` (403); primer ingreso con el código de la consola (código malo 403, segundo reclamo 409); el admin crea un operador que entra con el reto PBKDF2+HMAC; consigna dentro y fuera de rango, variable de rol técnico rechazada; alarma «baja» activada y reconocida; tendencia JSON y CSV; auditoría solo para técnico o más. Ejemplo `04.Runtime_En_Vivo`: con sesión, OK, ▼ y ► desde la página llevan el MENU a RED y la pantalla armada con `/f` es idéntica píxel a píxel a la TFT; <1 KB por pedido con la pantalla quieta. | `scripts/gate-web.mjs` (W5500 simulado con app/lib/net-bridge.mjs). |
 
 ## G5 — CI del package
 
