@@ -6,19 +6,38 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.6.1 · package JWPLC 2.1.0-alpha.18 (package.lock) · OpenPLC Editor 4.3.3-jwplc.2 (editor.lock)
+Versión: 0.7.0 · package JWPLC 2.1.0-alpha.18 (package.lock; pasa a alpha.19 al publicarse) · OpenPLC Editor 4.3.3-jwplc.3 (editor.lock)
 Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real, Ladder en vivo, editor Ladder y depurador del editor PASS
 Matriz:  ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-**[⬇ JWPLC Sim 0.6.1: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+**[⬇ JWPLC Sim 0.7.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
 package JWPLC, sus dependencias, el compilador GCC y la caché de compilación, así que no hace falta Node.js ni
 red. No tienen firma de código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
 
 Desde 0.6.0 el Sim **se actualiza solo** desde las Releases de GitHub ([docs/ACTUALIZAR.md](docs/ACTUALIZAR.md)).
 La 0.6.0 se instala a mano una vez; las siguientes llegan con el botón **⟳ Actualizar**.
+
+Novedades de 0.7.0 (alpha.19):
+
+- **Ejecutar en vivo con el JWPLC real**: el Sim se conecta por COM a la placa (depurador del OpenPLC) y muestra
+  en el Ladder, la bornera, el esquema y la Planta 3D lo que pasa en el equipo; un clic en una entrada la fuerza.
+- **Cancelar** la compilación y la descarga de herramientas del ESP32, como en Arduino IDE, con el avance visible.
+- **Red Ethernet en la escena**: una **PC con JW Modbus Tool** que lee y escribe al JWPLC por Modbus TCP y unas
+  **E/S remotas** Modbus TCP, en la app y en el calificador. Soporte de `JWPLC_Red`, `JWPLC_WiFi`, `JWPLC_TLS`
+  (HTTPS) y `JWPLC_Cloud`.
+- **Panel web `JWPLC_Web`** del JWPLC simulado en el navegador de la PC o en el **celular** por el mismo Wi-Fi
+  (botón **Celular** de la barra).
+- **Curso C++ completo, unidades 1 a 9**: la Unidad 8, Ethernet y Modbus TCP, con la red del tablero, el JWPLC
+  servidor y cliente Modbus TCP y el panel web (lecciones 46 a 51). El calificador usa el panel web como un
+  celular: reclama el equipo, cambia consignas y reconoce alarmas.
+- **Curso IEC 61131-3, Unidad 5 · Comunicaciones**: servidor Modbus TCP del proyecto del OpenPLC Editor y
+  pulsadores remotos con acuse (lecciones 17 y 18), en ST, Ladder y FBD.
+- OpenPLC Editor **4.3.3-jwplc.3**: el servidor Modbus TCP de los proyectos OpenPLC abre el puerto 502 aunque la
+  red llegue después del arranque.
+- Prueba automática de la **app empaquetada** antes de publicar: abre todas las pestañas, incluida la Planta 3D.
 
 Novedades de 0.6.1:
 
