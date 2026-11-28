@@ -8,6 +8,7 @@ import { basename, dirname, extname, join, relative, resolve, sep } from "node:p
 
 import { spawn } from "node:child_process";
 import { Worker } from "node:worker_threads";
+import { networkInterfaces } from "node:os";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from "electron";
 
@@ -1132,6 +1133,24 @@ function copyDir(from, to) {
 // la red ("ip" para el DHCP de la red virtual, "listenHost" "0.0.0.0" para
 // publicar en la LAN y "portOffset" para los puertos de escucha).
 let bridge = null;
+// «Panel web desde el celular» (Herramientas): publica los puertos del PLC en
+// la red de la PC (0.0.0.0) para entrar desde el celular por el mismo Wi-Fi.
+// Apagado por defecto: abre esos puertos a la red local.
+const panelCelular = () => readPref("panelCelular") === true;
+// IPv4 de la PC en la red local: privada, no interna y sin adaptadores
+// virtuales (Hyper-V/WSL, VirtualBox, VMware, Docker).
+function lanIPv4() {
+  const virtual = /vethernet|virtualbox|vmware|vbox|wsl|docker|hyper-v|loopback|tailscale|zerotier|vpn/i;
+  const priv = (a) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a);
+  const found = [];
+  for (const [name, addrs] of Object.entries(networkInterfaces())) {
+    if (virtual.test(name)) continue;
+    for (const a of addrs ?? []) if (a.family === "IPv4" && !a.internal && priv(a.address)) found.push({ name, address: a.address });
+  }
+  // Wi-Fi primero: es por donde llega el celular.
+  found.sort((x, y) => Number(/wi-?fi|wlan|wireless/i.test(y.name)) - Number(/wi-?fi|wlan|wireless/i.test(x.name)));
+  return found[0]?.address ?? null;
+}
 // Puente de E/S (G8): la bornera como esclavo Modbus TCP para Open Industry
 // Project o FUXA (app/lib/io-bridge.mjs). En el proyecto,
 // simulation.ioBridge: { "present": false } lo quita; "port" (5020) y
@@ -1264,16 +1283,23 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     if (hasBreakpoints()) await attachDebugger();
   };
   const eth = ethernetConfig(projectFile);
-  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg, ...(eth ? [] : ["--no-eth"])], { env: { JWSIM_DEBUG: "1" }, onRestart });
+  // Celular: escucha en la LAN y le pasa al firmware la IP de la PC para que
+  // JWPLC_Web arme la URL y el QR con ella (solo con los puertos por defecto).
+  const listenHost = eth?.listenHost ?? (eth && panelCelular() ? "0.0.0.0" : "127.0.0.1");
+  const lan = eth && !stim && listenHost === "0.0.0.0" && eth.portOffset === undefined ? lanIPv4() : null;
+  const env = { JWSIM_DEBUG: "1", ...(lan ? { JWSIM_LAN_HOST: lan } : {}) };
+  r.start(exe, [...(stim ? ["--stim", stim] : []), "--state", stateDir, "--rtc", rtcArg, ...(eth ? [] : ["--no-eth"])], { env, onRestart });
   // Red del host para el W5500 (al reproducir una grabación, la red sale
   // del .stim: sin puente).
   if (eth && !stim) {
     bridge = new NetBridge({
       plcIp: eth.ip,
-      listenHost: eth.listenHost ?? "127.0.0.1",
+      listenHost,
       ...(eth.portOffset !== undefined ? { listenPort: (p) => p + eth.portOffset } : {}),
     });
-    bridge.on("listening", (p, hp) => forward("sim:stderr", `[jwsim] Ethernet: puerto ${p} del PLC en ${bridge.listenHost}:${hp}\n`));
+    bridge.on("listening", (p, hp) =>
+      forward("sim:stderr", lan ? `[jwsim] Ethernet: puerto ${p} del PLC en http://${lan}:${hp}/ (celular en la misma red Wi-Fi)\n` : `[jwsim] Ethernet: puerto ${p} del PLC en ${bridge.listenHost}:${hp}\n`),
+    );
     bridge.on("error", (err) => forward("sim:stderr", `[jwsim] Ethernet: ${err.message}\n`));
     bridge.attach(r);
     // Lo que va a los equipos de red de la escena no sale a la PC.
@@ -2099,6 +2125,12 @@ function buildMenu() {
           ...(process.platform === "win32" ? [{ type: "separator" }, { label: "Acelerar la compilación (antivirus)…", click: () => offerAvExclusion(false) }] : []),
           { type: "separator" },
           { label: "Package JWPLC", submenu: packageMenuItems() },
+          {
+            label: "Panel web desde el celular (misma red Wi-Fi)",
+            type: "checkbox",
+            checked: panelCelular(),
+            click: (item) => writePref("panelCelular", item.checked),
+          },
           { type: "separator" },
           { label: "Buscar actualizaciones…", click: () => updater.check(true) },
           {
