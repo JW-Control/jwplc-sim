@@ -72,23 +72,46 @@ export class PlcDebugLink {
     this.batch = ops.debugProfileFor("rtu").batchSize;
     this.onMessage = (m) => {
       if (m.type !== "uart_out" || m.port !== this.uart) return;
-      this.lastRx = Date.now();
-      if (!this.pending) return;
-      this.rx = Buffer.concat([this.rx, Buffer.from(m.hex.replaceAll(" ", ""), "hex")]);
-      this.tryFrame();
+      this.feed(Buffer.from(m.hex.replaceAll(" ", ""), "hex"));
     };
+    this.onData = (d) => this.feed(d);
   }
 
+  /** Bytes que llegan del PLC (simulado o real). */
+  feed(bytes) {
+    this.lastRx = Date.now();
+    if (!this.pending) return;
+    this.rx = Buffer.concat([this.rx, bytes]);
+    this.tryFrame();
+  }
+
+  /** Transporte: la UART0 del runner del Sim. */
   attach(proc) {
     this.detach();
     this.proc = proc;
+    // Todos los bytes en el instante actual: el firmware arma la trama por
+    // el silencio que sigue (T3.5).
+    this.send = (frame) => proc.send({ type: "uart_rx", port: this.uart, data: frame.toString("hex").match(/../g).map((h) => `0:${h}`).join(",") });
+    this.off = () => proc.off?.("message", this.onMessage);
     proc.on("message", this.onMessage);
     proc.send({ type: "tap", port: this.uart, on: 1 });
   }
 
+  /**
+   * Transporte: un puerto serie (el JWPLC real por USB, «Ejecutar en vivo»).
+   * port: objeto de serialport (write(buf), on("data")).
+   */
+  attachSerial(port) {
+    this.detach();
+    this.proc = port;
+    this.send = (frame) => port.write(frame);
+    this.off = () => port.off?.("data", this.onData);
+    port.on("data", this.onData);
+  }
+
   detach() {
     if (!this.proc) return;
-    this.proc.off?.("message", this.onMessage);
+    this.off?.();
     this.proc = null;
     this.pending?.reject(new Error("la simulación se detuvo"));
     this.pending = null;
@@ -124,17 +147,14 @@ export class PlcDebugLink {
   request(pdu) {
     const run = () =>
       new Promise((resolve, reject) => {
-        if (!this.proc) return reject(new Error("la simulación no está corriendo"));
+        if (!this.proc) return reject(new Error("el PLC no está conectado"));
         this.rx = Buffer.alloc(0);
         const timer = setTimeout(() => {
           this.pending = null;
           reject(new Error("el depurador no respondió"));
         }, this.timeoutMs);
         this.pending = { resolve, reject, timer };
-        const hex = rtuFrame(this.slave, pdu).toString("hex");
-        // Todos los bytes en el instante actual: el firmware arma la trama
-        // por el silencio que sigue (T3.5).
-        this.proc.send({ type: "uart_rx", port: this.uart, data: hex.match(/../g).map((h) => `0:${h}`).join(",") });
+        this.send(rtuFrame(this.slave, pdu));
       });
     const p = this.queue.then(run, run);
     this.queue = p.catch(() => {});
@@ -173,5 +193,24 @@ export class PlcDebugLink {
       i += Math.max(1, Math.min(part.length, (r.lastIndex ?? part.length - 1) + 1));
     }
     return { tick, values };
+  }
+
+  /**
+   * Fuerza una variable a un valor (como «Forzar» del editor) o, con
+   * value === null, la libera. Valor como texto o número: "TRUE", 1, "T#2s"…
+   */
+  async force(name, value) {
+    const v = this.vars.find((x) => x.name === String(name).toUpperCase());
+    if (!v) throw new Error(`la variable ${name} no está en el programa`);
+    let bytes;
+    if (value !== null && value !== undefined) {
+      const text = typeof value === "boolean" ? (value ? "TRUE" : "FALSE") : String(value);
+      const e = this.ops.encodeValue(v, text);
+      if (!e.success) throw new Error(e.error);
+      bytes = e.bytes;
+    }
+    const r = this.ops.parseSetVariableResponse(await this.request(this.ops.buildSetVariableRequest(v.index, value !== null && value !== undefined, bytes)));
+    if (!r.success) throw new Error(r.error);
+    return true;
   }
 }
