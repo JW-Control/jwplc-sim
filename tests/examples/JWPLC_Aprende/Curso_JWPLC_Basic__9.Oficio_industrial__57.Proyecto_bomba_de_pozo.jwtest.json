@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (entradas, salidas y tiempos).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/9.Oficio_industrial/57.Proyecto_bomba_de_pozo",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      {
+        "match": "^Lección 57: tablero de bomba de pozo$",
+        "min": 1
+      },
+      {
+        "match": "^Horómetro: 0 s de marcha$",
+        "min": 1
+      },
+      {
+        "match": "^00:00:00 EMERGENCIA$",
+        "min": 1
+      }
+    ]
+  }
+}

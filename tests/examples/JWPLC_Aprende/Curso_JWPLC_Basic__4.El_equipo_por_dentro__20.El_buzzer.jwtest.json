@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (entradas, salidas y tiempos).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/4.El_equipo_por_dentro/20.El_buzzer",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      {
+        "match": "^Lección 20: marcha I0\\.0, paro NC I0\\.1, térmico NC I0\\.2, motor Q0\\.0, falla Q0\\.1$",
+        "min": 1
+      },
+      {
+        "match": "^Falla: térmico$",
+        "min": 1
+      }
+    ]
+  }
+}

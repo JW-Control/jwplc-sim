@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (entradas, salidas y tiempos).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/6.RS485_y_Modbus_RTU/39.Proyecto_extractor_por_Modbus",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      {
+        "match": "^Lección 39: extractor por Modbus, VF1 dir\\. 1, TC1 dir\\. 2, IO1 dir\\. 3$",
+        "min": 1
+      },
+      {
+        "match": "^Turno 0 sin respuesta: Timeout$",
+        "min": 1
+      },
+      {
+        "match": "^Turno 1 sin respuesta: Timeout$",
+        "min": 1
+      }
+    ]
+  }
+}

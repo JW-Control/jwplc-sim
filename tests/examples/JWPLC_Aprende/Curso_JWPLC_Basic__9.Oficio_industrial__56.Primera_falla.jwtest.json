@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (entradas, salidas y tiempos).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/9.Oficio_industrial/56.Primera_falla",
+  "until_ms": 6000,
+  "expect": {
+    "console": [
+      {
+        "match": "^Lección 56: primera falla, térmico I0\\.2, presión I0\\.3, nivel I0\\.4 \\(NC\\), ESC reconoce$",
+        "min": 1
+      },
+      {
+        "match": "^Primera falla: TERMICO a las 00:00:00$",
+        "min": 1
+      },
+      {
+        "match": "^También: PRESION DE ACEITE$",
+        "min": 1
+      }
+    ]
+  }
+}
