@@ -6,19 +6,25 @@ el PC contra un HAL nativo del Arduino core ESP32, con un motor de tiempo
 virtual determinista y modelos de periféricos a nivel de registros.
 
 ```text
-Versión: 0.6.0 · package JWPLC 2.1.0-alpha.18 (package.lock) · OpenPLC Editor 4.3.3-jwplc.2 (editor.lock)
+Versión: 0.6.1 · package JWPLC 2.1.0-alpha.18 (package.lock) · OpenPLC Editor 4.3.3-jwplc.2 (editor.lock)
 Estado:  G0–G5 cerrados; G6 (OpenPLC): cadena real, Ladder en vivo, editor Ladder y depurador del editor PASS
 Matriz:  ejemplos del package compilan, corren y pasan su prueba (SIM_REGRESSION en cada publicación)
 ```
 
 ## Descargar (Windows)
 
-**[⬇ JWPLC Sim 0.6.0: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
+**[⬇ JWPLC Sim 0.6.1: instalador y portable](https://github.com/JW-Control/jwplc-sim/releases/latest)**. Traen el
 package JWPLC, sus dependencias, el compilador GCC y la caché de compilación, así que no hace falta Node.js ni
 red. No tienen firma de código: si Windows SmartScreen avisa, **Más información → Ejecutar de todas formas**.
 
 Desde 0.6.0 el Sim **se actualiza solo** desde las Releases de GitHub ([docs/ACTUALIZAR.md](docs/ACTUALIZAR.md)).
 La 0.6.0 se instala a mano una vez; las siguientes llegan con el botón **⟳ Actualizar**.
+
+Novedades de 0.6.1:
+
+- **Planta 3D en la app instalada**: en 0.6.0 la pestaña quedaba en blanco porque el instalador no traía el
+  complemento `RoomEnvironment` de three.js (luz del entorno). Ahora el armado copia todos los complementos que
+  importa la vista 3D, leídos del código, y falla si alguno falta.
 
 Novedades de 0.6.0:
 

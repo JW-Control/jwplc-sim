@@ -21,7 +21,7 @@
 // desinstalador al lado, la app guarda sus datos en "datos\" dentro de la
 // carpeta (app/main.mjs).
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 
@@ -124,6 +124,48 @@ function longPaths(appOutDir) {
   else throw new Error(`${msg}\n(JWSIM_DIST_RUTAS_LARGAS=1 arma igual)`);
 }
 
+// Complementos de three.js (three/addons/… = three/examples/jsm/…) que importa
+// el renderer, con los que ellos mismos importan por ruta relativa. Rutas
+// relativas a examples/jsm, con «/».
+const THREE_JSM = join(APP, "node_modules", "three", "examples", "jsm");
+function findThreeAddons() {
+  const found = new Set();
+  const pending = [];
+  const add = (rel) => {
+    rel = rel.replaceAll("\\", "/");
+    if (found.has(rel)) return;
+    if (!existsSync(join(THREE_JSM, rel))) throw new Error(`el renderer importa three/addons/${rel}, que no existe en three`);
+    found.add(rel);
+    pending.push(rel);
+  };
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const f = join(dir, e.name);
+      if (e.isDirectory()) walk(f);
+      else if (/\.(m?js|html)$/.test(e.name)) {
+        for (const m of readFileSync(f, "utf8").matchAll(/three\/addons\/([\w./-]+\.js)/g)) add(m[1]);
+      }
+    }
+  };
+  walk(join(APP, "renderer"));
+  while (pending.length) {
+    const rel = pending.pop();
+    const base = rel.split("/").slice(0, -1);
+    const src = readFileSync(join(THREE_JSM, rel), "utf8");
+    for (const m of src.matchAll(/(?:import|export)[^'"]*?from\s*['"](\.{1,2}\/[^'"]+)['"]|import\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const parts = [...base];
+      for (const p of (m[1] ?? m[2]).split("/")) {
+        if (p === "..") parts.pop();
+        else if (p !== ".") parts.push(p);
+      }
+      add(parts.join("/"));
+    }
+  }
+  return [...found].filter((f) => statSync(join(THREE_JSM, f)).isFile()).sort();
+}
+const threeAddons = findThreeAddons();
+log(`complementos de three.js: ${threeAddons.join(", ")}`);
+
 /** @type {import("electron-builder").Configuration} */
 const config = {
   appId: "pe.jwcontrol.jwplcsim",
@@ -161,15 +203,17 @@ const config = {
     res(".jwsim/arduino-cli"),
     ...(withSeed ? [{ from: seedDir, to: "cache-seed", filter: ["**/*"] }] : []),
     // electron-builder deja fuera las carpetas «examples» de node_modules, y
-    // ahí están los complementos de three.js que usa la vista 3D (OrbitControls,
-    // importado como three/addons/ en renderer/index.html). Sin esto la vista
-    // 3D del instalador queda vacía (0.3.0).
-    { from: join(APP, "node_modules", "three", "examples", "jsm", "controls"), to: "app/node_modules/three/examples/jsm/controls", filter: ["**/*"] },
+    // ahí están los complementos de three.js que usa la vista 3D (three/addons/
+    // en renderer/index.html). Sin ellos scene3d.js no carga y la Planta 3D del
+    // instalador queda en blanco: pasó en 0.3.0 (OrbitControls) y en 0.6.0
+    // (RoomEnvironment, solo se copiaba controls/). Ahora se copian todos los
+    // que importa el renderer, leídos del código (threeAddons).
+    { from: THREE_JSM, to: "app/node_modules/three/examples/jsm", filter: threeAddons },
   ],
   // Lo que el renderer importa desde node_modules tiene que estar en la app
   // armada, antes de empaquetar el instalador y el portable.
   afterPack: async ({ appOutDir }) => {
-    const need = ["three/build/three.module.js", "three/examples/jsm/controls/OrbitControls.js", "monaco-editor/min/vs/loader.js", "electron-updater/package.json"];
+    const need = ["three/build/three.module.js", ...threeAddons.map((f) => `three/examples/jsm/${f}`), "monaco-editor/min/vs/loader.js", "electron-updater/package.json"];
     const missing = need.filter((f) => !existsSync(join(appOutDir, "resources", "app", "node_modules", ...f.split("/"))));
     if (editorDir) {
       const strucpp = join(appOutDir, "resources", ...editorDir.split("/"), "deps", "node_modules", "strucpp");
