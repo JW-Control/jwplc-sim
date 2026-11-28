@@ -3008,6 +3008,174 @@
       ]
     },
     {
+      "unidad": 8,
+      "nombre": "Ethernet y Modbus TCP",
+      "lecciones": [
+        {
+          "id": "curso-46",
+          "numero": 46,
+          "titulo": "La red del tablero: dirección IP fija",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/46.La_red_del_tablero",
+          "aprende": [
+            "Qué es una dirección IP, la máscara y la puerta de enlace.",
+            "Por qué en un tablero se usa IP fija y no DHCP, y cómo se fija con `setStaticIP()`.",
+            "A saber si la red está lista con `isReady()` y qué le falta con `diagnosticCode()`."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Cable de red del RJ45 del JWPLC al switch.",
+                "Q0.0: lámpara H1, piloto de red lista (24 V DC)."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**: el estado de la red sale cada 2 s en el **Monitor Serie**.",
+                "A los 6 s, más o menos, la red está lista y **H1** se enciende.",
+                "En el **Esquema**, la PC **PC1** está en la misma red: su JW Modbus Tool dice «sin conexión» porque este programa todavía no abre el servidor Modbus (eso es la lección 47).",
+                "Lección 46: IP fija 192.168.250.10, piloto H1 en Q0.0\nEsperando la red: LNK (Link OFF)\nEsperando la red: LNK (Link OFF)\nRed lista. IP: 192.168.250.10"
+              ]
+            }
+          ],
+          "pasos": [
+            "Pon a tu PC una IP de la misma red, por ejemplo 192.168.250.50.",
+            "Sube el programa: al rato sale «Red lista. IP: 192.168.250.10» y H1 se enciende.",
+            "Desde la PC: `ping 192.168.250.10`. Desconecta el cable: «Red perdida»."
+          ],
+          "practica": [
+            "Mientras espera la red, H1 parpadea cada medio segundo; con la red lista queda fijo."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-46",
+            "objetivos_en_vivo": [
+              {
+                "id": "lista",
+                "text": "«Red lista. IP: 192.168.250.10»",
+                "extra": false
+              },
+              {
+                "id": "parpadeo",
+                "text": "H1 parpadea mientras espera la red",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-47",
+          "numero": 47,
+          "titulo": "El JWPLC servidor Modbus TCP: la PC mira y manda",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/47.Servidor_Modbus_TCP",
+          "aprende": [
+            "Qué es Modbus TCP: el Modbus de la Unidad 6 por Ethernet, con IP y puerto 502.",
+            "A hacer del JWPLC un servidor con `setCoils()`, `setHoldingRegisters()` y `beginServer()`.",
+            "A leer lo que manda la PC (una bobina) y publicar lo que la PC lee (holding)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: sensor fotoeléctrico B1 de las cajas (PNP, 24 V DC).",
+                "Q0.0: contactor KM1 de la banda.",
+                "Cable de red; una PC en la misma red con JW Modbus Tool."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y mira la PC **PC1** en el **Esquema**: tras unos segundos dice «en línea».",
+                "Clic en la bobina **00001** de la PC: **KM1** cierra y el 40002 pasa a 1.",
+                "Acciona el sensor **B1** desde su símbolo: el 40001 cuenta las cajas.",
+                "Para escribir un holding desde la PC, arrastra su valor a izquierda o derecha.",
+                "Lección 47: servidor Modbus TCP, cajas en 40001, marcha en la bobina 00001\nBanda en marcha (desde la PC)\nCaja 1\nCaja 2"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y conecta JW Modbus Tool a 192.168.250.10, puerto 502, Unit ID 1.",
+            "Escribe 1 en la bobina 00001: la banda arranca y el 40002 pasa a 1.",
+            "Pasa cajas por B1: el 40001 las cuenta."
+          ],
+          "practica": [
+            "La PC escribe la meta en el 40003; al llegarla, la banda para sola y se escribe «Meta cumplida: N cajas»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-47",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "La PC arranca la banda con la bobina 00001",
+                "extra": false
+              },
+              {
+                "id": "meta",
+                "text": "«Meta cumplida: N cajas»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-48",
+          "numero": 48,
+          "titulo": "E/S remotas por Ethernet: el JWPLC cliente Modbus TCP",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/48.E_S_remotas_por_Ethernet",
+          "aprende": [
+            "A hacer del JWPLC un cliente Modbus TCP con `JWPLC_ModbusTCPClient`.",
+            "A pedir sin esperar: `request…()`, `task()`, `done()`, `succeeded()` y `clearResult()`.",
+            "A repartir el ciclo leer, decidir y escribir en dos pasos."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Módulo de E/S remotas Modbus TCP en 192.168.250.20, puerto 502, en el mismo switch que el JWPLC, con 24 V DC.",
+                "DI1: marcha S1 (NA). DI2: parada S2 (NC). Común DC al 0 V.",
+                "DO1: contactor KM1 de la bomba. DO2: lámpara de marcha H1. Común C1 al +24 V."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y espera «Módulo en línea» (la red tarda unos segundos en arrancar).",
+                "En **Mandos** (panel **Reto**), **S1** y **S2** están cableados al módulo **IO1**, no al JWPLC.",
+                "Toca **S1**: **KM1** cierra a través de DO1. **S2** lo detiene.",
+                "Lección 48: E/S remotas por Ethernet en 192.168.250.20, bomba en DO1\nMódulo en línea\nBomba en marcha\nBomba detenida"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa: «Módulo en línea».",
+            "Marcha en DI1: KM1 y H1 encienden. Parada en DI2: se apagan.",
+            "Desconecta el cable del módulo: «Sin respuesta del módulo»."
+          ],
+          "practica": [
+            "Suma el térmico en DI3 (NC): la bomba para, no arranca y se escribe «Falla: térmico» una vez; la lámpara de falla en DO3 mientras dure."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-48",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1 en el módulo: la bomba arranca por la red",
+                "extra": false
+              },
+              {
+                "id": "falla",
+                "text": "Abre F1: «Falla: térmico», bomba parada y H2",
+                "extra": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "unidad": 9,
       "nombre": "Oficio industrial",
       "lecciones": [

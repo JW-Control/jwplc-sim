@@ -55,6 +55,8 @@ export interface ActionSpec {
   min?: number;
   max?: number;
   unit?: string;
+  /** false: no aparece en «Mandos» del reto; se acciona en el propio símbolo. */
+  mando?: boolean;
 }
 
 /**

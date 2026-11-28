@@ -1,0 +1,161 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-47",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "La PC arranca la banda con la bobina 00001",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "En la PC PC1, clic en la bobina 00001."
+    },
+    {
+      "id": "meta",
+      "description": "«Meta cumplida: N cajas»",
+      "console": "Meta cumplida: \\d+ cajas",
+      "hint": "uint16_t meta = holding[2]; y bobinas[0] = bobinas[0] & 0b11111110; al llegar.",
+      "why": "Un contador por la red sirve para que la oficina fije el lote y la máquina pare sola al completarlo."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lote de 3 cajas",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h2",
+          "value": 3
+        },
+        {
+          "at_ms": 9500,
+          "device": "PC1",
+          "action": "c0",
+          "value": true
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 12800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La bobina 00001 de la PC arranca la banda",
+          "points": 4,
+          "from_ms": 9500,
+          "to_ms": 10400,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "La PC ve las cajas en 40001",
+          "points": 4,
+          "at_ms": 13500,
+          "expect": {
+            "PC1.h0": 3
+          }
+        },
+        {
+          "description": "Al llegar a la meta la banda para sola",
+          "points": 6,
+          "from_ms": 12500,
+          "to_ms": 13500,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "«Meta cumplida: 3 cajas», una vez",
+          "points": 6,
+          "console": "Meta cumplida: 3 cajas",
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Banda",
+      "until_ms": 14000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h2",
+          "value": 2
+        },
+        {
+          "at_ms": 9500,
+          "device": "PC1",
+          "action": "c0",
+          "value": true
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

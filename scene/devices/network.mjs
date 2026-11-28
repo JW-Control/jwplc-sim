@@ -24,7 +24,7 @@ export const pcModbusTcp = {
   name: "PC con JW Modbus Tool (Modbus TCP)",
   category: "Comunicación",
   description:
-    "Computadora en la red del tablero con JW Modbus Tool abierto como maestro Modbus TCP: se conecta al JWPLC (servidor, puerto 502) y le pregunta cada «Período». Muestra 8 holding registers (03) y 8 bobinas (01) desde las direcciones de inicio. Arrastrar el valor de un holding lo escribe (06, 0-1000) y un clic en una bobina la invierte (05). Con el cable de red suelto o sin el PLC escuchando queda «sin conexión».",
+    "Computadora en la red del tablero con JW Modbus Tool abierto como maestro Modbus TCP: se conecta al JWPLC (servidor, puerto 502) y le pregunta cada «Período». Muestra 8 holding registers (03) y 8 bobinas (01) desde las direcciones de inicio. Arrastrar el valor de un holding lo escribe (06, 0-1000, de a 1 por píxel) y un clic en una bobina la invierte (05). Con el cable de red suelto o sin el PLC escuchando queda «sin conexión».",
   parameters: [
     { id: "ip", label: "IP de la PC", type: "string", default: "192.168.250.50" },
     { id: "plc", label: "IP del PLC", type: "string", default: "192.168.250.10" },
@@ -37,8 +37,9 @@ export const pcModbusTcp = {
   ],
   terminals: [],
   actions: [
-    ...K8.map((k) => ({ id: `h${k}`, label: `Escribir holding ${k + 1}`, kind: /** @type {const} */ ("value"), min: 0, max: 1000 })),
-    ...K8.map((k) => ({ id: `c${k}`, label: `Invertir bobina ${k + 1}`, kind: /** @type {const} */ ("toggle") })),
+    // Se manejan en la pantalla de la PC, no en «Mandos» (mando: false).
+    ...K8.map((k) => ({ id: `h${k}`, label: `Escribir holding ${k + 1}`, kind: /** @type {const} */ ("value"), min: 0, max: 1000, mando: false })),
+    ...K8.map((k) => ({ id: `c${k}`, label: `Invertir bobina ${k + 1}`, kind: /** @type {const} */ ("toggle"), mando: false })),
   ],
   net: (p) => ({
     role: "client",
