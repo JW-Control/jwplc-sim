@@ -1,0 +1,237 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-50",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "S1 arranca un lote",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "Mandos: S1."
+    },
+    {
+      "id": "meta",
+      "description": "«Meta cumplida: N cajas»",
+      "console": "Meta cumplida: \\d+ cajas",
+      "hint": "Baja la meta en el panel y pasa cajas por B1."
+    },
+    {
+      "id": "cero",
+      "description": "«Contador a cero desde el panel»",
+      "console": "Contador a cero desde el panel",
+      "hint": "if (reiniciar) { cajas = 0; reiniciar = false; }",
+      "why": "Una orden por la red se cumple una vez: devolverla a falso es el acuse que ve el operador."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Lote de 3 cajas y contador a cero",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "WEB",
+          "action": "write",
+          "id": "meta",
+          "value": 3
+        },
+        {
+          "at_ms": 9500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 12800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 13500,
+          "device": "WEB",
+          "action": "write",
+          "id": "meta",
+          "value": 500
+        },
+        {
+          "at_ms": 14500,
+          "device": "WEB",
+          "action": "write",
+          "id": "reiniciar",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "S1 arranca el lote",
+          "points": 2,
+          "from_ms": 9500,
+          "to_ms": 10500,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "El panel cambió la meta a 3",
+          "points": 2,
+          "at_ms": 10000,
+          "expect": {
+            "WEB.meta": 3
+          }
+        },
+        {
+          "description": "Con 3 cajas la banda para sola",
+          "points": 4,
+          "from_ms": 12500,
+          "to_ms": 13300,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "«Meta cumplida: 3 cajas», una vez",
+          "points": 3,
+          "console": "Meta cumplida: 3 cajas",
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "description": "Una meta de 500 se rechaza (fuera de rango)",
+          "points": 2,
+          "from_ms": 13500,
+          "to_ms": 14400,
+          "eventually": {
+            "WEB.respuesta": 400
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "y la meta sigue en 3",
+          "points": 1,
+          "at_ms": 14400,
+          "expect": {
+            "WEB.meta": 3
+          }
+        },
+        {
+          "description": "«Contador a cero» deja las cajas en 0",
+          "points": 4,
+          "at_ms": 15500,
+          "expect": {
+            "WEB.cajas": 0
+          }
+        },
+        {
+          "description": "«Contador a cero desde el panel»",
+          "points": 2,
+          "console": "^Contador a cero desde el panel$",
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Lote",
+      "until_ms": 16000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "WEB",
+          "action": "write",
+          "id": "meta",
+          "value": 2
+        },
+        {
+          "at_ms": 9500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11500,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11800,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 13000,
+          "device": "WEB",
+          "action": "write",
+          "id": "reiniciar",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

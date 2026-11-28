@@ -1,0 +1,151 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 50 · Consignas desde el celular",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.19"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Consignas_desde_el_celular/Consignas_desde_el_celular.ino"
+  },
+  "exercise": {
+    "lesson": "curso-50",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Consignas_desde_el_celular",
+    "brief": {
+      "goal": "Un «Contador a cero» en el panel: la variable bool «reiniciar», que el operador pone en verdadero, deja las cajas en 0 y el programa la devuelve a falso.",
+      "steps": [
+        "Ejecuta el ejemplo, entra al panel y cambia la «Meta del lote» a 3. Arranca con S1: al contar 3 cajas en B1, la banda para sola.",
+        "Prueba una meta de 500: el panel la rechaza, porque range(1, 100) no la deja pasar.",
+        "Publica bool reiniciar con el id «reiniciar» y writable(WEB_OPERADOR). Si vale verdadero: cajas a 0, reiniciar a falso y «Contador a cero desde el panel»."
+      ],
+      "uses": [
+        "Ethernet · panel web en http://192.168.250.10/",
+        "I0_0 · B1, sensor de cajas",
+        "I0_1 · S1, lote nuevo (NA)",
+        "I0_2 · S2, parada (NC)",
+        "Q0_0 · KM1, banda"
+      ],
+      "teaches": "Con writable() y range() el panel cambia variables del programa sin riesgo: solo los roles permitidos y solo dentro del rango. Una orden de un toque se devuelve a falso al cumplirla."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 460,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 660,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 320,
+        "y": 140
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}

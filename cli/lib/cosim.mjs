@@ -15,6 +15,7 @@ import { RunnerProcess } from "../../app/lib/sim-port.mjs";
 import { ModbusLink, uartRxMessage } from "../../scene/modbus.mjs";
 import { VirtualNet } from "../../scene/network.mjs";
 import { Scene } from "../../scene/scene.mjs";
+import { WebUser } from "../../scene/web-user.mjs";
 
 /** Señales de la placa que la escena lee (salidas del firmware). */
 export function watchedSignals(scene) {
@@ -34,7 +35,10 @@ export function watchedSignals(scene) {
  *   onSerial?: (port: number, text: string, t_ns: number) => void,
  *   onStderr?: (text: string) => void,
  *   onStep?: (scene: Scene, t_ns: bigint) => void,
+ *   web?: { user?: string, password?: string, pollMs?: number } | null,
  * }} o
+ * web: un usuario del panel JWPLC_Web (scene/web-user.mjs) lo reclama y lo mira;
+ * las acciones con device "WEB" son suyas y sus lecturas quedan como «WEB.<id>».
  */
 export async function cosim(o) {
   const scene = o.scene instanceof Scene ? o.scene : new Scene(o.scene, { registry: o.registry });
@@ -78,12 +82,18 @@ export async function cosim(o) {
   // Esclavos Modbus de la escena en el bus RS-485 (UART 2 del PLC).
   const link = scene.hasModbus() ? new ModbusLink(scene) : null;
   // Red Ethernet de la escena (HMI, E/S remotas TCP): también entrega el DHCP.
-  const vnet = scene.hasNetwork() ? new VirtualNet(scene, { send: (m) => proc.send(m), dhcp: true }) : null;
+  const web = o.web
+    ? new WebUser({ ...o.web, record: (key, value, t) => scene.events.push({ t, kind: "output", device: "WEB", key: key.slice(4), value }) })
+    : null;
+  const vnet = scene.hasNetwork() || web ? new VirtualNet(scene, { send: (m) => proc.send(m), dhcp: true, web }) : null;
   proc.on("message", (m) => {
     if (m.type === "net") {
       if (vnet?.claims(m)) vnet.onNet(m, m.t_ns !== undefined ? BigInt(m.t_ns) : scene.t);
     } else if (m.type === "uart_tx") link?.onTx(m.bytes);
-    else if (m.type === "serial") o.onSerial?.(m.port, m.text, m.t_ns);
+    else if (m.type === "serial") {
+      if (m.port === 0) web?.onSerial(m.text);
+      o.onSerial?.(m.port, m.text, m.t_ns);
+    }
     else if (m.type === "fatal") fatal = m;
     else if (m.type === "hello") {
       // Arranque (o reinicio por esp_restart): salidas actuales y todas las
@@ -121,7 +131,10 @@ export async function cosim(o) {
       const a = actions[ai++];
       if (a.inject) scene.inject(a.inject, t);
       else if (a.clear) scene.clearFault(a.clear, t);
-      else scene.act(a.device, a.action, a.value, t);
+      else if (a.device === "WEB") {
+        if (!web) throw new Error("acción WEB sin usuario del panel web");
+        web.act(a.action, a);
+      } else scene.act(a.device, a.action, a.value, t);
     }
     sendInputs(scene.takeInputChanges(), t);
     const reply = link?.poll(t) ?? [];

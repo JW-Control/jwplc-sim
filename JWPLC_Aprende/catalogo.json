@@ -3172,6 +3172,186 @@
               }
             ]
           }
+        },
+        {
+          "id": "curso-49",
+          "numero": 49,
+          "titulo": "El panel web: la banda en el celular",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/49.El_panel_web",
+          "aprende": [
+            "Qué es el panel web de `JWPLC_Web`: una página que el equipo arma sola con las variables del programa.",
+            "A publicar variables con `publish()`, `label()` y `unit()`.",
+            "Cómo es el primer ingreso: el código de 6 dígitos del equipo crea al administrador."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: sensor fotoeléctrico B1 de las cajas (PNP, 24 V DC).",
+                "I0.1: pulsador S1 de marcha (NA).",
+                "I0.2: pulsador S2 de parada (NC).",
+                "Q0.0: contactor KM1 de la banda.",
+                "Cable de red al router o al switch de la planta; un celular o una PC en la misma red."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. A los pocos segundos, la consola dice «Panel web: …» y el código de primer ingreso; el panel **Compilación** dice en qué dirección de la PC atiende el puerto 80 del PLC («Ethernet: puerto 80 del PLC en …»).",
+                "Abre esa dirección en el navegador de la PC, o en el celular si está en el mismo Wi-Fi (botón **Celular** de la barra). Escribe el código de 6 dígitos y elige tu usuario y tu clave.",
+                "Arranca con **S1** y acciona el sensor **B1** desde su símbolo: el panel muestra las cajas y la banda en vivo.",
+                "Lección 49: panel web de la banda\n[JWPLC_Web] Primer ingreso: abrir el panel y escribir el codigo 534141\nPanel web: http://192.168.250.10/\nCaja 1\nCaja 2"
+              ]
+            }
+          ],
+          "pasos": [
+            "Sube el programa y abre el Monitor Serie: sale «Panel web: http://…» y el código de primer ingreso.",
+            "Abre esa dirección en el navegador, escribe el código y elige tu usuario y tu clave (10 caracteres o más).",
+            "Arranca con S1 y pasa cajas por B1: «Cajas contadas» y «Banda en marcha» cambian solos en el panel."
+          ],
+          "practica": [
+            "Publica también el tiempo de marcha de la banda: `unsigned long marchaSegundos`, que suma 1 cada segundo con la banda en marcha, con el id «marcha_s», la etiqueta «Tiempo de marcha» y la unidad «s»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-49",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1 arranca la banda",
+                "extra": false
+              },
+              {
+                "id": "caja",
+                "text": "Dos cajas contadas: «Caja 2»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-50",
+          "numero": 50,
+          "titulo": "Consignas desde el celular",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/50.Consignas_desde_el_celular",
+          "aprende": [
+            "A dejar cambiar una variable desde el panel con `writable(WEB_OPERADOR)`.",
+            "A poner límites con `range()`: el panel rechaza un valor fuera de rango.",
+            "Cómo se hace una orden de un toque: el programa la cumple y la devuelve a falso."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: sensor fotoeléctrico B1 de las cajas.",
+                "I0.1: pulsador S1, lote nuevo (NA).",
+                "I0.2: pulsador S2 de parada (NC).",
+                "Q0.0: contactor KM1 de la banda.",
+                "Cable de red; un celular o una PC en la misma red."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. A los pocos segundos, la consola dice «Panel web: …» y el código de primer ingreso; el panel **Compilación** dice en qué dirección de la PC atiende el puerto 80 del PLC («Ethernet: puerto 80 del PLC en …»).",
+                "Abre esa dirección en el navegador de la PC, o en el celular si está en el mismo Wi-Fi (botón **Celular** de la barra). Escribe el código de 6 dígitos y elige tu usuario y tu clave.",
+                "En **Inicio**, «Cambiar valor» en la meta del lote. Arranca con **S1** y acciona **B1** desde su símbolo hasta llegar a la meta.",
+                "Lección 50: la meta del lote se cambia desde el panel web\nPanel web: http://192.168.250.10/\nCaja 1 de 3\nCaja 2 de 3\nCaja 3 de 3\nMeta cumplida: 3 cajas"
+              ]
+            }
+          ],
+          "pasos": [
+            "Entra al panel como en la lección 49 y cambia la «Meta del lote» a 3.",
+            "Arranca con S1 y pasa 3 cajas por B1: la banda para sola y sale «Meta cumplida: 3 cajas».",
+            "Prueba una meta de 500: el panel avisa que está fuera de rango y la meta no cambia."
+          ],
+          "practica": [
+            "Un «Contador a cero» en el panel: publica `bool reiniciar` con el id «reiniciar» y `writable(WEB_OPERADOR)`. Cuando vale verdadero, el programa pone `cajas` en 0, devuelve `reiniciar` a falso y escribe «Contador a cero desde el panel»."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-50",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1 arranca un lote",
+                "extra": false
+              },
+              {
+                "id": "meta",
+                "text": "«Meta cumplida: N cajas»",
+                "extra": false
+              },
+              {
+                "id": "cero",
+                "text": "«Contador a cero desde el panel»",
+                "extra": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "curso-51",
+          "numero": 51,
+          "titulo": "Alarmas y tendencia en el panel web",
+          "ruta": "examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/51.Alarmas_y_tendencia",
+          "aprende": [
+            "A declarar una alarma con `addAlarm()` y a encenderla con `setAlarm()`.",
+            "Qué hace el operador con una alarma: verla, reconocerla y mirar su historial.",
+            "A guardar una variable en la tendencia con `trend()` y `trendEvery()`."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "I0.0: sensor fotoeléctrico B1 de las cajas.",
+                "I0.1: pulsador S1 de marcha (NA).",
+                "I0.2: pulsador S2 de parada (NC).",
+                "I0.3: contacto 95-96 del relé térmico F1 (NC), para la práctica.",
+                "Q0.0: contactor KM1 de la banda.",
+                "Q0.1: piloto rojo H1 de falla.",
+                "Cable de red; un celular o una PC en la misma red."
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar**. A los pocos segundos, la consola dice «Panel web: …» y el código de primer ingreso; el panel **Compilación** dice en qué dirección de la PC atiende el puerto 80 del PLC («Ethernet: puerto 80 del PLC en …»).",
+                "Abre esa dirección en el navegador de la PC, o en el celular si está en el mismo Wi-Fi (botón **Celular** de la barra). Escribe el código de 6 dígitos y elige tu usuario y tu clave.",
+                "Arranca con **S1**. Para el atasco, deja el sensor **B1** accionado más de 3 s; reconoce la alarma en la pestaña **Alarmas** del panel.",
+                "Lección 51: alarma de atasco y tendencia en el panel web\nPanel web: http://192.168.250.10/\nCaja 1\nAlarma: caja atascada"
+              ]
+            }
+          ],
+          "pasos": [
+            "Entra al panel y arranca con S1.",
+            "Tapa el sensor B1 más de 3 s: la banda para, H1 se enciende y el panel muestra «Caja atascada frente a B1».",
+            "En la pestaña Alarmas, reconócela. Destapa B1 y vuelve a arrancar. En Tendencias, mira cómo suben las cajas."
+          ],
+          "practica": [
+            "Una segunda alarma: el relé térmico F1 en I0.3 (NC). Declara la alarma «termico» («Térmico del motor disparado», prioridad alta); con F1 abierto se enciende, la banda para y H1 se enciende, igual que con el atasco."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/curso-51",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "S1 arranca la banda",
+                "extra": false
+              },
+              {
+                "id": "atasco",
+                "text": "«Alarma: caja atascada»",
+                "extra": false
+              },
+              {
+                "id": "termico",
+                "text": "«Alarma: térmico disparado»",
+                "extra": false
+              }
+            ]
+          }
         }
       ]
     },

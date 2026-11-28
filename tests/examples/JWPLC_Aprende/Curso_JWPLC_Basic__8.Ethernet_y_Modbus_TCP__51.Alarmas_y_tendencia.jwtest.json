@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Lección 51: B1 tapado más de 3 s da «Alarma: caja atascada», para la banda y enciende H1. La alarma en el panel se califica en la práctica curso-51.",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/51.Alarmas_y_tendencia",
+  "scene": "../../../JWPLC_Aprende/extras/practicas/curso-51/curso-51.jwsim",
+  "until_ms": 7000,
+  "actions": [
+    {
+      "at_ms": 1500,
+      "device": "S1",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 1700,
+      "device": "S1",
+      "action": "press",
+      "value": false
+    },
+    {
+      "at_ms": 2000,
+      "device": "B1",
+      "action": "target",
+      "value": true
+    },
+    {
+      "at_ms": 6000,
+      "device": "B1",
+      "action": "target",
+      "value": false
+    }
+  ],
+  "expect": {
+    "console": [
+      "^Lección 51: alarma de atasco y tendencia en el panel web$",
+      {
+        "match": "^Alarma: caja atascada$",
+        "min": 1,
+        "max": 1
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 1900,
+          "KM1.closed": true
+        },
+        {
+          "at_ms": 5500,
+          "KM1.closed": false,
+          "H1.lit": true
+        }
+      ]
+    }
+  }
+}

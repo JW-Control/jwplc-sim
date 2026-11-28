@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Lección 49: el panel web arranca y deja en la consola el código de primer ingreso; S1 arranca la banda y B1 cuenta. El panel por la red se califica en la práctica curso-49 (usuario del panel en el calificador).",
+  "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/49.El_panel_web",
+  "scene": "../../../JWPLC_Aprende/extras/practicas/curso-49/curso-49.jwsim",
+  "until_ms": 4000,
+  "actions": [
+    {
+      "at_ms": 1500,
+      "device": "S1",
+      "action": "press",
+      "value": true
+    },
+    {
+      "at_ms": 1700,
+      "device": "S1",
+      "action": "press",
+      "value": false
+    },
+    {
+      "at_ms": 2500,
+      "device": "B1",
+      "action": "target",
+      "value": true
+    },
+    {
+      "at_ms": 2800,
+      "device": "B1",
+      "action": "target",
+      "value": false
+    }
+  ],
+  "expect": {
+    "console": [
+      "^Lección 49: panel web de la banda$",
+      "^\\[JWPLC_Web\\] Primer ingreso: abrir el panel y escribir el codigo \\d{6}$",
+      {
+        "match": "^Caja 1$",
+        "min": 1,
+        "max": 1
+      }
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 2000,
+          "KM1.closed": true
+        }
+      ]
+    }
+  }
+}

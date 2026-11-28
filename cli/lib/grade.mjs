@@ -31,6 +31,9 @@
 //
 // Las claves de expect/always/never/eventually son señales de la placa
 // (Q0_k, I0_k) o salidas de equipos de la escena ("KM1.closed", "H1.lit").
+// Con JWPLC_Web, también lo que ve el usuario del panel web: "WEB.<id>",
+// "WEB.alarma.<id>", "WEB.respuesta" (acciones con device "WEB"; ver
+// scene/web-user.mjs y docs/EJERCICIOS.md).
 // La traza es determinista: la misma nota en cualquier corrida.
 //
 // El programa del alumno puede ser un sketch de Arduino o un proyecto del
@@ -72,6 +75,12 @@ export function loadExercise(path) {
     rtc: typeof project.simulation?.rtc === "string" ? project.simulation.rtc : null,
     rubric,
   };
+}
+
+/** ¿La rúbrica usa el panel web (acciones "WEB" o claves «WEB.»)? */
+export function usesWeb(r) {
+  if (r.web) return true;
+  return /"device":\s*"WEB"|"WEB\./.test(JSON.stringify([r.cases ?? [], r.goal_runs ?? []]));
 }
 
 const CHECK_KINDS = ["expect", "always", "never", "eventually", "console", "no_faults", "period", "responds"];
@@ -330,6 +339,7 @@ export async function gradeSketch(ex, sketchDir, { pkg, target = "native", build
         scene: ex.scene,
         untilNs: ns(c.until_ms),
         actions: [...(c.actions ?? []), ...fx.actions].map((a) => ({ ...a, at_ns: ns(a.at_ms) })),
+        web: usesWeb(ex.rubric) ? (ex.rubric.web ?? {}) : null,
         maxStepNs: 5_000_000n,
         onStep: tracker
           ? (scene, t) => {

@@ -1,0 +1,250 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-51",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "S1 arranca la banda",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "Mandos: S1."
+    },
+    {
+      "id": "atasco",
+      "description": "«Alarma: caja atascada»",
+      "console": "Alarma: caja atascada",
+      "hint": "Deja el sensor B1 tapado más de 3 s."
+    },
+    {
+      "id": "termico",
+      "description": "«Alarma: térmico disparado»",
+      "console": "Alarma: térmico disparado",
+      "hint": "bool termico = !digitalRead(I0_3); y JWPLC_Web.setAlarm(\"termico\", termico);",
+      "why": "Cada falla con su alarma: el operador sabe qué pasó sin ir al tablero."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Atasco, reconocimiento y térmico",
+      "until_ms": 21000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 14500,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 13800,
+          "device": "WEB",
+          "action": "ack",
+          "id": "atasco"
+        },
+        {
+          "at_ms": 15500,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 15700,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 16500,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 18500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 19000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 19200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "S1 arranca la banda",
+          "points": 2,
+          "from_ms": 9000,
+          "to_ms": 10000,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "B1 tapado más de 3 s: alarma «atasco» en el panel",
+          "points": 3,
+          "from_ms": 13000,
+          "to_ms": 13700,
+          "eventually": {
+            "WEB.alarma.atasco": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Con el atasco la banda queda parada",
+          "points": 2,
+          "from_ms": 13300,
+          "to_ms": 14400,
+          "always": {
+            "KM1.closed": false
+          }
+        },
+        {
+          "description": "El operador reconoce el atasco desde el panel",
+          "points": 2,
+          "from_ms": 13800,
+          "to_ms": 14400,
+          "eventually": {
+            "WEB.reconocida.atasco": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "H1 se enciende con el atasco",
+          "points": 1,
+          "from_ms": 13000,
+          "to_ms": 13600,
+          "eventually": {
+            "H1.lit": true
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "Sin atasco, S1 vuelve a arrancar",
+          "points": 1,
+          "from_ms": 15500,
+          "to_ms": 16300,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "F1 abierto: alarma «termico» en el panel",
+          "points": 4,
+          "from_ms": 16500,
+          "to_ms": 17400,
+          "eventually": {
+            "WEB.alarma.termico": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "y la banda para",
+          "points": 3,
+          "from_ms": 16500,
+          "to_ms": 17000,
+          "eventually": {
+            "KM1.closed": false
+          },
+          "for_ms": 200
+        },
+        {
+          "description": "Con F1 cerrado, la alarma se apaga y S1 arranca",
+          "points": 2,
+          "from_ms": 19000,
+          "to_ms": 20500,
+          "eventually": {
+            "WEB.alarma.termico": 0,
+            "KM1.closed": true
+          },
+          "for_ms": 200
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Fallas",
+      "until_ms": 19000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 14000,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 15000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 15200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 16000,
+          "device": "F1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 17500,
+          "device": "F1",
+          "action": "press",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "curso-49",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "S1 arranca la banda",
+      "when": {
+        "KM1.closed": true
+      },
+      "hold_ms": 500,
+      "hint": "Mandos: S1."
+    },
+    {
+      "id": "caja",
+      "description": "Dos cajas contadas: «Caja 2»",
+      "console": "^Caja 2$",
+      "hint": "Acciona el sensor B1 desde su símbolo, dos veces."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Banda vista desde el panel",
+      "until_ms": 18000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 14000,
+          "device": "S2",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 14200,
+          "device": "S2",
+          "action": "press",
+          "value": false
+        }
+      ],
+      "checks": [
+        {
+          "description": "La consola da la dirección del panel",
+          "points": 2,
+          "console": "^Panel web: http://192\\.168\\.250\\.10/$"
+        },
+        {
+          "description": "El panel abre con el código del equipo (sesión del administrador)",
+          "points": 2,
+          "from_ms": 6000,
+          "to_ms": 9000,
+          "eventually": {
+            "WEB.sesion": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "El panel ve la banda en marcha",
+          "points": 3,
+          "from_ms": 9000,
+          "to_ms": 10000,
+          "eventually": {
+            "WEB.banda": 1
+          },
+          "for_ms": 100
+        },
+        {
+          "description": "El panel ve las 2 cajas",
+          "points": 4,
+          "at_ms": 12500,
+          "expect": {
+            "WEB.cajas": 2
+          }
+        },
+        {
+          "description": "El panel ve el tiempo de marcha (marcha_s) contando",
+          "points": 5,
+          "at_ms": 13800,
+          "expect": {
+            "WEB.marcha_s": [
+              3,
+              5
+            ]
+          }
+        },
+        {
+          "description": "Con la banda parada, marcha_s ya no suma",
+          "points": 4,
+          "at_ms": 17500,
+          "expect": {
+            "WEB.marcha_s": [
+              4,
+              6
+            ],
+            "WEB.banda": 0
+          }
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Banda",
+      "until_ms": 13000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "S1",
+          "action": "press",
+          "value": true
+        },
+        {
+          "at_ms": 9200,
+          "device": "S1",
+          "action": "press",
+          "value": false
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        }
+      ]
+    }
+  ]
+}

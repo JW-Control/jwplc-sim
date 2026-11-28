@@ -1,0 +1,151 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 49 · El panel web: la banda en el celular",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.19"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/El_panel_web/El_panel_web.ino"
+  },
+  "exercise": {
+    "lesson": "curso-49",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/El_panel_web",
+    "brief": {
+      "goal": "Publicar en el panel el tiempo de marcha de la banda: «marcha_s», en segundos, que cuenta solo mientras la banda marcha.",
+      "steps": [
+        "Ejecuta el ejemplo y abre el panel web con el botón del Sim; la primera vez, escribe el código de 6 dígitos de la consola y elige tu clave.",
+        "Arranca la banda con S1 y pasa cajas por B1: en el panel, «Cajas contadas» y «Banda en marcha» cambian solos.",
+        "Declara unsigned long marchaSegundos; súmale 1 cada segundo con la banda en marcha y publícala con el id «marcha_s», unidad «s»."
+      ],
+      "uses": [
+        "Ethernet · panel web en http://192.168.250.10/",
+        "I0_0 · B1, sensor de cajas",
+        "I0_1 · S1, marcha (NA)",
+        "I0_2 · S2, parada (NC)",
+        "Q0_0 · KM1, banda"
+      ],
+      "teaches": "JWPLC_Web arma el panel con las variables que el programa publica: el celular las ve en vivo, sin escribir HTML. La primera vez, el código del equipo crea al administrador."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 460,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 660,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 320,
+        "y": 140
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}

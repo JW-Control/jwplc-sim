@@ -173,6 +173,28 @@ si falla, las demás del caso no suman. Así un programa vacío no aprueba
 }
 ```
 
+### El panel web en la rúbrica (JWPLC_Web, alpha.19)
+
+Para un programa con `JWPLC_Web`, la rúbrica puede usar un **usuario del panel**
+(`scene/web-user.mjs`), que hace lo mismo que una persona con el celular, por
+HTTP sobre la red de la escena: lee de la consola el código de primer ingreso,
+reclama el equipo como administrador y mira `/api/vivo` cada 250 ms. Se activa
+solo cuando la rúbrica nombra `WEB` (o trae `"web": { "user", "password", "pollMs" }`).
+
+| En la rúbrica | Qué es |
+|---|---|
+| `{ "at_ms": 9000, "device": "WEB", "action": "write", "id": "meta", "value": 3 }` | cambia una variable publicada (`POST /api/escribir`) |
+| `{ "at_ms": 13800, "device": "WEB", "action": "ack", "id": "atasco" }` | reconoce una alarma (`POST /api/reconocer`) |
+| `WEB.<id>` | valor de la variable publicada que ve el panel |
+| `WEB.alarma.<id>`, `WEB.reconocida.<id>` | alarma activa y reconocida (0 o 1) |
+| `WEB.sesion` | 1 con la sesión abierta |
+| `WEB.respuesta` | estado HTTP de la última escritura (200, 400 fuera de rango, 403 sin permiso) |
+
+La red tarda unos 8 s virtuales en estar lista (DHCP): las acciones `WEB` van
+desde los 9 s. Solo en el calificador: en la app el panel lo abre el
+navegador de la PC por el puente de red. Ejemplos: prácticas `curso-49` a
+`curso-51`.
+
 ### Consejos para escribir una rúbrica
 
 - El firmware tarda unos 720 ms en arrancar (setup del package): las

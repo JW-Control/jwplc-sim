@@ -100,4 +100,4 @@ Bomba detenida
 - Las preguntas no bloquean: se pide, se atiende con `task()` y se lee el resultado con `done()`.
 - El ciclo leer, decidir, escribir queda en dos pasos.
 
-Con el JWPLC de servidor y de cliente ya cubres lo más común de una red de planta. Vuelve al [temario](https://jw-control.com/wiki/curso-jwplc-basic/) para ver lo que sigue.
+Con el JWPLC de servidor y de cliente ya cubres lo más común de una red de planta. En la siguiente lección, [El panel web](https://jw-control.com/wiki/curso-jwplc-basic/unidad-8/49-el-panel-web/), la banda se mira desde el celular, sin instalar nada.

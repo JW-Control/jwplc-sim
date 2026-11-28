@@ -1,0 +1,195 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "Lección 51 · Alarmas y tendencia en el panel web",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.19"
+    }
+  },
+  "program": {
+    "kind": "arduino",
+    "sketch": "./sketch/Alarmas_y_tendencia/Alarmas_y_tendencia.ino"
+  },
+  "exercise": {
+    "lesson": "curso-51",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/Alarmas_y_tendencia",
+    "brief": {
+      "goal": "Una segunda alarma, «termico»: con el relé térmico F1 (I0.3, NC) abierto, la alarma se enciende en el panel, la banda para y H1 se enciende.",
+      "steps": [
+        "Ejecuta el ejemplo, entra al panel y arranca la banda con S1. Deja el sensor B1 tapado más de 3 s: la alarma «atasco» aparece y la banda para.",
+        "Reconoce la alarma desde la pestaña Alarmas del panel; destapa B1 y vuelve a arrancar. Mira «Cajas contadas» en Tendencias.",
+        "Declara la alarma «termico» con addAlarm(); enciéndela con setAlarm() cuando F1 se abra y para la banda igual que con el atasco."
+      ],
+      "uses": [
+        "Ethernet · panel web en http://192.168.250.10/",
+        "I0_0 · B1, sensor de cajas",
+        "I0_1 · S1, marcha (NA)",
+        "I0_2 · S2, parada (NC)",
+        "I0_3 · F1, térmico (NC)",
+        "Q0_0 · KM1, banda",
+        "Q0_1 · H1, falla"
+      ],
+      "teaches": "Una alarma del panel tiene texto, prioridad y quién la reconoció; el programa solo dice si está activa. La tendencia guarda la historia de una variable sin escribir nada más."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 360
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 360
+      },
+      {
+        "id": "S1",
+        "type": "jwsim/pushbutton-no",
+        "params": {
+          "color": "verde",
+          "label": "Marcha"
+        },
+        "x": 420,
+        "y": 0
+      },
+      {
+        "id": "S2",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "rojo",
+          "label": "Parada"
+        },
+        "x": 620,
+        "y": 0
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 280,
+        "y": 140
+      },
+      {
+        "id": "F1",
+        "type": "jwsim/pushbutton-nc",
+        "params": {
+          "color": "azul",
+          "label": "Térmico 95-96"
+        },
+        "x": 820,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 1060
+      },
+      {
+        "id": "H1",
+        "type": "jwsim/lamp",
+        "params": {
+          "color": "rojo",
+          "label": "Falla"
+        },
+        "x": 560,
+        "y": 1060
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S1.13",
+        "ref": true
+      },
+      {
+        "from": "S1.14",
+        "to": "plc.I0_1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "S2.11",
+        "ref": true
+      },
+      {
+        "from": "S2.12",
+        "to": "plc.I0_2"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "F1.11",
+        "ref": true
+      },
+      {
+        "from": "F1.12",
+        "to": "plc.I0_3"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_1.1"
+      },
+      {
+        "from": "plc.Q0_1.2",
+        "to": "H1.X1"
+      },
+      {
+        "from": "H1.X2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}

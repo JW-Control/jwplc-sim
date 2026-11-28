@@ -49,7 +49,18 @@
             "exclusiveMinimum": 0
           },
           "actions": {
-            "type": "array"
+            "type": "array",
+            "description": "Acciones sobre equipos de la escena en instantes dados; con \"device\": \"WEB\", acciones del usuario del panel JWPLC_Web.",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "jwsim-test-1.json#/$defs/run/properties/actions/items"
+                },
+                {
+                  "$ref": "#/$defs/webAction"
+                }
+              ]
+            }
           },
           "faults": {},
           "stim": {
@@ -73,6 +84,24 @@
         },
         "additionalProperties": false
       }
+    },
+    "web": {
+      "type": "object",
+      "description": "Usuario del panel web JWPLC_Web en el calificador (se activa solo si la rúbrica usa «WEB»): reclama el equipo con el código de la consola y mira /api/vivo cada pollMs.",
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 10
+        },
+        "pollMs": {
+          "type": "number",
+          "minimum": 50
+        }
+      }
     }
   },
   "$defs": {
@@ -93,7 +122,18 @@
           "exclusiveMinimum": 0
         },
         "actions": {
-          "$ref": "jwsim-test-1.json#/$defs/run/properties/actions"
+          "type": "array",
+          "description": "Acciones sobre equipos de la escena en instantes dados; con \"device\": \"WEB\", acciones del usuario del panel JWPLC_Web.",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "jwsim-test-1.json#/$defs/run/properties/actions/items"
+              },
+              {
+                "$ref": "#/$defs/webAction"
+              }
+            ]
+          }
         },
         "faults": {
           "$ref": "jwsim-test-1.json#/$defs/run/properties/faults"
@@ -588,6 +628,37 @@
           ]
         }
       ]
+    },
+    "webAction": {
+      "type": "object",
+      "description": "Usuario del panel web JWPLC_Web (calificador): write cambia una variable publicada (POST /api/escribir), ack reconoce una alarma. La respuesta queda en «WEB.respuesta»; lo que ve el panel, en «WEB.<id>», «WEB.alarma.<id>», «WEB.reconocida.<id>» y «WEB.sesion».",
+      "required": [
+        "at_ms",
+        "device",
+        "action",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "at_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "device": {
+          "const": "WEB"
+        },
+        "action": {
+          "enum": [
+            "write",
+            "ack"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {}
+      }
     }
   }
 }

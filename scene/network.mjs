@@ -91,18 +91,21 @@ export function parseResponse(r, pdu) {
 export class VirtualNet {
   /**
    * @param {import("./scene.mjs").Scene} scene
-   * @param {{ send: (m: object) => void, subnet?: string, plcIp?: string, dhcp?: boolean }} o
+   * @param {{ send: (m: object) => void, subnet?: string, plcIp?: string, dhcp?: boolean, web?: import("./web-user.mjs").WebUser | null }} o
    * dhcp: esta red entrega el DHCP (en el calificador; en la app lo hace el puente).
+   * web: usuario del panel JWPLC_Web (solo en el calificador; en la app el panel
+   * lo abre el navegador de la PC por el puente).
    */
-  constructor(scene, { send, subnet = "192.168.250", plcIp, dhcp = false }) {
+  constructor(scene, { send, subnet = "192.168.250", plcIp, dhcp = false, web = null }) {
     this.scene = scene;
+    this.web = web;
     this.send = send;
     this.gateway = `${subnet}.1`;
     this.plcIp = plcIp ?? `${subnet}.10`;
     this.dhcp = dhcp;
     /** @type {Map<number, Set<number>>} puerto → sockets del PLC en LISTEN */
     this.listens = new Map();
-    /** @type {Map<number, { dev: any, role: "server" | "client", rx: number[] }>} socket del PLC → conexión */
+    /** @type {Map<number, { dev: any, role: "server" | "client" | "web", rx: number[], req?: any }>} socket del PLC → conexión */
     this.conns = new Map();
     /** @type {Map<string, { s: number | null, tid: number, pending: any, due: bigint, queue: any[], ok: number, errors: number }>} */
     this.clients = new Map();
@@ -125,7 +128,7 @@ export class VirtualNet {
   claims(m) {
     if (m.type !== "net") return false;
     switch (m.op) {
-      case "listen": return this.devices().some((d) => d.net.role === "client" && d.net.port === m.port);
+      case "listen": return (!!this.web && m.port === this.web.port) || this.devices().some((d) => d.net.role === "client" && d.net.port === m.port);
       case "connect": return this.devices().some((d) => d.net.role === "server" && d.net.ip === m.ip);
       case "send": case "close": return this.conns.has(m.s) || [...this.listens.values()].some((l) => l.has(m.s));
       case "udp_open": case "sendto": case "udp_close": return this.dhcp;
@@ -154,12 +157,18 @@ export class VirtualNet {
         const c = this.conns.get(s);
         if (!c) return;
         c.rx.push(...Buffer.from(m.hex, "hex"));
+        if (c.role === "web") return;
         return c.role === "server" ? this.#serve(s, c) : this.#answer(s, c);
       }
       case "close": {
         for (const l of this.listens.values()) l.delete(s);
         const c = this.conns.get(s);
         this.conns.delete(s);
+        if (c?.role === "web") {
+          this.web?.done(c.rx, c.req, this.t);
+          if (this.web) this.web.inflight = null;
+          return;
+        }
         if (c?.role === "client") {
           const st = this.clients.get(c.dev.id);
           if (st) {
@@ -226,6 +235,31 @@ export class VirtualNet {
     this.#refresh();
   }
 
+  // Usuario del panel web: una petición por conexión.
+  #webTick() {
+    const w = /** @type {import("./web-user.mjs").WebUser} */ (this.web);
+    if (w.inflight) {
+      // Sin respuesta completa en 5 s: se abandona.
+      if (this.t - w.inflight.at > 5_000_000_000n) {
+        this.#in({ op: "reset", s: w.inflight.s });
+        this.conns.delete(w.inflight.s);
+        w.done([], w.inflight.req, this.t);
+        w.inflight = null;
+      }
+      return;
+    }
+    const l = this.listens.get(w.port);
+    const s = l && [...l].sort((a, b) => a - b)[0];
+    if (s === undefined) return;
+    const req = w.next(this.t);
+    if (!req) return;
+    l?.delete(s);
+    this.conns.set(s, { dev: null, role: "web", rx: [], req });
+    w.inflight = { s, req, at: this.t };
+    this.#in({ op: "connected", s, ip: `${this.gateway.replace(/\.1$/, "")}.50`, port: 50000 + (s & 7) });
+    this.#in({ op: "data", s, hex: hex(w.bytes(req)) });
+  }
+
   // Lo que llegó por la red cambia lo que muestran los equipos: se reevalúa la escena.
   #refresh() {
     if (!this.dirty) return;
@@ -239,6 +273,8 @@ export class VirtualNet {
     // a lo sumo 2 ms (virtuales) después de que la placa lo pidió (10 ms antes
     // de que arranque el Ethernet).
     let n = this.t + (this.active ? 2_000_000n : 10_000_000n);
+    // Usuario del panel web con una petición en vuelo: la respuesta llega pronto.
+    if (this.web?.inflight) n = this.t + 1_000_000n;
     for (const [id, st] of this.clients) {
       // Con una pregunta en vuelo, se mira de nuevo pronto (llega la respuesta).
       const at = st.s === null ? undefined : st.pending ? this.t + 1_000_000n : st.due;
@@ -253,6 +289,7 @@ export class VirtualNet {
   /** Avance del tiempo: conexiones y preguntas de los maestros de la escena. */
   tick(t) {
     if (t > this.t) this.t = t;
+    if (this.web) this.#webTick();
     for (const dev of this.devices()) {
       if (dev.net.role !== "client") continue;
       let st = this.clients.get(dev.id);
