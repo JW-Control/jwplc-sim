@@ -3621,6 +3621,27 @@ function iobShow(st) {
   }[st.state] ?? "";
 }
 
+// ------------------------------------------------------------- panel desde el celular
+// Botón de la barra (y Herramientas > Panel web desde el celular): el Sim
+// publica los puertos del PLC en la red de la PC y el QR de JWPLC_Web usa esa IP.
+function celularShow(st) {
+  const on = !!st?.on;
+  $("btn-celular").classList.toggle("on", on);
+  $("btn-celular").setAttribute("aria-pressed", String(on));
+  // Texto corto (la barra no tiene lugar): la IP y los pasos van en el globo.
+  $("celular-label").textContent = "Celular";
+  $("btn-celular").title = on
+    ? st.lan
+      ? `Activo: el panel web se abre desde el celular en http://${st.lan}:1080/ (mismo Wi-Fi). Escanea el QR de la pantalla del equipo. Se aplica al iniciar la simulación; si Windows pregunta, permitir en redes privadas. Clic para apagar.`
+      : "Activo, pero la PC no tiene una red local (Wi-Fi o cable). Clic para apagar."
+    : "Abre el panel web del JWPLC simulado desde el celular, por el mismo Wi-Fi de la PC. Apagado: solo se ve desde esta PC.";
+}
+if ($("btn-celular") && window.jwsim.celular) {
+  window.jwsim.celular().then(celularShow).catch(() => {});
+  window.jwsim.onCelular(celularShow);
+  $("btn-celular").addEventListener("click", async () => celularShow(await window.jwsim.celular(!$("btn-celular").classList.contains("on"))));
+}
+
 // ------------------------------------------------------------- puerto COM virtual
 // El instalador de Windows crea el par com0com COM20 ↔ COM21: el Sim abre
 // COM20 y JW Serial (u otro programa) abre COM21.

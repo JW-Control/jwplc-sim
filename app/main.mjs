@@ -1151,6 +1151,16 @@ function lanIPv4() {
   found.sort((x, y) => Number(/wi-?fi|wlan|wireless/i.test(y.name)) - Number(/wi-?fi|wlan|wireless/i.test(x.name)));
   return found[0]?.address ?? null;
 }
+// Botón «Celular» de la barra y casilla de Herramientas: los dos quedan iguales.
+function setPanelCelular(on) {
+  writePref("panelCelular", !!on);
+  buildMenu();
+  const st = { on: !!on, lan: lanIPv4() };
+  forward("net:celular", st);
+  if (runner) forward("sim:stderr", "[jwsim] Panel desde el celular: se aplica al volver a iniciar la simulación\n");
+  return st;
+}
+ipcMain.handle("net:celular", (_e, on) => (on === undefined ? { on: panelCelular(), lan: lanIPv4() } : setPanelCelular(on)));
 // Puente de E/S (G8): la bornera como esclavo Modbus TCP para Open Industry
 // Project o FUXA (app/lib/io-bridge.mjs). En el proyecto,
 // simulation.ioBridge: { "present": false } lo quita; "port" (5020) y
@@ -2129,7 +2139,7 @@ function buildMenu() {
             label: "Panel web desde el celular (misma red Wi-Fi)",
             type: "checkbox",
             checked: panelCelular(),
-            click: (item) => writePref("panelCelular", item.checked),
+            click: (item) => setPanelCelular(item.checked),
           },
           { type: "separator" },
           { label: "Buscar actualizaciones…", click: () => updater.check(true) },

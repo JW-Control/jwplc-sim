@@ -12,6 +12,9 @@ const on = (channel) => (cb) => {
 contextBridge.exposeInMainWorld("jwsim", {
   info: () => ipcRenderer.invoke("app:info"),
   getTheme: () => ipcRenderer.invoke("app:getTheme"),
+  // «Panel web desde el celular»: sin argumento lee; con true/false lo cambia.
+  celular: (on) => ipcRenderer.invoke("net:celular", on),
+  onCelular: on("net:celular"),
   setTheme: (theme) => ipcRenderer.invoke("app:setTheme", theme),
   onThemeChanged: on("app:themeChanged"),
   onPackageChanged: on("app:packageChanged"),
