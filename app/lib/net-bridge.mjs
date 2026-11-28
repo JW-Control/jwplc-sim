@@ -16,10 +16,18 @@
 // Un socket del PLC en LISTEN en el puerto P se publica en el host en
 // `listenPort(P)` (por defecto P + 1000 si P < 1024, si no P), en
 // `listenHost` (127.0.0.1; "0.0.0.0" para la LAN).
+//
+// TLS hecho por la PC (JWPLC_TLS en el Sim): una conexión del PLC a .1:4430
+// manda primero "JWSIM-TLS <host> <puerto> <verificar 1|0>\n"; el puente abre
+// TLS hacia el destino con las CA del sistema (y NODE_EXTRA_CA_CERTS),
+// responde "OK\n" o "ERR <motivo>\n" y luego pasa los datos en claro.
 import dgram from "node:dgram";
 import dns from "node:dns";
 import { EventEmitter } from "node:events";
 import net from "node:net";
+import tls from "node:tls";
+
+export const SIM_TLS_PORT = 4430;
 
 const ip2n = (s) => s.split(".").reduce((a, b) => ((a << 8) | Number(b)) >>> 0, 0);
 const n2ip = (n) => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
@@ -56,6 +64,8 @@ export class NetBridge extends EventEmitter {
   }
 
   close() {
+    this.tlsProxy?.close();
+    this.tlsProxy = null;
     for (const s of this.tcp.values()) s.destroy();
     for (const l of this.listening.values()) {
       l.server.close();
@@ -117,6 +127,7 @@ export class NetBridge extends EventEmitter {
   }
 
   #connect(s, ip, port) {
+    if (ip === this.gateway && port === SIM_TLS_PORT) return this.#connectTls(s, ip, port);
     const sock = net.connect({ host: this.#target(ip), port: this.connectPort(ip, port), noDelay: true });
     let connected = false;
     sock.once("connect", () => {
@@ -130,6 +141,72 @@ export class NetBridge extends EventEmitter {
       this.#in({ op: "timeout", s });
     });
     this.tcp.set(s, sock);
+  }
+
+  // Servicio TLS de la PC (ver arriba): servidor local perezoso; el socket del
+  // PLC se conecta a él como a cualquier otro destino.
+  #connectTls(s, ip, port) {
+    const go = () => {
+      const sock = net.connect({ host: "127.0.0.1", port: this.tlsProxy.address().port, noDelay: true });
+      sock.once("connect", () => {
+        this.#wire(s, sock);
+        this.#in({ op: "connected", s, ip, port });
+      });
+      sock.once("error", () => this.tcp.get(s) === sock || this.#in({ op: "timeout", s }));
+      this.tcp.set(s, sock);
+    };
+    if (this.tlsProxy?.listening) return go();
+    if (!this.tlsProxy) {
+      this.tlsProxy = net.createServer({ noDelay: true }, (c) => this.#tlsSession(c));
+      this.tlsProxy.on("error", (err) => this.emit("error", err));
+      this.tlsProxy.listen(0, "127.0.0.1");
+    }
+    this.tlsProxy.once("listening", go);
+  }
+
+  #tlsSession(c) {
+    let head = Buffer.alloc(0);
+    c.on("error", () => {});
+    const onData = (d) => {
+      head = Buffer.concat([head, d]);
+      const nl = head.indexOf(10);
+      if (nl < 0) {
+        if (head.length > 300) c.destroy();
+        return;
+      }
+      c.off("data", onData);
+      c.pause();
+      const rest = head.subarray(nl + 1);
+      const [tag, host, portTxt, verify] = head.subarray(0, nl).toString("latin1").trim().split(/\s+/);
+      const port = Number(portTxt);
+      if (tag !== "JWSIM-TLS" || !host || !(port > 0)) return c.end("ERR PEDIDO\n");
+      const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);
+      const t = tls.connect({
+        host: this.#target(host),
+        port: this.connectPort(host, port),
+        servername: isIp ? undefined : host,
+        rejectUnauthorized: verify !== "0",
+      });
+      this.log.push({ dir: "tls", host, port, verify: verify !== "0" });
+      let up = false;
+      t.once("secureConnect", () => {
+        up = true;
+        c.write("OK\n");
+        if (rest.length) t.write(rest);
+        c.pipe(t);
+        t.pipe(c);
+        c.resume();
+      });
+      t.on("error", (err) => {
+        if (up) return c.destroy();
+        const code = String(err.code ?? "");
+        const why = /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|ALTNAME|HOSTNAME/i.test(code + err.message) ? "CERT" : /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH/.test(code) ? "CONNECT" : "HANDSHAKE";
+        c.end(`ERR ${why} ${code}\n`);
+      });
+      c.on("close", () => t.destroy());
+      t.on("close", () => c.end());
+    };
+    c.on("data", onData);
   }
 
   #closeTcp(s, fin) {

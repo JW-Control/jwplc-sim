@@ -133,7 +133,7 @@
     "HTTPClient": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
     "HTTPUpdate": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
     "HTTPUpdateServer": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
-    "NetworkClientSecure": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
+    "NetworkClientSecure": "requiere la pila lwIP del ESP32, que no se simula. Para HTTPS use JWPLC_TLS (en el Sim el cifrado lo hace la PC) sobre JWPLC_Red o JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
     "Network": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
     "ESPmDNS": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
     "NetBIOS": "requiere la pila lwIP del ESP32, que no se simula. No está en el plan de gates G0–G10. Para red use JWPLC_Ethernet (W5500, JWSIM_G4_W5500_MODEL).",
