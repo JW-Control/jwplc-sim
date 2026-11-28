@@ -285,8 +285,25 @@ const PROJECT = (name) => ({
 });
 const DEVICE = { deviceBoard: "JWPLC BASIC [2.0.0]", communicationPort: "", runtimeIpAddress: "", vendorScreenData: {}, vendorScreenDataByBoard: {}, selectedPlatformOptions: {} };
 
+/**
+ * Servidor Modbus TCP del proyecto (como lo guarda el OpenPLC Editor): el
+ * archivo de devices/servers/ y la red de la pantalla Network del VPP, con IP
+ * fija. mwCount: cuántos %MW se exponen como holding (después de los %QW).
+ */
+function writeServer(dir, { mwCount = 8, ip = "192.168.250.10", gateway = "192.168.250.1" } = {}) {
+  mkdirSync(join(dir, "devices", "servers"), { recursive: true });
+  const server = {
+    name: "modbus_tcp",
+    protocol: "modbus-tcp",
+    modbusSlaveConfig: { enabled: true, transports: ["tcp"], networkInterface: "0.0.0.0", port: 502, bufferMapping: { holdingRegisters: { mwCount } } },
+  };
+  writeFileSync(join(dir, "devices", "servers", "modbus_tcp.json"), JSON.stringify(server, null, 2) + "\n");
+  const network = { enabled: true, enable_dhcp: false, ip_address: ip, subnet: "255.255.255.0", gateway, dns: gateway };
+  writeFileSync(join(dir, "devices", "configuration.json"), JSON.stringify({ ...DEVICE, vendorScreenData: { network } }, null, 2) + "\n");
+}
+
 /** Escribe la carpeta del proyecto (la borra antes). lang: st | ld | fbd. */
-export function writeProject(dir, { name, lang, program, blocks = [] }) {
+export function writeProject(dir, { name, lang, program, blocks = [], server = null }) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, "pous", "programs"), { recursive: true });
   mkdirSync(join(dir, "devices"), { recursive: true });
@@ -296,4 +313,5 @@ export function writeProject(dir, { name, lang, program, blocks = [] }) {
   writeFileSync(join(dir, "pous", "programs", `main.${lang}`), program);
   if (blocks.length) mkdirSync(join(dir, "pous", "function-blocks"), { recursive: true });
   for (const fb of blocks) writeFileSync(join(dir, "pous", "function-blocks", `${fb.name}.st`), functionBlockText(fb));
+  if (server) writeServer(dir, server);
 }

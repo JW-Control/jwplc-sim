@@ -1,0 +1,198 @@
+{
+  "$schema": "../../../../schema/jwsim-rubric-1.json",
+  "id": "iec-18",
+  "goals": [
+    {
+      "id": "marcha",
+      "description": "MARCHA desde la PC arranca la banda y se acusa",
+      "when": {
+        "KM1.closed": true,
+        "PC1.h1": 0
+      },
+      "hold_ms": 500,
+      "hint": "En la PC PC1, arrastra el valor del 40002 a la derecha."
+    },
+    {
+      "id": "cuenta",
+      "description": "La PC ve cajas contadas",
+      "when": {
+        "PC1.h0": [
+          1,
+          9999
+        ]
+      },
+      "hold_ms": 300,
+      "after": "marcha",
+      "hint": "Acciona el sensor B1 con la banda en marcha."
+    },
+    {
+      "id": "cero",
+      "description": "CERO desde la PC pone el contador en 0 y se acusa",
+      "when": {
+        "PC1.h0": 0,
+        "PC1.h3": 0
+      },
+      "hold_ms": 500,
+      "after": "cuenta",
+      "hint": "IF P_CERO <> 0 THEN CAJAS := 0; P_CERO := 0; END_IF;",
+      "why": "Sin el acuse, la PC no sabe si la orden se hizo y el contador quedaría en 0 para siempre."
+    }
+  ],
+  "cases": [
+    {
+      "name": "Marcha, cajas, cero y paro",
+      "until_ms": 17000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h1",
+          "value": 1
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "PC1",
+          "action": "h3",
+          "value": 1
+        },
+        {
+          "at_ms": 14500,
+          "device": "PC1",
+          "action": "h2",
+          "value": 1
+        }
+      ],
+      "checks": [
+        {
+          "description": "MARCHA desde la PC arranca la banda",
+          "points": 3,
+          "from_ms": 9000,
+          "to_ms": 9900,
+          "eventually": {
+            "KM1.closed": true
+          },
+          "for_ms": 300
+        },
+        {
+          "description": "El 40002 vuelve a 0 (acuse de MARCHA)",
+          "points": 3,
+          "at_ms": 9900,
+          "expect": {
+            "PC1.h1": 0
+          }
+        },
+        {
+          "description": "La PC ve 2 cajas en el 40001",
+          "points": 2,
+          "at_ms": 12400,
+          "expect": {
+            "PC1.h0": 2
+          }
+        },
+        {
+          "description": "CERO pone el 40001 en 0",
+          "points": 5,
+          "at_ms": 13500,
+          "expect": {
+            "PC1.h0": 0
+          }
+        },
+        {
+          "description": "El 40004 vuelve a 0 (acuse de CERO)",
+          "points": 3,
+          "at_ms": 13500,
+          "expect": {
+            "PC1.h3": 0
+          }
+        },
+        {
+          "description": "La banda sigue en marcha tras el cero",
+          "points": 1,
+          "at_ms": 13500,
+          "expect": {
+            "KM1.closed": true
+          }
+        },
+        {
+          "description": "PARO desde la PC para la banda y se acusa",
+          "points": 3,
+          "from_ms": 14500,
+          "to_ms": 16500,
+          "eventually": {
+            "KM1.closed": false,
+            "PC1.h2": 0
+          },
+          "for_ms": 300
+        }
+      ]
+    }
+  ],
+  "goal_runs": [
+    {
+      "name": "Banda",
+      "until_ms": 15000,
+      "actions": [
+        {
+          "at_ms": 9000,
+          "device": "PC1",
+          "action": "h1",
+          "value": 1
+        },
+        {
+          "at_ms": 10000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 10300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 11000,
+          "device": "B1",
+          "action": "target",
+          "value": true
+        },
+        {
+          "at_ms": 11300,
+          "device": "B1",
+          "action": "target",
+          "value": false
+        },
+        {
+          "at_ms": 12500,
+          "device": "PC1",
+          "action": "h3",
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,14 +1,29 @@
 {
   "$schema": "../../../schema/jwsim-test-1.json",
-  "$comment": "Prueba mínima de arranque (generada el 28/11/2026 al fijar este Sim en la CI del package): la lección compila, corre 6 s sin detenerse e imprime sus mensajes de inicio. Falta la prueba de comportamiento de la lección (red, Modbus TCP y salidas).",
+  "$comment": "Lección 46: con IP fija la red queda lista y H1 (Q0.0) se enciende; antes, H1 apagado.",
   "sketch": "../../../JWPLC_Aprende/examples/Curso_JWPLC_Basic/8.Ethernet_y_Modbus_TCP/46.La_red_del_tablero",
-  "until_ms": 6000,
+  "scene": "../../../JWPLC_Aprende/extras/practicas/curso-46/curso-46.jwsim",
+  "until_ms": 10000,
   "expect": {
     "console": [
       {
-        "match": "^Lección 46: IP fija 192\\.168\\.250\\.10, piloto H1 en Q0\\.0$",
-        "min": 1
+        "match": "^Red lista\\. IP: 192\\.168\\.250\\.10$",
+        "min": 1,
+        "max": 1
       }
-    ]
+    ],
+    "scene": {
+      "state": [
+        {
+          "at_ms": 3000,
+          "H1.lit": false
+        },
+        {
+          "at_ms": 9500,
+          "H1.lit": true,
+          "PC1.connected": false
+        }
+      ]
+    }
   }
 }

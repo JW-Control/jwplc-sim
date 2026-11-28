@@ -1784,4 +1784,249 @@ H1 := COMPLETO;`,
       }],
     },
   },
+  {
+    id: "iec-17",
+    unit: "5.Comunicaciones",
+    folder: "17.Servidor_Modbus_TCP",
+    project: "servidor_modbus_tcp",
+    title: "Servidor Modbus TCP: la PC mira y manda",
+    bench: "curso-47",
+    // El servidor Modbus TCP del proyecto (Servers en el OpenPLC Editor) con 8 %MW.
+    server: { mwCount: 8 },
+    vars: [
+      { name: "B1", type: "BOOL", at: "%IX0.0", doc: "sensor de cajas" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "banda (bobina 00001 para la PC)" },
+      { name: "CAJAS", type: "INT", at: "%MW0", doc: "holding 40001: cajas contadas" },
+      { name: "MARCHA", type: "INT", at: "%MW1", doc: "holding 40002: marcha, la escribe la PC" },
+      { name: "META", type: "INT", at: "%MW2", doc: "holding 40003: meta de cajas, la escribe la PC" },
+      { name: "F_CAJA", type: "R_TRIG" },
+      { name: "CAJA", type: "BOOL", doc: "flanco de B1", langs: ["fbd"] },
+      { name: "HAY_META", type: "BOOL", doc: "la PC fijó una meta", langs: ["ld"] },
+      { name: "LLENO", type: "BOOL", doc: "se llegó a la meta", langs: ["ld"] },
+    ],
+    example: {
+      st: `(* Cada caja que pasa frente a B1 suma una (flanco de subida). *)
+F_CAJA(CLK := B1);
+IF F_CAJA.Q THEN
+  CAJAS := CAJAS + 1;
+END_IF;
+
+(* La banda marcha mientras la PC tenga un valor distinto de 0 en el 40002. *)
+KM1 := MARCHA <> 0;`,
+      ld: {
+        rungs: [
+          { comment: "Una caja más (40001)", elements: ["^B1", { fb: "ADD", en: true, pins: { IN1: "CAJAS", IN2: "1", OUT: "CAJAS" } }] },
+          { comment: "La banda: marcha desde la PC (40002 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "MARCHA", IN2: "0", OUT: "KM1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_CAJA", in: { CLK: "B1" }, out: { Q: "CAJA" } },
+          { out: "CAJAS", expr: ["SEL", "CAJA", "CAJAS", ["ADD", "CAJAS", "1"]] },
+          { out: "KM1", expr: ["NE", "MARCHA", "0"] },
+        ],
+      },
+    },
+    solution: {
+      st: `F_CAJA(CLK := B1);
+IF F_CAJA.Q THEN
+  CAJAS := CAJAS + 1;
+END_IF;
+
+(* Meta desde la PC (40003): al llegar, el programa borra la marcha que escribió la PC. *)
+IF META > 0 AND CAJAS >= META THEN
+  MARCHA := 0;
+END_IF;
+
+KM1 := MARCHA <> 0;`,
+      ld: {
+        rungs: [
+          { comment: "Una caja más (40001)", elements: ["^B1", { fb: "ADD", en: true, pins: { IN1: "CAJAS", IN2: "1", OUT: "CAJAS" } }] },
+          { comment: "¿La PC fijó una meta? (40003 mayor que 0)", elements: [{ fb: "GT", en: true, pins: { IN1: "META", IN2: "0", OUT: "HAY_META" } }] },
+          { comment: "¿Se llegó a la meta?", elements: [{ fb: "GE", en: true, pins: { IN1: "CAJAS", IN2: "META", OUT: "LLENO" } }] },
+          { comment: "Meta cumplida: la marcha vuelve a 0", elements: ["HAY_META", "LLENO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "MARCHA" } }] },
+          { comment: "La banda: marcha desde la PC (40002 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "MARCHA", IN2: "0", OUT: "KM1" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_CAJA", in: { CLK: "B1" }, out: { Q: "CAJA" } },
+          { out: "CAJAS", expr: ["SEL", "CAJA", "CAJAS", ["ADD", "CAJAS", "1"]] },
+          { out: "MARCHA", expr: ["SEL", ["AND", ["GT", "META", "0"], ["GE", "CAJAS", "META"]], "MARCHA", "0"] },
+          { out: "KM1", expr: ["NE", "MARCHA", "0"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Meta desde la PC: la PC escribe la meta de cajas en el 40003; al llegarla, el programa pone la marcha (40002) en 0 y la banda para sola.",
+      steps: [
+        "Ejecuta el ejemplo y espera «en línea» en la PC PC1: el 40001 cuenta las cajas y la bobina 00001 muestra la banda.",
+        "Arrastra el 40002 de la PC a un valor distinto de 0: la banda KM1 arranca. Acciona B1 y mira sumar el 40001.",
+        "Declara META AT %MW2 (40003). Si META > 0 y CAJAS >= META, escribe 0 en MARCHA: la banda para y la PC lo ve.",
+      ],
+      uses: ["Ethernet · servidor Modbus TCP del proyecto, puerto 502", "%IX0.0 · B1, sensor de cajas", "%QX0.0 · KM1, banda (bobina 00001)", "%MW0 · 40001 cajas", "%MW1 · 40002 marcha", "%MW2 · 40003 meta", "PC1 · JW Modbus Tool"],
+      teaches: "Con el servidor Modbus TCP del proyecto, las variables %MW son los holding que la PC lee y escribe; el programa también puede escribir en ellos, como borrar la marcha al cumplir la meta.",
+    },
+    rubric: {
+      goals: [
+        { id: "marcha", description: "La PC arranca la banda con el 40002", when: { "KM1.closed": true }, hold_ms: 500, hint: "En la PC PC1, arrastra el valor del 40002 a la derecha." },
+        { id: "meta", description: "Al llegar a la meta, la marcha vuelve a 0 sola", when: { "KM1.closed": false, "PC1.h1": 0 }, hold_ms: 500, after: "marcha", hint: "IF META > 0 AND CAJAS >= META THEN MARCHA := 0; END_IF;", why: "Lo que escribe la PC es una variable más: el programa decide cuándo vale y cuándo se borra." },
+      ],
+      cases: [
+        {
+          name: "Lote de 3 cajas",
+          until_ms: 17000,
+          actions: [{ at_ms: 9000, device: "PC1", action: "h2", value: 3 }, { at_ms: 9500, device: "PC1", action: "h1", value: 1 }, ...sensor("B1", 10500, 300), ...sensor("B1", 11500, 300), ...sensor("B1", 12500, 300)],
+          checks: [
+            ev("El 40002 de la PC arranca la banda", 4, 9500, 10400, { "KM1.closed": true }, 300),
+            expect("La PC ve las 3 cajas en el 40001", 4, 13500, { "PC1.h0": 3 }),
+            ev("Al llegar a la meta la banda para sola", 6, 12500, 13500, { "KM1.closed": false }, 300),
+            expect("La PC ve la marcha en 0 (40002)", 6, 14500, { "PC1.h1": 0 }),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Banda", until_ms: 15000, actions: [{ at_ms: 9000, device: "PC1", action: "h2", value: 2 }, { at_ms: 9500, device: "PC1", action: "h1", value: 1 }, ...sensor("B1", 10500, 300), ...sensor("B1", 11500, 300)] }],
+    },
+  },
+  {
+    id: "iec-18",
+    unit: "5.Comunicaciones",
+    folder: "18.Pulsadores_remotos",
+    project: "pulsadores_remotos",
+    title: "Pulsadores remotos: la PC pide y el programa acusa",
+    bench: "curso-47",
+    server: { mwCount: 8 },
+    vars: [
+      { name: "B1", type: "BOOL", at: "%IX0.0", doc: "sensor de cajas" },
+      { name: "KM1", type: "BOOL", at: "%QX0.0", doc: "banda (bobina 00001 para la PC)" },
+      { name: "CAJAS", type: "INT", at: "%MW0", doc: "holding 40001: cajas contadas" },
+      { name: "P_MARCHA", type: "INT", at: "%MW1", doc: "holding 40002: pulsador remoto MARCHA" },
+      { name: "P_PARO", type: "INT", at: "%MW2", doc: "holding 40003: pulsador remoto PARO" },
+      { name: "P_CERO", type: "INT", at: "%MW3", doc: "holding 40004: pulsador remoto contador a cero" },
+      { name: "F_CAJA", type: "R_TRIG" },
+      { name: "CAJA", type: "BOOL", doc: "flanco de B1", langs: ["fbd"] },
+      { name: "O_MARCHA", type: "BOOL", doc: "la PC pidió marcha", langs: ["ld"] },
+      { name: "O_PARO", type: "BOOL", doc: "la PC pidió paro", langs: ["ld"] },
+      { name: "O_CERO", type: "BOOL", doc: "la PC pidió el contador a cero", langs: ["ld"] },
+    ],
+    example: {
+      st: `F_CAJA(CLK := B1);
+IF F_CAJA.Q THEN
+  CAJAS := CAJAS + 1;
+END_IF;
+
+(* Pulsador remoto MARCHA (40002): la PC escribe un valor distinto de 0;
+   el programa hace la orden y lo devuelve a 0: ese 0 es el acuse. *)
+IF P_MARCHA <> 0 THEN
+  KM1 := TRUE;
+  P_MARCHA := 0;
+END_IF;
+
+(* Pulsador remoto PARO (40003), con el mismo acuse. *)
+IF P_PARO <> 0 THEN
+  KM1 := FALSE;
+  P_PARO := 0;
+END_IF;`,
+      ld: {
+        rungs: [
+          { comment: "Una caja más (40001)", elements: ["^B1", { fb: "ADD", en: true, pins: { IN1: "CAJAS", IN2: "1", OUT: "CAJAS" } }] },
+          { comment: "¿La PC pulsó MARCHA? (40002 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "P_MARCHA", IN2: "0", OUT: "O_MARCHA" } }] },
+          { comment: "Marcha: la banda queda encendida", elements: ["O_MARCHA", "S=KM1"] },
+          { comment: "Acuse: el 40002 vuelve a 0", elements: ["O_MARCHA", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "P_MARCHA" } }] },
+          { comment: "¿La PC pulsó PARO? (40003 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "P_PARO", IN2: "0", OUT: "O_PARO" } }] },
+          { comment: "Paro: la banda se apaga", elements: ["O_PARO", "R=KM1"] },
+          { comment: "Acuse: el 40003 vuelve a 0", elements: ["O_PARO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "P_PARO" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_CAJA", in: { CLK: "B1" }, out: { Q: "CAJA" } },
+          { out: "CAJAS", expr: ["SEL", "CAJA", "CAJAS", ["ADD", "CAJAS", "1"]] },
+          { out: "KM1", expr: ["AND", ["OR", "KM1", ["NE", "P_MARCHA", "0"]], ["EQ", "P_PARO", "0"]] },
+          { out: "P_MARCHA", expr: ["SEL", ["NE", "P_MARCHA", "0"], "P_MARCHA", "0"] },
+          { out: "P_PARO", expr: ["SEL", ["NE", "P_PARO", "0"], "P_PARO", "0"] },
+        ],
+      },
+    },
+    solution: {
+      st: `F_CAJA(CLK := B1);
+IF F_CAJA.Q THEN
+  CAJAS := CAJAS + 1;
+END_IF;
+
+IF P_MARCHA <> 0 THEN
+  KM1 := TRUE;
+  P_MARCHA := 0;
+END_IF;
+
+IF P_PARO <> 0 THEN
+  KM1 := FALSE;
+  P_PARO := 0;
+END_IF;
+
+(* Pulsador remoto CERO (40004): el contador vuelve a 0 y se acusa la orden. *)
+IF P_CERO <> 0 THEN
+  CAJAS := 0;
+  P_CERO := 0;
+END_IF;`,
+      ld: {
+        rungs: [
+          { comment: "Una caja más (40001)", elements: ["^B1", { fb: "ADD", en: true, pins: { IN1: "CAJAS", IN2: "1", OUT: "CAJAS" } }] },
+          { comment: "¿La PC pulsó MARCHA? (40002 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "P_MARCHA", IN2: "0", OUT: "O_MARCHA" } }] },
+          { comment: "Marcha: la banda queda encendida", elements: ["O_MARCHA", "S=KM1"] },
+          { comment: "Acuse: el 40002 vuelve a 0", elements: ["O_MARCHA", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "P_MARCHA" } }] },
+          { comment: "¿La PC pulsó PARO? (40003 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "P_PARO", IN2: "0", OUT: "O_PARO" } }] },
+          { comment: "Paro: la banda se apaga", elements: ["O_PARO", "R=KM1"] },
+          { comment: "Acuse: el 40003 vuelve a 0", elements: ["O_PARO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "P_PARO" } }] },
+          { comment: "¿La PC pulsó CERO? (40004 distinto de 0)", elements: [{ fb: "NE", en: true, pins: { IN1: "P_CERO", IN2: "0", OUT: "O_CERO" } }] },
+          { comment: "Contador a cero", elements: ["O_CERO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "CAJAS" } }] },
+          { comment: "Acuse: el 40004 vuelve a 0", elements: ["O_CERO", { fb: "MOVE", en: true, pins: { IN: "0", OUT: "P_CERO" } }] },
+        ],
+      },
+      fbd: {
+        networks: [
+          { fb: "R_TRIG", inst: "F_CAJA", in: { CLK: "B1" }, out: { Q: "CAJA" } },
+          { out: "CAJAS", expr: ["SEL", ["NE", "P_CERO", "0"], ["SEL", "CAJA", "CAJAS", ["ADD", "CAJAS", "1"]], "0"] },
+          { out: "KM1", expr: ["AND", ["OR", "KM1", ["NE", "P_MARCHA", "0"]], ["EQ", "P_PARO", "0"]] },
+          { out: "P_MARCHA", expr: ["SEL", ["NE", "P_MARCHA", "0"], "P_MARCHA", "0"] },
+          { out: "P_PARO", expr: ["SEL", ["NE", "P_PARO", "0"], "P_PARO", "0"] },
+          { out: "P_CERO", expr: ["SEL", ["NE", "P_CERO", "0"], "P_CERO", "0"] },
+        ],
+      },
+    },
+    brief: {
+      goal: "Contador a cero desde la PC: un tercer pulsador remoto en el 40004 pone el 40001 en 0 y el programa lo acusa devolviéndolo a 0.",
+      steps: [
+        "Ejecuta el ejemplo y espera «en línea» en la PC PC1. Arrastra el 40002 (MARCHA): la banda arranca y el 40002 vuelve solo a 0.",
+        "Acciona B1 un par de veces y mira el 40001. Arrastra el 40003 (PARO): la banda para y el 40003 vuelve a 0.",
+        "Declara P_CERO AT %MW3 (40004). Si es distinto de 0, pon CAJAS en 0 y devuelve P_CERO a 0.",
+      ],
+      uses: ["Ethernet · servidor Modbus TCP del proyecto, puerto 502", "%IX0.0 · B1, sensor de cajas", "%QX0.0 · KM1, banda (bobina 00001)", "%MW0 · 40001 cajas", "%MW1 · 40002 MARCHA", "%MW2 · 40003 PARO", "%MW3 · 40004 CERO", "PC1 · JW Modbus Tool"],
+      teaches: "Una orden por red se da como un pulso: la PC escribe un valor y el programa, al cumplirla, lo devuelve a 0. Ese acuse le dice a la PC que la orden se hizo y evita que se repita.",
+    },
+    rubric: {
+      goals: [
+        { id: "marcha", description: "MARCHA desde la PC arranca la banda y se acusa", when: { "KM1.closed": true, "PC1.h1": 0 }, hold_ms: 500, hint: "En la PC PC1, arrastra el valor del 40002 a la derecha." },
+        { id: "cuenta", description: "La PC ve cajas contadas", when: { "PC1.h0": [1, 9999] }, hold_ms: 300, after: "marcha", hint: "Acciona el sensor B1 con la banda en marcha." },
+        { id: "cero", description: "CERO desde la PC pone el contador en 0 y se acusa", when: { "PC1.h0": 0, "PC1.h3": 0 }, hold_ms: 500, after: "cuenta", hint: "IF P_CERO <> 0 THEN CAJAS := 0; P_CERO := 0; END_IF;", why: "Sin el acuse, la PC no sabe si la orden se hizo y el contador quedaría en 0 para siempre." },
+      ],
+      cases: [
+        {
+          name: "Marcha, cajas, cero y paro",
+          until_ms: 17000,
+          actions: [{ at_ms: 9000, device: "PC1", action: "h1", value: 1 }, ...sensor("B1", 10000, 300), ...sensor("B1", 11000, 300), { at_ms: 12500, device: "PC1", action: "h3", value: 1 }, { at_ms: 14500, device: "PC1", action: "h2", value: 1 }],
+          checks: [
+            ev("MARCHA desde la PC arranca la banda", 3, 9000, 9900, { "KM1.closed": true }, 300),
+            expect("El 40002 vuelve a 0 (acuse de MARCHA)", 3, 9900, { "PC1.h1": 0 }),
+            expect("La PC ve 2 cajas en el 40001", 2, 12400, { "PC1.h0": 2 }),
+            expect("CERO pone el 40001 en 0", 5, 13500, { "PC1.h0": 0 }),
+            expect("El 40004 vuelve a 0 (acuse de CERO)", 3, 13500, { "PC1.h3": 0 }),
+            expect("La banda sigue en marcha tras el cero", 1, 13500, { "KM1.closed": true }),
+            ev("PARO desde la PC para la banda y se acusa", 3, 14500, 16500, { "KM1.closed": false, "PC1.h2": 0 }, 300),
+          ],
+        },
+      ],
+      goal_runs: [{ name: "Banda", until_ms: 15000, actions: [{ at_ms: 9000, device: "PC1", action: "h1", value: 1 }, ...sensor("B1", 10000, 300), ...sensor("B1", 11000, 300), { at_ms: 12500, device: "PC1", action: "h3", value: 1 }] }],
+    },
+  },
 ];

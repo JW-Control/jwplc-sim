@@ -1,0 +1,122 @@
+{
+  "$schema": "https://jw-control.github.io/jwplc-sim/schema/jwsim-1.json",
+  "format": "jwsim",
+  "version": 1,
+  "name": "IEC · Lección 18 · Pulsadores remotos: la PC pide y el programa acusa",
+  "board": {
+    "id": "jwplcbasic",
+    "package": {
+      "minRef": "v2.1.0-alpha.18"
+    }
+  },
+  "program": {
+    "kind": "openplc",
+    "project": "./iniciar/ST"
+  },
+  "exercise": {
+    "lesson": "iec-18",
+    "rubric": "./rubrica.json",
+    "solution": "./solucion/ST",
+    "brief": {
+      "goal": "Contador a cero desde la PC: un tercer pulsador remoto en el 40004 pone el 40001 en 0 y el programa lo acusa devolviéndolo a 0.",
+      "steps": [
+        "Ejecuta el ejemplo y espera «en línea» en la PC PC1. Arrastra el 40002 (MARCHA): la banda arranca y el 40002 vuelve solo a 0.",
+        "Acciona B1 un par de veces y mira el 40001. Arrastra el 40003 (PARO): la banda para y el 40003 vuelve a 0.",
+        "Declara P_CERO AT %MW3 (40004). Si es distinto de 0, pon CAJAS en 0 y devuelve P_CERO a 0."
+      ],
+      "uses": [
+        "Ethernet · servidor Modbus TCP del proyecto, puerto 502",
+        "%IX0.0 · B1, sensor de cajas",
+        "%QX0.0 · KM1, banda (bobina 00001)",
+        "%MW0 · 40001 cajas",
+        "%MW1 · 40002 MARCHA",
+        "%MW2 · 40003 PARO",
+        "%MW3 · 40004 CERO",
+        "PC1 · JW Modbus Tool"
+      ],
+      "teaches": "Una orden por red se da como un pulso: la PC escribe un valor y el programa, al cumplirla, lo devuelve a 0. Ese acuse le dice a la PC que la orden se hizo y evita que se repita."
+    }
+  },
+  "simulation": {
+    "seed": 1,
+    "realtimeFactor": 1
+  },
+  "scene": {
+    "devices": [
+      {
+        "id": "plc",
+        "type": "jwsim/jwplc-basic",
+        "x": 280,
+        "y": 220
+      },
+      {
+        "id": "PS1",
+        "type": "jwsim/power-24vdc",
+        "params": {
+          "model": "MDR-60"
+        },
+        "x": 0,
+        "y": 220
+      },
+      {
+        "id": "B1",
+        "type": "jwsim/sensor-photoelectric",
+        "x": 500,
+        "y": 0
+      },
+      {
+        "id": "KM1",
+        "type": "jwsim/contactor",
+        "x": 280,
+        "y": 920
+      },
+      {
+        "id": "PC1",
+        "type": "jwsim/pc-modbus-tcp",
+        "x": 860,
+        "y": 0
+      }
+    ],
+    "wiring": [
+      {
+        "from": "PS1.+V1",
+        "to": "plc.24VDC"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M0"
+      },
+      {
+        "from": "PS1.-V1",
+        "to": "plc.M1"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "B1.BN",
+        "ref": true
+      },
+      {
+        "from": "B1.BU",
+        "to": "PS1.-V1",
+        "ref": true
+      },
+      {
+        "from": "B1.BK",
+        "to": "plc.I0_0"
+      },
+      {
+        "from": "PS1.+V1",
+        "to": "plc.Q0_0.1"
+      },
+      {
+        "from": "plc.Q0_0.2",
+        "to": "KM1.A1"
+      },
+      {
+        "from": "KM1.A2",
+        "to": "PS1.-V1",
+        "ref": true
+      }
+    ]
+  }
+}

@@ -37,7 +37,7 @@ async function writeSet(dir, l, p) {
   // Bloques de función propios (en ST): los del programa o, si no, los de la lección.
   const blocks = p.blocks ?? l.blocks ?? [];
   setUserBlocks(blocks);
-  for (const [L, lang] of Object.entries(LANGS)) writeProject(join(dir, L), { name: `${l.project}_${lang}`, lang, program: await program(lang, l.vars, p), blocks });
+  for (const [L, lang] of Object.entries(LANGS)) writeProject(join(dir, L), { name: `${l.project}_${lang}`, lang, program: await program(lang, l.vars, p), blocks, server: l.server ?? null });
 }
 
 function rubricOf(l) {

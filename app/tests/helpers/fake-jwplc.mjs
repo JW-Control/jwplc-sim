@@ -19,7 +19,11 @@ export async function fakeJwplc(exe) {
     const hex = l.slice(2).trim();
     runner.send({ type: "uart_rx", port: 0, data: hex.match(/../g).map((h) => `0:${h}`).join(",") });
   });
+  // Al cerrar, el runner aún puede soltar bytes de UART0: el pty ya no existe.
+  let closed = false;
+  pty.stdin.on("error", () => {});
   runner.on("message", (m) => {
+    if (closed) return;
     if (m.type === "uart_out" && m.port === 0) pty.stdin.write(`W ${m.hex.replaceAll(" ", "")}\n`);
   });
   runner.send({ type: "tap", port: 0, on: 1 });
@@ -28,6 +32,7 @@ export async function fakeJwplc(exe) {
     tty,
     runner,
     close: () => {
+      closed = true;
       runner.stop();
       pty.kill();
     },
