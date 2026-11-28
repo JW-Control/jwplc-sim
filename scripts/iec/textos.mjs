@@ -448,4 +448,30 @@ La PC lee el 40001 cuando quiere y escribe el 40002 para arrancar la banda. KM1 
     como: `El flanco de B1 suma una caja en \`CAJAS\` (como en la lección 14). La banda sigue a la orden de la PC: \`KM1 := MARCHA <> 0;\`. En Ladder, la suma es un bloque **ADD** detrás de un contacto de flanco y la comparación un bloque **NE** por EN/ENO; en FBD, **R_TRIG**, **SEL** con **ADD**, y **NE**. Nada en el programa habla de la red: el servidor del proyecto presta \`CAJAS\` y \`MARCHA\` tal cual.`,
     sim: ["Pulsa **Ejecutar** y espera unos segundos: la PC **PC1** del **Esquema** dice «en línea».", "Arrastra a la derecha el valor del **40002** en la PC: **KM1** cierra y la bobina **00001** se enciende.", "Acciona el sensor **B1** desde su símbolo: el **40001** cuenta las cajas.", ABRIR],
   },
+  "iec-18": {
+    descripcion: "Comunicaciones en IEC 61131-3: pulsadores remotos por Modbus TCP; la PC escribe la orden en un holding y el programa la cumple y la acusa devolviéndola a 0, en ST, Ladder y FBD.",
+    intro: `En la lección anterior la PC dejaba un valor fijo en el 40002 y la banda lo seguía. En planta, las órdenes de un SCADA casi nunca son así: son **pulsos**, como un botón. La PC escribe «quiero marcha», el PLC lo hace y le contesta «hecho». Esa respuesta es el **acuse**, y aquí sale gratis: el programa devuelve la orden a 0.`,
+    aprende: ["A recibir órdenes de la PC como pulsadores remotos en holding (%MW).", "A acusar una orden devolviéndola a 0 para que no se repita.", "A combinar las órdenes de la red con una memoria de marcha (Set/Reset)."],
+    idea: `### Una orden es un pulso
+
+Si la PC deja un 1 fijo en una palabra, ¿cuándo se pulsó? ¿Ya se cumplió? Con el **acuse** no hay duda:
+
+1. La PC escribe un valor distinto de 0 en el holding de la orden.
+2. El programa lo ve, hace la orden **una vez** y escribe 0 en el mismo holding.
+3. La PC vuelve a leer el holding: si está en 0, la orden se cumplió.
+
+### El mapa de la banda
+
+| Variable | Dirección | Para la PC | Quién escribe |
+|---|---|---|---|
+| \`CAJAS\` | \`%MW0\` | 40001 | el programa |
+| \`P_MARCHA\` | \`%MW1\` | 40002 | la PC (pulso), el programa (acuse) |
+| \`P_PARO\` | \`%MW2\` | 40003 | la PC (pulso), el programa (acuse) |
+| \`P_CERO\` | \`%MW3\` | 40004 | la PC (pulso), el programa (acuse) |
+| \`KM1\` | \`%QX0.0\` | bobina 00001 | el programa |
+
+La banda ya no sigue a un valor: queda **encendida** con MARCHA y se **apaga** con PARO, como un arranque con pulsadores de la Unidad 1.`,
+    como: `Cada orden es un \`IF\`: si el holding es distinto de 0, se hace la orden y se escribe 0. MARCHA pone \`KM1 := TRUE\` y PARO \`KM1 := FALSE\`. En Ladder, un bloque **NE** por EN/ENO deja la orden en un BOOL (\`O_MARCHA\`), ese contacto activa la bobina **S** (o **R**) de KM1 y un **MOVE** de 0 hace el acuse. En FBD, \`KM1\` es la memoria \`(KM1 OR MARCHA) AND NOT PARO\` y cada orden se borra con **SEL**.`,
+    sim: ["Pulsa **Ejecutar** y espera unos segundos: la PC **PC1** del **Esquema** dice «en línea».", "Arrastra a la derecha el valor del **40002** (MARCHA): **KM1** cierra y el 40002 vuelve solo a 0.", "Acciona el sensor **B1**: el **40001** cuenta. Arrastra el **40003** (PARO): la banda para y el 40003 vuelve a 0.", ABRIR],
+  },
 };

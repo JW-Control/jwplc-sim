@@ -4739,6 +4739,80 @@
               }
             ]
           }
+        },
+        {
+          "id": "iec-18",
+          "numero": 18,
+          "titulo": "Pulsadores remotos: la PC pide y el programa acusa",
+          "ruta": "extras/Curso_IEC_61131/5.Comunicaciones/18.Pulsadores_remotos",
+          "lenguajes": [
+            "ST",
+            "LD",
+            "FBD"
+          ],
+          "aprende": [
+            "A recibir órdenes de la PC como pulsadores remotos en holding (%MW).",
+            "A acusar una orden devolviéndola a 0 para que no se repita.",
+            "A combinar las órdenes de la red con una memoria de marcha (Set/Reset)."
+          ],
+          "necesita": [],
+          "secciones": [
+            {
+              "titulo": "Cómo funciona el programa",
+              "items": [
+                "Cada orden es un `IF`: si el holding es distinto de 0, se hace la orden y se escribe 0. MARCHA pone `KM1 := TRUE` y PARO `KM1 := FALSE`. En Ladder, un bloque **NE** por EN/ENO deja la orden en un BOOL (`O_MARCHA`), ese contacto activa la bobina **S** (o **R**) de KM1 y un **MOVE** de 0 hace el acuse. En FBD, `KM1` es la memoria `(KM1 OR MARCHA) AND NOT PARO` y cada orden se borra con **SEL**."
+              ]
+            },
+            {
+              "titulo": "Qué conectar",
+              "items": [
+                "Ethernet · servidor Modbus TCP del proyecto, puerto 502",
+                "%IX0.0 · B1, sensor de cajas",
+                "%QX0.0 · KM1, banda (bobina 00001)",
+                "%MW0 · 40001 cajas",
+                "%MW1 · 40002 MARCHA",
+                "%MW2 · 40003 PARO",
+                "%MW3 · 40004 CERO",
+                "PC1 · JW Modbus Tool"
+              ]
+            },
+            {
+              "titulo": "En JWPLC Sim",
+              "items": [
+                "Pulsa **Ejecutar** y espera unos segundos: la PC **PC1** del **Esquema** dice «en línea».",
+                "Arrastra a la derecha el valor del **40002** (MARCHA): **KM1** cierra y el 40002 vuelve solo a 0.",
+                "Acciona el sensor **B1**: el **40001** cuenta. Arrastra el **40003** (PARO): la banda para y el 40003 vuelve a 0.",
+                "Abre la práctica desde **Inicio → Ruta de aprendizaje** y elige el lenguaje: **ST** se edita ahí mismo en el Sim; **Ladder** y **FBD** se editan en el OpenPLC Editor (Archivo → Abrir proyecto, con la carpeta que muestra la consola del Sim). Al guardar en el editor, el Sim recompila solo."
+              ]
+            }
+          ],
+          "pasos": [],
+          "practica": [
+            "Contador a cero desde la PC: un tercer pulsador remoto en el 40004 pone el 40001 en 0 y el programa lo acusa devolviéndolo a 0.",
+            "Ejecuta el ejemplo y espera «en línea» en la PC PC1. Arrastra el 40002 (MARCHA): la banda arranca y el 40002 vuelve solo a 0.",
+            "Acciona B1 un par de veces y mira el 40001. Arrastra el 40003 (PARO): la banda para y el 40003 vuelve a 0.",
+            "Declara P_CERO AT %MW3 (40004). Si es distinto de 0, pon CAJAS en 0 y devuelve P_CERO a 0."
+          ],
+          "practica_evaluada": {
+            "ruta": "extras/practicas/iec-18",
+            "objetivos_en_vivo": [
+              {
+                "id": "marcha",
+                "text": "MARCHA desde la PC arranca la banda y se acusa",
+                "extra": false
+              },
+              {
+                "id": "cuenta",
+                "text": "La PC ve cajas contadas",
+                "extra": false
+              },
+              {
+                "id": "cero",
+                "text": "CERO desde la PC pone el contador en 0 y se acusa",
+                "extra": false
+              }
+            ]
+          }
         }
       ]
     }

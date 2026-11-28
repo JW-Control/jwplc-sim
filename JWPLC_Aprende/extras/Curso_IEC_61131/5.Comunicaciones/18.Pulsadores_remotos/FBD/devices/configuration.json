@@ -1,0 +1,17 @@
+{
+  "deviceBoard": "JWPLC BASIC [2.0.0]",
+  "communicationPort": "",
+  "runtimeIpAddress": "",
+  "vendorScreenData": {
+    "network": {
+      "enabled": true,
+      "enable_dhcp": false,
+      "ip_address": "192.168.250.10",
+      "subnet": "255.255.255.0",
+      "gateway": "192.168.250.1",
+      "dns": "192.168.250.1"
+    }
+  },
+  "vendorScreenDataByBoard": {},
+  "selectedPlatformOptions": {}
+}
