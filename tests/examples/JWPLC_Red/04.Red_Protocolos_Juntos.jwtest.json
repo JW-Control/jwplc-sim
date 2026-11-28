@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schema/jwsim-test-1.json",
+  "$comment": "Arranque sin red con todos los protocolos en el mismo sketch: cada uno informa su estado sin colgar el loop (la línea de estado sale cada 10 s y el aviso HTTP reintenta). La prueba con red y todos a la vez es la parte «juntos» del gate JWSIM_PROTOCOLOS.",
+  "sketch": "package:libraries/JWPLC_Red/examples/04.Red_Protocolos_Juntos",
+  "runs": [
+    {
+      "until_ms": 25000,
+      "expect": {
+        "console": [
+          {
+            "match": "^JWPLC Basic - 04\\.Red_Protocolos_Juntos$",
+            "min": 1
+          },
+          {
+            "match": "^Red: web SIN RED \\| MQTT SIN RED \\| hora ESPERANDO HORA \\| mDNS 0 \\| avisos 0$",
+            "min": 2
+          },
+          {
+            "match": "^Aviso HTTP: SIN RED$",
+            "min": 3
+          }
+        ],
+        "console_absent": [
+          "Orden MQTT"
+        ]
+      }
+    }
+  ]
+}

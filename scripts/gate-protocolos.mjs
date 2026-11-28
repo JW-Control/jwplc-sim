@@ -14,6 +14,9 @@
 //             temperatura y lluvia de "current"
 //   mdns      01.MDNS_Nombre_En_La_Red anuncia planta1.local en 224.0.0.251:5353 y contesta
 //             a una consulta A con la IP del PLC
+//   juntos    JWPLC_Red/04.Red_Protocolos_Juntos: panel web, mDNS, MQTT, HTTP y NTP en el mismo
+//             sketch y al mismo tiempo; la falla y la orden MQTT mueven la bomba, el aviso
+//             lleva la hora de Internet y se cuentan los sockets del W5500 en uso a la vez
 import { createSocket } from "node:dgram";
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import http from "node:http";
@@ -33,6 +36,9 @@ const { root, lock } = resolvePackageRoot();
 const libs = join(root, lock.JWPLC_PACKAGE_TREE, "libraries");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const criteria = {};
+// GATE_ONLY=ntp,juntos corre solo esas partes (para depurar).
+const only = process.env.GATE_ONLY?.split(",");
+const want = (k) => !only || only.includes(k);
 
 const freePort = () =>
   new Promise((r) => {
@@ -102,7 +108,7 @@ async function waitFor(fn, ms) {
 }
 
 // ------------------------------------------------------------ NTP
-{
+if (want("ntp")) {
   const port = await freePort();
   const srv = createSocket("udp4");
   let queries = 0;
@@ -128,7 +134,7 @@ async function waitFor(fn, ms) {
 }
 
 // ------------------------------------------------------------ MQTT
-{
+if (want("mqtt")) {
   let broker = new MiniBroker();
   const port = await broker.listen(0);
   const exe = await build(exampleCopy("JWPLC_MQTT", "01.MQTT_Publicar_Recibir"));
@@ -160,7 +166,7 @@ async function waitFor(fn, ms) {
 }
 
 // ------------------------------------------------------------ HTTP / HTTPS
-{
+if (want("http")) {
   const reqs = [];
   const server = http.createServer((req, res) => {
     let body = "";
@@ -207,7 +213,7 @@ async function waitFor(fn, ms) {
 }
 
 // ------------------------------------------------------------ mDNS
-{
+if (want("mdns")) {
   const exe = await build(exampleCopy("JWPLC_MDNS", "01.MDNS_Nombre_En_La_Red"));
   const sim = start(exe);
   try {
@@ -226,6 +232,85 @@ async function waitFor(fn, ms) {
     };
   } finally {
     await sim.stop();
+  }
+}
+
+// ------------------------------------------------------------ todos a la vez
+if (want("juntos")) {
+  const ntpPort = await freePort();
+  const ntp = createSocket("udp4");
+  ntp.on("message", (m, r) => {
+    if (m.length < 48 || (m[0] & 7) !== 3) return;
+    const b = Buffer.alloc(48);
+    b[0] = 0x24;
+    b[1] = 2;
+    b.writeUInt32BE(Math.floor(Date.UTC(2026, 10, 28, 23, 30, 5) / 1000) + 2208988800, 40);
+    ntp.send(b, r.port, r.address);
+  });
+  await new Promise((r) => ntp.bind(ntpPort, "127.0.0.1", r));
+  const broker = new MiniBroker();
+  const mqttPort = await broker.listen(0);
+  const posts = [];
+  const hook = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (d) => (body += d));
+    req.on("end", () => {
+      posts.push(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end('{"ok":true}');
+    });
+  });
+  const hookPort = await new Promise((r) => hook.listen(0, "127.0.0.1", () => r(hook.address().port)));
+  const exe = await build(exampleCopy("JWPLC_Red", "04.Red_Protocolos_Juntos", [['SERVIDOR_HORA[] = "pool.ntp.org"', 'SERVIDOR_HORA[] = "192.168.250.1"']]));
+  const sim = start(exe, { ports: { 123: ntpPort, 1883: mqttPort, 1880: hookPort } });
+  // Sockets del W5500 abiertos a la vez (según lo que el chip informa al puente).
+  const open = new Set();
+  let maxOpen = 0;
+  sim.proc.on("message", (m) => {
+    if (m.type !== "net") return;
+    if (m.op === "connect" || m.op === "listen" || m.op === "udp_open") open.add(m.s);
+    else if (m.op === "close" || m.op === "udp_close") open.delete(m.s);
+    maxOpen = Math.max(maxOpen, open.size);
+  });
+  try {
+    const sub = await waitFor(() => broker.log.find((e) => e.kind === "subscribe"), 30000);
+    const mdnsOpen = await waitFor(() => sim.out.find((m) => m.op === "udp_open" && m.port === 5353), 10000);
+    const page = await waitFor(async () => {
+      try {
+        const r = await fetch("http://127.0.0.1:1080/");
+        return r.ok ? r.status : null;
+      } catch {
+        return null;
+      }
+    }, 15000);
+    const synced = await waitFor(() => /hora 18:3\d:\d\d/.test(sim.console), 25000);
+    // Se normaliza el térmico y llega la orden ON: la bomba arranca.
+    sim.proc.send({ type: "set", signal: "I0_1", value: 1 });
+    broker.publish("jwplc/bomba/orden", "ON");
+    const order = await waitFor(() => sim.console.includes("Orden MQTT: ON"), 8000);
+    const marcha = await waitFor(() => broker.log.find((e) => e.kind === "publish" && e.topic === "jwplc/bomba/marcha" && e.msg === "1"), 8000);
+    const aviso = await waitFor(() => posts.find((b) => b.includes('"falla":false') && /28\/11\/2026 18:3\d:\d\d/.test(b)), 15000);
+    // Consulta mDNS mientras todo lo demás sigue conectado.
+    const q = "abcd00000001000000000000" + "07706c616e74613105" + "6c6f63616c00" + "00010001";
+    sim.proc.send({ type: "net_in", op: "udp", s: mdnsOpen?.s, ip: "192.168.250.1", port: 40001, hex: q });
+    const answer = await waitFor(() => sim.out.find((m) => m.op === "sendto" && m.port === 40001 && m.hex.endsWith("c0a8fa0a")), 8000);
+    const pageAgain = await fetch("http://127.0.0.1:1080/").then((r) => r.status).catch(() => 0);
+    // Cuatro navegadores a la vez con MQTT, mDNS y lo demás abiertos: no se acaban los 8 sockets.
+    const burst = await Promise.all([1, 2, 3, 4].map(() => fetch("http://127.0.0.1:1080/").then((r) => r.status).catch(() => 0)));
+    const line = await waitFor(() => /Red: web http:\/\/planta1\.local \| MQTT CONECTADO \| hora 18:3\d:\d\d \| mDNS [1-9]\d* \| avisos [1-9]/.exec(sim.console)?.[0], 25000);
+    criteria.juntos = {
+      pass: !!sub && page === 200 && !!synced && !!order && !!marcha && !!aviso && !!answer && pageAgain === 200 && burst.every((c) => c === 200) && !!line && maxOpen <= 8,
+      linea: line,
+      pasos: { mqtt: !!sub, web: page === 200, hora: !!synced, orden: !!order, marcha: !!marcha, aviso_con_hora: !!aviso, mdns: !!answer, web_otra_vez: pageAgain === 200, cuatro_navegadores: burst.join(",") },
+      avisos: posts.length,
+      sockets_max: maxOpen,
+    };
+  } finally {
+    if (process.env.GATE_DEBUG) console.error(sim.console, posts);
+    await sim.stop();
+    await broker.close();
+    hook.close();
+    ntp.close();
   }
 }
 
