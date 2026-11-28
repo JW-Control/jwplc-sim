@@ -13,6 +13,7 @@
 // las mismas acciones, la corrida es idéntica (mismo hash de traza).
 import { RunnerProcess } from "../../app/lib/sim-port.mjs";
 import { ModbusLink, uartRxMessage } from "../../scene/modbus.mjs";
+import { VirtualNet } from "../../scene/network.mjs";
 import { Scene } from "../../scene/scene.mjs";
 
 /** Señales de la placa que la escena lee (salidas del firmware). */
@@ -76,8 +77,12 @@ export async function cosim(o) {
 
   // Esclavos Modbus de la escena en el bus RS-485 (UART 2 del PLC).
   const link = scene.hasModbus() ? new ModbusLink(scene) : null;
+  // Red Ethernet de la escena (HMI, E/S remotas TCP): también entrega el DHCP.
+  const vnet = scene.hasNetwork() ? new VirtualNet(scene, { send: (m) => proc.send(m), dhcp: true }) : null;
   proc.on("message", (m) => {
-    if (m.type === "uart_tx") link?.onTx(m.bytes);
+    if (m.type === "net") {
+      if (vnet?.claims(m)) vnet.onNet(m, m.t_ns !== undefined ? BigInt(m.t_ns) : scene.t);
+    } else if (m.type === "uart_tx") link?.onTx(m.bytes);
     else if (m.type === "serial") o.onSerial?.(m.port, m.text, m.t_ns);
     else if (m.type === "fatal") fatal = m;
     else if (m.type === "hello") {
@@ -104,6 +109,7 @@ export async function cosim(o) {
   scene.setSignals(first.levels, first.t);
   proc.send({ type: "scene", on: 1, watch: watch.join(",") });
   if (link) proc.send({ type: "rs485", port: 2, on: 1 });
+  if (vnet) proc.send({ type: "net", on: 1 });
   sendInputs(scene.takeInputChanges(), first.t);
   proc.send({ type: "run", speed: o.speed ?? 0 });
 
@@ -120,6 +126,7 @@ export async function cosim(o) {
     sendInputs(scene.takeInputChanges(), t);
     const reply = link?.poll(t) ?? [];
     if (reply.length) proc.send(uartRxMessage(2, reply));
+    vnet?.tick(t);
     while (pi < probes.length && probes[pi] <= t) snapshots.set(probes[pi++], scene.snapshot());
     o.onStep?.(scene, t);
     if (t >= o.untilNs) break;
@@ -129,6 +136,12 @@ export async function cosim(o) {
     if (ai < actions.length && actions[ai].at_ns < h) h = actions[ai].at_ns;
     const le = link?.nextEvent();
     if (le !== undefined && le > t && le < h) h = le;
+    // Red: el maestro de la escena pregunta en su período (al menos 1 ms después).
+    if (vnet) {
+      let ve = vnet.nextEvent();
+      if (ve !== undefined && ve <= t) ve = t + 1_000_000n;
+      if (ve !== undefined && ve < h) h = ve;
+    }
     if (pi < probes.length && probes[pi] < h) h = probes[pi];
     if (o.maxStepNs && t + o.maxStepNs < h) h = t + o.maxStepNs;
     proc.send({ type: "horizon", until_ns: String(h) });

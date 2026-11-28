@@ -22,11 +22,14 @@ import { conveyorPhysics } from "./conveyor-physics.mjs";
 import { breaker, motorProtector, ssr, stackLight, timerRelay } from "./panel.mjs";
 import { energyMeter, remoteIo, tempController } from "./fieldbus.mjs";
 import { usbPc, usbRs485 } from "./comms.mjs";
+import { hmiModbusTcp, remoteIoTcp } from "./network.mjs";
 import { ammeter, floatSwitch, levelElectrodes, levelRelay, pressureSwitch, thermostat, voltmeter } from "./instruments.mjs";
 
 export const builtinDevices = [
   jwplcBasic,
   remoteIo,
+  remoteIoTcp,
+  hmiModbusTcp,
   power24,
   power230,
   power3ph,

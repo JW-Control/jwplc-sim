@@ -14,6 +14,7 @@ import { EventEmitter } from "node:events";
 
 import { watchedSignals } from "../../cli/lib/cosim.mjs";
 import { ModbusLink, uartRxMessage } from "../../scene/modbus.mjs";
+import { VirtualNet } from "../../scene/network.mjs";
 
 /** Instantánea de la escena para la interfaz (sin bigint). */
 export function wireSnapshot(snap) {
@@ -43,7 +44,7 @@ export class SceneSession extends EventEmitter {
    * @param {import("./sim-port.mjs").RunnerProcess} runner
    * @param {import("../../scene/scene.mjs").Scene} scene
    */
-  constructor(runner, scene, { stepNs = 10_000_000n, snapshotMs = 40 } = {}) {
+  constructor(runner, scene, { stepNs = 10_000_000n, snapshotMs = 40, hostNet = false } = {}) {
     super();
     this.runner = runner;
     this.scene = scene;
@@ -52,6 +53,9 @@ export class SceneSession extends EventEmitter {
     this.watch = watchedSignals(scene);
     // Esclavos Modbus de la escena en el bus RS-485 (G9, emulación de planta).
     this.link = scene.hasModbus() ? new ModbusLink(scene) : null;
+    // Red Ethernet de la escena (HMI, E/S remotas TCP). hostNet: el puente
+    // de la PC (app/lib/net-bridge.mjs) ya entrega DHCP y lo demás.
+    this.vnet = scene.hasNetwork() ? new VirtualNet(scene, { send: (m) => runner.send(m), dhcp: !hostNet }) : null;
     this.onMessage = (m) => this.#onMessage(m);
     runner.on("message", this.onMessage);
   }
@@ -135,6 +139,13 @@ export class SceneSession extends EventEmitter {
   }
 
   #onMessage(m) {
+    if (m.type === "net") {
+      if (this.vnet?.claims(m)) {
+        this.vnet.onNet(m, m.t_ns !== undefined ? BigInt(m.t_ns) : this.scene.t);
+        this.#snapshot();
+      }
+      return;
+    }
     if (m.type === "hello") {
       const t = BigInt(m.t_ns);
       const levels = Object.fromEntries((m.signals ?? []).filter(([n]) => this.watch.includes(n)));
@@ -143,6 +154,7 @@ export class SceneSession extends EventEmitter {
         this.#started = true;
         this.runner.send({ type: "scene", on: 1, watch: this.watch.join(",") });
         if (this.link) this.runner.send({ type: "rs485", port: 2, on: 1 });
+        if (this.vnet) this.runner.send({ type: "net", on: 1 });
         this.#send(this.scene.boardInputs(), t);
         this.scene.takeInputChanges();
         this.#next();
@@ -178,6 +190,7 @@ export class SceneSession extends EventEmitter {
     this.#send(this.scene.takeInputChanges(), at);
     const reply = this.link?.poll(at) ?? [];
     if (reply.length) this.runner.send(uartRxMessage(2, reply));
+    this.vnet?.tick(at);
     this.#snapshot(ops.length > 0);
     this.#next();
   }

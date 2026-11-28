@@ -49,7 +49,8 @@ export class NetBridge extends EventEmitter {
   attach(proc) {
     this.proc = proc;
     proc.on("message", (m) => {
-      if (m.type === "net") this.#onNet(m);
+      // skip(m): lo que atiende la red de la escena (scene/network.mjs).
+      if (m.type === "net" && !this.skip?.(m)) this.#onNet(m);
     });
     proc.send({ type: "net", on: 1 });
   }

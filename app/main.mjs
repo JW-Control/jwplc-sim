@@ -1225,7 +1225,7 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     if (m.type !== "horizon" && m.type !== "uart_tx" && m.type !== "uart_out") forward("sim:message", m);
   });
   if (sceneObj) {
-    sceneSession = new SceneSession(r, sceneObj);
+    sceneSession = new SceneSession(r, sceneObj, { hostNet: !!ethernetConfig(projectFile) });
     goalTracker = activeGoals?.length ? new GoalTracker(activeGoals) : null;
     sceneSession.on("snapshot", (snap) => {
       lastSceneInputs = snap.inputs ?? null;
@@ -1276,6 +1276,8 @@ ipcMain.handle("sim:start", async (_e, { exe, stim, projectFile, rtc, scene }) =
     bridge.on("listening", (p, hp) => forward("sim:stderr", `[jwsim] Ethernet: puerto ${p} del PLC en ${bridge.listenHost}:${hp}\n`));
     bridge.on("error", (err) => forward("sim:stderr", `[jwsim] Ethernet: ${err.message}\n`));
     bridge.attach(r);
+    // Lo que va a los equipos de red de la escena no sale a la PC.
+    bridge.skip = (m) => !!sceneSession?.vnet?.claims(m);
   }
   const iob = !stim && ioBridgeConfig(projectFile);
   if (iob) {

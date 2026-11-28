@@ -174,6 +174,8 @@ export class Scene {
         links: def.links?.(params) ?? [],
         reads: (def.reads?.(params) ?? []).filter((r) => r.source),
         modbus: def.modbus?.(params) ?? null,
+        // Equipo de la red Ethernet de la escena (scene/network.mjs).
+        net: def.net?.(params) ?? null,
         hostPort: def.hostPort?.(params) ?? null,
         probes: def.probes?.(params) ?? [],
         probeInputs: def.probeInputs?.(params) ?? [],
@@ -661,7 +663,12 @@ export class Scene {
 
   /** ¿Hay esclavos Modbus en la escena? (la co-simulación enlaza el bus RS-485) */
   hasModbus() {
-    return [...this.devices.values()].some((d) => d.modbus);
+    return [...this.devices.values()].some((d) => d.modbus && !d.net);
+  }
+
+  /** ¿Hay equipos en la red Ethernet de la escena? (scene/network.mjs) */
+  hasNetwork() {
+    return [...this.devices.values()].some((d) => d.net);
   }
 
   /**
@@ -700,7 +707,9 @@ export class Scene {
    * velocidad y que no esté sin alimentación. Devuelve los bytes de la
    * respuesta (con CRC) y la demora, o null si nadie responde.
    * @param {number[]} frame trama completa con CRC
-   * @param {{ t: bigint, baud: number }} o
+   * @param {{ t: bigint, baud: number, only?: string }} o
+   * only: un equipo de la red Ethernet (Modbus TCP, scene/network.mjs): sin
+   * bus ni velocidad, solo ese equipo.
    */
   modbusRequest(frame, o) {
     if (frame.length < 4 || crc16(frame.slice(0, -2)) !== (frame.at(-2) | (frame.at(-1) << 8))) return null;
@@ -716,6 +725,7 @@ export class Scene {
     const cfg = (d) => ({ ...d.modbus, ...(d.inst.modbusConfig?.() ?? {}) });
     const slaves = [...this.devices.values()].filter((d) => {
       if (!d.modbus) return false;
+      if (o.only !== undefined || d.net) return d.id === o.only && !this.injected.has(`burnt:${d.id}`);
       const m = cfg(d);
       return (addr === 0 || m.address === addr) && Math.abs(m.baud - o.baud) / m.baud < 0.03 &&
         find(`${d.id}.${m.a ?? "A"}`) === busA && find(`${d.id}.${m.b ?? "B"}`) === busB && !this.injected.has(`burnt:${d.id}`);
