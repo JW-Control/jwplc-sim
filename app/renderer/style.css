@@ -291,6 +291,12 @@ select:focus-visible {
   border-color: var(--ok);
   color: var(--on-ok);
 }
+/* «Ejecutar en vivo»: el Sim muestra el JWPLC real (color propio). */
+body[data-live] #btn-run.state-running {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 #btn-run.state-running:hover:not(:disabled) {
   filter: brightness(1.06);
 }

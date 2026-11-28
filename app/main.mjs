@@ -44,6 +44,7 @@ import { ComponentBench } from "./lib/component-bench.mjs";
 import { createUpdater } from "./lib/updater.mjs";
 import { createLadderEditor } from "./lib/ladder-edit.mjs";
 import { PlcDebugLink, debugMapFor } from "./lib/plc-debug.mjs";
+import { LiveRunner, LiveSession } from "./lib/plc-live.mjs";
 
 // Portable (scripts/dist.mjs): la app empaquetada sin el desinstalador al
 // lado guarda sus datos (compilaciones, estado y dispositivos instalados) en
@@ -1141,6 +1142,8 @@ let comBridge = null;
 // Cliente del depurador OpenPLC sobre la UART0 del runner (app/lib/plc-debug.mjs).
 let plcDebug = null;
 ipcMain.handle("plcdbg:read", async (_e, names) => {
+  // «Ejecutar en vivo»: los valores son los que leyó la sesión del JWPLC real.
+  if (live) return liveValues ?? { error: "conectando con el JWPLC…" };
   if (!plcDebug || !runner) return { error: "sin depurador" };
   try {
     return await plcDebug.read(names);
@@ -1642,6 +1645,13 @@ ipcMain.handle("scene:rearm", () => {
 });
 
 ipcMain.handle("sim:command", (_e, msg) => {
+  // En vivo: un clic en una entrada fuerza esa variable en el JWPLC real.
+  if (live) {
+    if (msg?.type === "set" && /^I\d+_\d+$/.test(msg.signal ?? "")) {
+      live.setSignal(msg.signal, msg.value).catch((err) => forward("sim:stderr", `[en vivo] ${err.message}\n`));
+    }
+    return true;
+  }
   if (msg?.type === "run" && msg.speed !== undefined) sceneSession?.setSpeed(msg.speed);
   runner?.send(msg);
   return !!runner;
@@ -1737,6 +1747,11 @@ ipcMain.handle("jwplc:installTools", async () => {
 ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {
   if (uploading) return { ok: false, message: "ya hay una carga en curso" };
   if (isOpenPlcProject(dir)) return { ok: false, message: "Los proyectos IEC todavía se cargan desde el OpenPLC Editor. «Subir al JWPLC» por ahora es para sketches C++." };
+  // «Ejecutar en vivo» usa el mismo COM: se corta antes de cargar.
+  if (live) {
+    await stopLive();
+    forward("live:closed", { error: null });
+  }
   uploading = true;
   uploadAbort = new AbortController();
   const { signal } = uploadAbort;
@@ -1797,7 +1812,88 @@ ipcMain.handle("equipo:open", async (_e, kind) => {
   return { ok: true, web: true };
 });
 
+// ------------------------------------------------- Ejecutar en vivo (alpha.19)
+// El Sim muestra el JWPLC real conectado por USB (app/lib/plc-live.mjs).
+let live = null;
+let liveValues = null;
+let liveRunner = null;
+ipcMain.handle("live:start", async (_e, { exe, port, scene }) => {
+  await stopLive();
+  await stopRunner();
+  let sceneObj = null;
+  if (scene?.devices?.length) {
+    try {
+      sceneObj = new Scene(scene, { registry: await registry() });
+    } catch (err) {
+      return { ok: false, message: `escena: ${err.message}` };
+    }
+  }
+  if (uploading) return { ok: false, message: "Espere a que termine la carga al JWPLC." };
+  if (comBridge && comBridge.path.toUpperCase() === String(port).toUpperCase()) {
+    const b = comBridge;
+    comBridge = null;
+    await b.close();
+    forward("com:closed", b.path);
+  }
+  let s;
+  try {
+    s = new LiveSession({ ops: await ladderEditor.ops(), exe, path: port });
+  } catch (err) {
+    return { ok: false, message: err.message };
+  }
+  live = s;
+  liveValues = null;
+  s.on("values", ({ tick, values, changes }) => {
+    if (live !== s) return;
+    liveValues = { tick, values };
+    if (changes.length) forward("sim:message", { type: "signals", changes, t_ns: 0 });
+  });
+  s.on("lost", (err) => {
+    if (live !== s) return;
+    live = null;
+    liveValues = null;
+    forward("live:closed", { error: `se perdió la conexión con el JWPLC en ${port} (${err.message})` });
+  });
+  // Escena: el esquema y la planta 3D siguen al equipo real.
+  if (sceneObj) {
+    liveRunner = new LiveRunner(s);
+    liveRunner.on("stderr", (t) => forward("sim:stderr", t));
+    sceneSession = new SceneSession(liveRunner, sceneObj);
+    sceneSession.on("snapshot", (snap) => {
+      lastSceneInputs = snap.inputs ?? null;
+      forward("scene:snapshot", snap);
+    });
+    sceneSession.on("error", (err) => forward("sim:stderr", `[jwsim] escena: ${err.message}\n`));
+  }
+  try {
+    const info = await s.start();
+    forward("build:log", `[en vivo] conectado al JWPLC en ${port}: mismo programa (MD5 ${info.md5}), ${info.vars} variables`);
+    return { ok: true, ...info };
+  } catch (err) {
+    if (live === s) live = null;
+    return { ok: false, message: err.message };
+  }
+});
+async function stopLive() {
+  const s = live;
+  live = null;
+  liveValues = null;
+  if (liveRunner) {
+    sceneSession?.stop();
+    sceneSession = null;
+    liveRunner.stop();
+    liveRunner = null;
+  }
+  if (s) await s.stop();
+}
+ipcMain.handle("live:stop", async () => {
+  const was = !!live;
+  await stopLive();
+  return { ok: was };
+});
+
 ipcMain.handle("sim:stop", async () => {
+  await stopLive();
   await stopRunner();
   return true;
 });
@@ -2148,6 +2244,7 @@ app.on("window-all-closed", async () => {
   watcher?.close();
   await stopBuilder();
   await stopRunner();
+  await stopLive();
   await comBridge?.close();
   app.quit();
 });

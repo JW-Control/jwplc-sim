@@ -162,7 +162,8 @@ function setStatus(kind, text) {
   const btnRun = $("btn-run");
   const btnPause = $("btn-pause");
   const btnStop = $("btn-stop");
-  btnPause.disabled = !live || kind === "break";
+  // En vivo el tiempo es el del equipo real: no se pausa.
+  btnPause.disabled = !live || kind === "break" || !!state.live;
   btnStop.disabled = !live && kind !== "building";
   btnStop.title = kind === "building" ? "Cancelar la compilación (Mayús+F5)" : "Detener (Mayús+F5)";
   btnStop.innerHTML = kind === "building" ? '✕<span class="tb-lbl"> Cancelar</span>' : '■<span class="tb-lbl"> Detener</span>';
@@ -177,6 +178,9 @@ function setStatus(kind, text) {
   if (kind === "building") {
     btnRun.textContent = "⟳ Compilando";
     btnRun.title = "Compilando el programa…";
+  } else if (kind === "running" && state.live) {
+    btnRun.textContent = `◉ En vivo · ${state.live.port}`;
+    btnRun.title = "El Sim muestra el JWPLC real. Clic para volver a simular (F5); ■ Detener sale de en vivo.";
   } else if (kind === "running") {
     btnRun.textContent = text === "Reproduciendo" ? "● Replay" : "● Ejecutando";
     btnRun.title = `${text} — clic para recompilar y reiniciar (F5)`;
@@ -1057,6 +1061,8 @@ function currentInputs() {
 
 async function buildAndRun({ keepScene = false, replay = null } = {}) {
   if (!state.sketch || state.sim === "building") return false;
+  // Ejecutar vuelve al simulador: se sale de en vivo.
+  if (state.live) await liveStop("En vivo detenido");
   const scene = replay ? {} : keepScene ? currentInputs() : (state.pendingInputs ?? {});
   state.pendingInputs = null;
   await saveSketch();
@@ -1142,6 +1148,10 @@ function togglePause() {
 }
 
 function stopSim() {
+  if (state.live) {
+    liveStop("En vivo detenido");
+    return;
+  }
   // Mientras compila, Detener cancela la compilación (como en Arduino IDE).
   if (state.sim === "building") {
     api.buildCancel?.();
@@ -3354,6 +3364,15 @@ function wireUi() {
   $("up-tools").addEventListener("click", upInstallTools);
   $("up-tools").title = "Compilador, librerías del ESP-IDF y esptool: unos 480 MB, una sola vez. Con 10 Mbps tarda unos 7 minutos y luego unos minutos más en instalar. Se puede cancelar y retomar.";
   $("up-go").addEventListener("click", upGo);
+  $("up-live").addEventListener("click", liveGo);
+  api.onLiveClosed(({ error }) => {
+    if (!state.live) return;
+    state.live = null;
+    delete document.body.dataset.live;
+    resetBoard();
+    setStatus(error ? "error" : "idle", error ? "Se perdió el JWPLC" : "En vivo detenido");
+    if (error) consoleWrite(`[en vivo] ${error}\n`, "fatal");
+  });
   $("up-cancel").addEventListener("click", () => {
     $("up-cancel").disabled = true;
     $("up-note").textContent = "Cancelando…";
@@ -3655,10 +3674,21 @@ async function upRefresh() {
   const missing = info.missing ?? [];
   $("up-tools").hidden = !missing.length || !info.cli;
   $("up-tools").textContent = `Descargar herramientas del ESP32 (unos ${info.downloadMb ?? 500} MB, una sola vez)`;
-  $("up-go").disabled = upBusy || info.busy || !info.cli || !!missing.length || !info.ports?.length || !state.sketch;
+  const iec = !!state.sketch?.openplc;
+  $("up-go").disabled = upBusy || info.busy || !info.cli || !!missing.length || !info.ports?.length || !state.sketch || iec;
+  // En vivo: proyectos IEC (el depurador del OpenPLC viene en su firmware).
+  $("up-live").disabled = upBusy || !info.ports?.length || !iec;
+  $("up-live").textContent = state.live ? "■ Salir de en vivo" : "◉ Ejecutar en vivo";
+  if (state.live) $("up-live").disabled = false;
   $("up-note").textContent = info.error
     ? info.error
-    : !info.cli
+    : iec && state.sketch
+      ? state.live
+        ? `En vivo con el JWPLC en ${state.live.port}.`
+        : info.ports?.length
+          ? "Proyecto IEC: cárguelo con el OpenPLC Editor y use «Ejecutar en vivo» para verlo y forzarlo desde el Sim."
+          : "No se ve ningún puerto USB. Conecte el JWPLC y pulse ↻."
+      : !info.cli
       ? "Esta instalación no trae arduino-cli."
       : missing.length
         ? `Falta: ${missing.join(", ")}. Si ya usa el JWPLC en Arduino IDE, instale la placa JWPLC allí y vuelva a abrir este panel.`
@@ -3666,7 +3696,7 @@ async function upRefresh() {
           ? "No se ve ningún puerto USB. Conecte el JWPLC y pulse ↻."
           : !state.sketch
             ? "Abra un programa para subirlo."
-            : `Se compila con el package ${info.version}, el mismo que usa el simulador.`;
+            : `Se compila con el package ${info.version}, el mismo que usa el simulador. «Ejecutar en vivo» es para proyectos IEC.`;
 }
 // Descarga de las herramientas del ESP32: el avance va al panel Compilación y
 // a la nota del panel; Cancelar la corta (lo bajado se reutiliza).
@@ -3718,6 +3748,61 @@ async function upGo() {
   }
   if (r.needTools) await upRefresh();
   else $("up-go").disabled = false;
+}
+
+// ------------------------------------------------------- Ejecutar en vivo
+// El Sim se vuelve la pantalla del JWPLC real: compila el mismo proyecto
+// (para el mapa de variables y el MD5), se conecta por el COM y pinta lo que
+// lee. Detener (o ■ Salir de en vivo) libera lo forzado y suelta el puerto.
+async function liveGo() {
+  if (state.live) return liveStop("En vivo detenido");
+  const port = $("up-port").value;
+  if (!port || !state.sketch?.openplc || upBusy) return;
+  storeSet(UP_PORT_KEY, port);
+  upBusy = true;
+  $("up-live").disabled = true;
+  $("up-note").textContent = "Compilando el proyecto para conocer sus variables…";
+  try {
+    await saveSketch();
+    await api.stop();
+    resetBoard();
+    setStatus("building", "Compilando…");
+    const r = await api.build(state.sketch.dir);
+    if (!r.ok) {
+      setStatus(r.cancelled ? "idle" : "error", r.cancelled ? "Compilación cancelada" : "Error de compilación");
+      $("up-note").textContent = r.cancelled ? "Cancelado." : "El proyecto no compila: revise Problemas antes de ir en vivo.";
+      return;
+    }
+    state.exe = r.exe;
+    setStatus("building", "Conectando…");
+    $("up-note").textContent = `Conectando con el JWPLC en ${port}…`;
+    const c = await api.liveStart({ exe: r.exe, port, scene: window.JwsimScene?.specForRun() ?? null });
+    if (!c.ok) {
+      setStatus("error", "Sin conexión en vivo");
+      $("up-note").textContent = c.message;
+      consoleWrite(`[en vivo] ${c.message}\n`, "fatal");
+      return;
+    }
+    state.live = { port };
+    document.body.dataset.live = "1";
+    setStatus("running", `En vivo · ${port}`);
+    $("up-note").textContent = `En vivo con el JWPLC en ${port}. Un clic en una entrada la fuerza en el equipo.`;
+    consoleWrite(`[en vivo] conectado al JWPLC en ${port}: el Sim muestra el equipo real\n`, "sys");
+    upPopover(false);
+  } finally {
+    upBusy = false;
+    await upRefresh();
+  }
+}
+async function liveStop(text, error) {
+  if (!state.live) return;
+  state.live = null;
+  delete document.body.dataset.live;
+  await api.liveStop();
+  resetBoard();
+  setStatus(error ? "error" : "idle", text);
+  if (error) consoleWrite(`[en vivo] ${error}\n`, "fatal");
+  if (!$("up-panel").hidden) upRefresh();
 }
 
 // ------------------------------------------------------------- Mi JWPLC

@@ -113,12 +113,16 @@ export class LiveSession extends EventEmitter {
     this.timer = setTimeout(() => this.loop(), Math.max(0, this.periodMs - (Date.now() - t0)));
   }
 
-  /** Clic en una entrada del Sim: fuerza la variable de esa borna en el equipo real. */
+  /**
+   * Entrada del Sim apretada (level 1): fuerza a TRUE la variable de esa
+   * borna en el equipo real. Soltada (0): libera el forzado y la variable
+   * vuelve a seguir a la entrada física.
+   */
   async setSignal(signal, level) {
     const name = this.bySignal.get(signal);
     if (!name) throw new Error(`ninguna variable del programa está en ${signal.replace("_", ".")}`);
-    await this.link.force(name, !!level);
-    this.forced.set(name, !!level);
+    if (!level && !this.forced.has(name)) return name;
+    await this.force(name, level ? true : null);
     return name;
   }
 
@@ -147,6 +151,67 @@ export class LiveSession extends EventEmitter {
     this.port = null;
     if (p?.isOpen) await new Promise((r) => p.close(() => r()));
     this.emit("closed");
+  }
+}
+
+/**
+ * «Runner» para la escena (SceneSession) en vivo: en vez del firmware
+ * simulado, el tiempo es el real y las salidas son las que lee la sesión del
+ * JWPLC. Así el esquema y la planta 3D se mueven con el equipo real, y los
+ * mandos de la escena (pulsadores, selectores…) fuerzan sus entradas.
+ */
+export class LiveRunner extends EventEmitter {
+  constructor(session) {
+    super();
+    this.session = session;
+    this.t0 = process.hrtime.bigint();
+    this.lastT = 0n;
+    this.pending = [];
+    this.wait = null;
+    this.started = false;
+    this.onValues = ({ changes }) => {
+      if (!this.started) {
+        this.started = true;
+        this.emit("message", { type: "hello", t_ns: String(this.now()), signals: [...session.levels].map(([n, v]) => [n, v ? 1 : 0]) });
+        return;
+      }
+      if (!changes.length) return;
+      this.pending.push(...changes.filter(([n]) => n.startsWith("Q")));
+      if (this.wait && this.pending.length) this.reply(this.wait.until);
+    };
+    session.on("values", this.onValues);
+  }
+
+  now() {
+    return process.hrtime.bigint() - this.t0;
+  }
+
+  reply(until) {
+    clearTimeout(this.wait?.timer);
+    this.wait = null;
+    let at = this.now();
+    if (at > until) at = until;
+    if (at < this.lastT) at = this.lastT;
+    this.lastT = at;
+    const changes = this.pending.splice(0);
+    this.emit("message", changes.length ? { type: "horizon", t_ns: String(at), reason: "output", changes } : { type: "horizon", t_ns: String(at), reason: "time" });
+  }
+
+  send(msg) {
+    if (msg?.type === "set" && /^I\d+_\d+$/.test(msg.signal ?? "")) {
+      this.session.setSignal(msg.signal, Number(msg.value)).catch((err) => this.emit("stderr", `[en vivo] ${err.message}\n`));
+    } else if (msg?.type === "horizon") {
+      const until = BigInt(msg.until_ns);
+      if (this.pending.length) return this.reply(until);
+      const ms = Number(until - this.now()) / 1e6;
+      this.wait = { until, timer: setTimeout(() => this.reply(until), Math.max(0, ms)) };
+    }
+  }
+
+  stop() {
+    clearTimeout(this.wait?.timer);
+    this.wait = null;
+    this.session.off("values", this.onValues);
   }
 }
 

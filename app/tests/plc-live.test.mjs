@@ -12,17 +12,16 @@
 // Solo Linux (pty). Necesita la cadena del editor (node scripts/fetch-editor.mjs).
 //   cd app && node --test tests/plc-live.test.mjs
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createInterface } from "node:readline";
 import { test } from "node:test";
 
 import { editorPaths, resolveEditor } from "../../scripts/fetch-editor.mjs";
 import { LiveSession, locatedVars } from "../lib/plc-live.mjs";
-import { RunnerProcess } from "../lib/sim-port.mjs";
+import { fakeJwplc as fakeBoard } from "./helpers/fake-jwplc.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..", "..");
 const LESSON = join(ROOT, "JWPLC_Aprende", "extras", "Curso_IEC_61131", "1.Contactos_y_logica", "01.Contactos_y_bobinas", "LD");
@@ -33,32 +32,6 @@ function build(dir) {
   const j = JSON.parse(r.stdout.trim().split("\n").pop());
   assert.ok(j.ok, j.error);
   return j.executable;
-}
-
-/** JWPLC de prueba: runner + pty en la UART0. Devuelve { tty, runner, close }. */
-async function fakeBoard(exe) {
-  const runner = new RunnerProcess().start(exe, []);
-  const pty = spawn("python3", [join(import.meta.dirname, "helpers", "pty-pair.py")], { stdio: ["pipe", "pipe", "inherit"] });
-  const lines = createInterface({ input: pty.stdout });
-  const tty = await new Promise((ok) => lines.once("line", (l) => ok(l.split(" ")[1])));
-  lines.on("line", (l) => {
-    if (!l.startsWith("R ")) return;
-    const hex = l.slice(2).trim();
-    runner.send({ type: "uart_rx", port: 0, data: hex.match(/../g).map((h) => `0:${h}`).join(",") });
-  });
-  runner.on("message", (m) => {
-    if (m.type === "uart_out" && m.port === 0) pty.stdin.write(`W ${m.hex.replaceAll(" ", "")}\n`);
-  });
-  runner.send({ type: "tap", port: 0, on: 1 });
-  runner.send({ type: "run", speed: 1 });
-  return {
-    tty,
-    runner,
-    close: () => {
-      runner.stop();
-      pty.kill();
-    },
-  };
 }
 
 const opsP = resolveEditor({ fetch: false }).then(({ dir }) => createRequire(import.meta.url)(editorPaths(dir).ladderOps));
