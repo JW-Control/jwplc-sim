@@ -135,6 +135,10 @@ export function prepareEsp32({ dataDir, package: pkg } = {}) {
       `    - ${BOARD_INDEX_URL}`,
       "updater:",
       "  enable_notification: false",
+      // En inglés siempre: el avance, los pasos y los avisos que se filtran
+      // (PROGRESS, stepName, NOISE) se reconocen por su texto, y en una PC en
+      // castellano arduino-cli escribe «Descargando el índice…», «Instalando…».
+      "locale: en",
       "",
     ].join("\n"),
   );
