@@ -1714,10 +1714,16 @@ ipcMain.handle("jwplc:uploadInfo", async () => {
 ipcMain.handle("jwplc:installTools", async () => {
   if (uploading) return { ok: false, message: "ya hay una carga en curso" };
   uploading = true;
+  // El botón Cancelar del panel corta también la descarga (jwplc:uploadCancel).
+  uploadAbort = new AbortController();
   const log = (l) => forward("build:log", l);
   try {
     const env = prepareEsp32({ dataDir: arduinoData() });
-    await installEsp32Tools(env, { log });
+    const r = await installEsp32Tools(env, { log, signal: uploadAbort.signal });
+    if (r.cancelled) {
+      log("[subir] descarga cancelada: lo ya bajado se reutiliza la próxima vez");
+      return { ok: false, cancelled: true, message: "Descarga cancelada. Lo ya descargado se reutiliza al volver a intentarlo." };
+    }
     log("[subir] herramientas del ESP32 listas");
     return { ok: true };
   } catch (err) {
@@ -1725,6 +1731,7 @@ ipcMain.handle("jwplc:installTools", async () => {
     return { ok: false, message: err.message.split("\n")[0] };
   } finally {
     uploading = false;
+    uploadAbort = null;
   }
 });
 ipcMain.handle("jwplc:upload", async (_e, { dir, port }) => {

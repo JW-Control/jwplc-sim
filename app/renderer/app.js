@@ -3352,6 +3352,7 @@ function wireUi() {
   window.addEventListener("resize", () => !$("up-panel").hidden && upPlace());
   $("up-refresh").addEventListener("click", upRefresh);
   $("up-tools").addEventListener("click", upInstallTools);
+  $("up-tools").title = "Compilador, librerías del ESP-IDF y esptool: unos 480 MB, una sola vez. Con 10 Mbps tarda unos 7 minutos y luego unos minutos más en instalar. Se puede cancelar y retomar.";
   $("up-go").addEventListener("click", upGo);
   $("up-cancel").addEventListener("click", () => {
     $("up-cancel").disabled = true;
@@ -3436,10 +3437,22 @@ function wireUi() {
   api.onUpdateState?.(showUpdate);
   api.updateStatus?.().then(showUpdate).catch(() => {});
   $("sb-update")?.addEventListener("click", () => api.updateInstall?.());
+  // Una línea que empieza con «\r» es avance (descarga de las herramientas
+  // del ESP32, cli/lib/esp32.mjs, «  esp-x32@2601: 20 / 319 MB (6 %)»):
+  // reemplaza a la anterior si era avance de lo mismo (el texto antes de «:»).
+  let buildLogProgress = null;
   api.onBuildLog((line) => {
     const log = $("build-log");
-    log.textContent += `${line}\n`;
+    const progress = line.startsWith("\r") ? line.slice(1).split(":")[0] : null;
+    const text = progress ? line.slice(1) : line;
+    if (progress && progress === buildLogProgress) {
+      const t = log.textContent;
+      const cut = t.lastIndexOf("\n", t.length - 2);
+      log.textContent = `${t.slice(0, cut + 1)}${text}\n`;
+    } else log.textContent += `${text}\n`;
+    buildLogProgress = progress;
     log.scrollTop = log.scrollHeight;
+    if (progress && upInstalling) $("up-note").textContent = text.trim();
   });
   api.onMessage(onMessage);
   api.onDisplay(drawDisplay);
@@ -3655,16 +3668,26 @@ async function upRefresh() {
             ? "Abra un programa para subirlo."
             : `Se compila con el package ${info.version}, el mismo que usa el simulador.`;
 }
+// Descarga de las herramientas del ESP32: el avance va al panel Compilación y
+// a la nota del panel; Cancelar la corta (lo bajado se reutiliza).
+let upInstalling = false;
 async function upInstallTools() {
   upBusy = true;
+  upInstalling = true;
   $("up-tools").disabled = true;
-  $("up-note").textContent = "Descargando… el avance se ve en el panel Compilación.";
+  $("up-go").hidden = true;
+  $("up-cancel").hidden = false;
+  $("up-cancel").disabled = false;
+  $("up-note").textContent = "Descargando… el avance se ve aquí y en el panel Compilación.";
   setView("build");
   setDockCollapsed(false);
   $("build-log").textContent = "";
   const r = await api.jwplcInstallTools();
   upBusy = false;
+  upInstalling = false;
   $("up-tools").disabled = false;
+  $("up-go").hidden = false;
+  $("up-cancel").hidden = true;
   await upRefresh();
   if (!r.ok) $("up-note").textContent = r.message;
 }

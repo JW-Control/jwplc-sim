@@ -192,7 +192,8 @@ async function main() {
   if (cmd === "subir") {
     const dir = opts._[0];
     if (!dir) throw new CliError(EXIT.USAGE, "falta la carpeta del sketch");
-    const log = opts.json ? () => {} : (l) => console.error(l);
+    // Las líneas de avance (empiezan con «\r») van como líneas normales.
+    const log = opts.json ? () => {} : (l) => console.error(l.replace(/^\r/, ""));
     const env = prepareEsp32({ dataDir: process.env.JWSIM_ARDUINO_DATA ?? join(ROOT, "build", "arduino") });
     if (!env.cli) throw new CliError(EXIT.ENV, "no se encontró arduino-cli (node scripts/fetch-arduino-cli.mjs)");
     if (env.missing.length && opts.tools) await installEsp32Tools(env, { log });

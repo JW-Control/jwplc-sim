@@ -32,8 +32,10 @@ export const ESP32_TOOLS = [
   { name: "esptool_py", version: "5.2.0", label: "esptool (carga por USB)" },
 ];
 export const FQBN = "jwplc_sim:esp32:jwplcbasic";
-// Tamaño aproximado de la descarga de las herramientas (Windows x64).
-export const TOOLS_DOWNLOAD_MB = 520;
+// Tamaño aproximado de la descarga de las herramientas (Windows x64): el
+// compilador (~320 MB), esptool (~70 MB), las librerías del IDF (~42 MB) y la
+// plataforma (~21 MB).
+export const TOOLS_DOWNLOAD_MB = 480;
 
 const exe = process.platform === "win32" ? ".exe" : "";
 
@@ -136,6 +138,13 @@ export function prepareEsp32({ dataDir, package: pkg } = {}) {
       "",
     ].join("\n"),
   );
+  // Índice de librerías vacío: sin él, arduino-cli baja el de Arduino
+  // (library_index, ~15 MB que se descomprimen a ~100 MB) cada vez que arranca
+  // sin encontrarlo, en silencio y antes de las herramientas, y la descarga
+  // parece colgada tras «package_jwplc_index.json downloaded». El Sim no
+  // instala librerías con arduino-cli: las trae el package.
+  const libIndex = join(dataDir, "library_index.json");
+  if (!existsSync(libIndex)) writeFileSync(libIndex, '{"libraries":[]}\n');
   // Plataforma: una sola versión, la del package fijado.
   const hwBase = join(dataDir, "packages", "jwplc_sim", "hardware", "esp32");
   const version = carpetaVersion(lock.JWPLC_PACKAGE_REF);
@@ -175,7 +184,30 @@ export function carpetaVersion(ref) {
   return `0.0.0-${limpiar(v) || "local"}`;
 }
 
-const NOISE = /^(Downloading index|Error initializing instance: (Loading index file|Error downloading index|Error loading hardware platform: discovery))/;
+const NOISE = /^(Downloading index: \S+ Get "|Some indexes could not be updated|Skipping (tool|platform) configuration|Error initializing instance: (Loading index file|Error downloading index|Error loading hardware platform: discovery|Some indexes))/;
+
+// Barra de avance de arduino-cli («jwplc:esp-x32@2601 199.26 MiB / 318.78 MiB
+// 62.51% 00m01s»). Se informa como una línea que empieza con «\r»: el panel
+// Compilación la escribe encima de la anterior en lugar de sumar cientos.
+const PROGRESS = /^(?:Downloading index: )?(\S+)\s+([\d.]+) ([KMG]?i?B) \/ (?:([\d.]+) ([KMG]?i?B)|\?)\s+([\d.]+)%/;
+const MIB = { B: 1 / 1048576, KiB: 1 / 1024, MiB: 1, GiB: 1024, KB: 1 / 1024, MB: 1, GB: 1024 };
+export function progressLine(l) {
+  const m = PROGRESS.exec(l);
+  if (!m) return null;
+  const name = m[1].replace(/^jwplc:/, "");
+  const done = Number(m[2]) * (MIB[m[3]] ?? 1);
+  if (!m[4]) return `\r  ${name}: ${done.toFixed(1)} MB`;
+  const total = Number(m[4]) * (MIB[m[5]] ?? 1);
+  const mb = (x) => (total < 10 ? x.toFixed(1) : String(Math.round(x)));
+  return `\r  ${name}: ${mb(done)} / ${mb(total)} MB (${Math.round(Number(m[6]))} %)`;
+}
+// Pasos de arduino-cli en castellano, para el aviso de «sigue trabajando».
+function stepName(l) {
+  let m;
+  if ((m = /^Installing (?:platform )?(\S+?)\.*$/.exec(l))) return `instalando ${m[1].replace(/^jwplc:/, "")}`;
+  if (/^Downloading packages/.test(l)) return "descargando";
+  return null;
+}
 
 // Corta el proceso y sus hijos (arduino-cli lanza el compilador y esptool).
 function killTree(p) {
@@ -191,7 +223,9 @@ function killTree(p) {
 }
 
 // `signal` (AbortSignal) cancela: el resultado lleva cancelled: true.
-function runCli(cli, args, { log = () => {}, cwd, signal } = {}) {
+// `heartbeat`: si arduino-cli calla más de 8 s (descomprimir el compilador
+// lleva minutos en Windows con el antivirus), se informa que sigue trabajando.
+function runCli(cli, args, { log = () => {}, cwd, signal, heartbeat = false } = {}) {
   return new Promise((done) => {
     if (signal?.aborted) return done({ code: -1, out: "", cancelled: true });
     // En Linux/macOS, grupo propio para cortar también a los hijos.
@@ -200,43 +234,87 @@ function runCli(cli, args, { log = () => {}, cwd, signal } = {}) {
     signal?.addEventListener("abort", onAbort, { once: true });
     let out = "";
     let buf = "";
+    let last = Date.now();
+    let step = null;
+    let stepAt = Date.now();
+    let lastProgress = { text: "", at: 0 };
+    let prev = "";
+    const emit = (l) => {
+      if (!l.trim() || NOISE.test(l)) return;
+      const pl = progressLine(l);
+      if (pl) {
+        // El índice pesa unos KB: su avance no aporta.
+        if (/^Downloading index/.test(l)) return;
+        // Como mucho 4 por segundo, salvo al terminar un archivo.
+        const now = Date.now();
+        if (pl === lastProgress.text || (now - lastProgress.at < 250 && !/\(100 %\)$/.test(pl))) return;
+        lastProgress = { text: pl, at: now };
+        return log(pl);
+      }
+      if (l === prev) return;
+      prev = l;
+      // «jwplc:esp-x32@2601 downloaded» cierra su barra de avance.
+      const fin = /^(?:jwplc:)?(\S+@\S+) downloaded$/.exec(l);
+      if (fin) return log(`\r  ${fin[1]}: descargado`);
+      const st = stepName(l);
+      if (st) {
+        step = st;
+        stepAt = Date.now();
+      }
+      log(l);
+    };
     const onData = (d) => {
       const s = d.toString().replace(/\x1b\[[0-9;]*m/g, "");
       out += s;
       buf += s;
+      last = Date.now();
       const lines = buf.split(/\r?\n|\r/);
       buf = lines.pop();
-      for (const l of lines) if (l.trim() && !NOISE.test(l)) log(l);
+      for (const l of lines) emit(l);
     };
+    const beat = heartbeat
+      ? setInterval(() => {
+          if (Date.now() - last < 8000) return;
+          const secs = Math.round((Date.now() - stepAt) / 1000);
+          log(`\r  sigue trabajando${step ? `: ${step}` : ""} (${secs} s)…`);
+        }, 4000)
+      : null;
     p.stdout.on("data", onData);
     p.stderr.on("data", onData);
     p.on("error", (err) => {
+      clearInterval(beat);
       signal?.removeEventListener("abort", onAbort);
       done({ code: -1, out: `${out}\n${err.message}`, cancelled: !!signal?.aborted });
     });
     p.on("close", (code) => {
+      clearInterval(beat);
       signal?.removeEventListener("abort", onAbort);
-      if (buf.trim() && !NOISE.test(buf)) log(buf);
+      emit(buf);
       done({ code, out, cancelled: !!signal?.aborted });
     });
   });
 }
 
-// Descarga las herramientas con arduino-cli (una sola vez, ~500 MB).
-export async function installEsp32Tools(env, { log = () => {} } = {}) {
+// Descarga las herramientas con arduino-cli (una sola vez, ~500 MB). Con
+// `signal` se cancela: devuelve { cancelled: true } (lo ya bajado queda en
+// staging/ y la próxima vez arduino-cli no lo vuelve a bajar).
+export async function installEsp32Tools(env, { log = () => {}, signal } = {}) {
   if (!env.cli) throw new Error("no se encontró arduino-cli");
   log("[subir] descargando el índice de placas JWPLC…");
-  let r = await runCli(env.cli, ["--config-file", env.config, "core", "update-index"], { log });
+  let r = await runCli(env.cli, ["--config-file", env.config, "core", "update-index"], { log, signal, heartbeat: true });
+  if (r.cancelled) return { cancelled: true };
   // Basta con el índice de JWPLC: el de Arduino (downloads.arduino.cc) puede
   // fallar detrás de un proxy y no hace falta para el ESP32.
   if (r.code !== 0 && !existsSync(join(env.dataDir, "package_jwplc_index.json"))) throw new Error(`no se pudo descargar el índice de placas (¿sin internet?)\n${r.out.trim()}`);
-  log(`[subir] descargando las herramientas del ESP32 (unos ${TOOLS_DOWNLOAD_MB} MB, solo la primera vez)…`);
-  r = await runCli(env.cli, ["--config-file", env.config, "core", "install", "jwplc:esp32"], { log });
+  log(`[subir] descargando las herramientas del ESP32 (unos ${TOOLS_DOWNLOAD_MB} MB, solo la primera vez). Con 10 Mbps tarda unos 7 minutos; después la instalación lleva unos minutos más.`);
+  r = await runCli(env.cli, ["--config-file", env.config, "core", "install", "jwplc:esp32"], { log, signal, heartbeat: true });
+  if (r.cancelled) return { cancelled: true };
   if (r.code !== 0) throw new Error(`no se pudieron instalar las herramientas del ESP32\n${r.out.trim()}`);
   // Los archivos descargados ya no hacen falta (unos 500 MB).
   removeEntry(join(env.dataDir, "staging"));
   const still = ESP32_TOOLS.filter((t) => !toolReady(toolDir(env.dataDir, t)));
   if (still.length) throw new Error(`faltan herramientas tras la descarga: ${still.map((t) => `${t.name} ${t.version}`).join(", ")}`);
+  return { cancelled: false };
 }
 
 // ctags (prototipos del .ino) del instalador: sin él, arduino-cli lo
